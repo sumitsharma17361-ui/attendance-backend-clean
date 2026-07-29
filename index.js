@@ -50,7 +50,7 @@ const Attendance = mongoose.model('Attendance', attendanceSchema);
 
 // Base Test Route
 app.get('/', (req, res) => {
-  res.send('College Attendance Portal API is Live!');
+  res.send('BM Group of Institutions - Attendance API is Live!');
 });
 
 // 1. Student Registration API
@@ -108,7 +108,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// 3. Mark Attendance API (Geo-fencing Included)
+// 3. Mark Attendance API (Geo-fencing Included for BM Group of Institutions)
 app.post('/api/attendance/mark', async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude } = req.body;
@@ -117,13 +117,13 @@ app.post('/api/attendance/mark', async (req, res) => {
       return res.status(400).json({ error: 'Roll number and Location are required!' });
     }
 
-    // --- GEO-FENCING LOGIC (Campus Location Setup) ---
-    const COLLEGE_LAT = 28.5355; 
-    const COLLEGE_LNG = 77.3910;
-    const MAX_ALLOWED_DISTANCE_KM = 0.5; // 500 Meters radius
+    // --- BM GROUP OF INSTITUTIONS, FARRUKHNAGAR COORDINATES ---
+    const COLLEGE_LAT = 28.4485; 
+    const COLLEGE_LNG = 76.8143;
+    const MAX_ALLOWED_DISTANCE_KM = 1.5; // 1.5 KM radius around campus
 
     function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-      const R = 6371; // Earth's Radius in KM
+      const R = 6371; // Earth Radius in KM
       const dLat = (lat2 - lat1) * (Math.PI / 180);
       const dLon = (lon2 - lon1) * (Math.PI / 180);
       const a =
@@ -138,7 +138,7 @@ app.post('/api/attendance/mark', async (req, res) => {
 
     if (distance > MAX_ALLOWED_DISTANCE_KM) {
       return res.status(400).json({ 
-        error: `Attendance Failed: Outside Campus! (${(distance * 1000).toFixed(0)} meters away)` 
+        error: `Attendance Failed: Outside BM Group Campus! (${(distance * 1000).toFixed(0)} meters away)` 
       });
     }
 
