@@ -19,7 +19,7 @@
         button:hover { background: #1557b0; }
         .btn-green { background: #34a853; }
         .btn-green:hover { background: #2d8e47; }
-        .btn-purple { background: #673ab7; margin-top: 10px; }
+        .btn-purple { background: #673ab7; margin-top: 10px; display: none; }
         .btn-purple:hover { background: #512da8; }
         .btn-red { background: #ea4335; margin-top: 15px; }
         .link { color: #1a73e8; cursor: pointer; font-size: 13px; margin-top: 12px; display: block; }
@@ -27,7 +27,6 @@
         .success { color: #2e7d32; }
         .error { color: #d32f2f; }
         
-        /* Table Styles */
         .history-list { text-align: left; margin-top: 15px; max-height: 200px; overflow-y: auto; border-top: 1px solid #eee; padding-top: 10px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
@@ -61,7 +60,7 @@
             <p style="font-size: 13px; color: #666;">Roll No: <span id="userRoll"></span></p>
             
             <button class="btn-green" onclick="markAttendance()">📍 Mark My Attendance (GPS)</button>
-            <button class="btn-purple" onclick="fetchAllAttendance()">📋 View All Class Attendance</button>
+            <button class="btn-purple" id="adminBtn" onclick="fetchAllAttendance()">📋 View All Class Attendance</button>
             <button class="btn-red" onclick="logout()">Logout</button>
 
             <div class="history-list">
@@ -161,6 +160,14 @@
             document.getElementById('welcomeMsg').innerText = `Hello, ${user.name}! 👋`;
             document.getElementById('userRoll').innerText = user.rollNo;
             showMsg('');
+
+            // ONLY ADMIN GETS THE ALL CLASS ATTENDANCE BUTTON
+            if (user.role === 'admin' || user.rollNo.toUpperCase() === '24CSE48') {
+                document.getElementById('adminBtn').style.display = 'block';
+            } else {
+                document.getElementById('adminBtn').style.display = 'none';
+            }
+
             fetchHistory(user.rollNo);
         }
 
@@ -230,12 +237,17 @@
         }
 
         async function fetchAllAttendance() {
+            const user = JSON.parse(localStorage.getItem('user'));
             document.getElementById('listTitle').innerText = "All Students Attendance List:";
             try {
-                const res = await fetch(`${API_BASE}/api/attendance/all`);
+                const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
                 const data = await res.json();
-                const logsDiv = document.getElementById('historyLogs');
 
+                if (!res.ok) {
+                    return showMsg(data.error || 'Access Denied', true);
+                }
+
+                const logsDiv = document.getElementById('historyLogs');
                 if (data.length === 0) {
                     logsDiv.innerHTML = '<p style="font-size:12px; color:#888;">No attendance records found.</p>';
                     return;
