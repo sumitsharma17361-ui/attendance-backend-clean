@@ -10,6 +10,12 @@
         .card { background: white; padding: 25px; border-radius: 12px; width: 100%; max-width: 380px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); text-align: center; }
         h2 { color: #1a73e8; margin-top: 0; }
         input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; outline: none; }
+        
+        /* Password Field Wrapper with Eye Icon */
+        .password-wrapper { position: relative; width: 100%; }
+        .password-wrapper input { padding-right: 40px; }
+        .eye-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; user-select: none; font-size: 18px; }
+        
         button { width: 100%; padding: 12px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; margin-top: 10px; }
         button:hover { background: #1557b0; }
         .btn-green { background: #34a853; }
@@ -34,7 +40,12 @@
                 <input type="text" id="regName" placeholder="Full Name">
             </div>
             <input type="text" id="rollNo" placeholder="Roll Number">
-            <input type="password" id="password" placeholder="Password">
+            
+            <!-- Password Field with Eye Toggle -->
+            <div class="password-wrapper">
+                <input type="password" id="password" placeholder="Password">
+                <span class="eye-icon" id="toggleEye" onclick="togglePassword()">👁️</span>
+            </div>
             
             <button id="authBtn" onclick="handleAuth()">Login</button>
             <span class="link" id="toggleLink" onclick="toggleMode()">New Student? Register Here</span>
@@ -58,9 +69,22 @@
     </div>
 
     <script>
-        // Set Render Backend URL
-        const API_BASE = window.location.origin; // Render will auto host or set your Render URL
+        // Render Backend Web Service ka exact URL yahan set kar diya hai
+        const API_BASE = "https://attendance-backend-clean.onrender.com"; 
         let isRegistering = false;
+
+        // Toggle Password Visibility (Eye Icon Logic)
+        function togglePassword() {
+            const passInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('toggleEye');
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                eyeIcon.innerText = '🙈';
+            } else {
+                passInput.type = 'password';
+                eyeIcon.innerText = '👁️';
+            }
+        }
 
         function showMsg(text, isError = false) {
             const msgEl = document.getElementById('msg');
@@ -82,35 +106,45 @@
             
             if (!rollNo || !password) return showMsg('Please fill all fields!', true);
 
+            showMsg('Connecting...');
+
             if (isRegistering) {
                 const name = document.getElementById('regName').value.trim();
                 if (!name) return showMsg('Please enter your full name!', true);
 
-                const res = await fetch(`${API_BASE}/api/auth/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, rollNo, password })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    showMsg('Registration successful! Please Login.');
-                    toggleMode();
-                } else {
-                    showMsg(data.error, true);
+                try {
+                    const res = await fetch(`${API_BASE}/api/auth/register`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, rollNo, password })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        showMsg('Registration successful! Please Login.');
+                        toggleMode();
+                    } else {
+                        showMsg(data.error || 'Registration failed', true);
+                    }
+                } catch (err) {
+                    showMsg('Server connection error. Please try again.', true);
                 }
             } else {
-                const res = await fetch(`${API_BASE}/api/auth/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ rollNo, password })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    localStorage.setItem('token', data.token);
-                    loadDashboard();
-                } else {
-                    showMsg(data.error, true);
+                try {
+                    const res = await fetch(`${API_BASE}/api/auth/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ rollNo, password })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        localStorage.setItem('user', JSON.stringify(data.user));
+                        localStorage.setItem('token', data.token);
+                        loadDashboard();
+                    } else {
+                        showMsg(data.error || 'Login failed', true);
+                    }
+                } catch (err) {
+                    showMsg('Server connection error. Please try again.', true);
                 }
             }
         }
@@ -136,45 +170,53 @@
 
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 const user = JSON.parse(localStorage.getItem('user'));
-                const res = await fetch(`${API_BASE}/api/attendance/mark`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        rollNo: user.rollNo,
-                        name: user.name,
-                        latitude: pos.coords.latitude,
-                        longitude: pos.coords.longitude
-                    })
-                });
+                try {
+                    const res = await fetch(`${API_BASE}/api/attendance/mark`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            rollNo: user.rollNo,
+                            name: user.name,
+                            latitude: pos.coords.latitude,
+                            longitude: pos.coords.longitude
+                        })
+                    });
 
-                const data = await res.json();
-                if (res.ok) {
-                    showMsg(data.message);
-                    fetchHistory(user.rollNo);
-                } else {
-                    showMsg(data.error, true);
+                    const data = await res.json();
+                    if (res.ok) {
+                        showMsg(data.message);
+                        fetchHistory(user.rollNo);
+                    } else {
+                        showMsg(data.error, true);
+                    }
+                } catch (err) {
+                    showMsg('Error submitting attendance!', true);
                 }
             }, (err) => {
-                showMsg('Location access denied! Please allow location permissions.', true);
+                showMsg('Location access denied! Please allow GPS permissions.', true);
             });
         }
 
         async function fetchHistory(rollNo) {
-            const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
-            const data = await res.json();
-            const logsDiv = document.getElementById('historyLogs');
+            try {
+                const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
+                const data = await res.json();
+                const logsDiv = document.getElementById('historyLogs');
 
-            if (data.length === 0) {
-                logsDiv.innerHTML = '<p style="font-size:12px; color:#888;">No attendance marked yet.</p>';
-                return;
+                if (data.length === 0) {
+                    logsDiv.innerHTML = '<p style="font-size:12px; color:#888;">No attendance marked yet.</p>';
+                    return;
+                }
+
+                logsDiv.innerHTML = data.map(item => `
+                    <div class="history-item">
+                        <span><b>${item.date}</b> (${item.subject})</span>
+                        <span style="color:green; font-weight:bold;">${item.status}</span>
+                    </div>
+                `).join('');
+            } catch(err) {
+                console.log(err);
             }
-
-            logsDiv.innerHTML = data.map(item => `
-                <div class="history-item">
-                    <span><b>${item.date}</b> (${item.subject})</span>
-                    <span style="color:green; font-weight:bold;">${item.status}</span>
-                </div>
-            `).join('');
         }
 
         function logout() {
@@ -187,5 +229,4 @@
         }
     </script>
 </body>
-  </html>
-
+</html>
