@@ -1,233 +1,186 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>College Attendance Portal</title>
-    <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 15px; }
-        .card { background: white; padding: 25px; border-radius: 12px; width: 100%; max-width: 380px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); text-align: center; }
-        h2 { color: #1a73e8; margin-top: 0; }
-        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; outline: none; }
-        
-        /* Password Field Wrapper with Eye Icon */
-        .password-wrapper { position: relative; width: 100%; }
-        .password-wrapper input { padding-right: 40px; }
-        .eye-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; user-select: none; font-size: 18px; }
-        
-        button { width: 100%; padding: 12px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; margin-top: 10px; }
-        button:hover { background: #1557b0; }
-        .btn-green { background: #34a853; }
-        .btn-green:hover { background: #2d8e47; }
-        .btn-red { background: #ea4335; margin-top: 15px; }
-        .link { color: #1a73e8; cursor: pointer; font-size: 13px; margin-top: 12px; display: block; }
-        #msg { margin-top: 15px; font-weight: 600; font-size: 14px; word-wrap: break-word; }
-        .success { color: #2e7d32; }
-        .error { color: #d32f2f; }
-        .history-list { text-align: left; margin-top: 15px; max-height: 150px; overflow-y: auto; border-top: 1px solid #eee; padding-top: 10px; }
-        .history-item { font-size: 13px; padding: 6px 0; border-bottom: 1px solid #f9f9f9; display: flex; justify-content: space-between; }
-    </style>
-</head>
-<body>
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
-    <div class="card">
-        <h2>🎓 College Portal</h2>
+const app = express();
+app.use(express.json());
+app.use(cors());
 
-        <!-- AUTH BOX -->
-        <div id="auth-box">
-            <div id="register-fields" style="display: none;">
-                <input type="text" id="regName" placeholder="Full Name">
-            </div>
-            <input type="text" id="rollNo" placeholder="Roll Number">
-            
-            <!-- Password Field with Eye Toggle -->
-            <div class="password-wrapper">
-                <input type="password" id="password" placeholder="Password">
-                <span class="eye-icon" id="toggleEye" onclick="togglePassword()">👁️</span>
-            </div>
-            
-            <button id="authBtn" onclick="handleAuth()">Login</button>
-            <span class="link" id="toggleLink" onclick="toggleMode()">New Student? Register Here</span>
-        </div>
+const MONGO_URI = process.env.MONGO_URI;
+const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
 
-        <!-- DASHBOARD BOX -->
-        <div id="dash-box" style="display: none;">
-            <h3 id="welcomeMsg">Welcome!</h3>
-            <p style="font-size: 13px; color: #666;">Roll No: <span id="userRoll"></span></p>
-            
-            <button class="btn-green" onclick="markAttendance()">📍 Mark Attendance (GPS)</button>
-            <button class="btn-red" onclick="logout()">Logout</button>
+// ---------------- DATABASE CONNECTION ----------------
+if (MONGO_URI) {
+  mongoose.connect(MONGO_URI)
+    .then(() => console.log('SUCCESS: MongoDB Connected Successfully!'))
+    .catch(err => console.log('DB CONNECTION ERROR:', err.message));
+} else {
+  console.log('MONGO_URI missing in Environment Variables!');
+}
 
-            <div class="history-list">
-                <h4>Recent Attendance Logs:</h4>
-                <div id="historyLogs">Loading logs...</div>
-            </div>
-        </div>
+// ---------------- DATABASE SCHEMAS ----------------
 
-        <p id="msg"></p>
-    </div>
+// 1. User Schema (Students / Faculty)
+const userSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  rollNo: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  role: { type: String, default: 'student' }
+}, { timestamps: true });
 
-    <script>
-        // Render Backend Web Service ka exact URL yahan set kar diya hai
-        const API_BASE = "https://attendance-backend-clean.onrender.com"; 
-        let isRegistering = false;
+// 2. Attendance Schema
+const attendanceSchema = new mongoose.Schema({
+  rollNo: { type: String, required: true },
+  studentName: { type: String, required: true },
+  subject: { type: String, default: 'General Attendance' },
+  date: { type: String, required: true }, // Format: YYYY-MM-DD
+  status: { type: String, enum: ['Present', 'Absent'], default: 'Present' },
+  location: {
+    latitude: Number,
+    longitude: Number
+  }
+}, { timestamps: true });
 
-        // Toggle Password Visibility (Eye Icon Logic)
-        function togglePassword() {
-            const passInput = document.getElementById('password');
-            const eyeIcon = document.getElementById('toggleEye');
-            if (passInput.type === 'password') {
-                passInput.type = 'text';
-                eyeIcon.innerText = '🙈';
-            } else {
-                passInput.type = 'password';
-                eyeIcon.innerText = '👁️';
-            }
-        }
+const User = mongoose.model('User', userSchema);
+const Attendance = mongoose.model('Attendance', attendanceSchema);
 
-        function showMsg(text, isError = false) {
-            const msgEl = document.getElementById('msg');
-            msgEl.innerText = text;
-            msgEl.className = isError ? 'error' : 'success';
-        }
+// ---------------- API ENDPOINTS ----------------
 
-        function toggleMode() {
-            isRegistering = !isRegistering;
-            document.getElementById('register-fields').style.display = isRegistering ? 'block' : 'none';
-            document.getElementById('authBtn').innerText = isRegistering ? 'Register' : 'Login';
-            document.getElementById('toggleLink').innerText = isRegistering ? 'Already registered? Login' : 'New Student? Register Here';
-            showMsg('');
-        }
+// Base Test Route
+app.get('/', (req, res) => {
+  res.send('College Attendance Portal API is Live!');
+});
 
-        async function handleAuth() {
-            const rollNo = document.getElementById('rollNo').value.trim();
-            const password = document.getElementById('password').value.trim();
-            
-            if (!rollNo || !password) return showMsg('Please fill all fields!', true);
+// 1. Student Registration API
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { name, rollNo, password } = req.body;
 
-            showMsg('Connecting...');
+    if (!name || !rollNo || !password) {
+      return res.status(400).json({ error: 'All fields are required!' });
+    }
 
-            if (isRegistering) {
-                const name = document.getElementById('regName').value.trim();
-                if (!name) return showMsg('Please enter your full name!', true);
+    let user = await User.findOne({ rollNo });
+    if (user) {
+      return res.status(400).json({ error: 'Roll number is already registered!' });
+    }
 
-                try {
-                    const res = await fetch(`${API_BASE}/api/auth/register`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name, rollNo, password })
-                    });
-                    const data = await res.json();
-                    if (res.ok) {
-                        showMsg('Registration successful! Please Login.');
-                        toggleMode();
-                    } else {
-                        showMsg(data.error || 'Registration failed', true);
-                    }
-                } catch (err) {
-                    showMsg('Server connection error. Please try again.', true);
-                }
-            } else {
-                try {
-                    const res = await fetch(`${API_BASE}/api/auth/login`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ rollNo, password })
-                    });
-                    const data = await res.json();
-                    if (res.ok) {
-                        localStorage.setItem('user', JSON.stringify(data.user));
-                        localStorage.setItem('token', data.token);
-                        loadDashboard();
-                    } else {
-                        showMsg(data.error || 'Login failed', true);
-                    }
-                } catch (err) {
-                    showMsg('Server connection error. Please try again.', true);
-                }
-            }
-        }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user = new User({ name, rollNo, password: hashedPassword });
+    await user.save();
 
-        function loadDashboard() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (!user) return;
+    res.status(201).json({ message: 'Student registered successfully!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-            document.getElementById('auth-box').style.display = 'none';
-            document.getElementById('dash-box').style.display = 'block';
-            document.getElementById('welcomeMsg').innerText = `Hello, ${user.name}! 👋`;
-            document.getElementById('userRoll').innerText = user.rollNo;
-            showMsg('');
-            fetchHistory(user.rollNo);
-        }
+// 2. Student / Admin Login API
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { rollNo, password } = req.body;
 
-        function markAttendance() {
-            if (!navigator.geolocation) {
-                return showMsg('Geolocation is not supported by your device!', true);
-            }
+    const user = await User.findOne({ rollNo });
+    if (!user) {
+      return res.status(400).json({ error: 'User not found with this Roll Number!' });
+    }
 
-            showMsg('Fetching GPS Location...');
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ error: 'Invalid password!' });
+    }
 
-            navigator.geolocation.getCurrentPosition(async (pos) => {
-                const user = JSON.parse(localStorage.getItem('user'));
-                try {
-                    const res = await fetch(`${API_BASE}/api/attendance/mark`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            rollNo: user.rollNo,
-                            name: user.name,
-                            latitude: pos.coords.latitude,
-                            longitude: pos.coords.longitude
-                        })
-                    });
+    const token = jwt.sign(
+      { id: user._id, rollNo: user.rollNo, name: user.name, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
 
-                    const data = await res.json();
-                    if (res.ok) {
-                        showMsg(data.message);
-                        fetchHistory(user.rollNo);
-                    } else {
-                        showMsg(data.error, true);
-                    }
-                } catch (err) {
-                    showMsg('Error submitting attendance!', true);
-                }
-            }, (err) => {
-                showMsg('Location access denied! Please allow GPS permissions.', true);
-            });
-        }
+    res.json({
+      message: 'Login successful!',
+      token,
+      user: { name: user.name, rollNo: user.rollNo, role: user.role }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-        async function fetchHistory(rollNo) {
-            try {
-                const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
-                const data = await res.json();
-                const logsDiv = document.getElementById('historyLogs');
+// 3. Mark Attendance API (Geo-fencing Included)
+app.post('/api/attendance/mark', async (req, res) => {
+  try {
+    const { rollNo, name, subject, latitude, longitude } = req.body;
 
-                if (data.length === 0) {
-                    logsDiv.innerHTML = '<p style="font-size:12px; color:#888;">No attendance marked yet.</p>';
-                    return;
-                }
+    if (!rollNo || !latitude || !longitude) {
+      return res.status(400).json({ error: 'Roll number and Location are required!' });
+    }
 
-                logsDiv.innerHTML = data.map(item => `
-                    <div class="history-item">
-                        <span><b>${item.date}</b> (${item.subject})</span>
-                        <span style="color:green; font-weight:bold;">${item.status}</span>
-                    </div>
-                `).join('');
-            } catch(err) {
-                console.log(err);
-            }
-        }
+    // --- GEO-FENCING LOGIC (Campus Location Setup) ---
+    const COLLEGE_LAT = 28.5355; 
+    const COLLEGE_LNG = 77.3910;
+    const MAX_ALLOWED_DISTANCE_KM = 0.5; // 500 Meters radius
 
-        function logout() {
-            localStorage.clear();
-            location.reload();
-        }
+    function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+      const R = 6371; // Earth's Radius in KM
+      const dLat = (lat2 - lat1) * (Math.PI / 180);
+      const dLon = (lon2 - lon1) * (Math.PI / 180);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
 
-        if (localStorage.getItem('user')) {
-            loadDashboard();
-        }
-    </script>
-</body>
-</html>
-          
+    const distance = getDistanceFromLatLonInKm(latitude, longitude, COLLEGE_LAT, COLLEGE_LNG);
+
+    if (distance > MAX_ALLOWED_DISTANCE_KM) {
+      return res.status(400).json({ 
+        error: `Attendance Failed: Outside Campus! (${(distance * 1000).toFixed(0)} meters away)` 
+      });
+    }
+
+    const todayDate = new Date().toISOString().split('T')[0];
+
+    // Check if already marked today
+    const existingRecord = await Attendance.findOne({
+      rollNo,
+      subject: subject || 'General Attendance',
+      date: todayDate
+    });
+
+    if (existingRecord) {
+      return res.status(400).json({ error: 'Attendance already marked for today!' });
+    }
+
+    const newAttendance = new Attendance({
+      rollNo,
+      studentName: name || 'Student',
+      subject: subject || 'General Attendance',
+      date: todayDate,
+      status: 'Present',
+      location: { latitude, longitude }
+    });
+
+    await newAttendance.save();
+    res.status(201).json({ message: 'Attendance Marked Successfully!', attendance: newAttendance });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 4. Get Attendance History API
+app.get('/api/attendance/history/:rollNo', async (req, res) => {
+  try {
+    const { rollNo } = req.params;
+    const history = await Attendance.find({ rollNo }).sort({ createdAt: -1 });
+    res.json(history);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
