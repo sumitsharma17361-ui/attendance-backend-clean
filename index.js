@@ -11,6 +11,9 @@ app.use(cors());
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
 
+// ADMIN ROLL NUMBERS LIST
+const ADMIN_ROLL_NUMBERS = ['24CSE48'];
+
 // ---------------- DATABASE CONNECTION ----------------
 if (MONGO_URI) {
   mongoose.connect(MONGO_URI)
@@ -21,7 +24,6 @@ if (MONGO_URI) {
 }
 
 // ---------------- DATABASE SCHEMAS ----------------
-
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   rollNo: { type: String, required: true, unique: true },
@@ -57,14 +59,21 @@ app.post('/api/auth/register', async (req, res) => {
     if (!name || !rollNo || !password) {
       return res.status(400).json({ error: 'All fields are required!' });
     }
-    let user = await User.findOne({ rollNo });
+
+    const cleanRollNo = rollNo.trim().toUpperCase();
+
+    let user = await User.findOne({ rollNo: cleanRollNo });
     if (user) {
       return res.status(400).json({ error: 'Roll number is already registered!' });
     }
+
     const hashedPassword = await bcrypt.hash(password, 10);
-    user = new User({ name, rollNo, password: hashedPassword });
+    const role = ADMIN_ROLL_NUMBERS.includes(cleanRollNo) ? 'admin' : 'student';
+
+    user = new User({ name, rollNo: cleanRollNo, password: hashedPassword, role });
     await user.save();
-    res.status(201).json({ message: 'Student registered successfully!' });
+
+    res.status(201).json({ message: 'Registration successful!' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -74,23 +83,30 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { rollNo, password } = req.body;
-    const user = await User.findOne({ rollNo });
+    const cleanRollNo = rollNo.trim().toUpperCase();
+
+    const user = await User.findOne({ rollNo: cleanRollNo });
     if (!user) {
-      return res.status(400).json({ error: 'User not found with this Roll Number!' });
+      return res.status(400).json({ error: 'User not found!' });
     }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ error: 'Invalid password!' });
     }
+
+    const role = ADMIN_ROLL_NUMBERS.includes(cleanRollNo) ? 'admin' : user.role;
+
     const token = jwt.sign(
-      { id: user._id, rollNo: user.rollNo, name: user.name, role: user.role },
+      { id: user._id, rollNo: user.rollNo, name: user.name, role },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
+
     res.json({
       message: 'Login successful!',
       token,
-      user: { name: user.name, rollNo: user.rollNo, role: user.role }
+      user: { name: user.name, rollNo: user.rollNo, role }
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -130,9 +146,10 @@ app.post('/api/attendance/mark', async (req, res) => {
     }
 
     const todayDate = new Date().toISOString().split('T')[0];
+    const cleanRollNo = rollNo.trim().toUpperCase();
 
     const existingRecord = await Attendance.findOne({
-      rollNo,
+      rollNo: cleanRollNo,
       subject: subject || 'General Attendance',
       date: todayDate
     });
@@ -142,7 +159,7 @@ app.post('/api/attendance/mark', async (req, res) => {
     }
 
     const newAttendance = new Attendance({
-      rollNo,
+      rollNo: cleanRollNo,
       studentName: name || 'Student',
       subject: subject || 'General Attendance',
       date: todayDate,
@@ -160,17 +177,23 @@ app.post('/api/attendance/mark', async (req, res) => {
 // 4. Individual Student History API
 app.get('/api/attendance/history/:rollNo', async (req, res) => {
   try {
-    const { rollNo } = req.params;
-    const history = await Attendance.find({ rollNo }).sort({ createdAt: -1 });
+    const cleanRollNo = req.params.rollNo.trim().toUpperCase();
+    const history = await Attendance.find({ rollNo: cleanRollNo }).sort({ createdAt: -1 });
     res.json(history);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// 5. ALL STUDENTS ATTENDANCE (ADMIN VIEW API)
-app.get('/api/attendance/all', async (req, res) => {
+// 5. SECURED ALL ATTENDANCE API (ONLY FOR ADMINS)
+app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
   try {
+    const requester = req.params.requesterRollNo.trim().toUpperCase();
+
+    if (!ADMIN_ROLL_NUMBERS.includes(requester)) {
+      return res.status(403).json({ error: 'Access Denied: Only Admin can view all attendance!' });
+    }
+
     const allRecords = await Attendance.find().sort({ createdAt: -1 });
     res.json(allRecords);
   } catch (err) {
