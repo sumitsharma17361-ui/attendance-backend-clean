@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College Attendance Portal</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 15px; }
+        .card { background: white; padding: 25px; border-radius: 12px; width: 100%; max-width: 380px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); text-align: center; }
+        h2 { color: #1a73e8; margin-top: 0; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; outline: none; }
+        button { width: 100%; padding: 12px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; margin-top: 10px; }
+        button:hover { background: #1557b0; }
+        .btn-green { background: #34a853; }
+        .btn-green:hover { background: #2d8e47; }
+        .btn-red { background: #ea4335; margin-top: 15px; }
+        .link { color: #1a73e8; cursor: pointer; font-size: 13px; margin-top: 12px; display: block; }
+        #msg { margin-top: 15px; font-weight: 600; font-size: 14px; word-wrap: break-word; }
+        .success { color: #2e7d32; }
+        .error { color: #d32f2f; }
+        .history-list { text-align: left; margin-top: 15px; max-height: 150px; overflow-y: auto; border-top: 1px solid #eee; padding-top: 10px; }
+        .history-item { font-size: 13px; padding: 6px 0; border-bottom: 1px solid #f9f9f9; display: flex; justify-content: space-between; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>🎓 College Portal</h2>
+
+        <!-- AUTH BOX -->
+        <div id="auth-box">
+            <div id="register-fields" style="display: none;">
+                <input type="text" id="regName" placeholder="Full Name">
+            </div>
+            <input type="text" id="rollNo" placeholder="Roll Number">
+            <input type="password" id="password" placeholder="Password">
+            
+            <button id="authBtn" onclick="handleAuth()">Login</button>
+            <span class="link" id="toggleLink" onclick="toggleMode()">New Student? Register Here</span>
+        </div>
+
+        <!-- DASHBOARD BOX -->
+        <div id="dash-box" style="display: none;">
+            <h3 id="welcomeMsg">Welcome!</h3>
+            <p style="font-size: 13px; color: #666;">Roll No: <span id="userRoll"></span></p>
+            
+            <button class="btn-green" onclick="markAttendance()">📍 Mark Attendance (GPS)</button>
+            <button class="btn-red" onclick="logout()">Logout</button>
+
+            <div class="history-list">
+                <h4>Recent Attendance Logs:</h4>
+                <div id="historyLogs">Loading logs...</div>
+            </div>
+        </div>
+
+        <p id="msg"></p>
+    </div>
+
+    <script>
+        // Set Render Backend URL
+        const API_BASE = window.location.origin; // Render will auto host or set your Render URL
+        let isRegistering = false;
+
+        function showMsg(text, isError = false) {
+            const msgEl = document.getElementById('msg');
+            msgEl.innerText = text;
+            msgEl.className = isError ? 'error' : 'success';
+        }
+
+        function toggleMode() {
+            isRegistering = !isRegistering;
+            document.getElementById('register-fields').style.display = isRegistering ? 'block' : 'none';
+            document.getElementById('authBtn').innerText = isRegistering ? 'Register' : 'Login';
+            document.getElementById('toggleLink').innerText = isRegistering ? 'Already registered? Login' : 'New Student? Register Here';
+            showMsg('');
+        }
+
+        async function handleAuth() {
+            const rollNo = document.getElementById('rollNo').value.trim();
+            const password = document.getElementById('password').value.trim();
+            
+            if (!rollNo || !password) return showMsg('Please fill all fields!', true);
+
+            if (isRegistering) {
+                const name = document.getElementById('regName').value.trim();
+                if (!name) return showMsg('Please enter your full name!', true);
+
+                const res = await fetch(`${API_BASE}/api/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, rollNo, password })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showMsg('Registration successful! Please Login.');
+                    toggleMode();
+                } else {
+                    showMsg(data.error, true);
+                }
+            } else {
+                const res = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rollNo, password })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    localStorage.setItem('token', data.token);
+                    loadDashboard();
+                } else {
+                    showMsg(data.error, true);
+                }
+            }
+        }
+
+        function loadDashboard() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user) return;
+
+            document.getElementById('auth-box').style.display = 'none';
+            document.getElementById('dash-box').style.display = 'block';
+            document.getElementById('welcomeMsg').innerText = `Hello, ${user.name}! 👋`;
+            document.getElementById('userRoll').innerText = user.rollNo;
+            showMsg('');
+            fetchHistory(user.rollNo);
+        }
+
+        function markAttendance() {
+            if (!navigator.geolocation) {
+                return showMsg('Geolocation is not supported by your device!', true);
+            }
+
+            showMsg('Fetching GPS Location...');
+
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                const user = JSON.parse(localStorage.getItem('user'));
+                const res = await fetch(`${API_BASE}/api/attendance/mark`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        rollNo: user.rollNo,
+                        name: user.name,
+                        latitude: pos.coords.latitude,
+                        longitude: pos.coords.longitude
+                    })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    showMsg(data.message);
+                    fetchHistory(user.rollNo);
+                } else {
+                    showMsg(data.error, true);
+                }
+            }, (err) => {
+                showMsg('Location access denied! Please allow location permissions.', true);
+            });
+        }
+
+        async function fetchHistory(rollNo) {
+            const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
+            const data = await res.json();
+            const logsDiv = document.getElementById('historyLogs');
+
+            if (data.length === 0) {
+                logsDiv.innerHTML = '<p style="font-size:12px; color:#888;">No attendance marked yet.</p>';
+                return;
+            }
+
+            logsDiv.innerHTML = data.map(item => `
+                <div class="history-item">
+                    <span><b>${item.date}</b> (${item.subject})</span>
+                    <span style="color:green; font-weight:bold;">${item.status}</span>
+                </div>
+            `).join('');
+        }
+
+        function logout() {
+            localStorage.clear();
+            location.reload();
+        }
+
+        if (localStorage.getItem('user')) {
+            loadDashboard();
+        }
+    </script>
+</body>
+  </html>
+
