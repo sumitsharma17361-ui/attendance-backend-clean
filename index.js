@@ -58,12 +58,7 @@ const Attendance = mongoose.model('Attendance', attendanceSchema);
 // ---------------- API ENDPOINTS ----------------
 
 app.get('/', (req, res) => {
-  res.send('B. M. Group Of Institutions - Professional Enterprise Portal Active!');
-});
-
-// Time-Table API
-app.get('/api/timetable', (req, res) => {
-  res.json(TIME_TABLE);
+  res.send('B. M. Group Of Institutions - Enterprise Portal Active!');
 });
 
 // Register API
@@ -142,8 +137,7 @@ app.post('/api/attendance/mark', async (req, res) => {
     const { rollNo, name, subject, latitude, longitude } = req.body;
 
     const today = new Date();
-    const dayOfWeek = today.getDay();
-    if (dayOfWeek === 0 || dayOfWeek === 6) {
+    if (today.getDay() === 0 || today.getDay() === 6) {
       return res.status(400).json({ error: 'College is OFF today (Weekend)!' });
     }
 
@@ -253,6 +247,46 @@ app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
 
     const allRecords = await Attendance.find().sort({ createdAt: -1 });
     res.json(allRecords);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ADMIN UPDATE ATTENDANCE STATUS
+app.put('/api/attendance/update/:id', async (req, res) => {
+  try {
+    const { requesterRollNo, status } = req.body;
+    const cleanRequester = requesterRollNo ? requesterRollNo.trim().toUpperCase() : '';
+
+    if (!ADMIN_ROLL_NUMBERS.includes(cleanRequester)) {
+      return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    }
+
+    const updated = await Attendance.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    );
+
+    if (!updated) return res.status(404).json({ error: 'Record not found!' });
+    res.json({ message: 'Attendance status updated successfully!', updated });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ADMIN DELETE ATTENDANCE RECORD
+app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
+  try {
+    const cleanRequester = req.params.requesterRollNo.trim().toUpperCase();
+    if (!ADMIN_ROLL_NUMBERS.includes(cleanRequester)) {
+      return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    }
+
+    const deleted = await Attendance.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'Record not found!' });
+
+    res.json({ message: 'Attendance record deleted successfully!' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
