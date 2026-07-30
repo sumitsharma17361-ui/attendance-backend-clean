@@ -42,6 +42,7 @@
         #msg { margin-top: 10px; font-size: 12px; text-align: center; padding: 8px; border-radius: 8px; display: none; }
         .msg-success { background: #e6f4ea; color: #137333; display: block !important; }
         .msg-error { background: #fce8e6; color: #c5221f; display: block !important; }
+        .admin-box { background: #f1f3f4; padding: 10px; border-radius: 10px; margin-top: 10px; border: 1px solid #e0e0e0; }
     </style>
 </head>
 <body>
@@ -126,20 +127,28 @@
 
                 <!-- TAB 2: ADMIN MANAGEMENT -->
                 <div id="adminTab" style="display:none;">
-                    <button class="btn btn-success" onclick="exportMonthlyGridCSV()">📥 Download Monthly Attendance Grid (Excel)</button>
+                    <button class="btn btn-success" onclick="exportMonthlyGridCSV()">📥 Download July Attendance Grid (Excel)</button>
                     
+                    <!-- ADMIN MANUAL BACKDATE ATTENDANCE TOOL (FOR FRIENDS OUTSIDE CAMPUS) -->
+                    <div class="admin-box">
+                        <span style="font-size:11px; font-weight:bold; color:var(--primary); display:block; margin-bottom:5px;">⚡ Admin Manual Backdate Attendance (No GPS):</span>
+                        <input type="text" id="manualRoll" placeholder="Friend Roll No (e.g. 24CSE14)" style="padding:6px; margin-bottom:5px;">
+                        <input type="date" id="manualDate" value="2026-07-29" style="padding:6px; margin-bottom:5px;">
+                        <button class="btn btn-primary" onclick="markManualAttendance()" style="margin-top:0; padding:8px;">✅ Mark Attendance for Selected Date</button>
+                    </div>
+
                     <!-- ADMIN DECLARE HOLIDAY SECTION -->
-                    <div style="background:#f1f3f4; padding:10px; border-radius:10px; margin-top:10px;">
-                        <span style="font-size:11px; font-weight:bold; display:block; margin-bottom:5px;">Declare Official College Holiday:</span>
+                    <div class="admin-box">
+                        <span style="font-size:11px; font-weight:bold; display:block; margin-bottom:5px;">🏖️ Declare Official College Holiday:</span>
                         <input type="date" id="holidayDate" style="padding:6px; margin-bottom:5px;">
-                        <input type="text" id="holidayReason" placeholder="Reason (e.g. Festival/Diwali)" style="padding:6px; margin-bottom:5px;">
-                        <button class="btn btn-warning" onclick="declareHoliday()" style="margin-top:0; padding:8px;">🏖️ Mark Selected Date as Holiday</button>
+                        <input type="text" id="holidayReason" placeholder="Reason (e.g. Rainy Day/Diwali)" style="padding:6px; margin-bottom:5px;">
+                        <button class="btn btn-warning" onclick="declareHoliday()" style="margin-top:0; padding:8px;">Mark Date as Holiday</button>
                     </div>
 
                     <button class="btn btn-outline" onclick="fetchAllAttendance()" style="margin-top:10px;">🔄 Refresh Records</button>
                     
                     <div style="margin-top:10px;">
-                        <h4 style="font-size:11px; color:var(--text-muted);">Manage Student Attendance Records:</h4>
+                        <h4 style="font-size:11px; color:var(--text-muted);">Manage Attendance Records:</h4>
                         <div class="table-container">
                             <table id="allHistoryTable">
                                 <thead><tr><th>Roll</th><th>Name</th><th>Date</th><th>Attended</th><th>Actions</th></tr></thead>
@@ -235,6 +244,31 @@
             }, () => showMsg('GPS Denied!', true));
         }
 
+        // ADMIN MANUAL BACKDATE MARK FUNCTION FOR FRIENDS
+        async function markManualAttendance() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            const studentRollNo = document.getElementById('manualRoll').value.trim();
+            const date = document.getElementById('manualDate').value;
+
+            if (!studentRollNo || !date) return showMsg('Roll Number and Date required!', true);
+
+            showMsg(`Adding manual attendance for ${studentRollNo} on ${date}...`);
+
+            const res = await fetch(`${API_BASE}/api/admin/manual-attendance`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ requesterRollNo: user.rollNo, studentRollNo, date })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                showMsg(data.message);
+                fetchAllAttendance();
+            } else {
+                showMsg(data.error, true);
+            }
+        }
+
         async function declareHoliday() {
             const user = JSON.parse(localStorage.getItem('user'));
             const date = document.getElementById('holidayDate').value;
@@ -267,8 +301,9 @@
             if (data.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No records</td></tr>';
             
             tbody.innerHTML = data.map(i => {
-                const d = new Date(i.date);
-                const dayStr = DAY_NAMES[d.getDay()];
+                const parts = i.date.split('-');
+                const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+                const dayStr = DAY_NAMES[dateObj.getDay()];
                 return `<tr><td>${i.date}</td><td><b>${dayStr}</b></td><td>${i.subject}</td><td><span class="badge">${i.status}</span></td></tr>`;
             }).join('');
         }
@@ -276,7 +311,6 @@
         async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             
-            // Fetch Holidays List first
             const hRes = await fetch(`${API_BASE}/api/holidays`);
             globalHolidays = await hRes.json();
 
@@ -285,7 +319,6 @@
             if (!res.ok) return showMsg(data.error, true);
             globalAllRecords = data;
 
-            // GROUP BY ROLL NO & DATE
             groupedAdminRecords = {};
             data.forEach(r => {
                 const key = `${r.rollNo}_${r.date}`;
@@ -296,7 +329,6 @@
                 groupedAdminRecords[key].count++;
             });
 
-            // SORT BY ROLL NUMBER NATURAL ORDER (24CSE14 -> 24CSE15 -> 24CSE48)
             const sortedArray = Object.values(groupedAdminRecords).sort((a, b) => {
                 return a.roll.localeCompare(b.roll, undefined, { numeric: true, sensitivity: 'base' });
             });
@@ -343,7 +375,6 @@
             URL.revokeObjectURL(url);
         }
 
-        // PERFECT STUDENT CSV EXPORT
         function exportStudentCSV() {
             if (globalMyRecords.length === 0) return alert("No records found!");
             const grouped = {};
@@ -354,7 +385,8 @@
 
             let csv = "Date,Day,Total Lectures Attended,Status\n";
             Object.keys(grouped).forEach(d => {
-                const dateObj = new Date(d);
+                const parts = d.split('-');
+                const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
                 const dayStr = DAY_NAMES[dateObj.getDay()];
                 csv += `"${d}","${dayStr}","${grouped[d]} Lectures","Present"\n`;
             });
@@ -363,46 +395,47 @@
             downloadFile(csv, `My_Attendance_Report.csv`);
         }
 
-        // PERFECT ADMIN MONTHLY GRID CSV EXPORT (OFF / HOLIDAYS EXCLUDED)
+        // --- FIXED ACCURATE JULY GRID CSV (CLASSES START 15 JULY) ---
         function exportMonthlyGridCSV() {
             if (globalAllRecords.length === 0) return alert("Refresh class list first!");
 
-            const now = new Date();
-            const year = now.getFullYear();
-            const monthIdx = now.getMonth(); 
-            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-            const currentMonthName = monthNames[monthIdx];
-            const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+            const year = 2026;
+            const monthIdx = 6; // July (0-indexed)
+            const currentMonthName = "July";
+            const startDay = 15; // Classes Start Date = 15 July
+            const daysInMonth = 31; // July has 31 days
 
-            // Unique Students Sorted by Roll No
             const studentsMap = {};
             globalAllRecords.forEach(r => {
                 if (!studentsMap[r.rollNo]) {
                     studentsMap[r.rollNo] = { name: r.studentName, roll: r.rollNo, dates: {} };
                 }
-                const recordDate = new Date(r.date);
-                if (recordDate.getMonth() === monthIdx && recordDate.getFullYear() === year) {
-                    const dayNum = recordDate.getDate();
-                    studentsMap[r.rollNo].dates[dayNum] = r.status;
+                const parts = r.date.split('-');
+                const recYear = parseInt(parts[0]);
+                const recMonth = parseInt(parts[1]) - 1;
+                const recDay = parseInt(parts[2]);
+
+                if (recMonth === monthIdx && recYear === year) {
+                    studentsMap[r.rollNo].dates[recDay] = r.status;
                 }
             });
 
             const holidayDatesList = globalHolidays.map(h => h.date);
 
-            // Calculate Working Days Header
             let workingDaysCount = 0;
             let daysHeaderRow = `Student Roll No,Student Name`;
             let daysNameRow = `,,`;
 
-            for (let d = 1; d <= daysInMonth; d++) {
+            for (let d = startDay; d <= daysInMonth; d++) {
+                // Precise local date creation without timezone shift
                 const dateObj = new Date(year, monthIdx, d);
                 const dayNumOfWeek = dateObj.getDay(); // 0 = Sun, 6 = Sat
-                const formattedDateStr = `${year}-${String(monthIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const formattedDateStr = `${year}-07-${String(d).padStart(2, '0')}`;
                 
                 const isWeekend = (dayNumOfWeek === 0 || dayNumOfWeek === 6);
                 const isHoliday = holidayDatesList.includes(formattedDateStr);
 
-                daysHeaderRow += `,${d}-${currentMonthName.substring(0, 3)}`;
+                daysHeaderRow += `,${d}-Jul`;
                 daysNameRow += `,${DAY_NAMES[dayNumOfWeek]}`;
 
                 if (!isWeekend && !isHoliday) {
@@ -413,24 +446,23 @@
             daysHeaderRow += `,Total Present Days\n`;
             daysNameRow += `,\n`;
 
-            let csv = `BM Group Of Institutions - Attendance Sheet for ${currentMonthName} ${year}\n`;
-            csv += `Total Working Days In Month: ${workingDaysCount} Days\n\n`;
+            let csv = `BM Group Of Institutions - Attendance Sheet for ${currentMonthName} ${year} (Classes Started 15-Jul)\n`;
+            csv += `Total Working Days (15 Jul - 31 Jul): ${workingDaysCount} Days\n\n`;
             csv += daysHeaderRow + daysNameRow;
 
-            // Sort Students Roll No Wise (24CSE14 -> 24CSE15 -> 24CSE48)
+            // Sort Students Natural Order
             const sortedStudents = Object.values(studentsMap).sort((a, b) => {
                 return a.roll.localeCompare(b.roll, undefined, { numeric: true, sensitivity: 'base' });
             });
 
-            // Build Student Rows
             sortedStudents.forEach(s => {
                 csv += `"${s.roll}","${s.name}"`;
                 let presentDaysCount = 0;
 
-                for (let d = 1; d <= daysInMonth; d++) {
+                for (let d = startDay; d <= daysInMonth; d++) {
                     const dateObj = new Date(year, monthIdx, d);
                     const dayNumOfWeek = dateObj.getDay();
-                    const formattedDateStr = `${year}-${String(monthIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    const formattedDateStr = `${year}-07-${String(d).padStart(2, '0')}`;
                     
                     const isWeekend = (dayNumOfWeek === 0 || dayNumOfWeek === 6);
                     const isHoliday = holidayDatesList.includes(formattedDateStr);
@@ -452,7 +484,7 @@
                 csv += `,${presentDaysCount}\n`;
             });
 
-            downloadFile(csv, `Attendance_Grid_${currentMonthName}_${year}.csv`);
+            downloadFile(csv, `Attendance_Grid_July_2026.csv`);
         }
 
         function logout() { localStorage.clear(); location.reload(); }
