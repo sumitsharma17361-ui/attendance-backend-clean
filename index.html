@@ -3,115 +3,187 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BM Group - CSE 5th Sem Portal</title>
+    <title>BM Group of Institutions - ERP Portal</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 15px; }
-        .card { background: white; padding: 25px; border-radius: 12px; width: 100%; max-width: 480px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); text-align: center; }
-        h2 { color: #1a73e8; margin-top: 0; margin-bottom: 5px; }
-        .subtitle { font-size: 12px; color: #666; margin-bottom: 20px; font-weight: 600; }
-        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; outline: none; font-size: 14px; }
-        
-        .password-wrapper { position: relative; width: 100%; }
-        .password-wrapper input { padding-right: 40px; }
-        .eye-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; user-select: none; font-size: 18px; }
-        
-        button { width: 100%; padding: 12px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; margin-top: 10px; }
-        button:hover { background: #1557b0; }
-        .btn-green { background: #34a853; }
-        .btn-green:hover { background: #2d8e47; }
-        .btn-blue { background: #0288d1; margin-top: 8px; }
-        .btn-blue:hover { background: #01579b; }
-        .btn-excel { background: #0f9d58; margin-top: 8px; }
-        .btn-purple { background: #673ab7; margin-top: 10px; display: none; }
-        .btn-red { background: #ea4335; margin-top: 15px; }
-        .link { color: #1a73e8; cursor: pointer; font-size: 13px; margin-top: 12px; display: block; }
-        
-        .stats-box { background: #e8f0fe; border-radius: 8px; padding: 12px; margin: 15px 0; display: flex; justify-content: space-around; }
-        .stat-item { text-align: center; }
-        .stat-val { font-size: 18px; font-weight: bold; color: #1a73e8; }
-        .stat-lbl { font-size: 11px; color: #555; }
+        :root {
+            --primary: #1a73e8;
+            --primary-hover: #1557b0;
+            --success: #0f9d58;
+            --warning: #f4b400;
+            --danger: #d93025;
+            --bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-main: #202124;
+            --text-muted: #5f6368;
+            --border: #dadce0;
+        }
 
-        .history-list { text-align: left; margin-top: 15px; max-height: 200px; overflow-y: auto; border-top: 1px solid #eee; padding-top: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
-        th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
-        th { background-color: #f2f2f2; color: #333; }
-        #msg { margin-top: 15px; font-weight: 600; font-size: 14px; word-wrap: break-word; }
-        .success { color: #2e7d32; }
-        .error { color: #d32f2f; }
+        * { box-sizing: border-box; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px 12px; }
+
+        .app-container { width: 100%; max-width: 480px; background: var(--card-bg); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid var(--border); overflow: hidden; }
+        
+        .app-header { background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; padding: 24px 20px; text-align: center; }
+        .app-header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+        .app-header p { font-size: 12px; opacity: 0.85; margin-top: 4px; font-weight: 400; }
+
+        .app-body { padding: 20px; }
+
+        input, select { width: 100%; padding: 12px 14px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; outline: none; transition: all 0.2s; }
+        input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,115,232,0.15); }
+
+        .password-wrapper { position: relative; width: 100%; }
+        .password-wrapper input { padding-right: 42px; }
+        .eye-icon { position: absolute; right: 14px; top: 38%; transform: translateY(-50%); cursor: pointer; user-select: none; font-size: 16px; opacity: 0.6; }
+
+        .btn { width: 100%; padding: 13px; border: none; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 6px; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { background: #0b8043; }
+        .btn-accent { background: #00838f; color: white; }
+        .btn-accent:hover { background: #006064; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+        .btn-outline:hover { background: #f1f3f4; }
+        .btn-danger { background: #fce8e6; color: var(--danger); }
+        .btn-danger:hover { background: #fad2cf; }
+
+        .link { color: var(--primary); cursor: pointer; font-size: 13px; text-align: center; margin-top: 14px; display: block; font-weight: 500; }
+
+        /* Stats Cards */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+        .stat-card { background: #f1f3f4; padding: 14px; border-radius: 12px; text-align: center; }
+        .stat-card .value { font-size: 20px; font-weight: 700; color: var(--primary); }
+        .stat-card .label { font-size: 11px; color: var(--text-muted); margin-top: 2px; font-weight: 500; }
+
+        /* Tabs UI */
+        .tab-bar { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 15px; }
+        .tab-item { flex: 1; padding: 10px; text-align: center; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; }
+        .tab-item.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+        .table-container { max-height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { background: #f8f9fa; color: var(--text-muted); font-weight: 600; padding: 10px; text-align: left; border-bottom: 1px solid var(--border); position: sticky; top: 0; }
+        td { padding: 10px; border-bottom: 1px solid #f1f3f4; }
+        
+        .badge { padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; display: inline-block; }
+        .badge-success { background: #e6f4ea; color: #137333; }
+        .badge-danger { background: #fce8e6; color: #c5221f; }
+
+        #msg { margin-top: 14px; font-size: 13px; font-weight: 500; text-align: center; padding: 10px; border-radius: 8px; display: none; }
+        .msg-success { background: #e6f4ea; color: #137333; display: block !important; }
+        .msg-error { background: #fce8e6; color: #c5221f; display: block !important; }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <h2>🎓 BM Group Portal</h2>
-        <div class="subtitle">B.Tech CSE - 5th Semester (Room 203)</div>
-
-        <!-- AUTH BOX -->
-        <div id="auth-box">
-            <div id="register-fields" style="display: none;">
-                <input type="text" id="regName" placeholder="Full Name">
-            </div>
-            <input type="text" id="rollNo" placeholder="Roll Number (e.g. 24CSE48)">
-            
-            <div class="password-wrapper">
-                <input type="password" id="password" placeholder="Password">
-                <span class="eye-icon" id="toggleEye" onclick="togglePassword()">👁️</span>
-            </div>
-            
-            <button id="authBtn" onclick="handleAuth()">Login</button>
-            <span class="link" id="toggleLink" onclick="toggleMode()">New Student? Register Here</span>
+    <div class="app-container">
+        <!-- Header -->
+        <div class="app-header">
+            <h1>🎓 BM Group of Institutions</h1>
+            <p>B.Tech CSE - 5th Semester (Room 203)</p>
         </div>
 
-        <!-- DASHBOARD BOX -->
-        <div id="dash-box" style="display: none;">
-            <h3 id="welcomeMsg" style="margin-bottom:2px;">Welcome!</h3>
-            <p style="font-size: 12px; color: #666; margin-top:0;">Roll No: <span id="userRoll"></span></p>
-
-            <div class="stats-box">
-                <div class="stat-item">
-                    <div class="stat-val" id="totalClasses">0</div>
-                    <div class="stat-lbl">Classes Marked</div>
+        <div class="app-body">
+            <!-- AUTHENTICATION FORM -->
+            <div id="auth-box">
+                <div id="register-fields" style="display: none;">
+                    <input type="text" id="regName" placeholder="Full Student Name">
                 </div>
-                <div class="stat-item">
-                    <div class="stat-val" id="attendancePct" style="color: #34a853;">100%</div>
-                    <div class="stat-lbl">Attendance Rate</div>
+                <input type="text" id="rollNo" placeholder="Roll Number (e.g. 24CSE48)">
+                
+                <div class="password-wrapper">
+                    <input type="password" id="password" placeholder="Password">
+                    <span class="eye-icon" id="toggleEye" onclick="togglePassword()">👁️</span>
                 </div>
+                
+                <button class="btn btn-primary" id="authBtn" onclick="handleAuth()">Sign In</button>
+                <span class="link" id="toggleLink" onclick="toggleMode()">New Student? Register Portal Account</span>
             </div>
 
-            <!-- OPTION 1: FULL DAY MARK BUTTON -->
-            <button class="btn-blue" onclick="markFullDayAttendance()">⚡ Mark FULL DAY Attendance (All Lectures)</button>
+            <!-- DASHBOARD VIEW -->
+            <div id="dash-box" style="display: none;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <h3 id="welcomeMsg" style="font-size:16px; font-weight:700;">Welcome!</h3>
+                        <p style="font-size: 12px; color: var(--text-muted);">Roll No: <span id="userRoll" style="font-weight:600;"></span></p>
+                    </div>
+                    <button class="btn btn-danger" style="width:auto; padding:6px 12px; margin:0; font-size:12px;" onclick="logout()">Logout</button>
+                </div>
 
-            <p style="font-size:11px; color:#888; margin: 10px 0 2px 0;">-- OR MARK SINGLE LECTURE --</p>
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="value" id="totalClasses">0</div>
+                        <div class="label">Attended Lectures</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value" id="attendancePct" style="color:var(--success);">100%</div>
+                        <div class="label">Attendance Rate</div>
+                    </div>
+                </div>
 
-            <!-- OPTION 2: SINGLE LECTURE SELECTOR -->
-            <select id="subjectSelect">
-                <option value="DAA">DAA - Design & Analysis of Algorithm</option>
-                <option value="FLA">FLA - Formal Language & Automata</option>
-                <option value="WT">WT - Web Technology</option>
-                <option value="BDA">BDA - Big Data Analytics</option>
-                <option value="CN">CN - Computer Network</option>
-                <option value="ECO">ECO - Economics for Engineers</option>
-                <option value="HRM">HRM - Human Resource Mgmt</option>
-                <option value="WT LAB">WT LAB</option>
-                <option value="CN LAB">CN LAB</option>
-                <option value="DAA LAB">DAA LAB</option>
-                <option value="Internet">Internet Lab</option>
-            </select>
-            
-            <button class="btn-green" onclick="markSingleAttendance()">📍 Mark Selected Lecture Only</button>
-            
-            <button class="btn-purple" id="adminBtn" onclick="fetchAllAttendance()">📋 View All Class Attendance</button>
-            <button class="btn-excel" id="excelBtn" style="display:none;" onclick="exportToCSV()">📥 Download Attendance Excel Sheet</button>
-            <button class="btn-red" onclick="logout()">Logout</button>
+                <!-- TABS NAVIGATION -->
+                <div class="tab-bar">
+                    <div class="tab-item active" onclick="switchTab('markTab')">📍 Attendance</div>
+                    <div class="tab-item" id="adminTabHeader" style="display:none;" onclick="switchTab('adminTab')">👑 Admin Control</div>
+                </div>
 
-            <div class="history-list">
-                <h4 id="listTitle" style="margin:5px 0;">My Attendance History:</h4>
-                <div id="historyLogs">Loading logs...</div>
+                <!-- TAB 1: MARK ATTENDANCE -->
+                <div id="markTab">
+                    <button class="btn btn-accent" onclick="markFullDayAttendance()">⚡ Mark Full Day Attendance (All Lectures)</button>
+                    
+                    <div style="text-align:center; font-size:11px; color:var(--text-muted); margin: 12px 0 6px 0;">--- OR SELECT SINGLE LECTURE ---</div>
+
+                    <select id="subjectSelect">
+                        <option value="DAA">DAA - Design & Analysis of Algorithm</option>
+                        <option value="FLA">FLA - Formal Language & Automata</option>
+                        <option value="WT">WT - Web Technology</option>
+                        <option value="BDA">BDA - Big Data Analytics</option>
+                        <option value="CN">CN - Computer Network</option>
+                        <option value="ECO">ECO - Economics for Engineers</option>
+                        <option value="HRM">HRM - Human Resource Mgmt</option>
+                        <option value="WT LAB">WT LAB</option>
+                        <option value="CN LAB">CN LAB</option>
+                        <option value="DAA LAB">DAA LAB</option>
+                        <option value="Internet">Internet Lab</option>
+                    </select>
+                    
+                    <button class="btn btn-outline" onclick="markSingleAttendance()">Mark Selected Lecture</button>
+
+                    <div style="margin-top:15px;">
+                        <h4 style="font-size:13px; color:var(--text-muted);">My Attendance History:</h4>
+                        <div class="table-container">
+                            <table id="myHistoryTable">
+                                <thead><tr><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
+                                <tbody><tr><td colspan="3" style="text-align:center;">Loading...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: ADMIN EXCLUSIVE VIEW -->
+                <div id="adminTab" style="display:none;">
+                    <button class="btn btn-success" onclick="exportCompactCSV()">📥 Download Compact Date-Wise Excel Sheet</button>
+                    <button class="btn btn-outline" onclick="fetchAllAttendance()" style="margin-top:8px;">🔄 Refresh Live Class List</button>
+
+                    <div style="margin-top:15px;">
+                        <h4 style="font-size:13px; color:var(--text-muted);">Class Attendance Records:</h4>
+                        <div class="table-container">
+                            <table id="allHistoryTable">
+                                <thead><tr><th>Student</th><th>Roll No</th><th>Subject</th><th>Date</th></tr></thead>
+                                <tbody><tr><td colspan="4" style="text-align:center;">Click refresh to load...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
             </div>
+
+            <p id="msg"></p>
         </div>
-
-        <p id="msg"></p>
     </div>
 
     <script>
@@ -134,27 +206,38 @@
         function showMsg(text, isError = false) {
             const msgEl = document.getElementById('msg');
             msgEl.innerText = text;
-            msgEl.className = isError ? 'error' : 'success';
+            msgEl.className = isError ? 'msg-error' : 'msg-success';
         }
 
         function toggleMode() {
             isRegistering = !isRegistering;
             document.getElementById('register-fields').style.display = isRegistering ? 'block' : 'none';
-            document.getElementById('authBtn').innerText = isRegistering ? 'Register' : 'Login';
-            document.getElementById('toggleLink').innerText = isRegistering ? 'Already registered? Login' : 'New Student? Register Here';
-            showMsg('');
+            document.getElementById('authBtn').innerText = isRegistering ? 'Register Account' : 'Sign In';
+            document.getElementById('toggleLink').innerText = isRegistering ? 'Already registered? Sign In' : 'New Student? Register Portal Account';
+            document.getElementById('msg').style.display = 'none';
+        }
+
+        function switchTab(tabId) {
+            document.getElementById('markTab').style.display = tabId === 'markTab' ? 'block' : 'none';
+            document.getElementById('adminTab').style.display = tabId === 'adminTab' ? 'block' : 'none';
+            
+            const tabs = document.querySelectorAll('.tab-item');
+            tabs[0].classList.toggle('active', tabId === 'markTab');
+            if(tabs[1]) tabs[1].classList.toggle('active', tabId === 'adminTab');
+
+            if(tabId === 'adminTab') fetchAllAttendance();
         }
 
         async function handleAuth() {
             const rollNo = document.getElementById('rollNo').value.trim();
             const password = document.getElementById('password').value.trim();
             
-            if (!rollNo || !password) return showMsg('Please fill all fields!', true);
-            showMsg('Connecting...');
+            if (!rollNo || !password) return showMsg('Please enter Roll Number and Password', true);
+            showMsg('Authenticating...');
 
             if (isRegistering) {
                 const name = document.getElementById('regName').value.trim();
-                if (!name) return showMsg('Please enter your full name!', true);
+                if (!name) return showMsg('Please enter your Full Name', true);
 
                 try {
                     const res = await fetch(`${API_BASE}/api/auth/register`, {
@@ -164,7 +247,7 @@
                     });
                     const data = await res.json();
                     if (res.ok) {
-                        showMsg('Registration successful! Please Login.');
+                        showMsg('Account created successfully! Please Sign In.');
                         toggleMode();
                     } else {
                         showMsg(data.error || 'Registration failed', true);
@@ -199,22 +282,20 @@
 
             document.getElementById('auth-box').style.display = 'none';
             document.getElementById('dash-box').style.display = 'block';
-            document.getElementById('welcomeMsg').innerText = `Hello, ${user.name}! 👋`;
+            document.getElementById('welcomeMsg').innerText = `Hello, ${user.name}!`;
             document.getElementById('userRoll').innerText = user.rollNo;
-            showMsg('');
+            document.getElementById('msg').style.display = 'none';
 
             if (user.role === 'admin' || user.rollNo.toUpperCase() === '24CSE48') {
-                document.getElementById('adminBtn').style.display = 'block';
-                document.getElementById('excelBtn').style.display = 'block';
+                document.getElementById('adminTabHeader').style.display = 'block';
             }
 
             fetchHistory(user.rollNo);
         }
 
-        // 1. FULL DAY ATTENDANCE (ONE TAP)
         function markFullDayAttendance() {
-            if (!navigator.geolocation) return showMsg('Geolocation not supported!', true);
-            showMsg('Fetching GPS Location for Full Day Attendance...');
+            if (!navigator.geolocation) return showMsg('Geolocation is not supported!', true);
+            showMsg('Verifying GPS Location for Full Day Attendance...');
 
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 const user = JSON.parse(localStorage.getItem('user'));
@@ -241,16 +322,15 @@
                     showMsg('Error submitting Full Day attendance!', true);
                 }
             }, (err) => {
-                showMsg('Location access denied! Allow GPS permissions.', true);
+                showMsg('GPS Location permission denied!', true);
             });
         }
 
-        // 2. SINGLE LECTURE ATTENDANCE
         function markSingleAttendance() {
             if (!navigator.geolocation) return showMsg('Geolocation not supported!', true);
             const selectedSubject = document.getElementById('subjectSelect').value;
 
-            showMsg(`Fetching GPS Location for ${selectedSubject}...`);
+            showMsg(`Verifying GPS Location for ${selectedSubject}...`);
 
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 const user = JSON.parse(localStorage.getItem('user'));
@@ -278,37 +358,31 @@
                     showMsg('Error submitting attendance!', true);
                 }
             }, (err) => {
-                showMsg('Location access denied! Allow GPS permissions.', true);
+                showMsg('GPS Location permission denied!', true);
             });
         }
 
         async function fetchHistory(rollNo) {
-            document.getElementById('listTitle').innerText = "My Attendance History:";
             try {
                 const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
                 const data = await res.json();
-                const logsDiv = document.getElementById('historyLogs');
+                const tbody = document.querySelector('#myHistoryTable tbody');
 
                 document.getElementById('totalClasses').innerText = data.length;
                 document.getElementById('attendancePct').innerText = data.length > 0 ? '100%' : '0%';
 
                 if (data.length === 0) {
-                    logsDiv.innerHTML = '<p style="font-size:12px; color:#888;">No attendance marked yet.</p>';
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#888;">No attendance records found</td></tr>';
                     return;
                 }
 
-                logsDiv.innerHTML = `
-                    <table>
-                        <tr><th>Date</th><th>Subject</th><th>Status</th></tr>
-                        ${data.map(item => `
-                            <tr>
-                                <td>${item.date}</td>
-                                <td><b>${item.subject}</b></td>
-                                <td style="color:green; font-weight:bold;">${item.status}</td>
-                            </tr>
-                        `).join('')}
-                    </table>
-                `;
+                tbody.innerHTML = data.map(item => `
+                    <tr>
+                        <td>${item.date}</td>
+                        <td><b>${item.subject}</b></td>
+                        <td><span class="badge badge-success">${item.status}</span></td>
+                    </tr>
+                `).join('');
             } catch(err) {
                 console.log(err);
             }
@@ -316,7 +390,6 @@
 
         async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
-            document.getElementById('listTitle').innerText = "All Students Attendance List:";
             try {
                 const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
                 const data = await res.json();
@@ -324,46 +397,62 @@
                 if (!res.ok) return showMsg(data.error || 'Access Denied', true);
 
                 globalAllRecords = data;
-                const logsDiv = document.getElementById('historyLogs');
+                const tbody = document.querySelector('#allHistoryTable tbody');
 
                 if (data.length === 0) {
-                    logsDiv.innerHTML = '<p style="font-size:12px; color:#888;">No records found.</p>';
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#888;">No class records found</td></tr>';
                     return;
                 }
 
-                logsDiv.innerHTML = `
-                    <table>
-                        <tr><th>Name</th><th>Roll No</th><th>Subject</th><th>Date</th></tr>
-                        ${data.map(item => `
-                            <tr>
-                                <td><b>${item.studentName}</b></td>
-                                <td>${item.rollNo}</td>
-                                <td>${item.subject}</td>
-                                <td>${item.date}</td>
-                            </tr>
-                        `).join('')}
-                    </table>
-                `;
+                tbody.innerHTML = data.map(item => `
+                    <tr>
+                        <td><b>${item.studentName}</b></td>
+                        <td>${item.rollNo}</td>
+                        <td>${item.subject}</td>
+                        <td>${item.date}</td>
+                    </tr>
+                `).join('');
             } catch(err) {
-                showMsg('Failed to load all records!', true);
+                showMsg('Failed to load class records!', true);
             }
         }
 
-        function exportToCSV() {
+        // --- COMPACT SINGLE COLUMN DATE-WISE EXCEL/CSV EXPORT ---
+        function exportCompactCSV() {
             if (globalAllRecords.length === 0) {
-                alert("Pehle 'View All Class Attendance' par click karke list load karo!");
+                alert("Please refresh the class list first!");
                 return;
             }
 
-            let csvContent = "data:text/csv;charset=utf-8,Student Name,Roll Number,Subject,Date,Status\n";
-            globalAllRecords.forEach(row => {
-                csvContent += `${row.studentName},${row.rollNo},${row.subject},${row.date},${row.status}\n`;
+            // Grouping records by Student Roll Number and Date
+            const groupedData = {};
+
+            globalAllRecords.forEach(rec => {
+                const key = `${rec.rollNo}_${rec.date}`;
+                if (!groupedData[key]) {
+                    groupedData[key] = {
+                        studentName: rec.studentName,
+                        rollNo: rec.rollNo,
+                        date: rec.date,
+                        subjects: []
+                    };
+                }
+                groupedData[key].subjects.push(rec.subject);
+            });
+
+            // Single Row Per Date Format Output
+            let csvContent = "data:text/csv;charset=utf-8,Student Name,Roll Number,Date,Daily Attendance Status\n";
+
+            Object.values(groupedData).forEach(row => {
+                const totalLectures = row.subjects.length;
+                const compactStatus = `Present (${totalLectures} Lectures: ${row.subjects.join(' | ')})`;
+                csvContent += `"${row.studentName}","${row.rollNo}","${row.date}","${compactStatus}"\n`;
             });
 
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
             link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `BM_Group_CSE5_Attendance_${new Date().toISOString().split('T')[0]}.csv`);
+            link.setAttribute("download", `BM_Group_Attendance_${new Date().toISOString().split('T')[0]}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
