@@ -57,15 +57,13 @@ const Holiday = mongoose.model('Holiday', holidaySchema);
 
 app.get('/', (req, res) => res.send('BM Group Portal API Active!'));
 
-// Registration API with STRICT ROLL NUMBER PATTERN (e.g., 24CSE48)
+// Registration API
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, rollNo, password } = req.body;
     if (!name || !rollNo || !password) return res.status(400).json({ error: 'All fields required!' });
     
     const cleanRoll = rollNo.trim().toUpperCase();
-
-    // Strict Regex Check: Starts with 24CSE followed by digits (e.g. 24CSE14, 24CSE48)
     const rollPattern = /^24CSE\d+$/;
     if (!rollPattern.test(cleanRoll)) {
       return res.status(400).json({ error: 'Invalid Roll Number format! Must be like 24CSE14 or 24CSE48' });
@@ -96,7 +94,6 @@ app.post('/api/auth/login', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Location Distance Helper
 function checkLocation(lat, lng) {
   const COLLEGE_LAT = 28.4475; 
   const COLLEGE_LNG = 76.7645;
@@ -109,19 +106,17 @@ function checkLocation(lat, lng) {
   return { isInside: distance <= 1.0, distance: (distance * 1000).toFixed(0) };
 }
 
-// Attendance Routes
+// Student GPS Mark Single
 app.post('/api/attendance/mark', async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude } = req.body;
     const today = new Date();
     const todayDate = today.toISOString().split('T')[0];
 
-    // Check Weekend
     if (today.getDay() === 0 || today.getDay() === 6) {
       return res.status(400).json({ error: 'College is OFF today (Weekend)!' });
     }
 
-    // Check Admin Declared Holiday
     const isHoliday = await Holiday.findOne({ date: todayDate });
     if (isHoliday) {
       return res.status(400).json({ error: `Today is declared a Holiday: ${isHoliday.reason}` });
@@ -139,6 +134,7 @@ app.post('/api/attendance/mark', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// Student GPS Mark Full Day
 app.post('/api/attendance/mark-fullday', async (req, res) => {
   try {
     const { rollNo, name, latitude, longitude } = req.body;
@@ -151,7 +147,6 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
       return res.status(400).json({ error: 'College is OFF today (Weekend)!' });
     }
 
-    // Check Admin Declared Holiday
     const isHoliday = await Holiday.findOne({ date: todayDate });
     if (isHoliday) {
       return res.status(400).json({ error: `Today is declared a Holiday: ${isHoliday.reason}` });
@@ -173,6 +168,52 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     }
     if (markedCount === 0) return res.status(400).json({ error: 'Full Day Attendance already marked!' });
     res.status(201).json({ message: `Full Day Attendance Marked (${markedCount} Lectures)!` });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// NEW: ADMIN MANUAL BACKDATE ATTENDANCE (NO GPS LOCK, ANY DATE)
+app.post('/api/admin/manual-attendance', async (req, res) => {
+  try {
+    const { requesterRollNo, studentRollNo, date } = req.body;
+    
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) {
+      return res.status(403).json({ error: 'Access Denied: Admin Privileges Required!' });
+    }
+
+    const targetRoll = studentRollNo.trim().toUpperCase();
+    const user = await User.findOne({ rollNo: targetRoll });
+    if (!user) {
+      return res.status(404).json({ error: `Student with Roll Number ${targetRoll} not registered yet!` });
+    }
+
+    // Determine Day Name for the Target Date
+    const targetDateObj = new Date(date + 'T00:00:00');
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayName = days[targetDateObj.getDay()];
+
+    if (dayName === 'Sunday' || dayName === 'Saturday') {
+      return res.status(400).json({ error: 'Target date is a Weekend! College was OFF.' });
+    }
+
+    const targetSubjects = TIME_TABLE[dayName] || ['General Class'];
+    let markedCount = 0;
+
+    for (let sub of targetSubjects) {
+      const exists = await Attendance.findOne({ rollNo: targetRoll, subject: sub, date: date });
+      if (!exists) {
+        await new Attendance({
+          rollNo: targetRoll,
+          studentName: user.name,
+          subject: sub,
+          date: date,
+          status: 'Present',
+          location: { latitude: 28.4475, longitude: 76.7645 }
+        }).save();
+        markedCount++;
+      }
+    }
+
+    res.status(201).json({ message: `Success! Marked ${markedCount} lectures for ${user.name} (${targetRoll}) on ${date}` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
