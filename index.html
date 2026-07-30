@@ -31,12 +31,12 @@
         .tab-bar { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
         .tab-item { flex: 1; padding: 10px; text-align: center; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; }
         .tab-item.active { color: var(--primary); border-bottom-color: var(--primary); }
-        .table-container { max-height: 180px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; margin-top: 8px; }
+        .table-container { max-height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; margin-top: 8px; }
         table { width: 100%; border-collapse: collapse; font-size: 11px; }
         th { background: #f8f9fa; color: var(--text-muted); padding: 8px; text-align: left; border-bottom: 1px solid var(--border); position: sticky; top: 0; }
         td { padding: 8px; border-bottom: 1px solid #f1f3f4; }
         .badge { padding: 2px 6px; border-radius: 10px; font-size: 10px; font-weight: 600; background: #e6f4ea; color: #137333; }
-        .action-btn { padding: 2px 5px; font-size: 9px; border-radius: 4px; border: none; cursor: pointer; }
+        .action-btn { padding: 3px 6px; font-size: 10px; border-radius: 4px; border: none; cursor: pointer; font-weight:600; }
         .btn-edit { background: #e8f0fe; color: #1a73e8; }
         .btn-del { background: #fce8e6; color: #d93025; }
         #msg { margin-top: 10px; font-size: 12px; text-align: center; padding: 8px; border-radius: 8px; display: none; }
@@ -129,10 +129,10 @@
                     <button class="btn btn-success" onclick="exportMonthlyGridCSV()">📥 Download Monthly Attendance Grid (Excel)</button>
                     <button class="btn btn-outline" onclick="fetchAllAttendance()" style="margin-top:6px;">🔄 Refresh Records</button>
                     <div style="margin-top:10px;">
-                        <h4 style="font-size:11px; color:var(--text-muted);">Manage Attendance Records (Edit / Delete):</h4>
+                        <h4 style="font-size:11px; color:var(--text-muted);">Manage Attendance Records (1 Row Per Student/Day):</h4>
                         <div class="table-container">
                             <table id="allHistoryTable">
-                                <thead><tr><th>Name</th><th>Roll</th><th>Subject</th><th>Date</th><th>Actions</th></tr></thead>
+                                <thead><tr><th>Name</th><th>Roll</th><th>Date</th><th>Attended</th><th>Actions</th></tr></thead>
                                 <tbody><tr><td colspan="5" style="text-align:center;">Click refresh...</td></tr></tbody>
                             </table>
                         </div>
@@ -146,7 +146,7 @@
 
     <script>
         const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; 
-        let isRegistering = false, globalAllRecords = [], globalMyRecords = [];
+        let isRegistering = false, globalAllRecords = [], globalMyRecords = [], groupedAdminRecords = {};
 
         function togglePassword() {
             const p = document.getElementById('password'), e = document.getElementById('toggleEye');
@@ -240,44 +240,82 @@
             const data = await res.json();
             if (!res.ok) return showMsg(data.error, true);
             globalAllRecords = data;
+
+            // GROUP BY ROLL NO & DATE TO SHOW 1 ROW PER DAY
+            groupedAdminRecords = {};
+            data.forEach(r => {
+                const key = `${r.rollNo}_${r.date}`;
+                if (!groupedAdminRecords[key]) {
+                    groupedAdminRecords[key] = {
+                        name: r.studentName,
+                        roll: r.rollNo,
+                        date: r.date,
+                        ids: [],
+                        count: 0
+                    };
+                }
+                groupedAdminRecords[key].ids.push(r._id);
+                groupedAdminRecords[key].count++;
+            });
+
             const tbody = document.querySelector('#allHistoryTable tbody');
-            if (data.length === 0) return tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No records</td></tr>';
-            tbody.innerHTML = data.map(i => `
+            const groupedArray = Object.values(groupedAdminRecords);
+
+            if (groupedArray.length === 0) return tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No records</td></tr>';
+            
+            tbody.innerHTML = groupedArray.map(g => `
                 <tr>
-                    <td><b>${i.studentName}</b></td><td>${i.rollNo}</td><td>${i.subject}</td><td>${i.date}</td>
+                    <td><b>${g.name}</b></td>
+                    <td>${g.roll}</td>
+                    <td>${g.date}</td>
+                    <td><span class="badge">${g.count} Lectures</span></td>
                     <td>
-                        <button class="action-btn btn-edit" onclick="updateRecord('${i._id}', '${i.status}')">Edit</button>
-                        <button class="action-btn btn-del" onclick="deleteRecord('${i._id}')">Del</button>
+                        <button class="action-btn btn-del" onclick="deleteDayGroup('${g.roll}', '${g.date}')">Del Day</button>
                     </td>
                 </tr>
             `).join('');
         }
 
-        async function updateRecord(id, currentStatus) {
+        async function deleteDayGroup(rollNo, date) {
             const user = JSON.parse(localStorage.getItem('user'));
-            const newStatus = currentStatus === 'Present' ? 'Absent' : 'Present';
-            const res = await fetch(`${API_BASE}/api/attendance/update/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: user.rollNo, status: newStatus }) });
-            if (res.ok) { showMsg('Updated!'); fetchAllAttendance(); }
+            const key = `${rollNo}_${date}`;
+            const group = groupedAdminRecords[key];
+            if (!group) return;
+
+            if(!confirm(`Delete full day attendance for ${group.name} on ${date}?`)) return;
+
+            showMsg("Deleting day records...");
+            for (let id of group.ids) {
+                await fetch(`${API_BASE}/api/attendance/delete/${id}/${user.rollNo}`, { method: 'DELETE' });
+            }
+            showMsg('Day record deleted successfully!');
+            fetchAllAttendance();
         }
 
-        async function deleteRecord(id) {
-            const user = JSON.parse(localStorage.getItem('user'));
-            if(!confirm('Delete this record?')) return;
-            const res = await fetch(`${API_BASE}/api/attendance/delete/${id}/${user.rollNo}`, { method: 'DELETE' });
-            if (res.ok) { showMsg('Deleted!'); fetchAllAttendance(); }
+        // --- HELPER FUNCTION FOR SAFE MOBILE CSV DOWNLOAD ---
+        function downloadFile(content, fileName) {
+            const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.setAttribute("download", fileName);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         }
 
         function exportStudentCSV() {
             if (globalMyRecords.length === 0) return alert("No records!");
             const grouped = {};
             globalMyRecords.forEach(r => { if (!grouped[r.date]) grouped[r.date] = 0; grouped[r.date]++; });
-            let csv = "data:text/csv;charset=utf-8,Date,Total Lectures Attended,Status\n";
+            let csv = "Date,Total Lectures Attended,Status\n";
             Object.keys(grouped).forEach(d => { csv += `"${d}","${grouped[d]} Lectures","Present"\n`; });
             csv += `\n"Total Days Attended","${Object.keys(grouped).length} Days",""\n`;
-            const a = document.createElement("a"); a.href = encodeURI(csv); a.download = `My_Attendance_Report.csv`; a.click();
+            
+            downloadFile(csv, `My_Attendance_Report.csv`);
         }
 
-        // --- MONTHLY GRID MATRIX EXCEL EXPORT (EXACT LIKE FIRST IMAGE) ---
         function exportMonthlyGridCSV() {
             if (globalAllRecords.length === 0) return alert("Refresh class list first!");
 
@@ -288,7 +326,6 @@
             const currentMonthName = monthNames[monthIdx];
             const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
 
-            // Unique Students List
             const studentsMap = {};
             globalAllRecords.forEach(r => {
                 if (!studentsMap[r.rollNo]) {
@@ -301,7 +338,6 @@
                 }
             });
 
-            // Build Header Row
             let csv = `Attendance Sheet for ${currentMonthName} - ${year}\n\n`;
             csv += `Student ID,Student Name`;
             for (let d = 1; d <= daysInMonth; d++) {
@@ -309,7 +345,6 @@
             }
             csv += `,Present Count\n`;
 
-            // Build Rows for each Student
             Object.values(studentsMap).forEach(s => {
                 csv += `"${s.roll}","${s.name}"`;
                 let presentCount = 0;
@@ -321,19 +356,13 @@
                     } else if (status === 'Absent') {
                         csv += `,A`;
                     } else {
-                        csv += `,-`; // Day with no marked record
+                        csv += `,-`;
                     }
                 }
                 csv += `,${presentCount}\n`;
             });
 
-            const encodedUri = encodeURI(csv);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `Attendance_Sheet_${currentMonthName}_${year}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            downloadFile(csv, `Attendance_Sheet_${currentMonthName}_${year}.csv`);
         }
 
         function logout() { localStorage.clear(); location.reload(); }
