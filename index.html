@@ -127,21 +127,20 @@
 
                 <!-- TAB 2: ADMIN MANAGEMENT -->
                 <div id="adminTab" style="display:none;">
-                    <!-- ADVANCED MONTH & YEAR SELECTOR FOR EXCEL DOWNLOAD -->
                     <div class="admin-box" style="border: 2px solid var(--primary);">
-                        <span style="font-size:11px; font-weight:bold; color:var(--primary); display:block; margin-bottom:5px;">📥 Select Month & Year for Excel Grid:</span>
-                        <select id="exportMonth" style="padding:6px; margin-bottom:5px;">
-                            <option value="6">July (2026)</option>
-                            <option value="7">August (2026)</option>
-                            <option value="8">September (2026)</option>
-                            <option value="9">October (2026)</option>
-                            <option value="10">November (2026)</option>
-                            <option value="11">December (2026)</option>
+                        <span style="font-size:11px; font-weight:bold; color:var(--primary); display:block; margin-bottom:5px;">📥 Download Attendance Report (Month / Full Semester):</span>
+                        <select id="exportSelection" style="padding:6px; margin-bottom:5px;">
+                            <option value="ALL_SEMESTER">🌟 Full Semester Combined (July 2026 - December 2026)</option>
+                            <option value="6">July 2026</option>
+                            <option value="7">August 2026</option>
+                            <option value="8">September 2026</option>
+                            <option value="9">October 2026</option>
+                            <option value="10">November 2026</option>
+                            <option value="11">December 2026</option>
                         </select>
-                        <button class="btn btn-success" onclick="exportMonthlyGridCSV()" style="margin-top:0; padding:9px;">📥 Download Selected Month Grid</button>
+                        <button class="btn btn-success" onclick="exportExcelGrid()" style="margin-top:0; padding:9px;">📥 Download Excel Report</button>
                     </div>
 
-                    <!-- ADMIN MANUAL BACKDATE ATTENDANCE TOOL -->
                     <div class="admin-box">
                         <span style="font-size:11px; font-weight:bold; color:var(--primary); display:block; margin-bottom:5px;">⚡ Admin Manual Backdate Attendance (No GPS):</span>
                         <input type="text" id="manualRoll" placeholder="Friend Roll No (e.g. 24CSE14)" style="padding:6px; margin-bottom:5px;">
@@ -149,7 +148,6 @@
                         <button class="btn btn-primary" onclick="markManualAttendance()" style="margin-top:0; padding:8px;">✅ Mark Attendance for Selected Date</button>
                     </div>
 
-                    <!-- ADMIN DECLARE HOLIDAY SECTION -->
                     <div class="admin-box">
                         <span style="font-size:11px; font-weight:bold; display:block; margin-bottom:5px;">🏖️ Declare Official College Holiday:</span>
                         <input type="date" id="holidayDate" style="padding:6px; margin-bottom:5px;">
@@ -174,8 +172,7 @@
             <p id="msg"></p>
         </div>
     </div>
-
-    <script>
+        <script>
         const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; 
         let isRegistering = false, globalAllRecords = [], globalMyRecords = [], globalHolidays = [], groupedAdminRecords = {};
 
@@ -237,12 +234,6 @@
             
             const todayISO = new Date().toISOString().split('T')[0];
             document.getElementById('manualDate').value = todayISO;
-
-            // Set default dropdown option to current month
-            const currentMonthIdx = new Date().getMonth();
-            if (currentMonthIdx >= 6 && currentMonthIdx <= 11) {
-                document.getElementById('exportMonth').value = currentMonthIdx;
-            }
 
             if (user.role === 'admin' || user.rollNo.toUpperCase() === '24CSE48') document.getElementById('adminTabHeader').style.display = 'block';
             fetchHistory(user.rollNo);
@@ -462,60 +453,69 @@
             downloadFile(csv, `My_Attendance_Report.csv`);
         }
 
-        // SELECTABLE MONTH GRID CSV EXPORT (DOWNLOAD ANY MONTH ANYTIME)
-        function exportMonthlyGridCSV() {
+        // EXPORT EXCEL GRID (JULY 2026 TO DECEMBER 2026)
+        function exportExcelGrid() {
             if (globalAllRecords.length === 0) return alert("Refresh class list first!");
 
-            const year = 2026;
-            const monthIdx = parseInt(document.getElementById('exportMonth').value);
-            const currentMonthName = MONTH_NAMES[monthIdx];
-            
-            const startDay = (monthIdx === 6 && year === 2026) ? 15 : 1; 
-            const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
-
+            const selection = document.getElementById('exportSelection').value;
+            const holidayDatesList = globalHolidays.map(h => h.date);
             const studentsMap = {};
+
             globalAllRecords.forEach(r => {
                 if (!studentsMap[r.rollNo]) {
                     studentsMap[r.rollNo] = { name: r.studentName, roll: r.rollNo, dates: {} };
                 }
-                const parts = r.date.split('-');
-                const recYear = parseInt(parts[0]);
-                const recMonth = parseInt(parts[1]) - 1;
-                const recDay = parseInt(parts[2]);
-
-                if (recMonth === monthIdx && recYear === year) {
-                    studentsMap[r.rollNo].dates[recDay] = r.status;
-                }
+                studentsMap[r.rollNo].dates[r.date] = r.status;
             });
 
-            const holidayDatesList = globalHolidays.map(h => h.date);
+            let targetDates = [];
+
+            if (selection === 'ALL_SEMESTER') {
+                let cur = new Date(2026, 6, 15);
+                const endDate = new Date(2026, 11, 31);
+                while (cur <= endDate) {
+                    const y = cur.getFullYear();
+                    const m = String(cur.getMonth() + 1).padStart(2, '0');
+                    const d = String(cur.getDate()).padStart(2, '0');
+                    targetDates.push(`${y}-${m}-${d}`);
+                    cur.setDate(cur.getDate() + 1);
+                }
+            } else {
+                const monthIdx = parseInt(selection);
+                const year = 2026;
+                const startDay = (monthIdx === 6) ? 15 : 1;
+                const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+
+                for (let d = startDay; d <= daysInMonth; d++) {
+                    const y = year;
+                    const m = String(monthIdx + 1).padStart(2, '0');
+                    const day = String(d).padStart(2, '0');
+                    targetDates.push(`${y}-${m}-${day}`);
+                }
+            }
 
             let workingDaysCount = 0;
-            let daysHeaderRow = `Student Roll No,Student Name`;
-            let daysNameRow = `,,`;
+            let headerRow = `Student Roll No,Student Name`;
 
-            for (let d = startDay; d <= daysInMonth; d++) {
-                const dateObj = new Date(year, monthIdx, d);
-                const dayNumOfWeek = dateObj.getDay(); 
-                const formattedDateStr = `${year}-${String(monthIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                
-                const isWeekend = (dayNumOfWeek === 0 || dayNumOfWeek === 6);
-                const isHoliday = holidayDatesList.includes(formattedDateStr);
+            targetDates.forEach(dt => {
+                const parts = dt.split('-');
+                const dtObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                const dayOfWeek = dtObj.getDay();
+                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+                const isHoliday = holidayDatesList.includes(dt);
 
-                daysHeaderRow += `,${d}-${currentMonthName.substring(0, 3)}`;
-                daysNameRow += `,${DAY_NAMES[dayNumOfWeek]}`;
+                headerRow += `,${parts[2]}-${MONTH_NAMES[parseInt(parts[1]) - 1].substring(0,3)}`;
 
                 if (!isWeekend && !isHoliday) {
                     workingDaysCount++;
                 }
-            }
+            });
 
-            daysHeaderRow += `,Total Present Days\n`;
-            daysNameRow += `,\n`;
+            headerRow += `,Total Present Days\n`;
 
-            let csv = `BM Group Of Institutions - Attendance Sheet for ${currentMonthName} ${year}\n`;
-            csv += `Total Working Days In Period: ${workingDaysCount} Days\n\n`;
-            csv += daysHeaderRow + daysNameRow;
+            let csv = `BM Group Of Institutions - Master Attendance Report (July-Dec 2026)\n`;
+            csv += `Total Working Days: ${workingDaysCount} Days\n\n`;
+            csv += headerRow;
 
             const sortedStudents = Object.values(studentsMap).sort((a, b) => {
                 return a.roll.localeCompare(b.roll, undefined, { numeric: true, sensitivity: 'base' });
@@ -523,34 +523,34 @@
 
             sortedStudents.forEach(s => {
                 csv += `"${s.roll}","${s.name}"`;
-                let presentDaysCount = 0;
+                let presentCount = 0;
 
-                for (let d = startDay; d <= daysInMonth; d++) {
-                    const dateObj = new Date(year, monthIdx, d);
-                    const dayNumOfWeek = dateObj.getDay();
-                    const formattedDateStr = `${year}-${String(monthIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                    
-                    const isWeekend = (dayNumOfWeek === 0 || dayNumOfWeek === 6);
-                    const isHoliday = holidayDatesList.includes(formattedDateStr);
+                targetDates.forEach(dt => {
+                    const parts = dt.split('-');
+                    const dtObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                    const dayOfWeek = dtObj.getDay();
+                    const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+                    const isHoliday = holidayDatesList.includes(dt);
 
                     if (isWeekend) {
                         csv += `,OFF`;
                     } else if (isHoliday) {
                         csv += `,H`;
                     } else {
-                        const status = s.dates[d];
+                        const status = s.dates[dt];
                         if (status === 'Present') {
                             csv += `,P`;
-                            presentDaysCount++;
+                            presentCount++;
                         } else {
                             csv += `,A`;
                         }
                     }
-                }
-                csv += `,${presentDaysCount}\n`;
+                });
+                csv += `,${presentCount}\n`;
             });
 
-            downloadFile(csv, `Attendance_Grid_${currentMonthName}_${year}.csv`);
+            const fileName = selection === 'ALL_SEMESTER' ? 'Full_Semester_Attendance_July_Dec_2026.csv' : `Attendance_Grid_${MONTH_NAMES[parseInt(selection)]}_2026.csv`;
+            downloadFile(csv, fileName);
         }
 
         function logout() { localStorage.clear(); location.reload(); }
