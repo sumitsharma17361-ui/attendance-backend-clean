@@ -32,6 +32,12 @@
         .tab-bar { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
         .tab-item { flex: 1; padding: 10px; text-align: center; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; }
         .tab-item.active { color: var(--primary); border-bottom-color: var(--primary); }
+        
+        /* ADMIN SUB-TAB NAVIGATION STYLING */
+        .admin-nav { display: flex; gap: 4px; background: #e8f0fe; padding: 4px; border-radius: 10px; margin-bottom: 12px; }
+        .admin-nav-item { flex: 1; text-align: center; padding: 7px 4px; font-size: 10px; font-weight: 700; cursor: pointer; border-radius: 7px; color: var(--primary); transition: all 0.2s; }
+        .admin-nav-item.active { background: var(--primary); color: white; }
+
         .table-container { max-height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; margin-top: 8px; }
         table { width: 100%; border-collapse: collapse; font-size: 11px; }
         th { background: #f8f9fa; color: var(--text-muted); padding: 8px; text-align: left; border-bottom: 1px solid var(--border); position: sticky; top: 0; }
@@ -42,7 +48,7 @@
         #msg { margin-top: 10px; font-size: 12px; text-align: center; padding: 8px; border-radius: 8px; display: none; }
         .msg-success { background: #e6f4ea; color: #137333; display: block !important; }
         .msg-error { background: #fce8e6; color: #c5221f; display: block !important; }
-        .admin-box { background: #f1f3f4; padding: 10px; border-radius: 10px; margin-top: 10px; border: 1px solid #e0e0e0; }
+        .admin-box { background: #ffffff; padding: 12px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
     </style>
 </head>
 <body>
@@ -125,12 +131,22 @@
                     </div>
                 </div>
 
-                <!-- TAB 2: ADMIN MANAGEMENT -->
+                <!-- TAB 2: CLEAN & PROFESSIONAL ADMIN DASHBOARD -->
                 <div id="adminTab" style="display:none;">
-                    <div class="admin-box" style="border: 2px solid var(--primary);">
-                        <span style="font-size:11px; font-weight:bold; color:var(--primary); display:block; margin-bottom:5px;">📥 Download Attendance Report (Month / Full Semester):</span>
-                        <select id="exportSelection" style="padding:6px; margin-bottom:5px;">
-                            <option value="ALL_SEMESTER">🌟 Full Semester Combined (July 2026 - December 2026)</option>
+                    
+                    <!-- ADMIN SUB NAVIGATION BAR -->
+                    <div class="admin-nav">
+                        <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">📊 Excel</div>
+                        <div class="admin-nav-item" onclick="switchAdminSubTab('subAttendance')">⚡ Attendance</div>
+                        <div class="admin-nav-item" onclick="switchAdminSubTab('subHoliday')">🏖️ Holiday</div>
+                        <div class="admin-nav-item" onclick="switchAdminSubTab('subRegister')">➕ Student</div>
+                    </div>
+
+                    <!-- SUB TAB 1: EXCEL REPORTS -->
+                    <div id="subReports" class="admin-box">
+                        <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">📥 Export Reports:</span>
+                        <select id="exportSelection" style="padding:8px; margin-bottom:6px;">
+                            <option value="ALL_SEMESTER">🌟 Full Semester (July 2026 - Dec 2026)</option>
                             <option value="6">July 2026</option>
                             <option value="7">August 2026</option>
                             <option value="8">September 2026</option>
@@ -138,27 +154,38 @@
                             <option value="10">November 2026</option>
                             <option value="11">December 2026</option>
                         </select>
-                        <button class="btn btn-success" onclick="exportExcelGrid()" style="margin-top:0; padding:9px;">📥 Download Excel Report</button>
+                        <button class="btn btn-success" onclick="exportExcelGrid()" style="margin-top:0; padding:10px;">📥 Download Excel Report</button>
                     </div>
 
-                    <div class="admin-box">
-                        <span style="font-size:11px; font-weight:bold; color:var(--primary); display:block; margin-bottom:5px;">⚡ Admin Manual Backdate Attendance (No GPS):</span>
-                        <input type="text" id="manualRoll" placeholder="Friend Roll No (e.g. 24CSE14)" style="padding:6px; margin-bottom:5px;">
-                        <input type="date" id="manualDate" style="padding:6px; margin-bottom:5px;">
-                        <button class="btn btn-primary" onclick="markManualAttendance()" style="margin-top:0; padding:8px;">✅ Mark Attendance for Selected Date</button>
+                    <!-- SUB TAB 2: BACKDATE ATTENDANCE -->
+                    <div id="subAttendance" class="admin-box" style="display:none;">
+                        <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">⚡ Manual Attendance Tool:</span>
+                        <input type="text" id="manualRoll" placeholder="Student Roll No (e.g. 24CSE14)" style="padding:8px; margin-bottom:6px;">
+                        <input type="date" id="manualDate" style="padding:8px; margin-bottom:6px;">
+                        <button class="btn btn-primary" onclick="markManualAttendance()" style="margin-top:0; padding:10px;">✅ Mark Attendance</button>
                     </div>
 
-                    <div class="admin-box">
-                        <span style="font-size:11px; font-weight:bold; display:block; margin-bottom:5px;">🏖️ Declare Official College Holiday:</span>
-                        <input type="date" id="holidayDate" style="padding:6px; margin-bottom:5px;">
-                        <input type="text" id="holidayReason" placeholder="Reason (e.g. Rainy Day/Diwali)" style="padding:6px; margin-bottom:5px;">
-                        <button class="btn btn-warning" onclick="declareHoliday()" style="margin-top:0; padding:8px;">Mark Date as Holiday</button>
+                    <!-- SUB TAB 3: HOLIDAY DECLARATION -->
+                    <div id="subHoliday" class="admin-box" style="display:none;">
+                        <span style="font-size:11px; font-weight:700; color:#b06000; display:block; margin-bottom:6px;">🏖️ Declare College Holiday:</span>
+                        <input type="date" id="holidayDate" style="padding:8px; margin-bottom:6px;">
+                        <input type="text" id="holidayReason" placeholder="Reason (e.g. Rainy Day/Diwali)" style="padding:8px; margin-bottom:6px;">
+                        <button class="btn btn-warning" onclick="declareHoliday()" style="margin-top:0; padding:10px;">Mark Selected Date as Holiday</button>
                     </div>
 
-                    <button class="btn btn-outline" onclick="fetchAllAttendance()" style="margin-top:10px;">🔄 Refresh Records</button>
+                    <!-- SUB TAB 4: NEW STUDENT REGISTRATION BY ADMIN -->
+                    <div id="subRegister" class="admin-box" style="display:none;">
+                        <span style="font-size:11px; font-weight:700; color:var(--success); display:block; margin-bottom:6px;">➕ Admin Register New Student:</span>
+                        <input type="text" id="adminStudentName" placeholder="Full Student Name" style="padding:8px; margin-bottom:6px;">
+                        <input type="text" id="adminStudentRoll" placeholder="Roll Number (e.g. 24CSE15)" style="padding:8px; margin-bottom:6px;">
+                        <input type="password" id="adminStudentPass" placeholder="Assign Password" style="padding:8px; margin-bottom:6px;">
+                        <button class="btn btn-success" onclick="adminRegisterStudent()" style="margin-top:0; padding:10px;">✨ Register Student Account</button>
+                    </div>
+
+                    <button class="btn btn-outline" onclick="fetchAllAttendance()" style="margin-top:12px;">🔄 Refresh Records List</button>
                     
-                    <div style="margin-top:10px;">
-                        <h4 style="font-size:11px; color:var(--text-muted);">Manage Attendance Records:</h4>
+                    <div style="margin-top:12px;">
+                        <h4 style="font-size:11px; color:var(--text-muted);">Class Attendance History:</h4>
                         <div class="table-container">
                             <table id="allHistoryTable">
                                 <thead><tr><th>Roll</th><th>Name</th><th>Date</th><th>Attended</th><th>Actions</th></tr></thead>
@@ -207,6 +234,19 @@
             if(tabId === 'adminTab') fetchAllAttendance();
         }
 
+        // ADMIN SUB TABS SWITCHER
+        function switchAdminSubTab(subId) {
+            const subTabs = ['subReports', 'subAttendance', 'subHoliday', 'subRegister'];
+            subTabs.forEach(id => {
+                document.getElementById(id).style.display = (id === subId) ? 'block' : 'none';
+            });
+
+            const navItems = document.querySelectorAll('.admin-nav-item');
+            navItems.forEach((item, idx) => {
+                item.classList.toggle('active', subTabs[idx] === subId);
+            });
+        }
+
         async function handleAuth() {
             const rollNo = document.getElementById('rollNo').value.trim(), password = document.getElementById('password').value.trim();
             if (!rollNo || !password) return showMsg('Fill all fields!', true);
@@ -221,6 +261,38 @@
                 const res = await fetch(`${API_BASE}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo, password }) });
                 const data = await res.json();
                 if (res.ok) { localStorage.setItem('user', JSON.stringify(data.user)); loadDashboard(); } else showMsg(data.error, true);
+            }
+        }
+
+        // ADMIN MANUAL STUDENT REGISTRATION
+        async function adminRegisterStudent() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            const name = document.getElementById('adminStudentName').value.trim();
+            const rollNo = document.getElementById('adminStudentRoll').value.trim();
+            const password = document.getElementById('adminStudentPass').value.trim();
+
+            if (!name || !rollNo || !password) return showMsg('Please fill Name, Roll No and Password!', true);
+
+            showMsg(`Registering ${name} (${rollNo})...`);
+
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/register-student`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requesterRollNo: user.rollNo, name, rollNo, password })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    showMsg(data.message);
+                    document.getElementById('adminStudentName').value = '';
+                    document.getElementById('adminStudentRoll').value = '';
+                    document.getElementById('adminStudentPass').value = '';
+                } else {
+                    showMsg(data.error, true);
+                }
+            } catch (err) {
+                showMsg('Error registering student!', true);
             }
         }
 
@@ -453,7 +525,6 @@
             downloadFile(csv, `My_Attendance_Report.csv`);
         }
 
-        // EXPORT EXCEL GRID (JULY 2026 TO DECEMBER 2026)
         function exportExcelGrid() {
             if (globalAllRecords.length === 0) return alert("Refresh class list first!");
 
