@@ -11,8 +11,10 @@ app.use(cors());
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
 
+// ADMIN ROLL NUMBERS
 const ADMIN_ROLL_NUMBERS = ['24CSE48'];
 
+// TIME TABLE DATA (B.Tech 5th Sem CSE)
 const TIME_TABLE = {
   Monday: ['BDA', 'ECO', 'DAA', 'FLA', 'HRM', 'CN', 'WT'],
   Tuesday: ['WT', 'ECO', 'Internet', 'FLA', 'HRM', 'BDA'],
@@ -27,6 +29,7 @@ if (MONGO_URI) {
     .catch(err => console.log('DB ERROR:', err.message));
 }
 
+// SCHEMAS
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   rollNo: { type: String, required: true, unique: true },
@@ -54,6 +57,7 @@ const Holiday = mongoose.model('Holiday', holidaySchema);
 
 app.get('/', (req, res) => res.send('BM Group Portal API Active!'));
 
+// Registration API
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, rollNo, password } = req.body;
@@ -73,6 +77,32 @@ app.post('/api/auth/register', async (req, res) => {
     user = new User({ name, rollNo: cleanRoll, password: hashedPassword, role });
     await user.save();
     res.status(201).json({ message: 'Registration successful!' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ADMIN MANUAL STUDENT REGISTER API
+app.post('/api/admin/register-student', async (req, res) => {
+  try {
+    const { requesterRollNo, name, rollNo, password } = req.body;
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) {
+      return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    }
+
+    if (!name || !rollNo || !password) return res.status(400).json({ error: 'All fields required!' });
+    
+    const cleanRoll = rollNo.trim().toUpperCase();
+    const rollPattern = /^24CSE\d+$/;
+    if (!rollPattern.test(cleanRoll)) {
+      return res.status(400).json({ error: 'Invalid Roll Number format! Must be like 24CSE14' });
+    }
+
+    let user = await User.findOne({ rollNo: cleanRoll });
+    if (user) return res.status(400).json({ error: 'Student Roll number already registered!' });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user = new User({ name, rollNo: cleanRoll, password: hashedPassword, role: 'student' });
+    await user.save();
+    res.status(201).json({ message: `Successfully registered student ${name} (${cleanRoll})!` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
