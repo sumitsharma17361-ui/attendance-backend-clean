@@ -487,6 +487,7 @@
             if (res.ok) { showMsg(data.message); fetchAllAttendance(); } else showMsg(data.error, true);
         }
 
+        // FIXED PERCENTAGE CALCULATION (STRICTLY SUBTRACTS DECLARED HOLIDAYS)
         function calculateRealAttendancePercentage(attendedDaysCount) {
             const startDate = new Date(2026, 6, 15);
             const today = new Date();
@@ -497,11 +498,17 @@
 
             while (cur <= today) {
                 const dayOfWeek = cur.getDay();
-                const isoStr = cur.toISOString().split('T')[0];
+                const y = cur.getFullYear();
+                const m = String(cur.getMonth() + 1).padStart(2, '0');
+                const d = String(cur.getDate()).padStart(2, '0');
+                const isoStr = `${y}-${m}-${d}`;
+
                 const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
                 const isHoliday = holidayDatesList.includes(isoStr);
 
-                if (!isWeekend && !isHoliday) totalWorkingDays++;
+                if (!isWeekend && !isHoliday) {
+                    totalWorkingDays++;
+                }
                 cur.setDate(cur.getDate() + 1);
             }
 
@@ -510,11 +517,14 @@
             return { pct: Math.min(100, pct), totalWorkingDays };
         }
 
+        // FIXED CALENDAR RENDERER (HIGHLIGHTS HOLIDAYS IN YELLOW/GREY BADGE)
         function renderAttendanceCalendar(historyData) {
             const gridBody = document.getElementById('calendarGridBody');
             const dayHeaders = '<div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div><div class="cal-day-head">W</div><div class="cal-day-head">T</div><div class="cal-day-head">F</div><div class="cal-day-head">S</div>';
             
             const attendedDates = new Set(historyData.map(h => h.date));
+            const holidayDatesSet = new Set(globalHolidays.map(h => h.date));
+
             const year = 2026, month = 6;
             const daysInMonth = 31;
             const firstDayOfWeek = new Date(year, month, 1).getDay();
@@ -529,9 +539,12 @@
                 const dtObj = new Date(year, month, d);
                 const dayOfWeek = dtObj.getDay();
                 const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+                const isHoliday = holidayDatesSet.has(dateStr);
 
                 if (isWeekend) {
                     cellsHtml += `<div class="cal-date cal-off">${d}</div>`;
+                } else if (isHoliday) {
+                    cellsHtml += `<div class="cal-date cal-off" style="background:#fef3c7; color:#92400e; font-weight:800; border-color:#fcd34d;" title="Declared Holiday">${d}</div>`;
                 } else if (attendedDates.has(dateStr)) {
                     cellsHtml += `<div class="cal-date cal-p">${d}</div>`;
                 } else {
@@ -540,8 +553,7 @@
             }
             gridBody.innerHTML = cellsHtml;
         }
-
-        async function fetchHistory(rollNo) {
+                    async function fetchHistory(rollNo) {
             const hRes = await fetch(`${API_BASE}/api/holidays`);
             globalHolidays = await hRes.json();
 
@@ -674,7 +686,6 @@
             downloadFile(csv, `My_Attendance_Report.csv`);
         }
 
-        // FULL MASTER GRID REPORT WITH DATES AND DAYS (15-Jul (Wed), 16-Jul (Thu)...)
         function exportExcelGrid() {
             if (globalAllRecords.length === 0) return alert("Pehle Class Records Refresh karo!");
 
@@ -718,7 +729,6 @@
             let workingDaysCount = 0;
             let headerRow = `Student Roll No,Student Name`;
 
-            // DATES + DAYS NAME IN HEADER (e.g. 15-Jul (Wed), 16-Jul (Thu)...)
             targetDates.forEach(dt => {
                 const parts = dt.split('-');
                 const dtObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
