@@ -42,23 +42,38 @@ const attendanceSchema = new mongoose.Schema({
   studentName: { type: String, required: true },
   subject: { type: String, required: true },
   date: { type: String, required: true }, 
-  status: { type: String, enum: ['Present', 'Absent'], default: 'Present' },
+  status: { type: String, enum: ['Present', 'Absent', 'Holiday'], default: 'Present' },
   location: { latitude: Number, longitude: Number }
+}, { timestamps: true });
+
+const holidaySchema = new mongoose.Schema({
+  date: { type: String, required: true, unique: true },
+  reason: { type: String, default: 'College Holiday' }
 }, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);
 const Attendance = mongoose.model('Attendance', attendanceSchema);
+const Holiday = mongoose.model('Holiday', holidaySchema);
 
 app.get('/', (req, res) => res.send('BM Group Portal API Active!'));
 
-// Auth Routes
+// Registration API with STRICT ROLL NUMBER PATTERN (e.g., 24CSE48)
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, rollNo, password } = req.body;
     if (!name || !rollNo || !password) return res.status(400).json({ error: 'All fields required!' });
+    
     const cleanRoll = rollNo.trim().toUpperCase();
+
+    // Strict Regex Check: Starts with 24CSE followed by digits (e.g. 24CSE14, 24CSE48)
+    const rollPattern = /^24CSE\d+$/;
+    if (!rollPattern.test(cleanRoll)) {
+      return res.status(400).json({ error: 'Invalid Roll Number format! Must be like 24CSE14 or 24CSE48' });
+    }
+
     let user = await User.findOne({ rollNo: cleanRoll });
-    if (user) return res.status(400).json({ error: 'Already registered!' });
+    if (user) return res.status(400).json({ error: 'Roll number already registered!' });
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const role = ADMIN_ROLL_NUMBERS.includes(cleanRoll) ? 'admin' : 'student';
     user = new User({ name, rollNo: cleanRoll, password: hashedPassword, role });
@@ -99,13 +114,26 @@ app.post('/api/attendance/mark', async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude } = req.body;
     const today = new Date();
-    if (today.getDay() === 0 || today.getDay() === 6) return res.status(400).json({ error: 'College is OFF today (Weekend)!' });
+    const todayDate = today.toISOString().split('T')[0];
+
+    // Check Weekend
+    if (today.getDay() === 0 || today.getDay() === 6) {
+      return res.status(400).json({ error: 'College is OFF today (Weekend)!' });
+    }
+
+    // Check Admin Declared Holiday
+    const isHoliday = await Holiday.findOne({ date: todayDate });
+    if (isHoliday) {
+      return res.status(400).json({ error: `Today is declared a Holiday: ${isHoliday.reason}` });
+    }
+
     const locCheck = checkLocation(latitude, longitude);
     if (!locCheck.isInside) return res.status(400).json({ error: `Outside Campus! (${locCheck.distance}m away)` });
-    const todayDate = today.toISOString().split('T')[0];
+
     const cleanRoll = rollNo.trim().toUpperCase();
     const exists = await Attendance.findOne({ rollNo: cleanRoll, subject, date: todayDate });
     if (exists) return res.status(400).json({ error: `Already marked for ${subject} today!` });
+
     await new Attendance({ rollNo: cleanRoll, studentName: name, subject, date: todayDate, status: 'Present', location: { latitude, longitude } }).save();
     res.status(201).json({ message: `Attendance Marked for ${subject}!` });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -115,15 +143,27 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
   try {
     const { rollNo, name, latitude, longitude } = req.body;
     const today = new Date();
+    const todayDate = today.toISOString().split('T')[0];
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayName = days[today.getDay()];
-    if (dayName === 'Sunday' || dayName === 'Saturday') return res.status(400).json({ error: 'College is OFF today!' });
+
+    if (dayName === 'Sunday' || dayName === 'Saturday') {
+      return res.status(400).json({ error: 'College is OFF today (Weekend)!' });
+    }
+
+    // Check Admin Declared Holiday
+    const isHoliday = await Holiday.findOne({ date: todayDate });
+    if (isHoliday) {
+      return res.status(400).json({ error: `Today is declared a Holiday: ${isHoliday.reason}` });
+    }
+
     const locCheck = checkLocation(latitude, longitude);
     if (!locCheck.isInside) return res.status(400).json({ error: `Outside Campus! (${locCheck.distance}m away)` });
-    const todayDate = today.toISOString().split('T')[0];
+
     const cleanRoll = rollNo.trim().toUpperCase();
     const todaySubjects = TIME_TABLE[dayName] || ['General Class'];
     let markedCount = 0;
+
     for (let sub of todaySubjects) {
       const exists = await Attendance.findOne({ rollNo: cleanRoll, subject: sub, date: todayDate });
       if (!exists) {
@@ -136,9 +176,30 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ADMIN: DECLARE HOLIDAY
+app.post('/api/admin/holiday', async (req, res) => {
+  try {
+    const { requesterRollNo, date, reason } = req.body;
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) {
+      return res.status(403).json({ error: 'Access Denied!' });
+    }
+
+    await Holiday.findOneAndUpdate({ date }, { date, reason: reason || 'Declared Holiday' }, { upsert: true, new: true });
+    res.json({ message: `Holiday successfully declared for ${date}` });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET ALL HOLIDAYS
+app.get('/api/holidays', async (req, res) => {
+  try {
+    const holidays = await Holiday.find();
+    res.json(holidays);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.get('/api/attendance/history/:rollNo', async (req, res) => {
   try {
-    const history = await Attendance.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ createdAt: -1 });
+    const history = await Attendance.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ date: -1 });
     res.json(history);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -148,18 +209,8 @@ app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
     if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) {
       return res.status(403).json({ error: 'Access Denied!' });
     }
-    const allRecords = await Attendance.find().sort({ createdAt: -1 });
+    const allRecords = await Attendance.find().sort({ rollNo: 1, date: -1 });
     res.json(allRecords);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.put('/api/attendance/update/:id', async (req, res) => {
-  try {
-    if (!ADMIN_ROLL_NUMBERS.includes(req.body.requesterRollNo.trim().toUpperCase())) {
-      return res.status(403).json({ error: 'Access Denied!' });
-    }
-    const updated = await Attendance.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true });
-    res.json({ message: 'Status updated!', updated });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
