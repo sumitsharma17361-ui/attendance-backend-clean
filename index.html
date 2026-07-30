@@ -3,86 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BM Group of Institutions - Advanced ERP Portal</title>
+    <title>BM Group of Institutions - ERP Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary: #1a73e8;
-            --primary-hover: #1557b0;
-            --success: #0f9d58;
-            --warning: #f4b400;
-            --danger: #d93025;
-            --bg: #f8f9fa;
-            --card-bg: #ffffff;
-            --text-main: #202124;
-            --text-muted: #5f6368;
-            --border: #dadce0;
-        }
-
+        :root { --primary: #1a73e8; --success: #0f9d58; --danger: #d93025; --bg: #f8f9fa; --card-bg: #ffffff; --text-main: #202124; --text-muted: #5f6368; --border: #dadce0; }
         * { box-sizing: border-box; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
-        body { background: var(--bg); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px 12px; }
-
-        .app-container { width: 100%; max-width: 520px; background: var(--card-bg); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid var(--border); overflow: hidden; }
-        
-        .app-header { background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; padding: 22px 20px; text-align: center; }
-        .app-header h1 { font-size: 19px; font-weight: 700; letter-spacing: -0.3px; }
-        .app-header p { font-size: 11px; opacity: 0.85; margin-top: 4px; font-weight: 400; }
-
+        body { background: var(--bg); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 15px; }
+        .app-container { width: 100%; max-width: 500px; background: var(--card-bg); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid var(--border); overflow: hidden; }
+        .app-header { background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; padding: 20px; text-align: center; }
+        .app-header h1 { font-size: 18px; font-weight: 700; }
+        .app-header p { font-size: 11px; opacity: 0.85; }
         .app-body { padding: 18px; }
-
-        input, select { width: 100%; padding: 12px 14px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; outline: none; transition: all 0.2s; }
-        input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,115,232,0.15); }
-
+        input, select { width: 100%; padding: 11px 14px; margin-bottom: 10px; border: 1px solid var(--border); border-radius: 10px; font-size: 13px; outline: none; }
         .password-wrapper { position: relative; width: 100%; }
-        .password-wrapper input { padding-right: 42px; }
-        .eye-icon { position: absolute; right: 14px; top: 38%; transform: translateY(-50%); cursor: pointer; user-select: none; font-size: 16px; opacity: 0.6; }
-
-        .btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; display: flex; justify-content: center; align-items: center; gap: 6px; margin-top: 6px; }
+        .password-wrapper input { padding-right: 40px; }
+        .eye-icon { position: absolute; right: 12px; top: 38%; transform: translateY(-50%); cursor: pointer; opacity: 0.6; }
+        .btn { width: 100%; padding: 11px; border: none; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; margin-top: 6px; }
         .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: var(--primary-hover); }
         .btn-success { background: var(--success); color: white; }
-        .btn-success:hover { background: #0b8043; }
         .btn-accent { background: #00838f; color: white; }
-        .btn-accent:hover { background: #006064; }
         .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
-        .btn-outline:hover { background: #f1f3f4; }
         .btn-danger { background: #fce8e6; color: var(--danger); }
-        .btn-danger:hover { background: #fad2cf; }
-
-        .link { color: var(--primary); cursor: pointer; font-size: 13px; text-align: center; margin-top: 14px; display: block; font-weight: 500; }
-
-        /* Stats & Alert Cards */
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
         .stat-card { background: #f1f3f4; padding: 12px; border-radius: 12px; text-align: center; }
         .stat-card .value { font-size: 18px; font-weight: 700; color: var(--primary); }
-        .stat-card .label { font-size: 10px; color: var(--text-muted); margin-top: 2px; font-weight: 500; }
-
-        .criteria-box { padding: 10px 14px; border-radius: 10px; font-size: 12px; font-weight: 600; margin-bottom: 12px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 6px; }
-        .criteria-safe { background: #e6f4ea; color: #137333; border: 1px solid #ceead6; }
-        .criteria-danger { background: #fce8e6; color: #c5221f; border: 1px solid #fad2cf; }
-
-        /* Today's Schedule Card */
-        .schedule-card { background: #e8f0fe; border-left: 4px solid var(--primary); padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; font-size: 12px; text-align: left; }
-        .schedule-card b { color: var(--primary); }
-
+        .stat-card .label { font-size: 10px; color: var(--text-muted); }
         .tab-bar { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
-        .tab-item { flex: 1; padding: 10px; text-align: center; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; }
+        .tab-item { flex: 1; padding: 10px; text-align: center; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; }
         .tab-item.active { color: var(--primary); border-bottom-color: var(--primary); }
-
         .table-container { max-height: 180px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; margin-top: 8px; }
         table { width: 100%; border-collapse: collapse; font-size: 11px; }
-        th { background: #f8f9fa; color: var(--text-muted); font-weight: 600; padding: 8px; text-align: left; border-bottom: 1px solid var(--border); position: sticky; top: 0; }
+        th { background: #f8f9fa; color: var(--text-muted); padding: 8px; text-align: left; border-bottom: 1px solid var(--border); position: sticky; top: 0; }
         td { padding: 8px; border-bottom: 1px solid #f1f3f4; }
-        
-        .badge { padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; display: inline-block; }
-        .badge-success { background: #e6f4ea; color: #137333; }
-        .badge-danger { background: #fce8e6; color: #c5221f; }
-
-        .action-btn { padding: 3px 6px; font-size: 10px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; margin-right: 2px; }
+        .badge { padding: 2px 6px; border-radius: 10px; font-size: 10px; font-weight: 600; background: #e6f4ea; color: #137333; }
+        .action-btn { padding: 2px 5px; font-size: 9px; border-radius: 4px; border: none; cursor: pointer; }
         .btn-edit { background: #e8f0fe; color: #1a73e8; }
         .btn-del { background: #fce8e6; color: #d93025; }
-
-        #msg { margin-top: 12px; font-size: 12px; font-weight: 500; text-align: center; padding: 8px; border-radius: 8px; display: none; }
+        #msg { margin-top: 10px; font-size: 12px; text-align: center; padding: 8px; border-radius: 8px; display: none; }
         .msg-success { background: #e6f4ea; color: #137333; display: block !important; }
         .msg-error { background: #fce8e6; color: #c5221f; display: block !important; }
     </style>
@@ -96,51 +53,38 @@
         </div>
 
         <div class="app-body">
-            <!-- AUTHENTICATION -->
+            <!-- AUTH -->
             <div id="auth-box">
                 <div id="register-fields" style="display: none;">
                     <input type="text" id="regName" placeholder="Full Student Name">
                 </div>
                 <input type="text" id="rollNo" placeholder="Roll Number (e.g. 24CSE48)">
-                
                 <div class="password-wrapper">
                     <input type="password" id="password" placeholder="Password">
                     <span class="eye-icon" id="toggleEye" onclick="togglePassword()">👁️</span>
                 </div>
-                
                 <button class="btn btn-primary" id="authBtn" onclick="handleAuth()">Sign In</button>
-                <span class="link" id="toggleLink" onclick="toggleMode()">New Student? Register Portal Account</span>
+                <span style="color:var(--primary); cursor:pointer; font-size:12px; display:block; text-align:center; margin-top:10px;" id="toggleLink" onclick="toggleMode()">New Student? Register Account</span>
             </div>
 
             <!-- DASHBOARD -->
             <div id="dash-box" style="display: none;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <div>
-                        <h3 id="welcomeMsg" style="font-size:15px; font-weight:700;">Welcome!</h3>
-                        <p style="font-size: 11px; color: var(--text-muted);">Roll No: <span id="userRoll" style="font-weight:600;"></span></p>
+                        <h3 id="welcomeMsg" style="font-size:14px; font-weight:700;">Welcome!</h3>
+                        <p style="font-size: 11px; color: var(--text-muted);">Roll: <span id="userRoll" style="font-weight:600;"></span></p>
                     </div>
-                    <button class="btn btn-danger" style="width:auto; padding:5px 10px; margin:0; font-size:11px;" onclick="logout()">Logout</button>
+                    <button class="btn btn-danger" style="width:auto; padding:4px 8px; margin:0; font-size:11px;" onclick="logout()">Logout</button>
                 </div>
 
-                <!-- 75% ATTENDANCE CRITERIA ALERT BANNER -->
-                <div id="criteriaAlert" class="criteria-box criteria-safe">
-                    <span>🟢 Safe: Above 75% Attendance Criteria</span>
-                </div>
-
-                <!-- LIVE TODAY'S SCHEDULE VIEWER -->
-                <div class="schedule-card" id="todayScheduleBox">
-                    <b>📅 Today's Schedule:</b> <span id="todaySubjectsText">Loading schedule...</span>
-                </div>
-
-                <!-- STATS GRID -->
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="value" id="totalDaysCount">0 Days</div>
                         <div class="label">Days Attended</div>
                     </div>
                     <div class="stat-card">
-                        <div class="value" id="attendancePct">100%</div>
-                        <div class="label">Attendance Rate</div>
+                        <div class="value" id="attendancePct" style="color:var(--success);">100%</div>
+                        <div class="label">Attendance Status</div>
                     </div>
                 </div>
 
@@ -153,9 +97,7 @@
                 <div id="markTab">
                     <button class="btn btn-accent" onclick="markFullDayAttendance()">⚡ Mark Full Day Attendance</button>
                     <button class="btn btn-success" onclick="exportStudentCSV()" style="margin-top:6px;">📥 Download My Attendance Sheet (Excel)</button>
-                    
-                    <div style="text-align:center; font-size:10px; color:var(--text-muted); margin: 10px 0 4px 0;">--- OR MARK SINGLE LECTURE ---</div>
-
+                    <div style="text-align:center; font-size:10px; color:var(--text-muted); margin: 8px 0 4px 0;">-- OR MARK SINGLE LECTURE --</div>
                     <select id="subjectSelect">
                         <option value="DAA">DAA - Design & Analysis of Algorithm</option>
                         <option value="FLA">FLA - Formal Language & Automata</option>
@@ -169,11 +111,10 @@
                         <option value="DAA LAB">DAA LAB</option>
                         <option value="Internet">Internet Lab</option>
                     </select>
-                    
                     <button class="btn btn-outline" onclick="markSingleAttendance()">Mark Selected Lecture</button>
 
-                    <div style="margin-top:12px;">
-                        <h4 style="font-size:12px; color:var(--text-muted);">My History:</h4>
+                    <div style="margin-top:10px;">
+                        <h4 style="font-size:11px; color:var(--text-muted);">My History:</h4>
                         <div class="table-container">
                             <table id="myHistoryTable">
                                 <thead><tr><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
@@ -187,403 +128,170 @@
                 <div id="adminTab" style="display:none;">
                     <button class="btn btn-success" onclick="exportCompactCSV()">📥 Download Class Summary Excel</button>
                     <button class="btn btn-outline" onclick="fetchAllAttendance()" style="margin-top:6px;">🔄 Refresh Records</button>
-
-                    <div style="margin-top:12px;">
-                        <h4 style="font-size:12px; color:var(--text-muted);">Manage Attendance Records (Edit / Delete):</h4>
+                    <div style="margin-top:10px;">
+                        <h4 style="font-size:11px; color:var(--text-muted);">Manage Attendance Records (Edit / Delete):</h4>
                         <div class="table-container">
                             <table id="allHistoryTable">
                                 <thead><tr><th>Name</th><th>Roll</th><th>Subject</th><th>Date</th><th>Actions</th></tr></thead>
-                                <tbody><tr><td colspan="5" style="text-align:center;">Click refresh to load...</td></tr></tbody>
+                                <tbody><tr><td colspan="5" style="text-align:center;">Click refresh...</td></tr></tbody>
                             </table>
                         </div>
                     </div>
                 </div>
 
             </div>
-
             <p id="msg"></p>
         </div>
     </div>
 
     <script>
         const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; 
-        let isRegistering = false;
-        let globalAllRecords = [];
-        let globalMyRecords = [];
-
-        // Time-table reference for schedule viewer
-        const WEEK_SCHEDULE = {
-            1: "BDA, ECO, DAA, FLA, HRM, CN, WT (Monday)",
-            2: "WT, ECO, Internet, FLA, HRM, BDA (Tuesday)",
-            3: "BDA, ECO, FLA, WT, CN LAB (Wednesday)",
-            4: "BDA, CN, DAA, DAA LAB, HRM (Thursday)",
-            5: "DAA, CN, FLA, BDA, WT LAB (Friday)",
-            0: "College is OFF (Sunday)",
-            6: "College is OFF (Saturday)"
-        };
-
-        function displayTodaySchedule() {
-            const dayNum = new Date().getDay();
-            document.getElementById('todaySubjectsText').innerText = WEEK_SCHEDULE[dayNum] || "Normal Working Day";
-        }
+        let isRegistering = false, globalAllRecords = [], globalMyRecords = [];
 
         function togglePassword() {
-            const passInput = document.getElementById('password');
-            const eyeIcon = document.getElementById('toggleEye');
-            if (passInput.type === 'password') {
-                passInput.type = 'text';
-                eyeIcon.innerText = '🙈';
-            } else {
-                passInput.type = 'password';
-                eyeIcon.innerText = '👁️';
-            }
+            const p = document.getElementById('password'), e = document.getElementById('toggleEye');
+            p.type = p.type === 'password' ? 'text' : 'password';
+            e.innerText = p.type === 'password' ? '👁️' : '🙈';
         }
 
         function showMsg(text, isError = false) {
-            const msgEl = document.getElementById('msg');
-            msgEl.innerText = text;
-            msgEl.className = isError ? 'msg-error' : 'msg-success';
+            const msg = document.getElementById('msg');
+            msg.innerText = text;
+            msg.className = isError ? 'msg-error' : 'msg-success';
         }
 
         function toggleMode() {
             isRegistering = !isRegistering;
             document.getElementById('register-fields').style.display = isRegistering ? 'block' : 'none';
             document.getElementById('authBtn').innerText = isRegistering ? 'Register Account' : 'Sign In';
-            document.getElementById('toggleLink').innerText = isRegistering ? 'Already registered? Sign In' : 'New Student? Register Portal Account';
-            document.getElementById('msg').style.display = 'none';
+            document.getElementById('toggleLink').innerText = isRegistering ? 'Already registered? Sign In' : 'New Student? Register Account';
         }
 
         function switchTab(tabId) {
             document.getElementById('markTab').style.display = tabId === 'markTab' ? 'block' : 'none';
             document.getElementById('adminTab').style.display = tabId === 'adminTab' ? 'block' : 'none';
-            
             const tabs = document.querySelectorAll('.tab-item');
             tabs[0].classList.toggle('active', tabId === 'markTab');
             if(tabs[1]) tabs[1].classList.toggle('active', tabId === 'adminTab');
-
             if(tabId === 'adminTab') fetchAllAttendance();
         }
 
         async function handleAuth() {
-            const rollNo = document.getElementById('rollNo').value.trim();
-            const password = document.getElementById('password').value.trim();
-            
-            if (!rollNo || !password) return showMsg('Please enter Roll Number and Password', true);
-            showMsg('Authenticating...');
-
+            const rollNo = document.getElementById('rollNo').value.trim(), password = document.getElementById('password').value.trim();
+            if (!rollNo || !password) return showMsg('Fill all fields!', true);
+            showMsg('Connecting...');
             if (isRegistering) {
                 const name = document.getElementById('regName').value.trim();
-                if (!name) return showMsg('Please enter your Full Name', true);
-
-                try {
-                    const res = await fetch(`${API_BASE}/api/auth/register`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name, rollNo, password })
-                    });
-                    const data = await res.json();
-                    if (res.ok) {
-                        showMsg('Account created successfully! Please Sign In.');
-                        toggleMode();
-                    } else {
-                        showMsg(data.error || 'Registration failed', true);
-                    }
-                } catch (err) {
-                    showMsg('Server connection error. Please try again.', true);
-                }
+                if (!name) return showMsg('Enter Full Name!', true);
+                const res = await fetch(`${API_BASE}/api/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, rollNo, password }) });
+                const data = await res.json();
+                if (res.ok) { showMsg('Registered! Sign in now.'); toggleMode(); } else showMsg(data.error, true);
             } else {
-                try {
-                    const res = await fetch(`${API_BASE}/api/auth/login`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ rollNo, password })
-                    });
-                    const data = await res.json();
-                    if (res.ok) {
-                        localStorage.setItem('user', JSON.stringify(data.user));
-                        localStorage.setItem('token', data.token);
-                        loadDashboard();
-                    } else {
-                        showMsg(data.error || 'Login failed', true);
-                    }
-                } catch (err) {
-                    showMsg('Server connection error. Please try again.', true);
-                }
+                const res = await fetch(`${API_BASE}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo, password }) });
+                const data = await res.json();
+                if (res.ok) { localStorage.setItem('user', JSON.stringify(data.user)); loadDashboard(); } else showMsg(data.error, true);
             }
         }
 
         function loadDashboard() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user) return;
-
             document.getElementById('auth-box').style.display = 'none';
             document.getElementById('dash-box').style.display = 'block';
             document.getElementById('welcomeMsg').innerText = `Hello, ${user.name}!`;
             document.getElementById('userRoll').innerText = user.rollNo;
-            document.getElementById('msg').style.display = 'none';
-
-            displayTodaySchedule();
-
-            if (user.role === 'admin' || user.rollNo.toUpperCase() === '24CSE48') {
-                document.getElementById('adminTabHeader').style.display = 'block';
-            }
-
+            if (user.role === 'admin' || user.rollNo.toUpperCase() === '24CSE48') document.getElementById('adminTabHeader').style.display = 'block';
             fetchHistory(user.rollNo);
         }
 
         function markFullDayAttendance() {
-            if (!navigator.geolocation) return showMsg('Geolocation is not supported!', true);
-            showMsg('Verifying GPS Location for Full Day Attendance...');
-
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 const user = JSON.parse(localStorage.getItem('user'));
-                try {
-                    const res = await fetch(`${API_BASE}/api/attendance/mark-fullday`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            rollNo: user.rollNo,
-                            name: user.name,
-                            latitude: pos.coords.latitude,
-                            longitude: pos.coords.longitude
-                        })
-                    });
-
-                    const data = await res.json();
-                    if (res.ok) {
-                        showMsg(data.message);
-                        fetchHistory(user.rollNo);
-                    } else {
-                        showMsg(data.error, true);
-                    }
-                } catch (err) {
-                    showMsg('Error submitting Full Day attendance!', true);
-                }
-            }, (err) => {
-                showMsg('GPS Location permission denied!', true);
-            });
+                const res = await fetch(`${API_BASE}/api/attendance/mark-fullday`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: user.rollNo, name: user.name, latitude: pos.coords.latitude, longitude: pos.coords.longitude }) });
+                const data = await res.json();
+                if (res.ok) { showMsg(data.message); fetchHistory(user.rollNo); } else showMsg(data.error, true);
+            }, () => showMsg('GPS Denied!', true));
         }
 
         function markSingleAttendance() {
-            if (!navigator.geolocation) return showMsg('Geolocation not supported!', true);
-            const selectedSubject = document.getElementById('subjectSelect').value;
-
-            showMsg(`Verifying GPS Location for ${selectedSubject}...`);
-
+            const sub = document.getElementById('subjectSelect').value;
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 const user = JSON.parse(localStorage.getItem('user'));
-                try {
-                    const res = await fetch(`${API_BASE}/api/attendance/mark`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            rollNo: user.rollNo,
-                            name: user.name,
-                            subject: selectedSubject,
-                            latitude: pos.coords.latitude,
-                            longitude: pos.coords.longitude
-                        })
-                    });
-
-                    const data = await res.json();
-                    if (res.ok) {
-                        showMsg(data.message);
-                        fetchHistory(user.rollNo);
-                    } else {
-                        showMsg(data.error, true);
-                    }
-                } catch (err) {
-                    showMsg('Error submitting attendance!', true);
-                }
-            }, (err) => {
-                showMsg('GPS Location permission denied!', true);
-            });
+                const res = await fetch(`${API_BASE}/api/attendance/mark`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: user.rollNo, name: user.name, subject: sub, latitude: pos.coords.latitude, longitude: pos.coords.longitude }) });
+                const data = await res.json();
+                if (res.ok) { showMsg(data.message); fetchHistory(user.rollNo); } else showMsg(data.error, true);
+            }, () => showMsg('GPS Denied!', true));
         }
 
         async function fetchHistory(rollNo) {
-            try {
-                const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
-                const data = await res.json();
-                globalMyRecords = data;
-                const tbody = document.querySelector('#myHistoryTable tbody');
-
-                const uniqueDays = [...new Set(data.map(item => item.date))].length;
-                document.getElementById('totalDaysCount').innerText = `${uniqueDays} Days`;
-                
-                // Assuming standard working days calculation for demo percentage ratio
-                const percentage = Math.min(100, Math.round((uniqueDays / Math.max(1, uniqueDays + 2)) * 100));
-                document.getElementById('attendancePct').innerText = `${percentage}%`;
-
-                // 75% Criteria Alert Logic
-                const alertBox = document.getElementById('criteriaAlert');
-                if (percentage >= 75) {
-                    alertBox.className = "criteria-box criteria-safe";
-                    alertBox.innerHTML = `<span>🟢 Safe: ${percentage}% Attendance (Above 75% Criteria)</span>`;
-                } else {
-                    alertBox.className = "criteria-box criteria-danger";
-                    alertBox.innerHTML = `<span>🔴 Warning: ${percentage}% Attendance (Below 75% Criteria!)</span>`;
-                }
-
-                if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#888;">No attendance records found</td></tr>';
-                    return;
-                }
-
-                tbody.innerHTML = data.map(item => `
-                    <tr>
-                        <td>${item.date}</td>
-                        <td><b>${item.subject}</b></td>
-                        <td><span class="badge badge-success">${item.status}</span></td>
-                    </tr>
-                `).join('');
-            } catch(err) {
-                console.log(err);
-            }
+            const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
+            const data = await res.json();
+            globalMyRecords = data;
+            const tbody = document.querySelector('#myHistoryTable tbody');
+            const uniqueDays = [...new Set(data.map(i => i.date))].length;
+            document.getElementById('totalDaysCount').innerText = `${uniqueDays} Days`;
+            if (data.length === 0) return tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">No records</td></tr>';
+            tbody.innerHTML = data.map(i => `<tr><td>${i.date}</td><td><b>${i.subject}</b></td><td><span class="badge">${i.status}</span></td></tr>`).join('');
         }
 
         async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
-            try {
-                const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
-                const data = await res.json();
-
-                if (!res.ok) return showMsg(data.error || 'Access Denied', true);
-
-                globalAllRecords = data;
-                const tbody = document.querySelector('#allHistoryTable tbody');
-
-                if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#888;">No records found</td></tr>';
-                    return;
-                }
-
-                tbody.innerHTML = data.map(item => `
-                    <tr>
-                        <td><b>${item.studentName}</b></td>
-                        <td>${item.rollNo}</td>
-                        <td>${item.subject}</td>
-                        <td>${item.date}</td>
-                        <td>
-                            <button class="action-btn btn-edit" onclick="updateRecord('${item._id}', '${item.status}')">Edit</button>
-                            <button class="action-btn btn-del" onclick="deleteRecord('${item._id}')">Del</button>
-                        </td>
-                    </tr>
-                `).join('');
-            } catch(err) {
-                showMsg('Failed to load class records!', true);
-            }
+            const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
+            const data = await res.json();
+            if (!res.ok) return showMsg(data.error, true);
+            globalAllRecords = data;
+            const tbody = document.querySelector('#allHistoryTable tbody');
+            if (data.length === 0) return tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No records</td></tr>';
+            tbody.innerHTML = data.map(i => `
+                <tr>
+                    <td><b>${i.studentName}</b></td><td>${i.rollNo}</td><td>${i.subject}</td><td>${i.date}</td>
+                    <td>
+                        <button class="action-btn btn-edit" onclick="updateRecord('${i._id}', '${i.status}')">Edit</button>
+                        <button class="action-btn btn-del" onclick="deleteRecord('${i._id}')">Del</button>
+                    </td>
+                </tr>
+            `).join('');
         }
 
         async function updateRecord(id, currentStatus) {
             const user = JSON.parse(localStorage.getItem('user'));
             const newStatus = currentStatus === 'Present' ? 'Absent' : 'Present';
-            
-            if(!confirm(`Change status to ${newStatus}?`)) return;
-
-            try {
-                const res = await fetch(`${API_BASE}/api/attendance/update/${id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ requesterRollNo: user.rollNo, status: newStatus })
-                });
-                const data = await res.json();
-                if(res.ok) {
-                    showMsg('Attendance status updated!');
-                    fetchAllAttendance();
-                } else {
-                    showMsg(data.error, true);
-                }
-            } catch(err) {
-                showMsg('Update failed!', true);
-            }
+            const res = await fetch(`${API_BASE}/api/attendance/update/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: user.rollNo, status: newStatus }) });
+            if (res.ok) { showMsg('Updated!'); fetchAllAttendance(); }
         }
 
         async function deleteRecord(id) {
             const user = JSON.parse(localStorage.getItem('user'));
-            if(!confirm('Are you sure you want to delete this attendance record?')) return;
-
-            try {
-                const res = await fetch(`${API_BASE}/api/attendance/delete/${id}/${user.rollNo}`, {
-                    method: 'DELETE'
-                });
-                const data = await res.json();
-                if(res.ok) {
-                    showMsg('Record deleted successfully!');
-                    fetchAllAttendance();
-                } else {
-                    showMsg(data.error, true);
-                }
-            } catch(err) {
-                showMsg('Delete failed!', true);
-            }
+            if(!confirm('Delete this record?')) return;
+            const res = await fetch(`${API_BASE}/api/attendance/delete/${id}/${user.rollNo}`, { method: 'DELETE' });
+            if (res.ok) { showMsg('Deleted!'); fetchAllAttendance(); }
         }
 
         function exportStudentCSV() {
-            if (globalMyRecords.length === 0) {
-                alert("No attendance records found to export!");
-                return;
-            }
-
+            if (globalMyRecords.length === 0) return alert("No records!");
             const grouped = {};
-            globalMyRecords.forEach(rec => {
-                if (!grouped[rec.date]) grouped[rec.date] = [];
-                grouped[rec.date].push(rec.subject);
-            });
-
-            const totalDays = Object.keys(grouped).length;
-
-            let csvContent = "data:text/csv;charset=utf-8,Date,Total Lectures Attended,Status\n";
-            Object.keys(grouped).forEach(date => {
-                csvContent += `"${date}","${grouped[date].length} Lectures","Present"\n`;
-            });
-            csvContent += `\n"Total Days Attended","${totalDays} Days",""\n`;
-
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `My_Attendance_Report_${new Date().toISOString().split('T')[0]}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            globalMyRecords.forEach(r => { if (!grouped[r.date]) grouped[r.date] = 0; grouped[r.date]++; });
+            let csv = "data:text/csv;charset=utf-8,Date,Total Lectures Attended,Status\n";
+            Object.keys(grouped).forEach(d => { csv += `"${d}","${grouped[d]} Lectures","Present"\n`; });
+            csv += `\n"Total Days Attended","${Object.keys(grouped).length} Days",""\n`;
+            const a = document.createElement("a"); a.href = encodeURI(csv); a.download = `My_Attendance_Report.csv`; a.click();
         }
 
         function exportCompactCSV() {
-            if (globalAllRecords.length === 0) {
-                alert("Please refresh the class list first!");
-                return;
-            }
-
-            const groupedData = {};
-            globalAllRecords.forEach(rec => {
-                const key = `${rec.rollNo}_${rec.date}`;
-                if (!groupedData[key]) {
-                    groupedData[key] = { studentName: rec.studentName, rollNo: rec.rollNo, date: rec.date, count: 0 };
-                }
-                groupedData[key].count++;
+            if (globalAllRecords.length === 0) return alert("Refresh class list first!");
+            const grouped = {};
+            globalAllRecords.forEach(r => {
+                const k = `${r.rollNo}_${r.date}`;
+                if (!grouped[k]) grouped[k] = { name: r.studentName, roll: r.rollNo, date: r.date, count: 0 };
+                grouped[k].count++;
             });
-
-            let csvContent = "data:text/csv;charset=utf-8,Student Name,Roll Number,Date,Total Classes Attended\n";
-            Object.values(groupedData).forEach(row => {
-                csvContent += `"${row.studentName}","${row.rollNo}","${row.date}","${row.count} Lectures Present"\n`;
-            });
-
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `BM_Group_Class_Attendance_${new Date().toISOString().split('T')[0]}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            let csv = "data:text/csv;charset=utf-8,Student Name,Roll Number,Date,Total Classes Attended\n";
+            Object.values(grouped).forEach(r => { csv += `"${r.name}","${r.roll}","${r.date}","${r.count} Lectures Present"\n`; });
+            const a = document.createElement("a"); a.href = encodeURI(csv); a.download = `Class_Attendance_Report.csv`; a.click();
         }
 
-        function logout() {
-            localStorage.clear();
-            location.reload();
-        }
-
-        if (localStorage.getItem('user')) {
-            loadDashboard();
-        }
+        function logout() { localStorage.clear(); location.reload(); }
+        if (localStorage.getItem('user')) loadDashboard();
     </script>
-    </body>
+</body>
 </html>
