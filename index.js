@@ -11,8 +11,59 @@ app.use(cors());
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
 
-// ADMIN ROLL NUMBERS LIST
+// ADMIN ROLL NUMBERS
 const ADMIN_ROLL_NUMBERS = ['24CSE48'];
+
+// ---------------- TIME TABLE DATA (B.Tech 5th Sem CSE) ----------------
+const TIME_TABLE = {
+  Monday: [
+    { period: 1, time: '09:20 - 10:05', subject: 'BDA', faculty: 'Ms. Rashmi' },
+    { period: 2, time: '10:05 - 10:50', subject: 'ECO', faculty: 'Ms. Sakshi Yadav' },
+    { period: 3, time: '10:50 - 11:35', subject: 'DAA', faculty: 'Ms. Rashmi' },
+    { period: 4, time: '11:35 - 12:20', subject: 'FLA', faculty: 'Ms. Nisha' },
+    { period: 5, time: '12:20 - 01:05', subject: 'LUNCH BREAK', faculty: '-' },
+    { period: 6, time: '01:05 - 01:50', subject: 'HRM', faculty: 'Msr. Lokesh' },
+    { period: 7, time: '01:50 - 02:35', subject: 'CN', faculty: 'Mr. Chhatarpal' },
+    { period: 8, time: '02:35 - 03:20', subject: 'WT', faculty: 'Mr. Avish Yadav' }
+  ],
+  Tuesday: [
+    { period: 1, time: '09:20 - 10:05', subject: 'WT', faculty: 'Mr. Avish Yadav' },
+    { period: 2, time: '10:05 - 10:50', subject: 'ECO', faculty: 'Ms. Sakshi Yadav' },
+    { period: 3, time: '10:50 - 11:35', subject: 'Internet', faculty: 'Ms. Geeta' },
+    { period: 4, time: '11:35 - 12:20', subject: 'FLA', faculty: 'Ms. Nisha' },
+    { period: 5, time: '12:20 - 01:05', subject: 'LUNCH BREAK', faculty: '-' },
+    { period: 6, time: '01:05 - 01:50', subject: 'HRM', faculty: 'Msr. Lokesh' },
+    { period: 7, time: '01:50 - 02:35', subject: 'BDA', faculty: 'Ms. Rashmi' },
+    { period: 8, time: '02:35 - 03:20', subject: 'SPORTS', faculty: '-' }
+  ],
+  Wednesday: [
+    { period: 1, time: '09:20 - 10:05', subject: 'BDA', faculty: 'Ms. Rashmi' },
+    { period: 2, time: '10:05 - 10:50', subject: 'ECO', faculty: 'Ms. Sakshi Yadav' },
+    { period: 3, time: '10:50 - 11:35', subject: 'FLA', faculty: 'Ms. Nisha' },
+    { period: 4, time: '11:35 - 12:20', subject: 'SPORTS', faculty: '-' },
+    { period: 5, time: '12:20 - 01:05', subject: 'LUNCH BREAK', faculty: '-' },
+    { period: 6, time: '01:05 - 01:50', subject: 'WT', faculty: 'Mr. Avish Yadav' },
+    { period: 7, time: '01:50 - 03:20', subject: 'CN LAB', faculty: 'Mr. Chhatarpal' }
+  ],
+  Thursday: [
+    { period: 1, time: '09:20 - 10:05', subject: 'BDA', faculty: 'Ms. Rashmi' },
+    { period: 2, time: '10:05 - 10:50', subject: 'CN', faculty: 'Mr. Chhatarpal' },
+    { period: 3, time: '10:50 - 11:35', subject: 'SPORTS', faculty: '-' },
+    { period: 4, time: '11:35 - 12:20', subject: 'DAA', faculty: 'Ms. Rashmi' },
+    { period: 5, time: '12:20 - 01:05', subject: 'LUNCH BREAK', faculty: '-' },
+    { period: 6, time: '01:05 - 02:35', subject: 'DAA LAB', faculty: 'Ms. Rashmi' },
+    { period: 8, time: '02:35 - 03:20', subject: 'HRM', faculty: 'Msr. Lokesh' }
+  ],
+  Friday: [
+    { period: 1, time: '09:20 - 10:05', subject: 'DAA', faculty: 'Ms. Rashmi' },
+    { period: 2, time: '10:05 - 10:50', subject: 'CN', faculty: 'Mr. Chhatarpal' },
+    { period: 3, time: '10:50 - 11:35', subject: 'FLA', faculty: 'Ms. Nisha' },
+    { period: 4, time: '11:35 - 12:20', subject: 'BDA', faculty: 'Ms. Rashmi' },
+    { period: 5, time: '12:20 - 01:05', subject: 'LUNCH BREAK', faculty: '-' },
+    { period: 6, time: '01:05 - 02:35', subject: 'WT LAB', faculty: 'Mr. Avish Yadav' },
+    { period: 8, time: '02:35 - 03:20', subject: 'SPORTS', faculty: '-' }
+  ]
+};
 
 // ---------------- DATABASE CONNECTION ----------------
 if (MONGO_URI) {
@@ -34,7 +85,7 @@ const userSchema = new mongoose.Schema({
 const attendanceSchema = new mongoose.Schema({
   rollNo: { type: String, required: true },
   studentName: { type: String, required: true },
-  subject: { type: String, default: 'General Attendance' },
+  subject: { type: String, required: true },
   date: { type: String, required: true }, 
   status: { type: String, enum: ['Present', 'Absent'], default: 'Present' },
   location: {
@@ -49,51 +100,46 @@ const Attendance = mongoose.model('Attendance', attendanceSchema);
 // ---------------- API ENDPOINTS ----------------
 
 app.get('/', (req, res) => {
-  res.send('BM Group of Institutions - Attendance API is Live!');
+  res.send('BM Group of Institutions - B.Tech 5th Sem CSE Portal Active!');
 });
 
-// 1. Student Registration API
+// Time-Table API
+app.get('/api/timetable', (req, res) => {
+  res.json(TIME_TABLE);
+});
+
+// Student Registration
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, rollNo, password } = req.body;
-    if (!name || !rollNo || !password) {
-      return res.status(400).json({ error: 'All fields are required!' });
-    }
+    if (!name || !rollNo || !password) return res.status(400).json({ error: 'All fields required!' });
 
     const cleanRollNo = rollNo.trim().toUpperCase();
-
     let user = await User.findOne({ rollNo: cleanRollNo });
-    if (user) {
-      return res.status(400).json({ error: 'Roll number is already registered!' });
-    }
+    if (user) return res.status(400).json({ error: 'Roll number already registered!' });
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const role = ADMIN_ROLL_NUMBERS.includes(cleanRollNo) ? 'admin' : 'student';
 
     user = new User({ name, rollNo: cleanRollNo, password: hashedPassword, role });
     await user.save();
-
     res.status(201).json({ message: 'Registration successful!' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// 2. Student / Admin Login API
+// Login API
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { rollNo, password } = req.body;
     const cleanRollNo = rollNo.trim().toUpperCase();
 
     const user = await User.findOne({ rollNo: cleanRollNo });
-    if (!user) {
-      return res.status(400).json({ error: 'User not found!' });
-    }
+    if (!user) return res.status(400).json({ error: 'User not found!' });
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ error: 'Invalid password!' });
-    }
+    if (!isMatch) return res.status(400).json({ error: 'Invalid password!' });
 
     const role = ADMIN_ROLL_NUMBERS.includes(cleanRollNo) ? 'admin' : user.role;
 
@@ -113,12 +159,12 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// 3. Mark Attendance API (BM Group Coordinates)
+// Mark Attendance (BM Group Geo-Fencing + Subject Wise)
 app.post('/api/attendance/mark', async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude } = req.body;
-    if (!rollNo || !latitude || !longitude) {
-      return res.status(400).json({ error: 'Roll number and Location are required!' });
+    if (!rollNo || !latitude || !longitude || !subject) {
+      return res.status(400).json({ error: 'Roll Number, Subject and Location required!' });
     }
 
     const COLLEGE_LAT = 28.4485; 
@@ -141,40 +187,41 @@ app.post('/api/attendance/mark', async (req, res) => {
 
     if (distance > MAX_ALLOWED_DISTANCE_KM) {
       return res.status(400).json({ 
-        error: `Attendance Failed: Outside BM Group Campus! (${(distance * 1000).toFixed(0)} meters away)` 
+        error: `Outside BM Group Campus! (${(distance * 1000).toFixed(0)}m away)` 
       });
     }
 
     const todayDate = new Date().toISOString().split('T')[0];
     const cleanRollNo = rollNo.trim().toUpperCase();
 
+    // Check if already marked for this subject today
     const existingRecord = await Attendance.findOne({
       rollNo: cleanRollNo,
-      subject: subject || 'General Attendance',
+      subject: subject,
       date: todayDate
     });
 
     if (existingRecord) {
-      return res.status(400).json({ error: 'Attendance already marked for today!' });
+      return res.status(400).json({ error: `Attendance already marked for ${subject} today!` });
     }
 
     const newAttendance = new Attendance({
       rollNo: cleanRollNo,
       studentName: name || 'Student',
-      subject: subject || 'General Attendance',
+      subject: subject,
       date: todayDate,
       status: 'Present',
       location: { latitude, longitude }
     });
 
     await newAttendance.save();
-    res.status(201).json({ message: 'Attendance Marked Successfully!', attendance: newAttendance });
+    res.status(201).json({ message: `Attendance Marked for ${subject}!`, attendance: newAttendance });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// 4. Individual Student History API
+// Individual History
 app.get('/api/attendance/history/:rollNo', async (req, res) => {
   try {
     const cleanRollNo = req.params.rollNo.trim().toUpperCase();
@@ -185,13 +232,13 @@ app.get('/api/attendance/history/:rollNo', async (req, res) => {
   }
 });
 
-// 5. SECURED ALL ATTENDANCE API (ONLY FOR ADMINS)
+// ADMIN ALL ATTENDANCE
 app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
   try {
     const requester = req.params.requesterRollNo.trim().toUpperCase();
 
     if (!ADMIN_ROLL_NUMBERS.includes(requester)) {
-      return res.status(403).json({ error: 'Access Denied: Only Admin can view all attendance!' });
+      return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     }
 
     const allRecords = await Attendance.find().sort({ createdAt: -1 });
