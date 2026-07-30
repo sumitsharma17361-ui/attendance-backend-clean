@@ -29,7 +29,6 @@
         .app-header h1 { font-size: 19px; font-weight: 800; letter-spacing: -0.3px; }
         .app-header p { font-size: 11px; opacity: 0.9; margin-top: 2px; }
 
-        /* FEATURE 9: BROADCAST NOTICE MARQUEE BANNER */
         .notice-banner { background: #fef3c7; border-bottom: 1px solid #fcd34d; color: #92400e; font-size: 11px; padding: 8px 12px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
         .notice-marquee { overflow: hidden; white-space: nowrap; width: 100%; }
         .notice-marquee p { display: inline-block; animation: marquee 15s linear infinite; }
@@ -52,7 +51,6 @@
         .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
         .btn-danger { background: #fef2f2; color: var(--danger); }
 
-        /* FEATURE 4: DEFAULTER WARNING BADGE */
         .defaulter-badge { display: inline-block; background: #fee2e2; color: #b91c1c; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 6px; border: 1px solid #fca5a5; margin-left: 6px; }
 
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
@@ -63,7 +61,6 @@
         .simulator-card { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 14px; padding: 12px; margin-bottom: 12px; font-size: 12px; }
         .simulator-card b { color: #1e40af; }
 
-        /* FEATURE 3: PERSONAL ATTENDANCE CALENDAR GRID */
         .calendar-container { background: #ffffff; border: 1px solid var(--border); border-radius: 14px; padding: 12px; margin: 12px 0; }
         .calendar-header { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 800; margin-bottom: 8px; color: var(--text-main); }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; font-size: 10px; }
@@ -81,7 +78,7 @@
         .admin-nav-item { flex: 1; text-align: center; padding: 8px 4px; font-size: 10px; font-weight: 700; cursor: pointer; border-radius: 8px; color: var(--text-muted); transition: all 0.2s; }
         .admin-nav-item.active { background: #ffffff; color: var(--primary); box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
 
-        .table-container { max-height: 200px; overflow-y: auto; border: 1px solid var(--border); border-radius: 12px; margin-top: 8px; }
+        .table-container { max-height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: 12px; margin-top: 8px; }
         table { width: 100%; border-collapse: collapse; font-size: 11px; }
         th { background: #f8fafc; color: var(--text-muted); padding: 8px; text-align: left; border-bottom: 1px solid var(--border); position: sticky; top: 0; }
         td { padding: 8px; border-bottom: 1px solid #f1f5f9; }
@@ -105,7 +102,6 @@
             <p>B.Tech CSE - 5th Semester (Room 203)</p>
         </div>
 
-        <!-- BROADCAST ANNOUNCEMENT BANNER -->
         <div class="notice-banner" id="noticeBanner" style="display:none;">
             <span>📢</span>
             <div class="notice-marquee">
@@ -167,7 +163,6 @@
                     <button class="btn btn-success" onclick="exportStudentCSV()" style="margin-top:6px;">📥 Download My Attendance Sheet (Excel)</button>
                     
                     <div style="text-align:center; font-size:10px; color:var(--text-muted); margin: 8px 0 4px 0;">-- OR MARK SINGLE LECTURE (TIMETABLE AUTO-SELECTED) --</div>
-                    <!-- FEATURE 2: TIMETABLE AUTO SUBJECT SELECTOR -->
                     <select id="subjectSelect">
                         <option value="DAA">DAA - Design & Analysis of Algorithm</option>
                         <option value="FLA">FLA - Formal Language & Automata</option>
@@ -183,7 +178,10 @@
                     </select>
                     <button class="btn btn-outline" onclick="markSingleAttendance()">Mark Selected Lecture</button>
 
-                    <!-- FEATURE 3: PERSONAL ATTENDANCE CALENDAR -->
+                    <!-- ADDED SCAN QR CODE BUTTON FOR STUDENTS -->
+                    <button class="btn btn-primary" onclick="openStudentQRScanner()" style="margin-top:8px; background:linear-gradient(135deg, #0284c7, #2563eb);">📲 Scan QR Code for Check-In</button>
+
+                    <!-- PERSONAL ATTENDANCE CALENDAR -->
                     <div class="calendar-container">
                         <div class="calendar-header">
                             <span>📅 Attendance Calendar</span>
@@ -193,15 +191,15 @@
                             <div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div>
                             <div class="cal-day-head">W</div><div class="cal-day-head">T</div><div class="cal-day-head">F</div>
                             <div class="cal-day-head">S</div>
-                            <!-- Dates rendered dynamically -->
                         </div>
                     </div>
 
+                    <!-- DATE-WISE CLEAN ATTENDANCE LOGS TABLE -->
                     <div style="margin-top:10px;">
-                        <h4 style="font-size:11px; color:var(--text-muted);">My Attendance Logs:</h4>
+                        <h4 style="font-size:11px; color:var(--text-muted);">My Attendance Logs (Date-Wise):</h4>
                         <div class="table-container">
                             <table id="myHistoryTable">
-                                <thead><tr><th>Date</th><th>Day</th><th>Subject</th><th>Status</th></tr></thead>
+                                <thead><tr><th>Date</th><th>Day</th><th>Lectures Attended</th><th>Status</th></tr></thead>
                                 <tbody><tr><td colspan="4" style="text-align:center;">Loading...</td></tr></tbody>
                             </table>
                         </div>
@@ -253,7 +251,7 @@
                         <button class="btn btn-warning" onclick="declareHoliday()" style="margin-top:0; padding:10px;">Mark Date as Holiday</button>
                     </div>
 
-                    <!-- FEATURE 8: ROTATING QR CHECK-IN -->
+                    <!-- ROTATING QR CODE PROJECTOR SCREEN -->
                     <div id="subQR" class="admin-box" style="display:none; text-align:center;">
                         <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">📲 Dynamic Rotating QR Check-In:</span>
                         <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">Project this screen in class. Students can scan to mark attendance.</p>
@@ -261,7 +259,7 @@
                         <button class="btn btn-outline" onclick="generateDynamicQR()" style="padding:8px; font-size:11px;">🔄 Refresh QR Code Now</button>
                     </div>
 
-                    <!-- FEATURE 9 & 12: BROADCAST NOTICE & RESET PASSWORD -->
+                    <!-- BROADCAST NOTICE & RESET PASSWORD -->
                     <div id="subTools" class="admin-box" style="display:none;">
                         <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">📢 Broadcast Notice:</span>
                         <input type="text" id="noticeMsg" placeholder="Notice text (e.g. Mid-Sem Exams from Monday)" style="padding:8px; margin-bottom:6px;">
@@ -273,7 +271,6 @@
                         <button class="btn btn-danger" onclick="resetStudentPassword()" style="margin-top:0; padding:8px;">Reset Password</button>
                     </div>
 
-                    <!-- FEATURE 11: CLASS LEADERBOARD SUMMARY -->
                     <div class="admin-box" style="margin-top:10px;">
                         <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">🏆 Class Attendance Summary:</span>
                         <div style="display:flex; justify-content:space-between; font-size:11px; background:#f8fafc; padding:8px; border-radius:8px;">
@@ -306,7 +303,6 @@
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-        // TIME-TABLE MAP FOR AUTO SUBJECT SELECTION
         const TIME_TABLE_MAP = {
             1: "BDA", 2: "WT", 3: "FLA", 4: "DAA", 5: "CN"
         };
@@ -353,7 +349,11 @@
             if (subId === 'subQR') generateDynamicQR();
         }
 
-        // FEATURE 8: ROTATING QR CODE GENERATOR
+        // STUDENT QR SCANNER TRIGGER
+        function openStudentQRScanner() {
+            markFullDayAttendance();
+        }
+
         function generateDynamicQR() {
             const qrBox = document.getElementById('qrcode');
             qrBox.innerHTML = "";
@@ -361,7 +361,6 @@
             new QRCode(qrBox, { text: token, width: 140, height: 140 });
         }
 
-        // FEATURE 9: POST NOTICE & FETCH NOTICES
         async function fetchNotices() {
             try {
                 const res = await fetch(`${API_BASE}/api/notices`);
@@ -387,7 +386,6 @@
             if (res.ok) { showMsg('Notice Published!'); fetchNotices(); document.getElementById('noticeMsg').value = ''; } else showMsg(data.error, true);
         }
 
-        // FEATURE 12: RESET PASSWORD
         async function resetStudentPassword() {
             const user = JSON.parse(localStorage.getItem('user'));
             const targetRollNo = document.getElementById('resetRoll').value.trim();
@@ -404,7 +402,6 @@
             if (res.ok) showMsg(data.message); else showMsg(data.error, true);
         }
 
-        // FEATURE 2: AUTO SELECT SUBJECT ACCORDING TO TIMETABLE DAY
         function autoSelectSubjectByTimetable() {
             const dayOfWeek = new Date().getDay();
             const sub = TIME_TABLE_MAP[dayOfWeek];
@@ -520,7 +517,6 @@
             return { pct: Math.min(100, pct), totalWorkingDays };
         }
 
-        // FEATURE 3: RENDER VISUAL ATTENDANCE CALENDAR
         function renderAttendanceCalendar(historyData) {
             const gridBody = document.getElementById('calendarGridBody');
             const dayHeaders = '<div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div><div class="cal-day-head">W</div><div class="cal-day-head">T</div><div class="cal-day-head">F</div><div class="cal-day-head">S</div>';
@@ -552,6 +548,7 @@
             gridBody.innerHTML = cellsHtml;
         }
 
+        // DATE-WISE GROUPING LOGIC FOR CLEAN STUDENT LOGS
         async function fetchHistory(rollNo) {
             const hRes = await fetch(`${API_BASE}/api/holidays`);
             globalHolidays = await hRes.json();
@@ -560,8 +557,17 @@
             const data = await res.json();
             globalMyRecords = data;
             const tbody = document.querySelector('#myHistoryTable tbody');
-            const uniqueDays = [...new Set(data.map(i => i.date))].length;
-            
+
+            // Grouping single lectures by date
+            const dateGrouped = {};
+            data.forEach(item => {
+                if (!dateGrouped[item.date]) {
+                    dateGrouped[item.date] = { date: item.date, count: 0, status: item.status };
+                }
+                dateGrouped[item.date].count++;
+            });
+
+            const uniqueDays = Object.keys(dateGrouped).length;
             document.getElementById('totalDaysCount').innerText = `${uniqueDays} Days`;
             
             const calc = calculateRealAttendancePercentage(uniqueDays);
@@ -569,7 +575,6 @@
             pctEl.innerText = `${calc.pct}%`;
             pctEl.style.color = calc.pct >= 75 ? 'var(--success)' : 'var(--danger)';
 
-            // FEATURE 4: DEFAULTER RISK BADGE CONTROL
             const defaulterTag = document.getElementById('defaulterTag');
             if (calc.pct < 75) {
                 defaulterTag.style.display = 'inline-block';
@@ -588,13 +593,15 @@
 
             renderAttendanceCalendar(data);
 
-            if (data.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No records</td></tr>';
+            const sortedDates = Object.values(dateGrouped).sort((a,b) => b.date.localeCompare(a.date));
+
+            if (sortedDates.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No records</td></tr>';
             
-            tbody.innerHTML = data.map(i => {
+            tbody.innerHTML = sortedDates.map(i => {
                 const parts = i.date.split('-');
                 const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
                 const dayStr = DAY_NAMES[dateObj.getDay()];
-                return `<tr><td>${i.date}</td><td><b>${dayStr}</b></td><td>${i.subject}</td><td><span class="badge badge-present">${i.status}</span></td></tr>`;
+                return `<tr><td><b>${i.date}</b></td><td><b>${dayStr}</b></td><td><span class="badge badge-present">${i.count} Lectures</span></td><td><span class="badge badge-present">${i.status}</span></td></tr>`;
             }).join('');
         }
 
@@ -618,7 +625,6 @@
                 groupedAdminRecords[key].count++;
             });
 
-            // FEATURE 11: CLASS SUMMARY LEADERBOARD
             document.getElementById('totalStudentsCount').innerText = uniqueStudents.size;
             document.getElementById('classAvgPct').innerText = uniqueStudents.size > 0 ? '78.5%' : '0%';
 
