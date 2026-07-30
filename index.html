@@ -179,15 +179,17 @@
 
                     <button class="btn btn-primary" onclick="openStudentQRScanner()" style="margin-top:8px; background:linear-gradient(135deg, #0284c7, #2563eb);">📲 Scan QR Code for Check-In</button>
 
+                    <!-- ADDED FULL SEMESTER CALENDAR TOGGLE -->
                     <div class="calendar-container">
                         <div class="calendar-header">
                             <span>📅 Attendance Calendar</span>
-                            <span id="calMonthTitle" style="color:var(--primary);">July 2026</span>
+                            <select id="calendarViewMode" onchange="toggleCalendarView()" style="width:auto; padding:4px 8px; font-size:11px; margin:0;">
+                                <option value="CURRENT_MONTH">Current Month</option>
+                                <option value="FULL_SEMESTER">🌟 Full Semester (July - Dec)</option>
+                            </select>
                         </div>
-                        <div class="calendar-grid" id="calendarGridBody">
-                            <div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div>
-                            <div class="cal-day-head">W</div><div class="cal-day-head">T</div><div class="cal-day-head">F</div>
-                            <div class="cal-day-head">S</div>
+                        <div id="calendarDisplayWrapper">
+                            <!-- Dynamic Calendar Months Rendered Here -->
                         </div>
                     </div>
 
@@ -201,9 +203,9 @@
                         </div>
                     </div>
                 </div>
-                                <!-- TAB 2: CLEAN ADMIN PANEL WITH NEW TOOLS -->
+
+                <!-- ADMIN CONTROL TAB -->
                 <div id="adminTab" style="display:none;">
-                    
                     <div class="admin-nav">
                         <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">📊 Excel</div>
                         <div class="admin-nav-item" onclick="switchAdminSubTab('subAttendance')">⚡ Entry</div>
@@ -212,7 +214,6 @@
                         <div class="admin-nav-item" onclick="switchAdminSubTab('subTools')">🛠️ Tools</div>
                     </div>
 
-                    <!-- SUB TAB 1: REPORTS -->
                     <div id="subReports" class="admin-box">
                         <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">📥 Export Excel Reports:</span>
                         <select id="exportSelection" style="padding:8px; margin-bottom:6px;">
@@ -227,7 +228,6 @@
                         <button class="btn btn-success" onclick="exportExcelGrid()" style="margin-top:0; padding:10px;">📥 Download Excel Report</button>
                     </div>
 
-                    <!-- SUB TAB 2: MANUAL ATTENDANCE -->
                     <div id="subAttendance" class="admin-box" style="display:none;">
                         <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">⚡ Manual Backdate Attendance:</span>
                         <input type="text" id="manualRoll" placeholder="Student Roll No (e.g. 24CSE14)" style="padding:8px; margin-bottom:6px;">
@@ -239,7 +239,6 @@
                         <button class="btn btn-primary" onclick="markManualAttendance()" style="margin-top:0; padding:10px;">✅ Mark Attendance</button>
                     </div>
 
-                    <!-- SUB TAB 3: HOLIDAYS -->
                     <div id="subHoliday" class="admin-box" style="display:none;">
                         <span style="font-size:11px; font-weight:700; color:#b06000; display:block; margin-bottom:6px;">🏖️ Declare Official Holiday:</span>
                         <input type="date" id="holidayDate" style="padding:8px; margin-bottom:6px;">
@@ -487,7 +486,6 @@
             if (res.ok) { showMsg(data.message); fetchAllAttendance(); } else showMsg(data.error, true);
         }
 
-        // FIXED PERCENTAGE CALCULATION (STRICTLY SUBTRACTS DECLARED HOLIDAYS)
         function calculateRealAttendancePercentage(attendedDaysCount) {
             const startDate = new Date(2026, 6, 15);
             const today = new Date();
@@ -517,43 +515,75 @@
             return { pct: Math.min(100, pct), totalWorkingDays };
         }
 
-        // FIXED CALENDAR RENDERER (HIGHLIGHTS HOLIDAYS IN YELLOW/GREY BADGE)
+        function toggleCalendarView() {
+            renderAttendanceCalendar(globalMyRecords);
+        }
+
+        // RENDER MONTHLY OR FULL SEMESTER VISUAL CALENDAR
         function renderAttendanceCalendar(historyData) {
-            const gridBody = document.getElementById('calendarGridBody');
-            const dayHeaders = '<div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div><div class="cal-day-head">W</div><div class="cal-day-head">T</div><div class="cal-day-head">F</div><div class="cal-day-head">S</div>';
-            
+            const wrapper = document.getElementById('calendarDisplayWrapper');
+            const mode = document.getElementById('calendarViewMode').value;
             const attendedDates = new Set(historyData.map(h => h.date));
             const holidayDatesSet = new Set(globalHolidays.map(h => h.date));
 
-            const year = 2026, month = 6;
-            const daysInMonth = 31;
-            const firstDayOfWeek = new Date(year, month, 1).getDay();
+            let monthsToRender = [];
+            const today = new Date();
+            const currentMonthIdx = today.getMonth(); // 6 for July
 
-            let cellsHtml = dayHeaders;
-            for (let i = 0; i < firstDayOfWeek; i++) {
-                cellsHtml += `<div class="cal-date cal-off"></div>`;
+            if (mode === 'FULL_SEMESTER') {
+                monthsToRender = [6, 7, 8, 9, 10, 11]; // July to Dec
+            } else {
+                monthsToRender = [currentMonthIdx];
             }
 
-            for (let d = 1; d <= daysInMonth; d++) {
-                const dateStr = `2026-07-${String(d).padStart(2, '0')}`;
-                const dtObj = new Date(year, month, d);
-                const dayOfWeek = dtObj.getDay();
-                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-                const isHoliday = holidayDatesSet.has(dateStr);
+            let wrapperHtml = "";
 
-                if (isWeekend) {
-                    cellsHtml += `<div class="cal-date cal-off">${d}</div>`;
-                } else if (isHoliday) {
-                    cellsHtml += `<div class="cal-date cal-off" style="background:#fef3c7; color:#92400e; font-weight:800; border-color:#fcd34d;" title="Declared Holiday">${d}</div>`;
-                } else if (attendedDates.has(dateStr)) {
-                    cellsHtml += `<div class="cal-date cal-p">${d}</div>`;
-                } else {
-                    cellsHtml += `<div class="cal-date cal-a">${d}</div>`;
+            monthsToRender.forEach(mIdx => {
+                const year = 2026;
+                const monthName = MONTH_NAMES[mIdx];
+                const daysInMonth = new Date(year, mIdx + 1, 0).getDate();
+                const firstDayOfWeek = new Date(year, mIdx, 1).getDay();
+
+                let gridHtml = `
+                    <div style="margin-bottom:12px; border-bottom:1px solid #f1f5f9; padding-bottom:8px;">
+                        <div style="font-size:11px; font-weight:800; color:var(--primary); margin-bottom:6px;">${monthName} ${year}</div>
+                        <div class="calendar-grid">
+                            <div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div>
+                            <div class="cal-day-head">W</div><div class="cal-day-head">T</div><div class="cal-day-head">F</div>
+                            <div class="cal-day-head">S</div>
+                `;
+
+                for (let i = 0; i < firstDayOfWeek; i++) {
+                    gridHtml += `<div class="cal-date cal-off"></div>`;
                 }
-            }
-            gridBody.innerHTML = cellsHtml;
+
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const dateStr = `2026-${String(mIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    const dtObj = new Date(year, mIdx, d);
+                    const dayOfWeek = dtObj.getDay();
+                    const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+                    const isHoliday = holidayDatesSet.has(dateStr);
+
+                    if (isWeekend) {
+                        gridHtml += `<div class="cal-date cal-off">${d}</div>`;
+                    } else if (isHoliday) {
+                        gridHtml += `<div class="cal-date cal-off" style="background:#fef3c7; color:#92400e; font-weight:800; border-color:#fcd34d;" title="Declared Holiday">${d}</div>`;
+                    } else if (attendedDates.has(dateStr)) {
+                        gridHtml += `<div class="cal-date cal-p">${d}</div>`;
+                    } else if (dtObj <= today) {
+                        gridHtml += `<div class="cal-date cal-a">${d}</div>`;
+                    } else {
+                        gridHtml += `<div class="cal-date cal-off">${d}</div>`;
+                    }
+                }
+                gridHtml += `</div></div>`;
+                wrapperHtml += gridHtml;
+            });
+
+            wrapper.innerHTML = wrapperHtml;
         }
-                    async function fetchHistory(rollNo) {
+
+        async function fetchHistory(rollNo) {
             const hRes = await fetch(`${API_BASE}/api/holidays`);
             globalHolidays = await hRes.json();
 
@@ -634,7 +664,7 @@
             const sortedArray = Object.values(groupedAdminRecords).sort((a, b) => a.roll.localeCompare(b.roll, undefined, { numeric: true }));
 
             const tbody = document.querySelector('#allHistoryTable tbody');
-            if (sortedArray.length === 0) return tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No records</td></tr>';
+            if (sortedArray.length === 0) return tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No records</td> innocent</tr>';
             
             tbody.innerHTML = sortedArray.map(g => `
                 <tr>
