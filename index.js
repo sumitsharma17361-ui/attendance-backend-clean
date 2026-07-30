@@ -58,10 +58,15 @@ const Attendance = mongoose.model('Attendance', attendanceSchema);
 // ---------------- API ENDPOINTS ----------------
 
 app.get('/', (req, res) => {
-  res.send('B. M. Group Of Institutions - Attendance API Active!');
+  res.send('B. M. Group Of Institutions - Professional Enterprise Portal Active!');
 });
 
-// Student Registration
+// Time-Table API
+app.get('/api/timetable', (req, res) => {
+  res.json(TIME_TABLE);
+});
+
+// Register API
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, rollNo, password } = req.body;
@@ -112,7 +117,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Helper Function for GPS Distance
+// GPS Distance Helper
 function checkLocation(lat, lng) {
   const COLLEGE_LAT = 28.4475; 
   const COLLEGE_LNG = 76.7645;
@@ -131,7 +136,7 @@ function checkLocation(lat, lng) {
   return { isInside: distance <= MAX_ALLOWED_DISTANCE_KM, distance: (distance * 1000).toFixed(0) };
 }
 
-// 1. Single Lecture Attendance Mark
+// Single Subject Mark
 app.post('/api/attendance/mark', async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude } = req.body;
@@ -139,16 +144,16 @@ app.post('/api/attendance/mark', async (req, res) => {
     const today = new Date();
     const dayOfWeek = today.getDay();
     if (dayOfWeek === 0 || dayOfWeek === 6) {
-      return res.status(400).json({ error: 'Today is Weekend! College is OFF.' });
+      return res.status(400).json({ error: 'College is OFF today (Weekend)!' });
     }
 
     if (!rollNo || !latitude || !longitude || !subject) {
-      return res.status(400).json({ error: 'Roll Number, Subject and Location required!' });
+      return res.status(400).json({ error: 'Roll Number, Subject & Location required!' });
     }
 
     const locCheck = checkLocation(latitude, longitude);
     if (!locCheck.isInside) {
-      return res.status(400).json({ error: `Outside B. M. Group Campus! (${locCheck.distance}m away)` });
+      return res.status(400).json({ error: `Outside Campus Boundary! (${locCheck.distance}m away)` });
     }
 
     const todayDate = today.toISOString().split('T')[0];
@@ -156,7 +161,7 @@ app.post('/api/attendance/mark', async (req, res) => {
 
     const existingRecord = await Attendance.findOne({ rollNo: cleanRollNo, subject, date: todayDate });
     if (existingRecord) {
-      return res.status(400).json({ error: `Attendance already marked for ${subject} today!` });
+      return res.status(400).json({ error: `Already marked for ${subject} today!` });
     }
 
     await new Attendance({
@@ -168,13 +173,13 @@ app.post('/api/attendance/mark', async (req, res) => {
       location: { latitude, longitude }
     }).save();
 
-    res.status(201).json({ message: `Attendance Marked for ${subject}!` });
+    res.status(201).json({ message: `Attendance Recorded for ${subject}!` });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// 2. NEW FEATURE: FULL DAY ATTENDANCE (All Lectures in One Tap)
+// Full Day Mark
 app.post('/api/attendance/mark-fullday', async (req, res) => {
   try {
     const { rollNo, name, latitude, longitude } = req.body;
@@ -184,22 +189,22 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     const currentDayName = days[today.getDay()];
 
     if (currentDayName === 'Sunday' || currentDayName === 'Saturday') {
-      return res.status(400).json({ error: 'Today is Weekend! College is OFF.' });
+      return res.status(400).json({ error: 'College is OFF today (Weekend)!' });
     }
 
     if (!rollNo || !latitude || !longitude) {
-      return res.status(400).json({ error: 'Roll Number and Location required!' });
+      return res.status(400).json({ error: 'Roll Number & Location required!' });
     }
 
     const locCheck = checkLocation(latitude, longitude);
     if (!locCheck.isInside) {
-      return res.status(400).json({ error: `Outside B. M. Group Campus! (${locCheck.distance}m away)` });
+      return res.status(400).json({ error: `Outside Campus Boundary! (${locCheck.distance}m away)` });
     }
 
     const todayDate = today.toISOString().split('T')[0];
     const cleanRollNo = rollNo.trim().toUpperCase();
 
-    const todaySubjects = TIME_TABLE[currentDayName] || ['General Full Day'];
+    const todaySubjects = TIME_TABLE[currentDayName] || ['General Attendance'];
     let markedCount = 0;
 
     for (let sub of todaySubjects) {
@@ -221,13 +226,13 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
       return res.status(400).json({ error: 'Full Day Attendance already marked for today!' });
     }
 
-    res.status(201).json({ message: `🎉 Full Day Attendance Marked for all ${markedCount} lectures of ${currentDayName}!` });
+    res.status(201).json({ message: `Full Day Attendance Marked (${markedCount} Lectures)!` });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Individual History
+// History
 app.get('/api/attendance/history/:rollNo', async (req, res) => {
   try {
     const cleanRollNo = req.params.rollNo.trim().toUpperCase();
@@ -243,7 +248,7 @@ app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
   try {
     const requester = req.params.requesterRollNo.trim().toUpperCase();
     if (!ADMIN_ROLL_NUMBERS.includes(requester)) {
-      return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+      return res.status(403).json({ error: 'Access Denied: Admin Privileges Required!' });
     }
 
     const allRecords = await Attendance.find().sort({ createdAt: -1 });
@@ -255,4 +260,3 @@ app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-      
