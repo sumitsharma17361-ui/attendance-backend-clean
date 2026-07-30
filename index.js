@@ -11,10 +11,8 @@ app.use(cors());
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
 
-// ADMIN ROLL NUMBERS
 const ADMIN_ROLL_NUMBERS = ['24CSE48'];
 
-// TIME TABLE DATA (B.Tech 5th Sem CSE)
 const TIME_TABLE = {
   Monday: ['BDA', 'ECO', 'DAA', 'FLA', 'HRM', 'CN', 'WT'],
   Tuesday: ['WT', 'ECO', 'Internet', 'FLA', 'HRM', 'BDA'],
@@ -29,7 +27,6 @@ if (MONGO_URI) {
     .catch(err => console.log('DB ERROR:', err.message));
 }
 
-// SCHEMAS
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   rollNo: { type: String, required: true, unique: true },
@@ -57,7 +54,6 @@ const Holiday = mongoose.model('Holiday', holidaySchema);
 
 app.get('/', (req, res) => res.send('BM Group Portal API Active!'));
 
-// Registration API
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, rollNo, password } = req.body;
@@ -106,7 +102,6 @@ function checkLocation(lat, lng) {
   return { isInside: distance <= 1.0, distance: (distance * 1000).toFixed(0) };
 }
 
-// Student GPS Mark Single
 app.post('/api/attendance/mark', async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude } = req.body;
@@ -134,7 +129,6 @@ app.post('/api/attendance/mark', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Student GPS Mark Full Day
 app.post('/api/attendance/mark-fullday', async (req, res) => {
   try {
     const { rollNo, name, latitude, longitude } = req.body;
@@ -171,7 +165,6 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// NEW: ADMIN MANUAL BACKDATE ATTENDANCE (NO GPS LOCK, ANY DATE)
 app.post('/api/admin/manual-attendance', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNo, date } = req.body;
@@ -186,8 +179,8 @@ app.post('/api/admin/manual-attendance', async (req, res) => {
       return res.status(404).json({ error: `Student with Roll Number ${targetRoll} not registered yet!` });
     }
 
-    // Determine Day Name for the Target Date
-    const targetDateObj = new Date(date + 'T00:00:00');
+    const parts = date.split('-');
+    const targetDateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayName = days[targetDateObj.getDay()];
 
@@ -217,7 +210,6 @@ app.post('/api/admin/manual-attendance', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ADMIN: DECLARE HOLIDAY
 app.post('/api/admin/holiday', async (req, res) => {
   try {
     const { requesterRollNo, date, reason } = req.body;
@@ -230,7 +222,6 @@ app.post('/api/admin/holiday', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// GET ALL HOLIDAYS
 app.get('/api/holidays', async (req, res) => {
   try {
     const holidays = await Holiday.find();
