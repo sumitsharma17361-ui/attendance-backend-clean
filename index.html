@@ -126,7 +126,7 @@
 
                 <!-- TAB 2: ADMIN MANAGEMENT -->
                 <div id="adminTab" style="display:none;">
-                    <button class="btn btn-success" onclick="exportCompactCSV()">📥 Download Class Summary Excel</button>
+                    <button class="btn btn-success" onclick="exportMonthlyGridCSV()">📥 Download Monthly Attendance Grid (Excel)</button>
                     <button class="btn btn-outline" onclick="fetchAllAttendance()" style="margin-top:6px;">🔄 Refresh Records</button>
                     <div style="margin-top:10px;">
                         <h4 style="font-size:11px; color:var(--text-muted);">Manage Attendance Records (Edit / Delete):</h4>
@@ -277,17 +277,63 @@
             const a = document.createElement("a"); a.href = encodeURI(csv); a.download = `My_Attendance_Report.csv`; a.click();
         }
 
-        function exportCompactCSV() {
+        // --- MONTHLY GRID MATRIX EXCEL EXPORT (EXACT LIKE FIRST IMAGE) ---
+        function exportMonthlyGridCSV() {
             if (globalAllRecords.length === 0) return alert("Refresh class list first!");
-            const grouped = {};
+
+            const now = new Date();
+            const year = now.getFullYear();
+            const monthIdx = now.getMonth(); 
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            const currentMonthName = monthNames[monthIdx];
+            const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+
+            // Unique Students List
+            const studentsMap = {};
             globalAllRecords.forEach(r => {
-                const k = `${r.rollNo}_${r.date}`;
-                if (!grouped[k]) grouped[k] = { name: r.studentName, roll: r.rollNo, date: r.date, count: 0 };
-                grouped[k].count++;
+                if (!studentsMap[r.rollNo]) {
+                    studentsMap[r.rollNo] = { name: r.studentName, roll: r.rollNo, dates: {} };
+                }
+                const recordDate = new Date(r.date);
+                if (recordDate.getMonth() === monthIdx && recordDate.getFullYear() === year) {
+                    const dayNum = recordDate.getDate();
+                    studentsMap[r.rollNo].dates[dayNum] = r.status;
+                }
             });
-            let csv = "data:text/csv;charset=utf-8,Student Name,Roll Number,Date,Total Classes Attended\n";
-            Object.values(grouped).forEach(r => { csv += `"${r.name}","${r.roll}","${r.date}","${r.count} Lectures Present"\n`; });
-            const a = document.createElement("a"); a.href = encodeURI(csv); a.download = `Class_Attendance_Report.csv`; a.click();
+
+            // Build Header Row
+            let csv = `Attendance Sheet for ${currentMonthName} - ${year}\n\n`;
+            csv += `Student ID,Student Name`;
+            for (let d = 1; d <= daysInMonth; d++) {
+                csv += `,${d}-${currentMonthName.substring(0, 3)}`;
+            }
+            csv += `,Present Count\n`;
+
+            // Build Rows for each Student
+            Object.values(studentsMap).forEach(s => {
+                csv += `"${s.roll}","${s.name}"`;
+                let presentCount = 0;
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const status = s.dates[d];
+                    if (status === 'Present') {
+                        csv += `,P`;
+                        presentCount++;
+                    } else if (status === 'Absent') {
+                        csv += `,A`;
+                    } else {
+                        csv += `,-`; // Day with no marked record
+                    }
+                }
+                csv += `,${presentCount}\n`;
+            });
+
+            const encodedUri = encodeURI(csv);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Attendance_Sheet_${currentMonthName}_${year}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         function logout() { localStorage.clear(); location.reload(); }
