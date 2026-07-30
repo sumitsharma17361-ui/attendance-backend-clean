@@ -84,7 +84,7 @@
                         <div class="label">Days Attended</div>
                     </div>
                     <div class="stat-card">
-                        <div class="value" id="attendancePct" style="color:var(--success);">100%</div>
+                        <div class="value" id="attendancePct" style="color:var(--primary);">0%</div>
                         <div class="label">Attendance Status</div>
                     </div>
                 </div>
@@ -127,13 +127,25 @@
 
                 <!-- TAB 2: ADMIN MANAGEMENT -->
                 <div id="adminTab" style="display:none;">
-                    <button class="btn btn-success" onclick="exportMonthlyGridCSV()">📥 Download July Attendance Grid (Excel)</button>
-                    
-                    <!-- ADMIN MANUAL BACKDATE ATTENDANCE TOOL (FOR FRIENDS OUTSIDE CAMPUS) -->
+                    <!-- ADVANCED MONTH & YEAR SELECTOR FOR EXCEL DOWNLOAD -->
+                    <div class="admin-box" style="border: 2px solid var(--primary);">
+                        <span style="font-size:11px; font-weight:bold; color:var(--primary); display:block; margin-bottom:5px;">📥 Select Month & Year for Excel Grid:</span>
+                        <select id="exportMonth" style="padding:6px; margin-bottom:5px;">
+                            <option value="6">July (2026)</option>
+                            <option value="7">August (2026)</option>
+                            <option value="8">September (2026)</option>
+                            <option value="9">October (2026)</option>
+                            <option value="10">November (2026)</option>
+                            <option value="11">December (2026)</option>
+                        </select>
+                        <button class="btn btn-success" onclick="exportMonthlyGridCSV()" style="margin-top:0; padding:9px;">📥 Download Selected Month Grid</button>
+                    </div>
+
+                    <!-- ADMIN MANUAL BACKDATE ATTENDANCE TOOL -->
                     <div class="admin-box">
                         <span style="font-size:11px; font-weight:bold; color:var(--primary); display:block; margin-bottom:5px;">⚡ Admin Manual Backdate Attendance (No GPS):</span>
                         <input type="text" id="manualRoll" placeholder="Friend Roll No (e.g. 24CSE14)" style="padding:6px; margin-bottom:5px;">
-                        <input type="date" id="manualDate" value="2026-07-29" style="padding:6px; margin-bottom:5px;">
+                        <input type="date" id="manualDate" style="padding:6px; margin-bottom:5px;">
                         <button class="btn btn-primary" onclick="markManualAttendance()" style="margin-top:0; padding:8px;">✅ Mark Attendance for Selected Date</button>
                     </div>
 
@@ -168,6 +180,7 @@
         let isRegistering = false, globalAllRecords = [], globalMyRecords = [], globalHolidays = [], groupedAdminRecords = {};
 
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
         function togglePassword() {
             const p = document.getElementById('password'), e = document.getElementById('toggleEye');
@@ -221,6 +234,16 @@
             document.getElementById('dash-box').style.display = 'block';
             document.getElementById('welcomeMsg').innerText = `Hello, ${user.name}!`;
             document.getElementById('userRoll').innerText = user.rollNo;
+            
+            const todayISO = new Date().toISOString().split('T')[0];
+            document.getElementById('manualDate').value = todayISO;
+
+            // Set default dropdown option to current month
+            const currentMonthIdx = new Date().getMonth();
+            if (currentMonthIdx >= 6 && currentMonthIdx <= 11) {
+                document.getElementById('exportMonth').value = currentMonthIdx;
+            }
+
             if (user.role === 'admin' || user.rollNo.toUpperCase() === '24CSE48') document.getElementById('adminTabHeader').style.display = 'block';
             fetchHistory(user.rollNo);
         }
@@ -244,7 +267,6 @@
             }, () => showMsg('GPS Denied!', true));
         }
 
-        // ADMIN MANUAL BACKDATE MARK FUNCTION FOR FRIENDS
         async function markManualAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             const studentRollNo = document.getElementById('manualRoll').value.trim();
@@ -291,18 +313,59 @@
             }
         }
 
+        function calculateRealAttendancePercentage(attendedDaysCount) {
+            const startDate = new Date(2026, 6, 15);
+            const today = new Date();
+            const holidayDatesList = globalHolidays.map(h => h.date);
+
+            let totalWorkingDays = 0;
+            let cur = new Date(startDate);
+
+            while (cur <= today) {
+                const dayOfWeek = cur.getDay();
+                const year = cur.getFullYear();
+                const monthStr = String(cur.getMonth() + 1).padStart(2, '0');
+                const dayStr = String(cur.getDate()).padStart(2, '0');
+                const isoStr = `${year}-${monthStr}-${dayStr}`;
+
+                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+                const isHoliday = holidayDatesList.includes(isoStr);
+
+                if (!isWeekend && !isHoliday) {
+                    totalWorkingDays++;
+                }
+
+                cur.setDate(cur.getDate() + 1);
+            }
+
+            if (totalWorkingDays === 0) return { pct: 100, totalWorkingDays: 0 };
+            const pct = ((attendedDaysCount / totalWorkingDays) * 100).toFixed(1);
+            return { pct: Math.min(100, pct), totalWorkingDays };
+        }
+
         async function fetchHistory(rollNo) {
+            const hRes = await fetch(`${API_BASE}/api/holidays`);
+            globalHolidays = await hRes.json();
+
             const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
             const data = await res.json();
             globalMyRecords = data;
             const tbody = document.querySelector('#myHistoryTable tbody');
             const uniqueDays = [...new Set(data.map(i => i.date))].length;
+            
             document.getElementById('totalDaysCount').innerText = `${uniqueDays} Days`;
+            
+            const calc = calculateRealAttendancePercentage(uniqueDays);
+            const pctEl = document.getElementById('attendancePct');
+            pctEl.innerText = `${calc.pct}%`;
+            
+            pctEl.style.color = calc.pct >= 75 ? 'var(--success)' : 'var(--danger)';
+
             if (data.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No records</td></tr>';
             
             tbody.innerHTML = data.map(i => {
                 const parts = i.date.split('-');
-                const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+                const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
                 const dayStr = DAY_NAMES[dateObj.getDay()];
                 return `<tr><td>${i.date}</td><td><b>${dayStr}</b></td><td>${i.subject}</td><td><span class="badge">${i.status}</span></td></tr>`;
             }).join('');
@@ -386,24 +449,29 @@
             let csv = "Date,Day,Total Lectures Attended,Status\n";
             Object.keys(grouped).forEach(d => {
                 const parts = d.split('-');
-                const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+                const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
                 const dayStr = DAY_NAMES[dateObj.getDay()];
                 csv += `"${d}","${dayStr}","${grouped[d]} Lectures","Present"\n`;
             });
-            csv += `\n"Total Working Days Attended","${Object.keys(grouped).length} Days",""\n`;
+
+            const calc = calculateRealAttendancePercentage(Object.keys(grouped).length);
+            csv += `\n"Total Days Attended","${Object.keys(grouped).length} Days",""\n`;
+            csv += `"Total Working Days (Since 15-Jul)","${calc.totalWorkingDays} Days",""\n`;
+            csv += `"Real Attendance Score","${calc.pct}%",""\n`;
             
             downloadFile(csv, `My_Attendance_Report.csv`);
         }
 
-        // --- FIXED ACCURATE JULY GRID CSV (CLASSES START 15 JULY) ---
+        // SELECTABLE MONTH GRID CSV EXPORT (DOWNLOAD ANY MONTH ANYTIME)
         function exportMonthlyGridCSV() {
             if (globalAllRecords.length === 0) return alert("Refresh class list first!");
 
             const year = 2026;
-            const monthIdx = 6; // July (0-indexed)
-            const currentMonthName = "July";
-            const startDay = 15; // Classes Start Date = 15 July
-            const daysInMonth = 31; // July has 31 days
+            const monthIdx = parseInt(document.getElementById('exportMonth').value);
+            const currentMonthName = MONTH_NAMES[monthIdx];
+            
+            const startDay = (monthIdx === 6 && year === 2026) ? 15 : 1; 
+            const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
 
             const studentsMap = {};
             globalAllRecords.forEach(r => {
@@ -427,15 +495,14 @@
             let daysNameRow = `,,`;
 
             for (let d = startDay; d <= daysInMonth; d++) {
-                // Precise local date creation without timezone shift
                 const dateObj = new Date(year, monthIdx, d);
-                const dayNumOfWeek = dateObj.getDay(); // 0 = Sun, 6 = Sat
-                const formattedDateStr = `${year}-07-${String(d).padStart(2, '0')}`;
+                const dayNumOfWeek = dateObj.getDay(); 
+                const formattedDateStr = `${year}-${String(monthIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                 
                 const isWeekend = (dayNumOfWeek === 0 || dayNumOfWeek === 6);
                 const isHoliday = holidayDatesList.includes(formattedDateStr);
 
-                daysHeaderRow += `,${d}-Jul`;
+                daysHeaderRow += `,${d}-${currentMonthName.substring(0, 3)}`;
                 daysNameRow += `,${DAY_NAMES[dayNumOfWeek]}`;
 
                 if (!isWeekend && !isHoliday) {
@@ -446,11 +513,10 @@
             daysHeaderRow += `,Total Present Days\n`;
             daysNameRow += `,\n`;
 
-            let csv = `BM Group Of Institutions - Attendance Sheet for ${currentMonthName} ${year} (Classes Started 15-Jul)\n`;
-            csv += `Total Working Days (15 Jul - 31 Jul): ${workingDaysCount} Days\n\n`;
+            let csv = `BM Group Of Institutions - Attendance Sheet for ${currentMonthName} ${year}\n`;
+            csv += `Total Working Days In Period: ${workingDaysCount} Days\n\n`;
             csv += daysHeaderRow + daysNameRow;
 
-            // Sort Students Natural Order
             const sortedStudents = Object.values(studentsMap).sort((a, b) => {
                 return a.roll.localeCompare(b.roll, undefined, { numeric: true, sensitivity: 'base' });
             });
@@ -462,7 +528,7 @@
                 for (let d = startDay; d <= daysInMonth; d++) {
                     const dateObj = new Date(year, monthIdx, d);
                     const dayNumOfWeek = dateObj.getDay();
-                    const formattedDateStr = `${year}-07-${String(d).padStart(2, '0')}`;
+                    const formattedDateStr = `${year}-${String(monthIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                     
                     const isWeekend = (dayNumOfWeek === 0 || dayNumOfWeek === 6);
                     const isHoliday = holidayDatesList.includes(formattedDateStr);
@@ -484,7 +550,7 @@
                 csv += `,${presentDaysCount}\n`;
             });
 
-            downloadFile(csv, `Attendance_Grid_July_2026.csv`);
+            downloadFile(csv, `Attendance_Grid_${currentMonthName}_${year}.csv`);
         }
 
         function logout() { localStorage.clear(); location.reload(); }
