@@ -16,53 +16,11 @@ const ADMIN_ROLL_NUMBERS = ['24CSE48'];
 
 // ---------------- TIME TABLE DATA (B.Tech 5th Sem CSE) ----------------
 const TIME_TABLE = {
-  Monday: [
-    { period: 1, time: '09:20 - 10:05', subject: 'BDA', faculty: 'Ms. Rashmi' },
-    { period: 2, time: '10:05 - 10:50', subject: 'ECO', faculty: 'Ms. Sakshi Yadav' },
-    { period: 3, time: '10:50 - 11:35', subject: 'DAA', faculty: 'Ms. Rashmi' },
-    { period: 4, time: '11:35 - 12:20', subject: 'FLA', faculty: 'Ms. Nisha' },
-    { period: 5, time: '12:20 - 01:05', subject: 'LUNCH BREAK', faculty: '-' },
-    { period: 6, time: '01:05 - 01:50', subject: 'HRM', faculty: 'Msr. Lokesh' },
-    { period: 7, time: '01:50 - 02:35', subject: 'CN', faculty: 'Mr. Chhatarpal' },
-    { period: 8, time: '02:35 - 03:20', subject: 'WT', faculty: 'Mr. Avish Yadav' }
-  ],
-  Tuesday: [
-    { period: 1, time: '09:20 - 10:05', subject: 'WT', faculty: 'Mr. Avish Yadav' },
-    { period: 2, time: '10:05 - 10:50', subject: 'ECO', faculty: 'Ms. Sakshi Yadav' },
-    { period: 3, time: '10:50 - 11:35', subject: 'Internet', faculty: 'Ms. Geeta' },
-    { period: 4, time: '11:35 - 12:20', subject: 'FLA', faculty: 'Ms. Nisha' },
-    { period: 5, time: '12:20 - 01:05', subject: 'LUNCH BREAK', faculty: '-' },
-    { period: 6, time: '01:05 - 01:50', subject: 'HRM', faculty: 'Msr. Lokesh' },
-    { period: 7, time: '01:50 - 02:35', subject: 'BDA', faculty: 'Ms. Rashmi' },
-    { period: 8, time: '02:35 - 03:20', subject: 'SPORTS', faculty: '-' }
-  ],
-  Wednesday: [
-    { period: 1, time: '09:20 - 10:05', subject: 'BDA', faculty: 'Ms. Rashmi' },
-    { period: 2, time: '10:05 - 10:50', subject: 'ECO', faculty: 'Ms. Sakshi Yadav' },
-    { period: 3, time: '10:50 - 11:35', subject: 'FLA', faculty: 'Ms. Nisha' },
-    { period: 4, time: '11:35 - 12:20', subject: 'SPORTS', faculty: '-' },
-    { period: 5, time: '12:20 - 01:05', subject: 'LUNCH BREAK', faculty: '-' },
-    { period: 6, time: '01:05 - 01:50', subject: 'WT', faculty: 'Mr. Avish Yadav' },
-    { period: 7, time: '01:50 - 03:20', subject: 'CN LAB', faculty: 'Mr. Chhatarpal' }
-  ],
-  Thursday: [
-    { period: 1, time: '09:20 - 10:05', subject: 'BDA', faculty: 'Ms. Rashmi' },
-    { period: 2, time: '10:05 - 10:50', subject: 'CN', faculty: 'Mr. Chhatarpal' },
-    { period: 3, time: '10:50 - 11:35', subject: 'SPORTS', faculty: '-' },
-    { period: 4, time: '11:35 - 12:20', subject: 'DAA', faculty: 'Ms. Rashmi' },
-    { period: 5, time: '12:20 - 01:05', subject: 'LUNCH BREAK', faculty: '-' },
-    { period: 6, time: '01:05 - 02:35', subject: 'DAA LAB', faculty: 'Ms. Rashmi' },
-    { period: 8, time: '02:35 - 03:20', subject: 'HRM', faculty: 'Msr. Lokesh' }
-  ],
-  Friday: [
-    { period: 1, time: '09:20 - 10:05', subject: 'DAA', faculty: 'Ms. Rashmi' },
-    { period: 2, time: '10:05 - 10:50', subject: 'CN', faculty: 'Mr. Chhatarpal' },
-    { period: 3, time: '10:50 - 11:35', subject: 'FLA', faculty: 'Ms. Nisha' },
-    { period: 4, time: '11:35 - 12:20', subject: 'BDA', faculty: 'Ms. Rashmi' },
-    { period: 5, time: '12:20 - 01:05', subject: 'LUNCH BREAK', faculty: '-' },
-    { period: 6, time: '01:05 - 02:35', subject: 'WT LAB', faculty: 'Mr. Avish Yadav' },
-    { period: 8, time: '02:35 - 03:20', subject: 'SPORTS', faculty: '-' }
-  ]
+  Monday: ['BDA', 'ECO', 'DAA', 'FLA', 'HRM', 'CN', 'WT'],
+  Tuesday: ['WT', 'ECO', 'Internet', 'FLA', 'HRM', 'BDA'],
+  Wednesday: ['BDA', 'ECO', 'FLA', 'WT', 'CN LAB'],
+  Thursday: ['BDA', 'CN', 'DAA', 'DAA LAB', 'HRM'],
+  Friday: ['DAA', 'CN', 'FLA', 'BDA', 'WT LAB']
 };
 
 // ---------------- DATABASE CONNECTION ----------------
@@ -100,12 +58,7 @@ const Attendance = mongoose.model('Attendance', attendanceSchema);
 // ---------------- API ENDPOINTS ----------------
 
 app.get('/', (req, res) => {
-  res.send('B. M. Group Of Institutions - Farrukhnagar Attendance API Active!');
-});
-
-// Time-Table API
-app.get('/api/timetable', (req, res) => {
-  res.json(TIME_TABLE);
+  res.send('B. M. Group Of Institutions - Attendance API Active!');
 });
 
 // Student Registration
@@ -159,64 +112,116 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Mark Attendance (BM Group Haily Mandi Rd, Kheda Khurrampur Coordinates)
+// Helper Function for GPS Distance
+function checkLocation(lat, lng) {
+  const COLLEGE_LAT = 28.4475; 
+  const COLLEGE_LNG = 76.7645;
+  const MAX_ALLOWED_DISTANCE_KM = 1.0;
+
+  const R = 6371; 
+  const dLat = (lat - COLLEGE_LAT) * (Math.PI / 180);
+  const dLon = (lng - COLLEGE_LNG) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(COLLEGE_LAT * (Math.PI / 180)) * Math.cos(lat * (Math.PI / 180)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distance = R * c;
+
+  return { isInside: distance <= MAX_ALLOWED_DISTANCE_KM, distance: (distance * 1000).toFixed(0) };
+}
+
+// 1. Single Lecture Attendance Mark
 app.post('/api/attendance/mark', async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude } = req.body;
+
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      return res.status(400).json({ error: 'Today is Weekend! College is OFF.' });
+    }
+
     if (!rollNo || !latitude || !longitude || !subject) {
       return res.status(400).json({ error: 'Roll Number, Subject and Location required!' });
     }
 
-    // EXACT SPOT: 5 km Stone, Haily Mandi Road, Farrukhnagar (28.4475° N, 76.7645° E)
-    const COLLEGE_LAT = 28.4475; 
-    const COLLEGE_LNG = 76.7645;
-    const MAX_ALLOWED_DISTANCE_KM = 1.0; // 1 KM radius around campus building
-
-    function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-      const R = 6371; 
-      const dLat = (lat2 - lat1) * (Math.PI / 180);
-      const dLon = (lon2 - lon1) * (Math.PI / 180);
-      const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c;
+    const locCheck = checkLocation(latitude, longitude);
+    if (!locCheck.isInside) {
+      return res.status(400).json({ error: `Outside B. M. Group Campus! (${locCheck.distance}m away)` });
     }
 
-    const distance = getDistanceFromLatLonInKm(latitude, longitude, COLLEGE_LAT, COLLEGE_LNG);
-
-    if (distance > MAX_ALLOWED_DISTANCE_KM) {
-      return res.status(400).json({ 
-        error: `Outside B. M. Group Campus! (${(distance * 1000).toFixed(0)}m away)` 
-      });
-    }
-
-    const todayDate = new Date().toISOString().split('T')[0];
+    const todayDate = today.toISOString().split('T')[0];
     const cleanRollNo = rollNo.trim().toUpperCase();
 
-    // Check duplicate per subject today
-    const existingRecord = await Attendance.findOne({
-      rollNo: cleanRollNo,
-      subject: subject,
-      date: todayDate
-    });
-
+    const existingRecord = await Attendance.findOne({ rollNo: cleanRollNo, subject, date: todayDate });
     if (existingRecord) {
       return res.status(400).json({ error: `Attendance already marked for ${subject} today!` });
     }
 
-    const newAttendance = new Attendance({
+    await new Attendance({
       rollNo: cleanRollNo,
       studentName: name || 'Student',
-      subject: subject,
+      subject,
       date: todayDate,
       status: 'Present',
       location: { latitude, longitude }
-    });
+    }).save();
 
-    await newAttendance.save();
-    res.status(201).json({ message: `Attendance Marked for ${subject}!`, attendance: newAttendance });
+    res.status(201).json({ message: `Attendance Marked for ${subject}!` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 2. NEW FEATURE: FULL DAY ATTENDANCE (All Lectures in One Tap)
+app.post('/api/attendance/mark-fullday', async (req, res) => {
+  try {
+    const { rollNo, name, latitude, longitude } = req.body;
+
+    const today = new Date();
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const currentDayName = days[today.getDay()];
+
+    if (currentDayName === 'Sunday' || currentDayName === 'Saturday') {
+      return res.status(400).json({ error: 'Today is Weekend! College is OFF.' });
+    }
+
+    if (!rollNo || !latitude || !longitude) {
+      return res.status(400).json({ error: 'Roll Number and Location required!' });
+    }
+
+    const locCheck = checkLocation(latitude, longitude);
+    if (!locCheck.isInside) {
+      return res.status(400).json({ error: `Outside B. M. Group Campus! (${locCheck.distance}m away)` });
+    }
+
+    const todayDate = today.toISOString().split('T')[0];
+    const cleanRollNo = rollNo.trim().toUpperCase();
+
+    const todaySubjects = TIME_TABLE[currentDayName] || ['General Full Day'];
+    let markedCount = 0;
+
+    for (let sub of todaySubjects) {
+      const exists = await Attendance.findOne({ rollNo: cleanRollNo, subject: sub, date: todayDate });
+      if (!exists) {
+        await new Attendance({
+          rollNo: cleanRollNo,
+          studentName: name || 'Student',
+          subject: sub,
+          date: todayDate,
+          status: 'Present',
+          location: { latitude, longitude }
+        }).save();
+        markedCount++;
+      }
+    }
+
+    if (markedCount === 0) {
+      return res.status(400).json({ error: 'Full Day Attendance already marked for today!' });
+    }
+
+    res.status(201).json({ message: `🎉 Full Day Attendance Marked for all ${markedCount} lectures of ${currentDayName}!` });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -237,7 +242,6 @@ app.get('/api/attendance/history/:rollNo', async (req, res) => {
 app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
   try {
     const requester = req.params.requesterRollNo.trim().toUpperCase();
-
     if (!ADMIN_ROLL_NUMBERS.includes(requester)) {
       return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     }
@@ -251,4 +255,4 @@ app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-    
+      
