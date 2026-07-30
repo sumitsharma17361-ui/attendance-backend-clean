@@ -100,7 +100,7 @@ const Attendance = mongoose.model('Attendance', attendanceSchema);
 // ---------------- API ENDPOINTS ----------------
 
 app.get('/', (req, res) => {
-  res.send('BM Group of Institutions - B.Tech 5th Sem CSE Portal Active!');
+  res.send('B. M. Group Of Institutions - Farukh Nagar Attendance API Active!');
 });
 
 // Time-Table API
@@ -159,7 +159,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Mark Attendance (BM Group Geo-Fencing + Subject Wise)
+// Mark Attendance (BM Group Haily Mandi Rd Coordinates)
 app.post('/api/attendance/mark', async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude } = req.body;
@@ -167,9 +167,10 @@ app.post('/api/attendance/mark', async (req, res) => {
       return res.status(400).json({ error: 'Roll Number, Subject and Location required!' });
     }
 
-    const COLLEGE_LAT = 28.4485; 
-    const COLLEGE_LNG = 76.8143;
-    const MAX_ALLOWED_DISTANCE_KM = 1.5; 
+    // EXACT SPOT: 5km Stone, Haily Mandi Rd, Farukh Nagar
+    const COLLEGE_LAT = 28.4239; 
+    const COLLEGE_LNG = 76.8021;
+    const MAX_ALLOWED_DISTANCE_KM = 1.0; 
 
     function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
       const R = 6371; 
@@ -187,14 +188,14 @@ app.post('/api/attendance/mark', async (req, res) => {
 
     if (distance > MAX_ALLOWED_DISTANCE_KM) {
       return res.status(400).json({ 
-        error: `Outside BM Group Campus! (${(distance * 1000).toFixed(0)}m away)` 
+        error: `Outside B. M. Group Campus! (${(distance * 1000).toFixed(0)}m away)` 
       });
     }
 
     const todayDate = new Date().toISOString().split('T')[0];
     const cleanRollNo = rollNo.trim().toUpperCase();
 
-    // Check if already marked for this subject today
+    // Check duplicate per subject today
     const existingRecord = await Attendance.findOne({
       rollNo: cleanRollNo,
       subject: subject,
