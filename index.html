@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BM Group - Attendance Portal</title>
+    <title>BM Group - CSE 5th Sem Portal</title>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 15px; }
-        .card { background: white; padding: 25px; border-radius: 12px; width: 100%; max-width: 450px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); text-align: center; }
-        h2 { color: #1a73e8; margin-top: 0; }
-        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; outline: none; }
+        .card { background: white; padding: 25px; border-radius: 12px; width: 100%; max-width: 480px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); text-align: center; }
+        h2 { color: #1a73e8; margin-top: 0; margin-bottom: 5px; }
+        .subtitle { font-size: 12px; color: #666; margin-bottom: 20px; font-weight: 600; }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; outline: none; font-size: 14px; }
         
         .password-wrapper { position: relative; width: 100%; }
         .password-wrapper input { padding-right: 40px; }
@@ -19,31 +20,40 @@
         button:hover { background: #1557b0; }
         .btn-green { background: #34a853; }
         .btn-green:hover { background: #2d8e47; }
+        .btn-excel { background: #0f9d58; margin-top: 8px; }
+        .btn-excel:hover { background: #0b8043; }
         .btn-purple { background: #673ab7; margin-top: 10px; display: none; }
         .btn-purple:hover { background: #512da8; }
         .btn-red { background: #ea4335; margin-top: 15px; }
         .link { color: #1a73e8; cursor: pointer; font-size: 13px; margin-top: 12px; display: block; }
+        
+        /* Stats & Percentage Box */
+        .stats-box { background: #e8f0fe; border-radius: 8px; padding: 12px; margin: 15px 0; display: flex; justify-content: space-around; }
+        .stat-item { text-align: center; }
+        .stat-val { font-size: 18px; font-weight: bold; color: #1a73e8; }
+        .stat-lbl { font-size: 11px; color: #555; }
+
+        .history-list { text-align: left; margin-top: 15px; max-height: 200px; overflow-y: auto; border-top: 1px solid #eee; padding-top: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+        th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+        th { background-color: #f2f2f2; color: #333; }
         #msg { margin-top: 15px; font-weight: 600; font-size: 14px; word-wrap: break-word; }
         .success { color: #2e7d32; }
         .error { color: #d32f2f; }
-        
-        .history-list { text-align: left; margin-top: 15px; max-height: 200px; overflow-y: auto; border-top: 1px solid #eee; padding-top: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; color: #333; }
     </style>
 </head>
 <body>
 
     <div class="card">
         <h2>🎓 BM Group Portal</h2>
+        <div class="subtitle">B.Tech CSE - 5th Semester (Room 203)</div>
 
         <!-- AUTH BOX -->
         <div id="auth-box">
             <div id="register-fields" style="display: none;">
                 <input type="text" id="regName" placeholder="Full Name">
             </div>
-            <input type="text" id="rollNo" placeholder="Roll Number">
+            <input type="text" id="rollNo" placeholder="Roll Number (e.g. 24CSE48)">
             
             <div class="password-wrapper">
                 <input type="password" id="password" placeholder="Password">
@@ -56,15 +66,44 @@
 
         <!-- DASHBOARD BOX -->
         <div id="dash-box" style="display: none;">
-            <h3 id="welcomeMsg">Welcome!</h3>
-            <p style="font-size: 13px; color: #666;">Roll No: <span id="userRoll"></span></p>
+            <h3 id="welcomeMsg" style="margin-bottom:2px;">Welcome!</h3>
+            <p style="font-size: 12px; color: #666; margin-top:0;">Roll No: <span id="userRoll"></span></p>
+
+            <!-- LIVE PERCENTAGE STATS -->
+            <div class="stats-box">
+                <div class="stat-item">
+                    <div class="stat-val" id="totalClasses">0</div>
+                    <div class="stat-lbl">Classes Marked</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-val" id="attendancePct" style="color: #34a853;">100%</div>
+                    <div class="stat-lbl">Attendance Rate</div>
+                </div>
+            </div>
+
+            <!-- SUBJECT SELECTOR FROM TIME TABLE -->
+            <label style="font-size: 12px; font-weight: bold; display: block; text-align: left; margin-top: 10px;">Select Subject:</label>
+            <select id="subjectSelect">
+                <option value="DAA">DAA - Design & Analysis of Algorithm (Ms. Rashmi)</option>
+                <option value="FLA">FLA - Formal Language & Automata (Ms. Nisha)</option>
+                <option value="WT">WT - Web Technology (Mr. Avish Yadav)</option>
+                <option value="BDA">BDA - Big Data Analytics (Ms. Rashmi)</option>
+                <option value="CN">CN - Computer Network (Mr. Chhatarpal)</option>
+                <option value="ECO">ECO - Economics for Engineers (Ms. Sakshi)</option>
+                <option value="HRM">HRM - Human Resource Mgmt (Msr. Lokesh)</option>
+                <option value="WT LAB">WT LAB (Second Floor)</option>
+                <option value="CN LAB">CN LAB (Ground Floor)</option>
+                <option value="DAA LAB">DAA LAB (Ground Floor)</option>
+                <option value="Internet">Internet Lab (Ms. Geeta)</option>
+            </select>
             
-            <button class="btn-green" onclick="markAttendance()">📍 Mark My Attendance (GPS)</button>
+            <button class="btn-green" onclick="markAttendance()">📍 Mark Subject Attendance (GPS)</button>
             <button class="btn-purple" id="adminBtn" onclick="fetchAllAttendance()">📋 View All Class Attendance</button>
+            <button class="btn-excel" id="excelBtn" style="display:none;" onclick="exportToCSV()">📥 Download Attendance Excel Sheet</button>
             <button class="btn-red" onclick="logout()">Logout</button>
 
             <div class="history-list">
-                <h4 id="listTitle">Recent Attendance Logs:</h4>
+                <h4 id="listTitle" style="margin:5px 0;">My Attendance History:</h4>
                 <div id="historyLogs">Loading logs...</div>
             </div>
         </div>
@@ -75,6 +114,7 @@
     <script>
         const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; 
         let isRegistering = false;
+        let globalAllRecords = [];
 
         function togglePassword() {
             const passInput = document.getElementById('password');
@@ -107,7 +147,6 @@
             const password = document.getElementById('password').value.trim();
             
             if (!rollNo || !password) return showMsg('Please fill all fields!', true);
-
             showMsg('Connecting...');
 
             if (isRegistering) {
@@ -161,22 +200,20 @@
             document.getElementById('userRoll').innerText = user.rollNo;
             showMsg('');
 
-            // ONLY ADMIN GETS THE ALL CLASS ATTENDANCE BUTTON
+            // ADMIN CONTROLS
             if (user.role === 'admin' || user.rollNo.toUpperCase() === '24CSE48') {
                 document.getElementById('adminBtn').style.display = 'block';
-            } else {
-                document.getElementById('adminBtn').style.display = 'none';
+                document.getElementById('excelBtn').style.display = 'block';
             }
 
             fetchHistory(user.rollNo);
         }
 
         function markAttendance() {
-            if (!navigator.geolocation) {
-                return showMsg('Geolocation is not supported by your device!', true);
-            }
+            if (!navigator.geolocation) return showMsg('Geolocation not supported!', true);
+            const selectedSubject = document.getElementById('subjectSelect').value;
 
-            showMsg('Fetching GPS Location...');
+            showMsg(`Fetching GPS Location for ${selectedSubject}...`);
 
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 const user = JSON.parse(localStorage.getItem('user'));
@@ -187,6 +224,7 @@
                         body: JSON.stringify({
                             rollNo: user.rollNo,
                             name: user.name,
+                            subject: selectedSubject,
                             latitude: pos.coords.latitude,
                             longitude: pos.coords.longitude
                         })
@@ -203,16 +241,19 @@
                     showMsg('Error submitting attendance!', true);
                 }
             }, (err) => {
-                showMsg('Location access denied! Please allow GPS permissions.', true);
+                showMsg('Location access denied! Allow GPS permissions.', true);
             });
         }
 
         async function fetchHistory(rollNo) {
-            document.getElementById('listTitle').innerText = "My Attendance Logs:";
+            document.getElementById('listTitle').innerText = "My Attendance History:";
             try {
                 const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
                 const data = await res.json();
                 const logsDiv = document.getElementById('historyLogs');
+
+                document.getElementById('totalClasses').innerText = data.length;
+                document.getElementById('attendancePct').innerText = data.length > 0 ? '100%' : '0%';
 
                 if (data.length === 0) {
                     logsDiv.innerHTML = '<p style="font-size:12px; color:#888;">No attendance marked yet.</p>';
@@ -225,7 +266,7 @@
                         ${data.map(item => `
                             <tr>
                                 <td>${item.date}</td>
-                                <td>${item.subject}</td>
+                                <td><b>${item.subject}</b></td>
                                 <td style="color:green; font-weight:bold;">${item.status}</td>
                             </tr>
                         `).join('')}
@@ -243,23 +284,24 @@
                 const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
                 const data = await res.json();
 
-                if (!res.ok) {
-                    return showMsg(data.error || 'Access Denied', true);
-                }
+                if (!res.ok) return showMsg(data.error || 'Access Denied', true);
 
+                globalAllRecords = data;
                 const logsDiv = document.getElementById('historyLogs');
+
                 if (data.length === 0) {
-                    logsDiv.innerHTML = '<p style="font-size:12px; color:#888;">No attendance records found.</p>';
+                    logsDiv.innerHTML = '<p style="font-size:12px; color:#888;">No records found.</p>';
                     return;
                 }
 
                 logsDiv.innerHTML = `
                     <table>
-                        <tr><th>Name</th><th>Roll No</th><th>Date</th></tr>
+                        <tr><th>Name</th><th>Roll No</th><th>Subject</th><th>Date</th></tr>
                         ${data.map(item => `
                             <tr>
                                 <td><b>${item.studentName}</b></td>
                                 <td>${item.rollNo}</td>
+                                <td>${item.subject}</td>
                                 <td>${item.date}</td>
                             </tr>
                         `).join('')}
@@ -268,6 +310,27 @@
             } catch(err) {
                 showMsg('Failed to load all records!', true);
             }
+        }
+
+        // EXCEL / CSV DOWNLOAD LOGIC FOR ADMIN
+        function exportToCSV() {
+            if (globalAllRecords.length === 0) {
+                alert("Pehle 'View All Class Attendance' par click karke list load karo!");
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,Student Name,Roll Number,Subject,Date,Status\n";
+            globalAllRecords.forEach(row => {
+                csvContent += `${row.studentName},${row.rollNo},${row.subject},${row.date},${row.status}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `BM_Group_CSE5_Attendance_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         function logout() {
