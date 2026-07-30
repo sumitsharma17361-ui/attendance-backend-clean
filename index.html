@@ -4,51 +4,81 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BM Group of Institutions - ERP Portal</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { --primary: #1a73e8; --success: #0f9d58; --danger: #d93025; --warning: #f4b400; --bg: #f8f9fa; --card-bg: #ffffff; --text-main: #202124; --text-muted: #5f6368; --border: #dadce0; }
+        :root { 
+            --primary: #2563eb; 
+            --primary-gradient: linear-gradient(135deg, #1e40af, #3b82f6);
+            --success: #10b981; 
+            --danger: #ef4444; 
+            --warning: #f59e0b; 
+            --bg: #f1f5f9; 
+            --card-bg: #ffffff; 
+            --text-main: #0f172a; 
+            --text-muted: #64748b; 
+            --border: #e2e8f0; 
+        }
+
         * { box-sizing: border-box; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
         body { background: var(--bg); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 15px; }
-        .app-container { width: 100%; max-width: 500px; background: var(--card-bg); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid var(--border); overflow: hidden; }
-        .app-header { background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; padding: 20px; text-align: center; }
-        .app-header h1 { font-size: 18px; font-weight: 700; }
-        .app-header p { font-size: 11px; opacity: 0.85; }
+
+        .app-container { width: 100%; max-width: 500px; background: var(--card-bg); border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.06); border: 1px solid var(--border); overflow: hidden; }
+        
+        .app-header { background: var(--primary-gradient); color: white; padding: 22px 20px; text-align: center; }
+        .app-header h1 { font-size: 19px; font-weight: 800; letter-spacing: -0.3px; }
+        .app-header p { font-size: 11px; opacity: 0.9; margin-top: 2px; }
+
         .app-body { padding: 18px; }
-        input, select { width: 100%; padding: 11px 14px; margin-bottom: 10px; border: 1px solid var(--border); border-radius: 10px; font-size: 13px; outline: none; }
+
+        input, select { width: 100%; padding: 11px 14px; margin-bottom: 10px; border: 1px solid var(--border); border-radius: 12px; font-size: 13px; outline: none; transition: all 0.2s; }
+        input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+
         .password-wrapper { position: relative; width: 100%; }
         .password-wrapper input { padding-right: 40px; }
         .eye-icon { position: absolute; right: 12px; top: 38%; transform: translateY(-50%); cursor: pointer; opacity: 0.6; }
-        .btn { width: 100%; padding: 11px; border: none; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; margin-top: 6px; }
+
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 12px; font-weight: 700; font-size: 13px; cursor: pointer; margin-top: 6px; transition: all 0.2s; }
         .btn-primary { background: var(--primary); color: white; }
         .btn-success { background: var(--success); color: white; }
         .btn-warning { background: var(--warning); color: white; }
-        .btn-accent { background: #00838f; color: white; }
+        .btn-accent { background: #0284c7; color: white; }
         .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
-        .btn-danger { background: #fce8e6; color: var(--danger); }
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
-        .stat-card { background: #f1f3f4; padding: 12px; border-radius: 12px; text-align: center; }
-        .stat-card .value { font-size: 18px; font-weight: 700; color: var(--primary); }
-        .stat-card .label { font-size: 10px; color: var(--text-muted); }
-        .tab-bar { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
-        .tab-item { flex: 1; padding: 10px; text-align: center; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; }
-        .tab-item.active { color: var(--primary); border-bottom-color: var(--primary); }
-        
-        /* ADMIN SUB-TAB NAVIGATION STYLING */
-        .admin-nav { display: flex; gap: 4px; background: #e8f0fe; padding: 4px; border-radius: 10px; margin-bottom: 12px; }
-        .admin-nav-item { flex: 1; text-align: center; padding: 7px 4px; font-size: 10px; font-weight: 700; cursor: pointer; border-radius: 7px; color: var(--primary); transition: all 0.2s; }
-        .admin-nav-item.active { background: var(--primary); color: white; }
+        .btn-danger { background: #fef2f2; color: var(--danger); }
 
-        .table-container { max-height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; margin-top: 8px; }
+        /* ADVANCED STATS GRID & SIMULATOR */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+        .stat-card { background: #f8fafc; padding: 12px; border-radius: 14px; text-align: center; border: 1px solid var(--border); }
+        .stat-card .value { font-size: 20px; font-weight: 800; color: var(--primary); }
+        .stat-card .label { font-size: 10px; color: var(--text-muted); font-weight: 600; margin-top: 2px; }
+
+        .simulator-card { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 14px; padding: 12px; margin-bottom: 12px; font-size: 12px; }
+        .simulator-card b { color: #1e40af; }
+
+        .tab-bar { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+        .tab-item { flex: 1; padding: 10px; text-align: center; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; }
+        .tab-item.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+        /* SEGMENTED ADMIN SUB NAV */
+        .admin-nav { display: flex; gap: 4px; background: #f1f5f9; padding: 4px; border-radius: 12px; margin-bottom: 12px; }
+        .admin-nav-item { flex: 1; text-align: center; padding: 8px 4px; font-size: 10px; font-weight: 700; cursor: pointer; border-radius: 8px; color: var(--text-muted); transition: all 0.2s; }
+        .admin-nav-item.active { background: #ffffff; color: var(--primary); box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+
+        .table-container { max-height: 200px; overflow-y: auto; border: 1px solid var(--border); border-radius: 12px; margin-top: 8px; }
         table { width: 100%; border-collapse: collapse; font-size: 11px; }
-        th { background: #f8f9fa; color: var(--text-muted); padding: 8px; text-align: left; border-bottom: 1px solid var(--border); position: sticky; top: 0; }
-        td { padding: 8px; border-bottom: 1px solid #f1f3f4; }
-        .badge { padding: 2px 6px; border-radius: 10px; font-size: 10px; font-weight: 600; background: #e6f4ea; color: #137333; }
-        .action-btn { padding: 3px 6px; font-size: 10px; border-radius: 4px; border: none; cursor: pointer; font-weight:600; }
-        .btn-del { background: #fce8e6; color: #d93025; }
-        #msg { margin-top: 10px; font-size: 12px; text-align: center; padding: 8px; border-radius: 8px; display: none; }
-        .msg-success { background: #e6f4ea; color: #137333; display: block !important; }
-        .msg-error { background: #fce8e6; color: #c5221f; display: block !important; }
-        .admin-box { background: #ffffff; padding: 12px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+        th { background: #f8fafc; color: var(--text-muted); padding: 8px; text-align: left; border-bottom: 1px solid var(--border); position: sticky; top: 0; }
+        td { padding: 8px; border-bottom: 1px solid #f1f5f9; }
+        
+        .badge { padding: 3px 7px; border-radius: 8px; font-size: 10px; font-weight: 700; }
+        .badge-present { background: #d1fae5; color: #047857; }
+        .badge-absent { background: #fee2e2; color: #b91c1c; }
+
+        .action-btn { padding: 3px 6px; font-size: 10px; border-radius: 6px; border: none; cursor: pointer; font-weight: 700; }
+        .btn-del { background: #fef2f2; color: #ef4444; }
+
+        #msg { margin-top: 10px; font-size: 12px; text-align: center; padding: 9px; border-radius: 10px; font-weight: 600; display: none; }
+        .msg-success { background: #d1fae5; color: #047857; display: block !important; }
+        .msg-error { background: #fee2e2; color: #b91c1c; display: block !important; }
+        .admin-box { background: #ffffff; padding: 12px; border-radius: 14px; border: 1px solid var(--border); }
     </style>
 </head>
 <body>
@@ -71,17 +101,17 @@
                     <span class="eye-icon" id="toggleEye" onclick="togglePassword()">👁️</span>
                 </div>
                 <button class="btn btn-primary" id="authBtn" onclick="handleAuth()">Sign In</button>
-                <span style="color:var(--primary); cursor:pointer; font-size:12px; display:block; text-align:center; margin-top:10px;" id="toggleLink" onclick="toggleMode()">New Student? Register Account</span>
+                <span style="color:var(--primary); cursor:pointer; font-size:12px; display:block; text-align:center; margin-top:10px; font-weight:600;" id="toggleLink" onclick="toggleMode()">New Student? Register Account</span>
             </div>
 
             <!-- DASHBOARD -->
             <div id="dash-box" style="display: none;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <div>
-                        <h3 id="welcomeMsg" style="font-size:14px; font-weight:700;">Welcome!</h3>
-                        <p style="font-size: 11px; color: var(--text-muted);">Roll: <span id="userRoll" style="font-weight:600;"></span></p>
+                        <h3 id="welcomeMsg" style="font-size:14px; font-weight:800;">Welcome!</h3>
+                        <p style="font-size: 11px; color: var(--text-muted);">Roll: <span id="userRoll" style="font-weight:700;"></span></p>
                     </div>
-                    <button class="btn btn-danger" style="width:auto; padding:4px 8px; margin:0; font-size:11px;" onclick="logout()">Logout</button>
+                    <button class="btn btn-danger" style="width:auto; padding:5px 10px; margin:0; font-size:11px;" onclick="logout()">Logout</button>
                 </div>
 
                 <div class="stats-grid">
@@ -90,9 +120,14 @@
                         <div class="label">Days Attended</div>
                     </div>
                     <div class="stat-card">
-                        <div class="value" id="attendancePct" style="color:var(--primary);">0%</div>
+                        <div class="value" id="attendancePct">0%</div>
                         <div class="label">Attendance Status</div>
                     </div>
+                </div>
+
+                <!-- DYNAMIC BUNK / RECOVERY CALCULATOR CARD -->
+                <div class="simulator-card" id="simulatorBox">
+                    <b>🎯 Attendance Advisor:</b> <span id="advisorText">Calculating criteria...</span>
                 </div>
 
                 <div class="tab-bar">
@@ -121,7 +156,7 @@
                     <button class="btn btn-outline" onclick="markSingleAttendance()">Mark Selected Lecture</button>
 
                     <div style="margin-top:10px;">
-                        <h4 style="font-size:11px; color:var(--text-muted);">My History:</h4>
+                        <h4 style="font-size:11px; color:var(--text-muted);">My Attendance Logs:</h4>
                         <div class="table-container">
                             <table id="myHistoryTable">
                                 <thead><tr><th>Date</th><th>Day</th><th>Subject</th><th>Status</th></tr></thead>
@@ -131,10 +166,9 @@
                     </div>
                 </div>
 
-                <!-- TAB 2: CLEAN & PROFESSIONAL ADMIN DASHBOARD -->
+                <!-- TAB 2: CLEAN ADMIN PANEL -->
                 <div id="adminTab" style="display:none;">
                     
-                    <!-- ADMIN SUB NAVIGATION BAR -->
                     <div class="admin-nav">
                         <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">📊 Excel</div>
                         <div class="admin-nav-item" onclick="switchAdminSubTab('subAttendance')">⚡ Attendance</div>
@@ -142,9 +176,9 @@
                         <div class="admin-nav-item" onclick="switchAdminSubTab('subRegister')">➕ Student</div>
                     </div>
 
-                    <!-- SUB TAB 1: EXCEL REPORTS -->
+                    <!-- SUB TAB 1: REPORTS -->
                     <div id="subReports" class="admin-box">
-                        <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">📥 Export Reports:</span>
+                        <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">📥 Export Excel Reports:</span>
                         <select id="exportSelection" style="padding:8px; margin-bottom:6px;">
                             <option value="ALL_SEMESTER">🌟 Full Semester (July 2026 - Dec 2026)</option>
                             <option value="6">July 2026</option>
@@ -157,23 +191,27 @@
                         <button class="btn btn-success" onclick="exportExcelGrid()" style="margin-top:0; padding:10px;">📥 Download Excel Report</button>
                     </div>
 
-                    <!-- SUB TAB 2: BACKDATE ATTENDANCE -->
+                    <!-- SUB TAB 2: MANUAL ATTENDANCE -->
                     <div id="subAttendance" class="admin-box" style="display:none;">
-                        <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">⚡ Manual Attendance Tool:</span>
+                        <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">⚡ Manual Attendance Entry:</span>
                         <input type="text" id="manualRoll" placeholder="Student Roll No (e.g. 24CSE14)" style="padding:8px; margin-bottom:6px;">
                         <input type="date" id="manualDate" style="padding:8px; margin-bottom:6px;">
+                        <select id="manualStatus" style="padding:8px; margin-bottom:6px;">
+                            <option value="Present">Present</option>
+                            <option value="Duty Leave">Duty Leave (DL)</option>
+                        </select>
                         <button class="btn btn-primary" onclick="markManualAttendance()" style="margin-top:0; padding:10px;">✅ Mark Attendance</button>
                     </div>
 
-                    <!-- SUB TAB 3: HOLIDAY DECLARATION -->
+                    <!-- SUB TAB 3: HOLIDAYS -->
                     <div id="subHoliday" class="admin-box" style="display:none;">
-                        <span style="font-size:11px; font-weight:700; color:#b06000; display:block; margin-bottom:6px;">🏖️ Declare College Holiday:</span>
+                        <span style="font-size:11px; font-weight:700; color:#b06000; display:block; margin-bottom:6px;">🏖️ Declare Official Holiday:</span>
                         <input type="date" id="holidayDate" style="padding:8px; margin-bottom:6px;">
-                        <input type="text" id="holidayReason" placeholder="Reason (e.g. Rainy Day/Diwali)" style="padding:8px; margin-bottom:6px;">
+                        <input type="text" id="holidayReason" placeholder="Reason (e.g. Diwali/Rainy Day)" style="padding:8px; margin-bottom:6px;">
                         <button class="btn btn-warning" onclick="declareHoliday()" style="margin-top:0; padding:10px;">Mark Selected Date as Holiday</button>
                     </div>
 
-                    <!-- SUB TAB 4: NEW STUDENT REGISTRATION BY ADMIN -->
+                    <!-- SUB TAB 4: REGISTER STUDENT -->
                     <div id="subRegister" class="admin-box" style="display:none;">
                         <span style="font-size:11px; font-weight:700; color:var(--success); display:block; margin-bottom:6px;">➕ Admin Register New Student:</span>
                         <input type="text" id="adminStudentName" placeholder="Full Student Name" style="padding:8px; margin-bottom:6px;">
@@ -185,7 +223,7 @@
                     <button class="btn btn-outline" onclick="fetchAllAttendance()" style="margin-top:12px;">🔄 Refresh Records List</button>
                     
                     <div style="margin-top:12px;">
-                        <h4 style="font-size:11px; color:var(--text-muted);">Class Attendance History:</h4>
+                        <h4 style="font-size:11px; color:var(--text-muted);">Class Records Directory:</h4>
                         <div class="table-container">
                             <table id="allHistoryTable">
                                 <thead><tr><th>Roll</th><th>Name</th><th>Date</th><th>Attended</th><th>Actions</th></tr></thead>
@@ -199,7 +237,8 @@
             <p id="msg"></p>
         </div>
     </div>
-        <script>
+
+    <script>
         const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; 
         let isRegistering = false, globalAllRecords = [], globalMyRecords = [], globalHolidays = [], groupedAdminRecords = {};
 
@@ -234,7 +273,6 @@
             if(tabId === 'adminTab') fetchAllAttendance();
         }
 
-        // ADMIN SUB TABS SWITCHER
         function switchAdminSubTab(subId) {
             const subTabs = ['subReports', 'subAttendance', 'subHoliday', 'subRegister'];
             subTabs.forEach(id => {
@@ -264,7 +302,6 @@
             }
         }
 
-        // ADMIN MANUAL STUDENT REGISTRATION
         async function adminRegisterStudent() {
             const user = JSON.parse(localStorage.getItem('user'));
             const name = document.getElementById('adminStudentName').value.trim();
@@ -334,6 +371,7 @@
             const user = JSON.parse(localStorage.getItem('user'));
             const studentRollNo = document.getElementById('manualRoll').value.trim();
             const date = document.getElementById('manualDate').value;
+            const status = document.getElementById('manualStatus').value;
 
             if (!studentRollNo || !date) return showMsg('Roll Number and Date required!', true);
 
@@ -342,7 +380,7 @@
             const res = await fetch(`${API_BASE}/api/admin/manual-attendance`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ requesterRollNo: user.rollNo, studentRollNo, date })
+                body: JSON.stringify({ requesterRollNo: user.rollNo, studentRollNo, date, status })
             });
 
             const data = await res.json();
@@ -421,8 +459,17 @@
             const calc = calculateRealAttendancePercentage(uniqueDays);
             const pctEl = document.getElementById('attendancePct');
             pctEl.innerText = `${calc.pct}%`;
-            
             pctEl.style.color = calc.pct >= 75 ? 'var(--success)' : 'var(--danger)';
+
+            // BUNK / RECOVERY CALCULATOR ADVISOR LOGIC
+            const advisorBox = document.getElementById('advisorText');
+            if (calc.pct >= 75) {
+                const skippableDays = Math.floor((uniqueDays - 0.75 * calc.totalWorkingDays) / 0.75);
+                advisorBox.innerHTML = ` You are in <b>Safe Zone (${calc.pct}%)</b>. You can skip up to <b>${Math.max(0, skippableDays)}</b> upcoming classes and still maintain 75%.`;
+            } else {
+                const neededDays = Math.ceil((0.75 * calc.totalWorkingDays - uniqueDays) / 0.25);
+                advisorBox.innerHTML = ` ⚠️ <b>Low Attendance Alert (${calc.pct}%)</b>. You must attend the next <b>${Math.max(0, neededDays)}</b> consecutive classes to recover to 75%.`;
+            }
 
             if (data.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No records</td></tr>';
             
@@ -430,7 +477,7 @@
                 const parts = i.date.split('-');
                 const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
                 const dayStr = DAY_NAMES[dateObj.getDay()];
-                return `<tr><td>${i.date}</td><td><b>${dayStr}</b></td><td>${i.subject}</td><td><span class="badge">${i.status}</span></td></tr>`;
+                return `<tr><td>${i.date}</td><td><b>${dayStr}</b></td><td>${i.subject}</td><td><span class="badge badge-present">${i.status}</span></td></tr>`;
             }).join('');
         }
 
@@ -467,7 +514,7 @@
                     <td><b>${g.roll}</b></td>
                     <td>${g.name}</td>
                     <td>${g.date}</td>
-                    <td><span class="badge">${g.count} Lectures</span></td>
+                    <td><span class="badge badge-present">${g.count} Lectures</span></td>
                     <td><button class="action-btn btn-del" onclick="deleteDayGroup('${g.roll}', '${g.date}')">Del Day</button></td>
                 </tr>
             `).join('');
@@ -609,7 +656,7 @@
                         csv += `,H`;
                     } else {
                         const status = s.dates[dt];
-                        if (status === 'Present') {
+                        if (status === 'Present' || status === 'Duty Leave') {
                             csv += `,P`;
                             presentCount++;
                         } else {
