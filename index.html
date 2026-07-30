@@ -123,8 +123,7 @@
                 <button class="btn btn-primary" id="authBtn" onclick="handleAuth()">Sign In</button>
                 <span style="color:var(--primary); cursor:pointer; font-size:12px; display:block; text-align:center; margin-top:10px; font-weight:600;" id="toggleLink" onclick="toggleMode()">New Student? Register Account</span>
             </div>
-
-            <!-- DASHBOARD -->
+                        <!-- DASHBOARD -->
             <div id="dash-box" style="display: none;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <div>
@@ -178,10 +177,8 @@
                     </select>
                     <button class="btn btn-outline" onclick="markSingleAttendance()">Mark Selected Lecture</button>
 
-                    <!-- ADDED SCAN QR CODE BUTTON FOR STUDENTS -->
                     <button class="btn btn-primary" onclick="openStudentQRScanner()" style="margin-top:8px; background:linear-gradient(135deg, #0284c7, #2563eb);">📲 Scan QR Code for Check-In</button>
 
-                    <!-- PERSONAL ATTENDANCE CALENDAR -->
                     <div class="calendar-container">
                         <div class="calendar-header">
                             <span>📅 Attendance Calendar</span>
@@ -194,7 +191,6 @@
                         </div>
                     </div>
 
-                    <!-- DATE-WISE CLEAN ATTENDANCE LOGS TABLE -->
                     <div style="margin-top:10px;">
                         <h4 style="font-size:11px; color:var(--text-muted);">My Attendance Logs (Date-Wise):</h4>
                         <div class="table-container">
@@ -251,7 +247,6 @@
                         <button class="btn btn-warning" onclick="declareHoliday()" style="margin-top:0; padding:10px;">Mark Date as Holiday</button>
                     </div>
 
-                    <!-- ROTATING QR CODE PROJECTOR SCREEN -->
                     <div id="subQR" class="admin-box" style="display:none; text-align:center;">
                         <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">📲 Dynamic Rotating QR Check-In:</span>
                         <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">Project this screen in class. Students can scan to mark attendance.</p>
@@ -259,7 +254,6 @@
                         <button class="btn btn-outline" onclick="generateDynamicQR()" style="padding:8px; font-size:11px;">🔄 Refresh QR Code Now</button>
                     </div>
 
-                    <!-- BROADCAST NOTICE & RESET PASSWORD -->
                     <div id="subTools" class="admin-box" style="display:none;">
                         <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">📢 Broadcast Notice:</span>
                         <input type="text" id="noticeMsg" placeholder="Notice text (e.g. Mid-Sem Exams from Monday)" style="padding:8px; margin-bottom:6px;">
@@ -349,7 +343,6 @@
             if (subId === 'subQR') generateDynamicQR();
         }
 
-        // STUDENT QR SCANNER TRIGGER
         function openStudentQRScanner() {
             markFullDayAttendance();
         }
@@ -522,7 +515,7 @@
             const dayHeaders = '<div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div><div class="cal-day-head">W</div><div class="cal-day-head">T</div><div class="cal-day-head">F</div><div class="cal-day-head">S</div>';
             
             const attendedDates = new Set(historyData.map(h => h.date));
-            const year = 2026, month = 6; // July
+            const year = 2026, month = 6;
             const daysInMonth = 31;
             const firstDayOfWeek = new Date(year, month, 1).getDay();
 
@@ -548,7 +541,6 @@
             gridBody.innerHTML = cellsHtml;
         }
 
-        // DATE-WISE GROUPING LOGIC FOR CLEAN STUDENT LOGS
         async function fetchHistory(rollNo) {
             const hRes = await fetch(`${API_BASE}/api/holidays`);
             globalHolidays = await hRes.json();
@@ -558,7 +550,6 @@
             globalMyRecords = data;
             const tbody = document.querySelector('#myHistoryTable tbody');
 
-            // Grouping single lectures by date
             const dateGrouped = {};
             data.forEach(item => {
                 if (!dateGrouped[item.date]) {
@@ -683,21 +674,106 @@
             downloadFile(csv, `My_Attendance_Report.csv`);
         }
 
+        // FULL MASTER GRID REPORT WITH DATES AND DAYS (15-Jul (Wed), 16-Jul (Thu)...)
         function exportExcelGrid() {
-            if (globalAllRecords.length === 0) return alert("Refresh class list first!");
+            if (globalAllRecords.length === 0) return alert("Pehle Class Records Refresh karo!");
+
             const selection = document.getElementById('exportSelection').value;
+            const holidayDatesList = globalHolidays.map(h => h.date);
             const studentsMap = {};
 
             globalAllRecords.forEach(r => {
-                if (!studentsMap[r.rollNo]) studentsMap[r.rollNo] = { name: r.studentName, roll: r.rollNo, dates: {} };
+                if (!studentsMap[r.rollNo]) {
+                    studentsMap[r.rollNo] = { name: r.studentName, roll: r.rollNo, dates: {} };
+                }
                 studentsMap[r.rollNo].dates[r.date] = r.status;
             });
 
-            let csv = `BM Group Master Attendance Report\nStudent Roll No,Student Name,Total Present\n`;
-            Object.values(studentsMap).forEach(s => {
-                csv += `"${s.roll}","${s.name}",${Object.keys(s.dates).length}\n`;
+            let targetDates = [];
+
+            if (selection === 'ALL_SEMESTER') {
+                let cur = new Date(2026, 6, 15);
+                const endDate = new Date(2026, 11, 31);
+                while (cur <= endDate) {
+                    const y = cur.getFullYear();
+                    const m = String(cur.getMonth() + 1).padStart(2, '0');
+                    const d = String(cur.getDate()).padStart(2, '0');
+                    targetDates.push(`${y}-${m}-${d}`);
+                    cur.setDate(cur.getDate() + 1);
+                }
+            } else {
+                const monthIdx = parseInt(selection);
+                const year = 2026;
+                const startDay = (monthIdx === 6) ? 15 : 1;
+                const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+
+                for (let d = startDay; d <= daysInMonth; d++) {
+                    const y = year;
+                    const m = String(monthIdx + 1).padStart(2, '0');
+                    const day = String(d).padStart(2, '0');
+                    targetDates.push(`${y}-${m}-${day}`);
+                }
+            }
+
+            let workingDaysCount = 0;
+            let headerRow = `Student Roll No,Student Name`;
+
+            // DATES + DAYS NAME IN HEADER (e.g. 15-Jul (Wed), 16-Jul (Thu)...)
+            targetDates.forEach(dt => {
+                const parts = dt.split('-');
+                const dtObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                const dayOfWeek = dtObj.getDay();
+                const dayName = DAY_NAMES[dayOfWeek];
+                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+                const isHoliday = holidayDatesList.includes(dt);
+
+                headerRow += `,${parts[2]}-${MONTH_NAMES[parseInt(parts[1]) - 1].substring(0,3)} (${dayName})`;
+
+                if (!isWeekend && !isHoliday) {
+                    workingDaysCount++;
+                }
             });
-            downloadFile(csv, `Master_Attendance_Grid.csv`);
+
+            headerRow += `,Total Present Days\n`;
+
+            let csv = `BM Group Of Institutions - Master Attendance Grid Report (July-Dec 2026)\n`;
+            csv += `Total Working Days: ${workingDaysCount} Days\n\n`;
+            csv += headerRow;
+
+            const sortedStudents = Object.values(studentsMap).sort((a, b) => {
+                return a.roll.localeCompare(b.roll, undefined, { numeric: true, sensitivity: 'base' });
+            });
+
+            sortedStudents.forEach(s => {
+                csv += `"${s.roll}","${s.name}"`;
+                let presentCount = 0;
+
+                targetDates.forEach(dt => {
+                    const parts = dt.split('-');
+                    const dtObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                    const dayOfWeek = dtObj.getDay();
+                    const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+                    const isHoliday = holidayDatesList.includes(dt);
+
+                    if (isWeekend) {
+                        csv += `,OFF`;
+                    } else if (isHoliday) {
+                        csv += `,H`;
+                    } else {
+                        const status = s.dates[dt];
+                        if (status === 'Present' || status === 'Duty Leave') {
+                            csv += `,P`;
+                            presentCount++;
+                        } else {
+                            csv += `,A`;
+                        }
+                    }
+                });
+                csv += `,${presentCount}\n`;
+            });
+
+            const fileName = selection === 'ALL_SEMESTER' ? 'Full_Semester_Attendance_July_Dec_2026.csv' : `Attendance_Grid_${MONTH_NAMES[parseInt(selection)]}_2026.csv`;
+            downloadFile(csv, fileName);
         }
 
         function logout() { localStorage.clear(); location.reload(); }
