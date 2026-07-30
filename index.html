@@ -6,7 +6,7 @@
     <title>BM Group of Institutions - ERP Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root { --primary: #1a73e8; --success: #0f9d58; --danger: #d93025; --bg: #f8f9fa; --card-bg: #ffffff; --text-main: #202124; --text-muted: #5f6368; --border: #dadce0; }
+        :root { --primary: #1a73e8; --success: #0f9d58; --danger: #d93025; --warning: #f4b400; --bg: #f8f9fa; --card-bg: #ffffff; --text-main: #202124; --text-muted: #5f6368; --border: #dadce0; }
         * { box-sizing: border-box; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
         body { background: var(--bg); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 15px; }
         .app-container { width: 100%; max-width: 500px; background: var(--card-bg); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid var(--border); overflow: hidden; }
@@ -21,6 +21,7 @@
         .btn { width: 100%; padding: 11px; border: none; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; margin-top: 6px; }
         .btn-primary { background: var(--primary); color: white; }
         .btn-success { background: var(--success); color: white; }
+        .btn-warning { background: var(--warning); color: white; }
         .btn-accent { background: #00838f; color: white; }
         .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
         .btn-danger { background: #fce8e6; color: var(--danger); }
@@ -37,7 +38,6 @@
         td { padding: 8px; border-bottom: 1px solid #f1f3f4; }
         .badge { padding: 2px 6px; border-radius: 10px; font-size: 10px; font-weight: 600; background: #e6f4ea; color: #137333; }
         .action-btn { padding: 3px 6px; font-size: 10px; border-radius: 4px; border: none; cursor: pointer; font-weight:600; }
-        .btn-edit { background: #e8f0fe; color: #1a73e8; }
         .btn-del { background: #fce8e6; color: #d93025; }
         #msg { margin-top: 10px; font-size: 12px; text-align: center; padding: 8px; border-radius: 8px; display: none; }
         .msg-success { background: #e6f4ea; color: #137333; display: block !important; }
@@ -117,8 +117,8 @@
                         <h4 style="font-size:11px; color:var(--text-muted);">My History:</h4>
                         <div class="table-container">
                             <table id="myHistoryTable">
-                                <thead><tr><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
-                                <tbody><tr><td colspan="3" style="text-align:center;">Loading...</td></tr></tbody>
+                                <thead><tr><th>Date</th><th>Day</th><th>Subject</th><th>Status</th></tr></thead>
+                                <tbody><tr><td colspan="4" style="text-align:center;">Loading...</td></tr></tbody>
                             </table>
                         </div>
                     </div>
@@ -127,12 +127,22 @@
                 <!-- TAB 2: ADMIN MANAGEMENT -->
                 <div id="adminTab" style="display:none;">
                     <button class="btn btn-success" onclick="exportMonthlyGridCSV()">📥 Download Monthly Attendance Grid (Excel)</button>
-                    <button class="btn btn-outline" onclick="fetchAllAttendance()" style="margin-top:6px;">🔄 Refresh Records</button>
+                    
+                    <!-- ADMIN DECLARE HOLIDAY SECTION -->
+                    <div style="background:#f1f3f4; padding:10px; border-radius:10px; margin-top:10px;">
+                        <span style="font-size:11px; font-weight:bold; display:block; margin-bottom:5px;">Declare Official College Holiday:</span>
+                        <input type="date" id="holidayDate" style="padding:6px; margin-bottom:5px;">
+                        <input type="text" id="holidayReason" placeholder="Reason (e.g. Festival/Diwali)" style="padding:6px; margin-bottom:5px;">
+                        <button class="btn btn-warning" onclick="declareHoliday()" style="margin-top:0; padding:8px;">🏖️ Mark Selected Date as Holiday</button>
+                    </div>
+
+                    <button class="btn btn-outline" onclick="fetchAllAttendance()" style="margin-top:10px;">🔄 Refresh Records</button>
+                    
                     <div style="margin-top:10px;">
-                        <h4 style="font-size:11px; color:var(--text-muted);">Manage Attendance Records (1 Row Per Student/Day):</h4>
+                        <h4 style="font-size:11px; color:var(--text-muted);">Manage Student Attendance Records:</h4>
                         <div class="table-container">
                             <table id="allHistoryTable">
-                                <thead><tr><th>Name</th><th>Roll</th><th>Date</th><th>Attended</th><th>Actions</th></tr></thead>
+                                <thead><tr><th>Roll</th><th>Name</th><th>Date</th><th>Attended</th><th>Actions</th></tr></thead>
                                 <tbody><tr><td colspan="5" style="text-align:center;">Click refresh...</td></tr></tbody>
                             </table>
                         </div>
@@ -146,7 +156,9 @@
 
     <script>
         const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; 
-        let isRegistering = false, globalAllRecords = [], globalMyRecords = [], groupedAdminRecords = {};
+        let isRegistering = false, globalAllRecords = [], globalMyRecords = [], globalHolidays = [], groupedAdminRecords = {};
+
+        const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
         function togglePassword() {
             const p = document.getElementById('password'), e = document.getElementById('toggleEye');
@@ -223,6 +235,28 @@
             }, () => showMsg('GPS Denied!', true));
         }
 
+        async function declareHoliday() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            const date = document.getElementById('holidayDate').value;
+            const reason = document.getElementById('holidayReason').value.trim();
+
+            if (!date) return showMsg('Please select a date for Holiday!', true);
+
+            const res = await fetch(`${API_BASE}/api/admin/holiday`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ requesterRollNo: user.rollNo, date, reason })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                showMsg(data.message);
+                fetchAllAttendance();
+            } else {
+                showMsg(data.error, true);
+            }
+        }
+
         async function fetchHistory(rollNo) {
             const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
             const data = await res.json();
@@ -230,48 +264,53 @@
             const tbody = document.querySelector('#myHistoryTable tbody');
             const uniqueDays = [...new Set(data.map(i => i.date))].length;
             document.getElementById('totalDaysCount').innerText = `${uniqueDays} Days`;
-            if (data.length === 0) return tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">No records</td></tr>';
-            tbody.innerHTML = data.map(i => `<tr><td>${i.date}</td><td><b>${i.subject}</b></td><td><span class="badge">${i.status}</span></td></tr>`).join('');
+            if (data.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No records</td></tr>';
+            
+            tbody.innerHTML = data.map(i => {
+                const d = new Date(i.date);
+                const dayStr = DAY_NAMES[d.getDay()];
+                return `<tr><td>${i.date}</td><td><b>${dayStr}</b></td><td>${i.subject}</td><td><span class="badge">${i.status}</span></td></tr>`;
+            }).join('');
         }
 
         async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
+            
+            // Fetch Holidays List first
+            const hRes = await fetch(`${API_BASE}/api/holidays`);
+            globalHolidays = await hRes.json();
+
             const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
             const data = await res.json();
             if (!res.ok) return showMsg(data.error, true);
             globalAllRecords = data;
 
-            // GROUP BY ROLL NO & DATE TO SHOW 1 ROW PER DAY
+            // GROUP BY ROLL NO & DATE
             groupedAdminRecords = {};
             data.forEach(r => {
                 const key = `${r.rollNo}_${r.date}`;
                 if (!groupedAdminRecords[key]) {
-                    groupedAdminRecords[key] = {
-                        name: r.studentName,
-                        roll: r.rollNo,
-                        date: r.date,
-                        ids: [],
-                        count: 0
-                    };
+                    groupedAdminRecords[key] = { name: r.studentName, roll: r.rollNo, date: r.date, ids: [], count: 0 };
                 }
                 groupedAdminRecords[key].ids.push(r._id);
                 groupedAdminRecords[key].count++;
             });
 
-            const tbody = document.querySelector('#allHistoryTable tbody');
-            const groupedArray = Object.values(groupedAdminRecords);
+            // SORT BY ROLL NUMBER NATURAL ORDER (24CSE14 -> 24CSE15 -> 24CSE48)
+            const sortedArray = Object.values(groupedAdminRecords).sort((a, b) => {
+                return a.roll.localeCompare(b.roll, undefined, { numeric: true, sensitivity: 'base' });
+            });
 
-            if (groupedArray.length === 0) return tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No records</td></tr>';
+            const tbody = document.querySelector('#allHistoryTable tbody');
+            if (sortedArray.length === 0) return tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No records</td></tr>';
             
-            tbody.innerHTML = groupedArray.map(g => `
+            tbody.innerHTML = sortedArray.map(g => `
                 <tr>
-                    <td><b>${g.name}</b></td>
-                    <td>${g.roll}</td>
+                    <td><b>${g.roll}</b></td>
+                    <td>${g.name}</td>
                     <td>${g.date}</td>
                     <td><span class="badge">${g.count} Lectures</span></td>
-                    <td>
-                        <button class="action-btn btn-del" onclick="deleteDayGroup('${g.roll}', '${g.date}')">Del Day</button>
-                    </td>
+                    <td><button class="action-btn btn-del" onclick="deleteDayGroup('${g.roll}', '${g.date}')">Del Day</button></td>
                 </tr>
             `).join('');
         }
@@ -292,7 +331,6 @@
             fetchAllAttendance();
         }
 
-        // --- HELPER FUNCTION FOR SAFE MOBILE CSV DOWNLOAD ---
         function downloadFile(content, fileName) {
             const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
@@ -305,17 +343,27 @@
             URL.revokeObjectURL(url);
         }
 
+        // PERFECT STUDENT CSV EXPORT
         function exportStudentCSV() {
-            if (globalMyRecords.length === 0) return alert("No records!");
+            if (globalMyRecords.length === 0) return alert("No records found!");
             const grouped = {};
-            globalMyRecords.forEach(r => { if (!grouped[r.date]) grouped[r.date] = 0; grouped[r.date]++; });
-            let csv = "Date,Total Lectures Attended,Status\n";
-            Object.keys(grouped).forEach(d => { csv += `"${d}","${grouped[d]} Lectures","Present"\n`; });
-            csv += `\n"Total Days Attended","${Object.keys(grouped).length} Days",""\n`;
+            globalMyRecords.forEach(r => {
+                if (!grouped[r.date]) grouped[r.date] = 0;
+                grouped[r.date]++;
+            });
+
+            let csv = "Date,Day,Total Lectures Attended,Status\n";
+            Object.keys(grouped).forEach(d => {
+                const dateObj = new Date(d);
+                const dayStr = DAY_NAMES[dateObj.getDay()];
+                csv += `"${d}","${dayStr}","${grouped[d]} Lectures","Present"\n`;
+            });
+            csv += `\n"Total Working Days Attended","${Object.keys(grouped).length} Days",""\n`;
             
             downloadFile(csv, `My_Attendance_Report.csv`);
         }
 
+        // PERFECT ADMIN MONTHLY GRID CSV EXPORT (OFF / HOLIDAYS EXCLUDED)
         function exportMonthlyGridCSV() {
             if (globalAllRecords.length === 0) return alert("Refresh class list first!");
 
@@ -326,6 +374,7 @@
             const currentMonthName = monthNames[monthIdx];
             const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
 
+            // Unique Students Sorted by Roll No
             const studentsMap = {};
             globalAllRecords.forEach(r => {
                 if (!studentsMap[r.rollNo]) {
@@ -338,31 +387,72 @@
                 }
             });
 
-            let csv = `Attendance Sheet for ${currentMonthName} - ${year}\n\n`;
-            csv += `Student ID,Student Name`;
-            for (let d = 1; d <= daysInMonth; d++) {
-                csv += `,${d}-${currentMonthName.substring(0, 3)}`;
-            }
-            csv += `,Present Count\n`;
+            const holidayDatesList = globalHolidays.map(h => h.date);
 
-            Object.values(studentsMap).forEach(s => {
-                csv += `"${s.roll}","${s.name}"`;
-                let presentCount = 0;
-                for (let d = 1; d <= daysInMonth; d++) {
-                    const status = s.dates[d];
-                    if (status === 'Present') {
-                        csv += `,P`;
-                        presentCount++;
-                    } else if (status === 'Absent') {
-                        csv += `,A`;
-                    } else {
-                        csv += `,-`;
-                    }
+            // Calculate Working Days Header
+            let workingDaysCount = 0;
+            let daysHeaderRow = `Student Roll No,Student Name`;
+            let daysNameRow = `,,`;
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateObj = new Date(year, monthIdx, d);
+                const dayNumOfWeek = dateObj.getDay(); // 0 = Sun, 6 = Sat
+                const formattedDateStr = `${year}-${String(monthIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                
+                const isWeekend = (dayNumOfWeek === 0 || dayNumOfWeek === 6);
+                const isHoliday = holidayDatesList.includes(formattedDateStr);
+
+                daysHeaderRow += `,${d}-${currentMonthName.substring(0, 3)}`;
+                daysNameRow += `,${DAY_NAMES[dayNumOfWeek]}`;
+
+                if (!isWeekend && !isHoliday) {
+                    workingDaysCount++;
                 }
-                csv += `,${presentCount}\n`;
+            }
+
+            daysHeaderRow += `,Total Present Days\n`;
+            daysNameRow += `,\n`;
+
+            let csv = `BM Group Of Institutions - Attendance Sheet for ${currentMonthName} ${year}\n`;
+            csv += `Total Working Days In Month: ${workingDaysCount} Days\n\n`;
+            csv += daysHeaderRow + daysNameRow;
+
+            // Sort Students Roll No Wise (24CSE14 -> 24CSE15 -> 24CSE48)
+            const sortedStudents = Object.values(studentsMap).sort((a, b) => {
+                return a.roll.localeCompare(b.roll, undefined, { numeric: true, sensitivity: 'base' });
             });
 
-            downloadFile(csv, `Attendance_Sheet_${currentMonthName}_${year}.csv`);
+            // Build Student Rows
+            sortedStudents.forEach(s => {
+                csv += `"${s.roll}","${s.name}"`;
+                let presentDaysCount = 0;
+
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const dateObj = new Date(year, monthIdx, d);
+                    const dayNumOfWeek = dateObj.getDay();
+                    const formattedDateStr = `${year}-${String(monthIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    
+                    const isWeekend = (dayNumOfWeek === 0 || dayNumOfWeek === 6);
+                    const isHoliday = holidayDatesList.includes(formattedDateStr);
+
+                    if (isWeekend) {
+                        csv += `,OFF`;
+                    } else if (isHoliday) {
+                        csv += `,H`;
+                    } else {
+                        const status = s.dates[d];
+                        if (status === 'Present') {
+                            csv += `,P`;
+                            presentDaysCount++;
+                        } else {
+                            csv += `,A`;
+                        }
+                    }
+                }
+                csv += `,${presentDaysCount}\n`;
+            });
+
+            downloadFile(csv, `Attendance_Grid_${currentMonthName}_${year}.csv`);
         }
 
         function logout() { localStorage.clear(); location.reload(); }
