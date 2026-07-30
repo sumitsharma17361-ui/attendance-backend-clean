@@ -42,7 +42,7 @@ const attendanceSchema = new mongoose.Schema({
   studentName: { type: String, required: true },
   subject: { type: String, required: true },
   date: { type: String, required: true }, 
-  status: { type: String, enum: ['Present', 'Absent', 'Holiday'], default: 'Present' },
+  status: { type: String, enum: ['Present', 'Absent', 'Duty Leave', 'Holiday'], default: 'Present' },
   location: { latitude: Number, longitude: Number }
 }, { timestamps: true });
 
@@ -55,9 +55,9 @@ const User = mongoose.model('User', userSchema);
 const Attendance = mongoose.model('Attendance', attendanceSchema);
 const Holiday = mongoose.model('Holiday', holidaySchema);
 
-app.get('/', (req, res) => res.send('BM Group Portal API Active!'));
+app.get('/', (req, res) => res.send('BM Group Portal Enterprise API Active!'));
 
-// Registration API
+// Registration API (Strict Pattern: 24CSE48)
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, rollNo, password } = req.body;
@@ -80,7 +80,7 @@ app.post('/api/auth/register', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ADMIN MANUAL STUDENT REGISTER API
+// ADMIN MANUAL STUDENT REGISTRATION
 app.post('/api/admin/register-student', async (req, res) => {
   try {
     const { requesterRollNo, name, rollNo, password } = req.body;
@@ -197,7 +197,7 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
 
 app.post('/api/admin/manual-attendance', async (req, res) => {
   try {
-    const { requesterRollNo, studentRollNo, date } = req.body;
+    const { requesterRollNo, studentRollNo, date, status } = req.body;
     
     if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) {
       return res.status(403).json({ error: 'Access Denied: Admin Privileges Required!' });
@@ -229,14 +229,14 @@ app.post('/api/admin/manual-attendance', async (req, res) => {
           studentName: user.name,
           subject: sub,
           date: date,
-          status: 'Present',
+          status: status || 'Present',
           location: { latitude: 28.4475, longitude: 76.7645 }
         }).save();
         markedCount++;
       }
     }
 
-    res.status(201).json({ message: `Success! Marked ${markedCount} lectures for ${user.name} (${targetRoll}) on ${date}` });
+    res.status(201).json({ message: `Success! Marked ${markedCount} lectures (${status || 'Present'}) for ${user.name} on ${date}` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -288,3 +288,4 @@ app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+                                        
