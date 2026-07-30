@@ -100,7 +100,7 @@ const Attendance = mongoose.model('Attendance', attendanceSchema);
 // ---------------- API ENDPOINTS ----------------
 
 app.get('/', (req, res) => {
-  res.send('B. M. Group Of Institutions - Farukh Nagar Attendance API Active!');
+  res.send('B. M. Group Of Institutions - Farrukhnagar Attendance API Active!');
 });
 
 // Time-Table API
@@ -159,7 +159,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Mark Attendance (BM Group Haily Mandi Rd Coordinates)
+// Mark Attendance (BM Group Haily Mandi Rd, Kheda Khurrampur Coordinates)
 app.post('/api/attendance/mark', async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude } = req.body;
@@ -167,10 +167,10 @@ app.post('/api/attendance/mark', async (req, res) => {
       return res.status(400).json({ error: 'Roll Number, Subject and Location required!' });
     }
 
-    // EXACT SPOT: 5km Stone, Haily Mandi Rd, Farukh Nagar
-    const COLLEGE_LAT = 28.4239; 
-    const COLLEGE_LNG = 76.8021;
-    const MAX_ALLOWED_DISTANCE_KM = 1.0; 
+    // EXACT SPOT: 5 km Stone, Haily Mandi Road, Farrukhnagar (28.4475° N, 76.7645° E)
+    const COLLEGE_LAT = 28.4475; 
+    const COLLEGE_LNG = 76.7645;
+    const MAX_ALLOWED_DISTANCE_KM = 1.0; // 1 KM radius around campus building
 
     function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
       const R = 6371; 
@@ -251,4 +251,4 @@ app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-                    
+    
