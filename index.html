@@ -484,19 +484,40 @@
             }
         }
 
+        // REAL WEBAUTHN HARDWARE BIOMETRIC PROMPT FIX
         async function triggerBiometricFingerprint() {
-            if (window.PublicKeyCredential) {
-                try {
-                    showMsg("🖐️ Scan Fingerprint on phone sensor...");
-                    setTimeout(() => {
-                        showMsg("✅ Biometric Identity Verified!");
-                        markFullDayAttendance();
-                    }, 1200);
-                } catch(e) {
-                    showMsg("Biometric verification failed!", true);
+            if (!window.PublicKeyCredential) {
+                return showMsg("Device biometric API not supported!", true);
+            }
+
+            try {
+                showMsg("🖐️ Place finger on phone sensor...");
+                
+                // Real Hardware Biometric Challenge Prompt Request
+                const publicKeyCredentialCreationOptions = {
+                    challenge: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]),
+                    rp: { name: "BM Group ERP Portal" },
+                    user: {
+                        id: new Uint8Array([1, 2, 3, 4]),
+                        name: "student@bmerp.edu",
+                        displayName: "Student Biometric"
+                    },
+                    pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+                    authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+                    timeout: 60000
+                };
+
+                const credential = await navigator.credentials.create({ publicKey: publicKeyCredentialCreationOptions });
+
+                if (credential) {
+                    showMsg("✅ Biometric Identity Verified!");
+                    setTimeout(markFullDayAttendance, 800);
+                } else {
+                    showMsg("❌ Biometric Verification Failed!", true);
                 }
-            } else {
-                showMsg("Device biometric not supported!", true);
+            } catch (err) {
+                // Catches user cancel / mismatch / timeout
+                showMsg("❌ Biometric Scanning Cancelled or Mismatch!", true);
             }
         }
 
@@ -1246,5 +1267,3 @@
     </script>
 </body>
 </html>
-
-        
