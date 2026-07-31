@@ -6,6 +6,7 @@
     <title>BM Group of Institutions - Enterprise ERP Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
     <style>
         :root { 
             --primary: #2563eb; 
@@ -93,7 +94,7 @@
         .msg-error { background: #fee2e2; color: #b91c1c; display: block !important; }
         .admin-box { background: #ffffff; padding: 12px; border-radius: 14px; border: 1px solid var(--border); }
         
-        .webcam-box { width: 100%; height: 210px; background: #000; border-radius: 12px; overflow: hidden; position: relative; margin-bottom: 8px; display: flex; justify-content: center; align-items: center; }
+        .webcam-box { width: 100%; height: 220px; background: #000; border-radius: 12px; overflow: hidden; position: relative; margin-bottom: 8px; display: flex; justify-content: center; align-items: center; }
         video { width: 100%; height: 100%; object-fit: cover; }
         .scan-overlay { position: absolute; border: 2px dashed #10b981; border-radius: 50%; width: 130px; height: 160px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.4); }
     </style>
@@ -171,8 +172,8 @@
                             <video id="webcamVideo" autoplay playsinline muted></video>
                             <div class="scan-overlay"></div>
                         </div>
-                        <p id="cameraScanStatus" style="font-size:11px; font-weight:700; color:var(--primary); margin-bottom:6px;">Align face in oval frame...</p>
-                        <button class="btn btn-primary" id="camActionBtn" onclick="executeCameraAction()" style="padding:8px; font-size:11px;">✨ Capture Face Landmark</button>
+                        <p id="cameraScanStatus" style="font-size:11px; font-weight:700; color:var(--primary); margin-bottom:6px;">Loading Face-AI Engine Neural Models...</p>
+                        <button class="btn btn-primary" id="camActionBtn" onclick="executeCameraAction()" style="padding:8px; font-size:11px;">✨ Scan 68-Point Mesh</button>
                         <button class="btn btn-outline" onclick="closeCameraModal()" style="padding:6px; font-size:10px; margin-top:4px;">Cancel</button>
                     </div>
                 </div>
@@ -184,9 +185,7 @@
 
                 <!-- TAB 1: MARK ATTENDANCE -->
                 <div id="markTab">
-                    <!-- FIXED: 1-CLICK FULL DAY ATTENDANCE BUTTON INCLUDED -->
                     <button class="btn btn-accent" onclick="markFullDayAttendance()" style="background:linear-gradient(135deg, #2563eb, #1d4ed8);">⚡ Mark Full Day Attendance</button>
-                    
                     <button class="btn btn-success" onclick="openCameraModal('CHECKIN')" style="margin-top:6px; background:linear-gradient(135deg, #059669, #10b981);">👤 Instant Check-In via AI Face Scan</button>
                     <button class="btn btn-primary" onclick="openStudentQRScanner()" style="margin-top:6px; background:linear-gradient(135deg, #0284c7, #2563eb);">📲 Scan Projector QR Code</button>
                     <button class="btn btn-outline" onclick="exportStudentCSV()" style="margin-top:6px;">📥 Download My Attendance Sheet (Excel)</button>
@@ -315,20 +314,39 @@
     </div>
         <script>
         const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; 
+        const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/";
+        
         let isRegistering = false, globalAllRecords = [], globalMyRecords = [], globalHolidays = [], groupedAdminRecords = {};
-        let currentCamMode = 'ENROLL', videoStream = null;
+        let currentCamMode = 'ENROLL', videoStream = null, isModelsLoaded = false;
 
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         const TIME_TABLE_MAP = { 1: "BDA", 2: "WT", 3: "FLA", 4: "DAA", 5: "CN" };
 
-        // REAL CAMERA SCANNER ENGINE
-        function openCameraModal(mode) {
+        // INITIALIZE FACE-API NEURAL MODELS
+        async function loadFaceAIModels() {
+            if (isModelsLoaded) return true;
+            try {
+                const statusTxt = document.getElementById('cameraScanStatus');
+                if(statusTxt) statusTxt.innerText = "Loading 68-Point Mesh AI Neural Models...";
+                await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+                await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+                await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+                isModelsLoaded = true;
+                if(statusTxt) statusTxt.innerText = "AI Engine Ready! Keep face in frame.";
+                return true;
+            } catch (err) {
+                showMsg("Failed to load Face AI Models!", true);
+                return false;
+            }
+        }
+
+        async function openCameraModal(mode) {
             const user = JSON.parse(localStorage.getItem('user'));
             currentCamMode = mode;
             
             if (mode === 'CHECKIN') {
-                const isFaceEnrolled = localStorage.getItem(`FACE_ID_${user.rollNo}`);
+                const isFaceEnrolled = localStorage.getItem(`FACE_MESH_${user.rollNo}`);
                 if (!isFaceEnrolled) {
                     return showMsg("Pehle Face ID Enroll karo!", true);
                 }
@@ -337,21 +355,18 @@
             const modal = document.getElementById('cameraModal');
             const video = document.getElementById('webcamVideo');
             const actionBtn = document.getElementById('camActionBtn');
-            const statusTxt = document.getElementById('cameraScanStatus');
 
             modal.style.display = 'block';
-            statusTxt.innerText = "Opening camera... Align face in frame";
-            actionBtn.innerText = (mode === 'ENROLL') ? "✨ Scan & Save Face ID" : "🔍 Verify Face & Mark Attendance";
+            actionBtn.innerText = (mode === 'ENROLL') ? "✨ Scan & Save 68-Point Face ID" : "🔍 Verify Face & Mark Attendance";
 
             navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-                .then(stream => {
+                .then(async stream => {
                     videoStream = stream;
                     video.srcObject = stream;
-                    statusTxt.innerText = "Camera Active! Keep face steady.";
+                    await loadFaceAIModels();
                 })
                 .catch(err => {
-                    statusTxt.innerText = "❌ Camera access denied!";
-                    showMsg("Camera Permission Denied!", true);
+                    showMsg("Camera Access Denied!", true);
                 });
         }
 
@@ -366,33 +381,60 @@
             video.srcObject = null;
         }
 
-        function executeCameraAction() {
+        // STRICT 68-POINT MESH DETECTION & MATCHING LOGIC
+        async function executeCameraAction() {
             const user = JSON.parse(localStorage.getItem('user'));
+            const video = document.getElementById('webcamVideo');
             const statusTxt = document.getElementById('cameraScanStatus');
 
-            if (!videoStream) return showMsg("Camera not active!", true);
+            if (!videoStream || !isModelsLoaded) return showMsg("Camera/Models not ready!", true);
 
-            statusTxt.innerText = "⚡ Scanning Facial Landmark Mesh...";
-            
-            setTimeout(() => {
-                if (currentCamMode === 'ENROLL') {
-                    localStorage.setItem(`FACE_ID_${user.rollNo}`, "REGISTERED_PROCESSED_MESH");
-                    checkUserFaceStatus();
-                    showMsg("Face ID Registered Successfully!");
-                    closeCameraModal();
-                } else {
-                    statusTxt.innerText = "✅ Identity Verified: " + user.name;
+            statusTxt.innerText = "⚡ Detecting 68 Facial Landmark Mesh Points...";
+
+            // DETECT FACE & DESCRIPTOR
+            const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
+
+            if (!detection) {
+                statusTxt.innerText = "❌ No Face Detected! Please look straight at camera.";
+                return showMsg("No Face Detected! Look straight at camera.", true);
+            }
+
+            const currentDescriptor = Array.from(detection.descriptor);
+
+            if (currentCamMode === 'ENROLL') {
+                // SAVE EXACT 128-FLOAT VECTOR DESCRIPTOR
+                localStorage.setItem(`FACE_MESH_${user.rollNo}`, JSON.stringify(currentDescriptor));
+                checkUserFaceStatus();
+                showMsg("Face ID Enrolled Successfully!");
+                statusTxt.innerText = "✅ 68 Landmarks Registered!";
+                setTimeout(closeCameraModal, 1200);
+            } else {
+                // STRICT VERIFICATION AGAINST SAVED VECTOR
+                const savedDescriptorRaw = localStorage.getItem(`FACE_MESH_${user.rollNo}`);
+                if (!savedDescriptorRaw) return showMsg("Face profile missing! Enroll first.", true);
+
+                const savedDescriptor = new Float32Array(JSON.parse(savedDescriptorRaw));
+                const distance = faceapi.euclideanDistance(detection.descriptor, savedDescriptor);
+
+                // STRICT THRESHOLD (Distance < 0.50 means ~85%+ match)
+                if (distance < 0.50) {
+                    statusTxt.innerText = "✅ Identity Verified: " + user.name + ` (Match Score: ${((1-distance)*100).toFixed(0)}%)`;
                     showMsg("Identity Verified: " + user.name);
-                    closeCameraModal();
-                    markFullDayAttendance();
+                    setTimeout(() => {
+                        closeCameraModal();
+                        markFullDayAttendance();
+                    }, 1200);
+                } else {
+                    statusTxt.innerText = "❌ Face Mismatch! Identity Not Verified.";
+                    showMsg("❌ Face Mismatch! Proxy Attempt Detected.", true);
                 }
-            }, 1800);
+            }
         }
 
         function checkUserFaceStatus() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user) return;
-            const isFaceEnrolled = localStorage.getItem(`FACE_ID_${user.rollNo}`);
+            const isFaceEnrolled = localStorage.getItem(`FACE_MESH_${user.rollNo}`);
             const badge = document.getElementById('faceStatusBadge');
             if (isFaceEnrolled) {
                 badge.innerText = "✅ Registered";
@@ -588,7 +630,7 @@
             });
             const data = await res.json();
             if (res.ok) { showMsg(data.message); fetchAllAttendance(); } else showMsg(data.error, true);
-            }
+        }
                     function calculateRealAttendancePercentage(attendedDaysCount) {
             const startDate = new Date(2026, 6, 15);
             const today = new Date();
