@@ -219,7 +219,7 @@
 
         #msg { margin-top: 10px; font-size: 12px; text-align: center; padding: 9px; border-radius: 10px; font-weight: 600; display: none; backdrop-filter: blur(10px); }
         .msg-success { background: rgba(209, 250, 229, 0.9); color: #047857; border: 1px solid #a7f3d0; display: block !important; }
-        .msg-error { background: rgba(224, 226, 226, 0.9); color: #b91c1c; border: 1px solid #fca5a5; display: block !important; }
+        .msg-error { background: rgba(254, 226, 226, 0.9); color: #b91c1c; border: 1px solid #fca5a5; display: block !important; }
         .admin-box { background: var(--glass-card); backdrop-filter: blur(12px); padding: 12px; border-radius: 16px; border: 1px solid var(--glass-border); }
         
         .webcam-box { width: 100%; height: 200px; background: #000; border-radius: 12px; overflow: hidden; position: relative; margin-bottom: 8px; display: flex; justify-content: center; align-items: center; border: 1px solid var(--glass-border); }
@@ -281,24 +281,12 @@
                     </div>
                 </div>
 
-                <!-- PURE SUPER ADMIN STATS CARD (REPLACES PERSONAL STATS FOR ADMINS) -->
-                <div class="stats-grid" id="adminStatsGrid" style="display:none;">
-                    <div class="stat-card">
-                        <div class="value" id="adminTotalStudents">0</div>
-                        <div class="label">Enrolled Students</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="value" id="adminClassAvg">78.5%</div>
-                        <div class="label">Class Attendance Avg</div>
-                    </div>
-                </div>
-
-                <!-- STUDENT ADVISOR CARD (HIDDEN FOR ADMINS) -->
+                <!-- STUDENT ADVISOR CARD -->
                 <div class="simulator-card" id="simulatorBox">
                     <b>🎯 Attendance Advisor:</b> <span id="advisorText">Calculating criteria...</span>
                 </div>
 
-                <!-- AI FACE ID ENROLLMENT & SCANNER MODAL (STUDENT ONLY) -->
+                <!-- AI FACE ID ENROLLMENT & SCANNER MODAL -->
                 <div class="admin-box" id="faceEnrollBox" style="margin-bottom:12px; background:rgba(224, 242, 254, 0.7); border-color:rgba(186, 230, 253, 0.8);">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
@@ -401,7 +389,6 @@
                         <button class="btn btn-primary" onclick="markManualAttendance()" style="margin-top:0; padding:10px;">✅ Mark Attendance</button>
                     </div>
 
-                    <!-- FIXED INVISIBLE CONTRAST ON DATE PICKER -->
                     <div id="subHoliday" class="admin-box" style="display:none;">
                         <span style="font-size:11px; font-weight:700; color:#b06000; display:block; margin-bottom:6px;">🏖️ Declare Official Holiday:</span>
                         <input type="date" id="holidayDate" style="background:#ffffff; border:1.5px solid #bae6fd; color:#0f172a;">
@@ -710,8 +697,7 @@
                 showMsg("Account deleted from directory!", false);
             }
         }
-
-        async function loadFaceAIModels() {
+                    async function loadFaceAIModels() {
             if (isModelsLoaded) return true;
             try {
                 const statusTxt = document.getElementById('cameraScanStatus');
@@ -979,7 +965,7 @@
             }
         }
 
-        // PURE SUPER ADMIN DASHBOARD LOGIC (HIDES PERSONAL TRACKER FOR ADMINS)
+        // DUAL MODE DASHBOARD LOGIC (RESTORES PERSONAL DASHBOARD FOR ROLL 24CSE48 + EXCLUSIVE ADMIN TAB)
         function loadDashboard() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user) return;
@@ -989,31 +975,24 @@
 
             const isAdmin = (user.role === 'admin' || user.rollNo.toUpperCase() === '24CSE48');
 
+            // EVERYONE GETS PERSONAL STUDENT PROFILE BY DEFAULT
+            document.getElementById('roleLabel').innerText = "Roll";
+            document.getElementById('userRoll').innerText = user.rollNo;
+            document.getElementById('studentStatsGrid').style.display = 'grid';
+            document.getElementById('adminStatsGrid').style.display = 'none';
+            document.getElementById('simulatorBox').style.display = 'block';
+            document.getElementById('faceEnrollBox').style.display = 'block';
+            document.getElementById('studentTabHeader').style.display = 'block';
+
             if (isAdmin) {
-                // HIDE PERSONAL STUDENT TRACKERS & SHOW SUPER ADMIN VIEW
-                document.getElementById('roleLabel').innerText = "System Role";
-                document.getElementById('userRoll').innerText = "SUPER ADMIN";
-                document.getElementById('studentStatsGrid').style.display = 'none';
-                document.getElementById('adminStatsGrid').style.display = 'grid';
-                document.getElementById('simulatorBox').style.display = 'none';
-                document.getElementById('faceEnrollBox').style.display = 'none';
-                document.getElementById('studentTabHeader').style.display = 'none';
+                // ADMIN TAB HEADER IS ONLY VISIBLE TO SUMIT (24CSE48) AND ADMINS
                 document.getElementById('adminTabHeader').style.display = 'block';
-                
-                switchTab('adminTab');
             } else {
-                // NORMAL STUDENT VIEW
-                document.getElementById('roleLabel').innerText = "Roll";
-                document.getElementById('userRoll').innerText = user.rollNo;
-                document.getElementById('studentStatsGrid').style.display = 'grid';
-                document.getElementById('adminStatsGrid').style.display = 'none';
-                document.getElementById('simulatorBox').style.display = 'block';
-                document.getElementById('faceEnrollBox').style.display = 'block';
-                document.getElementById('studentTabHeader').style.display = 'block';
-                
-                switchTab('markTab');
-                fetchHistory(user.rollNo);
+                document.getElementById('adminTabHeader').style.display = 'none';
             }
+
+            switchTab('markTab');
+            fetchHistory(user.rollNo);
             
             const todayISO = new Date().toISOString().split('T')[0];
             document.getElementById('manualDate').value = todayISO;
@@ -1216,6 +1195,7 @@
 
             const sortedDates = Object.values(dateGrouped).sort((a,b) => b.date.localeCompare(a.date));
 
+            if (!tbody) return;
             if (sortedDates.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No records</td></tr>';
             
             tbody.innerHTML = sortedDates.map(i => {
@@ -1415,5 +1395,3 @@
     </script>
 </body>
 </html>
-
-            
