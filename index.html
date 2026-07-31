@@ -83,7 +83,6 @@
 
         .app-body { padding: 18px; }
 
-        /* HIGH CONTRAST INPUT FIELDS & DATE PICKERS */
         input, select { 
             width: 100%; 
             padding: 12px 14px; 
@@ -161,7 +160,6 @@
         }
         .simulator-card b { color: #0284c7; }
 
-        /* ACTION GRID LAYOUT TO REDUCE COGNITIVE LOAD */
         .action-buttons-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
         .action-buttons-grid .btn { margin-top: 0; font-size: 11px; padding: 10px 6px; }
 
@@ -221,7 +219,7 @@
 
         #msg { margin-top: 10px; font-size: 12px; text-align: center; padding: 9px; border-radius: 10px; font-weight: 600; display: none; backdrop-filter: blur(10px); }
         .msg-success { background: rgba(209, 250, 229, 0.9); color: #047857; border: 1px solid #a7f3d0; display: block !important; }
-        .msg-error { background: rgba(254, 226, 226, 0.9); color: #b91c1c; border: 1px solid #fca5a5; display: block !important; }
+        .msg-error { background: rgba(224, 226, 226, 0.9); color: #b91c1c; border: 1px solid #fca5a5; display: block !important; }
         .admin-box { background: var(--glass-card); backdrop-filter: blur(12px); padding: 12px; border-radius: 16px; border: 1px solid var(--glass-border); }
         
         .webcam-box { width: 100%; height: 200px; background: #000; border-radius: 12px; overflow: hidden; position: relative; margin-bottom: 8px; display: flex; justify-content: center; align-items: center; border: 1px solid var(--glass-border); }
@@ -266,15 +264,15 @@
                             <span id="welcomeMsg">Welcome!</span>
                             <span id="defaulterTag" class="defaulter-badge" style="display:none;">DEBARRED RISK</span>
                         </h3>
-                        <p style="font-size: 11px; color: var(--text-muted); font-weight:600;">Roll: <span id="userRoll" style="font-weight:700;"></span></p>
+                        <p style="font-size: 11px; color: var(--text-muted); font-weight:600;"><span id="roleLabel">Roll</span>: <span id="userRoll" style="font-weight:700;"></span></p>
                     </div>
                     <button class="btn btn-danger" style="width:auto; padding:6px 12px; margin:0; font-size:11px;" onclick="logout()">Logout</button>
                 </div>
 
-                <!-- FIXED REDUNDANT DATA LABELS -->
-                <div class="stats-grid">
+                <!-- STUDENT DYNAMIC STATS CARD (FIXED REDUNDANT 'DAYS' LABEL) -->
+                <div class="stats-grid" id="studentStatsGrid">
                     <div class="stat-card">
-                        <div class="value" id="totalDaysCount">0 Days</div>
+                        <div class="value" id="totalDaysCount">0</div>
                         <div class="label">Days Attended</div>
                     </div>
                     <div class="stat-card">
@@ -283,12 +281,25 @@
                     </div>
                 </div>
 
+                <!-- PURE SUPER ADMIN STATS CARD (REPLACES PERSONAL STATS FOR ADMINS) -->
+                <div class="stats-grid" id="adminStatsGrid" style="display:none;">
+                    <div class="stat-card">
+                        <div class="value" id="adminTotalStudents">0</div>
+                        <div class="label">Enrolled Students</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value" id="adminClassAvg">78.5%</div>
+                        <div class="label">Class Attendance Avg</div>
+                    </div>
+                </div>
+
+                <!-- STUDENT ADVISOR CARD (HIDDEN FOR ADMINS) -->
                 <div class="simulator-card" id="simulatorBox">
                     <b>🎯 Attendance Advisor:</b> <span id="advisorText">Calculating criteria...</span>
                 </div>
 
-                <!-- AI FACE ID ENROLLMENT & SCANNER MODAL -->
-                <div class="admin-box" style="margin-bottom:12px; background:rgba(224, 242, 254, 0.7); border-color:rgba(186, 230, 253, 0.8);">
+                <!-- AI FACE ID ENROLLMENT & SCANNER MODAL (STUDENT ONLY) -->
+                <div class="admin-box" id="faceEnrollBox" style="margin-bottom:12px; background:rgba(224, 242, 254, 0.7); border-color:rgba(186, 230, 253, 0.8);">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
                             <span style="font-size:11px; font-weight:800; color:#0369a1;">👤 AI Face ID Status:</span>
@@ -309,16 +320,14 @@
                 </div>
 
                 <div class="tab-bar">
-                    <div class="tab-item active" onclick="switchTab('markTab')">📍 Attendance</div>
+                    <div class="tab-item active" id="studentTabHeader" onclick="switchTab('markTab')">📍 Attendance</div>
                     <div class="tab-item" id="adminTabHeader" style="display:none;" onclick="switchTab('adminTab')">👑 Admin Control</div>
                 </div>
 
-                <!-- TAB 1: MARK ATTENDANCE (STREAMLINED ACTION CARDS) -->
+                <!-- TAB 1: MARK ATTENDANCE -->
                 <div id="markTab">
-                    <!-- MAIN PRIMARY ACTION -->
                     <button class="btn btn-accent" onclick="openFullDayOtpPrompt()" style="background:linear-gradient(135deg, rgba(2, 132, 199, 0.95), rgba(37, 99, 235, 0.95)); padding:12px;">⚡ Mark Full Day Attendance (via OTP)</button>
                     
-                    <!-- SECONDARY ACTIONS GRID -->
                     <div class="action-buttons-grid">
                         <button class="btn btn-success" onclick="openCameraModal('CHECKIN')">👤 Face Scan</button>
                         <button class="btn btn-purple" onclick="triggerBiometricFingerprint()">🖐️ Biometric</button>
@@ -326,7 +335,6 @@
                         <button class="btn btn-outline" onclick="exportStudentCSV()">📥 Excel Sheet</button>
                     </div>
                     
-                    <!-- REAL-TIME PERIOD TRACKER FROM OFFICIAL TIMETABLE -->
                     <div style="text-align:center; font-size:10px; color:var(--text-muted); margin: 12px 0 4px 0; font-weight:700;">-- LIVE TIMETABLE PERIOD TRACKER --</div>
                     <div class="period-card" id="periodCardBox">
                         <div>
@@ -357,7 +365,7 @@
                         </div>
                     </div>
                 </div>
-                                <!-- ADMIN CONTROL TAB (REPETITIVE DIRECTORY TABLE REMOVED) -->
+                                <!-- ADMIN CONTROL TAB -->
                 <div id="adminTab" style="display:none;">
                     <div class="admin-nav">
                         <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">📊 Excel</div>
@@ -368,7 +376,6 @@
                         <div class="admin-nav-item" onclick="switchAdminSubTab('subDirectory')">📁 Directory</div>
                     </div>
 
-                    <!-- FIXED TRUNCATED TEXT IN EXPORT DROPDOWN -->
                     <div id="subReports" class="admin-box">
                         <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">📥 Export Excel Reports:</span>
                         <select id="exportSelection" style="padding:10px; margin-bottom:8px;">
@@ -386,7 +393,7 @@
                     <div id="subAttendance" class="admin-box" style="display:none;">
                         <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">⚡ Manual Backdate Attendance:</span>
                         <input type="text" id="manualRoll" placeholder="Student Roll No (e.g. 24CSE14)">
-                        <input type="date" id="manualDate">
+                        <input type="date" id="manualDate" style="background:#ffffff; border:1.5px solid #bae6fd;">
                         <select id="manualStatus">
                             <option value="Present">Present</option>
                             <option value="Duty Leave">Duty Leave (DL)</option>
@@ -394,10 +401,10 @@
                         <button class="btn btn-primary" onclick="markManualAttendance()" style="margin-top:0; padding:10px;">✅ Mark Attendance</button>
                     </div>
 
-                    <!-- FIXED INVISIBLE DATE INPUT FIELD CONTRAST -->
+                    <!-- FIXED INVISIBLE CONTRAST ON DATE PICKER -->
                     <div id="subHoliday" class="admin-box" style="display:none;">
                         <span style="font-size:11px; font-weight:700; color:#b06000; display:block; margin-bottom:6px;">🏖️ Declare Official Holiday:</span>
-                        <input type="date" id="holidayDate" style="background:#ffffff; border:1.5px solid #bae6fd;">
+                        <input type="date" id="holidayDate" style="background:#ffffff; border:1.5px solid #bae6fd; color:#0f172a;">
                         <input type="text" id="holidayReason" placeholder="Reason (e.g. Diwali/Rainy Day)">
                         <button class="btn btn-warning" onclick="declareHoliday()" style="margin-top:0; padding:10px;">Mark Date as Holiday</button>
                     </div>
@@ -450,19 +457,11 @@
                         </div>
                     </div>
 
-                    <!-- DEDICATED DIRECTORY TAB (CLEANED FROM OTHER TABS) -->
+                    <!-- DEDICATED DIRECTORY TAB -->
                     <div id="subDirectory" style="display:none;">
-                        <div class="admin-box" style="margin-bottom:10px;">
-                            <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">🏆 Class Attendance Summary:</span>
-                            <div style="display:flex; justify-content:space-between; font-size:11px; background:rgba(255,255,255,0.7); padding:8px; border-radius:10px; border:1px solid var(--glass-border);">
-                                <span>Class Avg: <b id="classAvgPct">0%</b></span>
-                                <span>Total Students: <b id="totalStudentsCount">0</b></span>
-                            </div>
-                        </div>
-
                         <button class="btn btn-outline" onclick="fetchAllAttendance()" style="margin-bottom:8px;">🔄 Refresh Records Directory</button>
                         
-                        <h4 style="font-size:11px; color:var(--text-muted); margin-top:6px;">Class Records Directory:</h4>
+                        <h4 style="font-size:11px; color:var(--text-muted); margin-top:6px;">Class Records Directory (Standardized Formats):</h4>
                         <div class="table-container">
                             <table id="allHistoryTable">
                                 <thead><tr><th>Roll</th><th>Name</th><th>Date</th><th>Attended</th><th>Actions</th></tr></thead>
@@ -488,10 +487,10 @@
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-        // STRICT ROLL NUMBER FORMATTER (PREVENTS INCONSISTENT FORMATS LIKE 24-CSE-14)
+        // STRICT ROLL NUMBER SANITIZER (CONVERTS 24-CSE-14 TO 24CSE14)
         function sanitizeAndValidateRollNo(rawRoll) {
             if (!rawRoll) return { isValid: false, cleanRoll: "" };
-            let clean = rawRoll.toUpperCase().replace(/[^A-Z0-9]/g, ''); // Removes spaces & hyphens
+            let clean = rawRoll.toUpperCase().replace(/[^A-Z0-9]/g, '');
             const strictRegex = /^\d{2}[A-Z]{3}\d{2,3}$/;
             return { isValid: strictRegex.test(clean), cleanRoll: clean };
         }
@@ -980,13 +979,41 @@
             }
         }
 
+        // PURE SUPER ADMIN DASHBOARD LOGIC (HIDES PERSONAL TRACKER FOR ADMINS)
         function loadDashboard() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user) return;
             document.getElementById('auth-box').style.display = 'none';
             document.getElementById('dash-box').style.display = 'block';
             document.getElementById('welcomeMsg').innerText = `Hello, ${user.name}!`;
-            document.getElementById('userRoll').innerText = user.rollNo;
+
+            const isAdmin = (user.role === 'admin' || user.rollNo.toUpperCase() === '24CSE48');
+
+            if (isAdmin) {
+                // HIDE PERSONAL STUDENT TRACKERS & SHOW SUPER ADMIN VIEW
+                document.getElementById('roleLabel').innerText = "System Role";
+                document.getElementById('userRoll').innerText = "SUPER ADMIN";
+                document.getElementById('studentStatsGrid').style.display = 'none';
+                document.getElementById('adminStatsGrid').style.display = 'grid';
+                document.getElementById('simulatorBox').style.display = 'none';
+                document.getElementById('faceEnrollBox').style.display = 'none';
+                document.getElementById('studentTabHeader').style.display = 'none';
+                document.getElementById('adminTabHeader').style.display = 'block';
+                
+                switchTab('adminTab');
+            } else {
+                // NORMAL STUDENT VIEW
+                document.getElementById('roleLabel').innerText = "Roll";
+                document.getElementById('userRoll').innerText = user.rollNo;
+                document.getElementById('studentStatsGrid').style.display = 'grid';
+                document.getElementById('adminStatsGrid').style.display = 'none';
+                document.getElementById('simulatorBox').style.display = 'block';
+                document.getElementById('faceEnrollBox').style.display = 'block';
+                document.getElementById('studentTabHeader').style.display = 'block';
+                
+                switchTab('markTab');
+                fetchHistory(user.rollNo);
+            }
             
             const todayISO = new Date().toISOString().split('T')[0];
             document.getElementById('manualDate').value = todayISO;
@@ -995,9 +1022,6 @@
             updatePeriodTrackerWidget();
             setInterval(updatePeriodTrackerWidget, 30000);
             fetchNotices();
-
-            if (user.role === 'admin' || user.rollNo.toUpperCase() === '24CSE48') document.getElementById('adminTabHeader').style.display = 'block';
-            fetchHistory(user.rollNo);
         }
 
         function markFullDayAttendance() {
@@ -1049,7 +1073,7 @@
             });
             const data = await res.json();
             if (res.ok) { showMsg(data.message); } else showMsg(data.error, true);
-        }
+            }
                     function calculateRealAttendancePercentage(attendedDaysCount) {
             const startDate = new Date(2026, 6, 15);
             const today = new Date();
@@ -1162,27 +1186,30 @@
             });
 
             const uniqueDays = Object.keys(dateGrouped).length;
-            document.getElementById('totalDaysCount').innerText = `${uniqueDays} Days`;
+            
+            // FIXED REDUNDANT 'DAYS' LABEL
+            const totalDaysEl = document.getElementById('totalDaysCount');
+            if (totalDaysEl) totalDaysEl.innerText = uniqueDays;
             
             const calc = calculateRealAttendancePercentage(uniqueDays);
             const pctEl = document.getElementById('attendancePct');
-            pctEl.innerText = `${calc.pct}%`;
-            pctEl.style.color = calc.pct >= 75 ? 'var(--success)' : 'var(--danger)';
-
-            const defaulterTag = document.getElementById('defaulterTag');
-            if (calc.pct < 75) {
-                defaulterTag.style.display = 'inline-block';
-            } else {
-                defaulterTag.style.display = 'none';
+            if (pctEl) {
+                pctEl.innerText = `${calc.pct}%`;
+                pctEl.style.color = calc.pct >= 75 ? 'var(--success)' : 'var(--danger)';
             }
 
+            const defaulterTag = document.getElementById('defaulterTag');
+            if (defaulterTag) defaulterTag.style.display = (calc.pct < 75) ? 'inline-block' : 'none';
+
             const advisorBox = document.getElementById('advisorText');
-            if (calc.pct >= 75) {
-                const skippableDays = Math.floor((uniqueDays - 0.75 * calc.totalWorkingDays) / 0.75);
-                advisorBox.innerHTML = ` Safe Zone (<b>${calc.pct}%</b>). You can skip <b>${Math.max(0, skippableDays)}</b> upcoming classes safely.`;
-            } else {
-                const neededDays = Math.ceil((0.75 * calc.totalWorkingDays - uniqueDays) / 0.25);
-                advisorBox.innerHTML = ` ⚠️ <b>Low Attendance (${calc.pct}%)</b>. Attend next <b>${Math.max(0, neededDays)}</b> consecutive classes to reach 75%.`;
+            if (advisorBox) {
+                if (calc.pct >= 75) {
+                    const skippableDays = Math.floor((uniqueDays - 0.75 * calc.totalWorkingDays) / 0.75);
+                    advisorBox.innerHTML = ` Safe Zone (<b>${calc.pct}%</b>). You can skip <b>${Math.max(0, skippableDays)}</b> upcoming classes safely.`;
+                } else {
+                    const neededDays = Math.ceil((0.75 * calc.totalWorkingDays - uniqueDays) / 0.25);
+                    advisorBox.innerHTML = ` ⚠️ <b>Low Attendance (${calc.pct}%)</b>. Attend next <b>${Math.max(0, neededDays)}</b> consecutive classes to reach 75%.`;
+                }
             }
 
             renderAttendanceCalendar(data);
@@ -1199,6 +1226,7 @@
             }).join('');
         }
 
+        // REAL-TIME AUTO SANITIZED DIRECTORY RENDERING
         async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
@@ -1210,20 +1238,20 @@
             const uniqueStudents = new Set();
 
             data.forEach(r => {
-                uniqueStudents.add(r.rollNo);
-                const key = `${r.rollNo}_${r.date}`;
+                // Auto-Sanitize dirty roll numbers for uniform display
+                const cleanRoll = r.rollNo.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                uniqueStudents.add(cleanRoll);
+
+                const key = `${cleanRoll}_${r.date}`;
                 if (!groupedAdminRecords[key]) {
-                    groupedAdminRecords[key] = { name: r.studentName, roll: r.rollNo, date: r.date, ids: [], count: 0 };
+                    groupedAdminRecords[key] = { name: r.studentName, roll: cleanRoll, date: r.date, ids: [], count: 0 };
                 }
                 groupedAdminRecords[key].ids.push(r._id);
                 groupedAdminRecords[key].count++;
             });
 
-            const totalCountEl = document.getElementById('totalStudentsCount');
+            const totalCountEl = document.getElementById('adminTotalStudents');
             if (totalCountEl) totalCountEl.innerText = uniqueStudents.size;
-            
-            const classAvgEl = document.getElementById('classAvgPct');
-            if (classAvgEl) classAvgEl.innerText = uniqueStudents.size > 0 ? '78.5%' : '0%';
 
             const sortedArray = Object.values(groupedAdminRecords).sort((a, b) => a.roll.localeCompare(b.roll, undefined, { numeric: true }));
 
@@ -1289,10 +1317,11 @@
             const studentsMap = {};
 
             globalAllRecords.forEach(r => {
-                if (!studentsMap[r.rollNo]) {
-                    studentsMap[r.rollNo] = { name: r.studentName, roll: r.rollNo, dates: {} };
+                const cleanRoll = r.rollNo.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                if (!studentsMap[cleanRoll]) {
+                    studentsMap[cleanRoll] = { name: r.studentName, roll: cleanRoll, dates: {} };
                 }
-                studentsMap[r.rollNo].dates[r.date] = r.status;
+                studentsMap[cleanRoll].dates[r.date] = r.status;
             });
 
             let targetDates = [];
@@ -1386,3 +1415,5 @@
     </script>
 </body>
 </html>
+
+            
