@@ -10,91 +10,191 @@
     <style>
         :root { 
             --primary: #2563eb; 
-            --primary-gradient: linear-gradient(135deg, #1e40af, #3b82f6);
+            --primary-gradient: linear-gradient(135deg, rgba(37,99,235,0.85), rgba(29,78,216,0.9));
             --success: #10b981; 
             --danger: #ef4444; 
             --warning: #f59e0b; 
-            --bg: #f1f5f9; 
-            --card-bg: #ffffff; 
+            --glass-bg: rgba(255, 255, 255, 0.45);
+            --glass-card: rgba(255, 255, 255, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.7);
+            --glass-shadow: 0 16px 40px 0 rgba(31, 38, 135, 0.12);
             --text-main: #0f172a; 
-            --text-muted: #64748b; 
-            --border: #e2e8f0; 
+            --text-muted: #475569; 
         }
 
         * { box-sizing: border-box; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
-        body { background: var(--bg); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 15px; }
-
-        .app-container { width: 100%; max-width: 520px; background: var(--card-bg); border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.06); border: 1px solid var(--border); overflow: hidden; }
         
-        .app-header { background: var(--primary-gradient); color: white; padding: 20px; text-align: center; }
-        .app-header h1 { font-size: 19px; font-weight: 800; letter-spacing: -0.3px; }
-        .app-header p { font-size: 11px; opacity: 0.9; margin-top: 2px; }
+        body { 
+            background: linear-gradient(135deg, #ffdde1 0%, #ee9ca7 50%, #a1c4fd 100%);
+            background-size: 200% 200%;
+            animation: gradientBG 12s ease infinite;
+            color: var(--text-main); 
+            min-height: 100vh; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            padding: 15px; 
+        }
 
-        .notice-banner { background: #fef3c7; border-bottom: 1px solid #fcd34d; color: #92400e; font-size: 11px; padding: 8px 12px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .app-container { 
+            width: 100%; 
+            max-width: 520px; 
+            background: var(--glass-bg); 
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 24px; 
+            box-shadow: var(--glass-shadow); 
+            border: 1px solid var(--glass-border); 
+            overflow: hidden; 
+        }
+        
+        .app-header { 
+            background: rgba(255, 255, 255, 0.35); 
+            backdrop-filter: blur(10px);
+            color: var(--text-main); 
+            padding: 22px 20px; 
+            text-align: center;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .app-header h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.4px; color: #1e293b; }
+        .app-header p { font-size: 11px; opacity: 0.85; margin-top: 2px; font-weight: 600; color: #475569; }
+
+        .notice-banner { 
+            background: rgba(254, 243, 199, 0.75); 
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid rgba(252, 211, 77, 0.6); 
+            color: #92400e; 
+            font-size: 11px; 
+            padding: 8px 12px; 
+            font-weight: 600; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+        }
         .notice-marquee { overflow: hidden; white-space: nowrap; width: 100%; }
         .notice-marquee p { display: inline-block; animation: marquee 15s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
 
-        .app-body { padding: 18px; }
+        .app-body { padding: 20px; }
 
-        input, select { width: 100%; padding: 11px 14px; margin-bottom: 10px; border: 1px solid var(--border); border-radius: 12px; font-size: 13px; outline: none; transition: all 0.2s; }
-        input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+        input, select { 
+            width: 100%; 
+            padding: 12px 16px; 
+            margin-bottom: 12px; 
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border); 
+            border-radius: 14px; 
+            font-size: 13px; 
+            color: var(--text-main);
+            outline: none; 
+            transition: all 0.25s ease; 
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+        }
+        input:focus, select:focus { 
+            background: rgba(255, 255, 255, 0.85);
+            border-color: var(--primary); 
+            box-shadow: 0 0 0 4px rgba(37,99,235,0.15); 
+        }
 
         .password-wrapper { position: relative; width: 100%; }
-        .password-wrapper input { padding-right: 40px; }
-        .eye-icon { position: absolute; right: 12px; top: 38%; transform: translateY(-50%); cursor: pointer; opacity: 0.6; }
+        .password-wrapper input { padding-right: 42px; }
+        .eye-icon { position: absolute; right: 14px; top: 38%; transform: translateY(-50%); cursor: pointer; opacity: 0.6; }
 
-        .btn { width: 100%; padding: 12px; border: none; border-radius: 12px; font-weight: 700; font-size: 13px; cursor: pointer; margin-top: 6px; transition: all 0.2s; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-success { background: var(--success); color: white; }
-        .btn-warning { background: var(--warning); color: white; }
-        .btn-accent { background: #0284c7; color: white; }
-        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
-        .btn-danger { background: #fef2f2; color: var(--danger); }
+        .btn { 
+            width: 100%; 
+            padding: 12px; 
+            border: 1px solid rgba(255,255,255,0.5); 
+            border-radius: 14px; 
+            font-weight: 700; 
+            font-size: 13px; 
+            cursor: pointer; 
+            margin-top: 6px; 
+            transition: all 0.25s ease; 
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            backdrop-filter: blur(10px);
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background: linear-gradient(135deg, rgba(37,99,235,0.9), rgba(29,78,216,0.95)); color: white; }
+        .btn-success { background: linear-gradient(135deg, rgba(16,185,129,0.9), rgba(5,150,105,0.95)); color: white; }
+        .btn-warning { background: linear-gradient(135deg, rgba(245,158,11,0.9), rgba(217,119,6,0.95)); color: white; }
+        .btn-accent { background: linear-gradient(135deg, rgba(2,132,199,0.9), rgba(3,105,161,0.95)); color: white; }
+        .btn-outline { background: rgba(255, 255, 255, 0.5); border: 1px solid var(--glass-border); color: var(--text-main); }
+        .btn-danger { background: rgba(254, 242, 242, 0.85); color: var(--danger); border-color: rgba(254, 202, 202, 0.6); }
 
-        .defaulter-badge { display: inline-block; background: #fee2e2; color: #b91c1c; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 6px; border: 1px solid #fca5a5; margin-left: 6px; }
+        .defaulter-badge { display: inline-block; background: rgba(254, 226, 226, 0.85); color: #b91c1c; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 8px; border: 1px solid #fca5a5; margin-left: 6px; }
 
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
-        .stat-card { background: #f8fafc; padding: 12px; border-radius: 14px; text-align: center; border: 1px solid var(--border); }
-        .stat-card .value { font-size: 20px; font-weight: 800; color: var(--primary); }
-        .stat-card .label { font-size: 10px; color: var(--text-muted); font-weight: 600; margin-top: 2px; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
+        .stat-card { 
+            background: var(--glass-card); 
+            backdrop-filter: blur(12px);
+            padding: 14px; 
+            border-radius: 16px; 
+            text-align: center; 
+            border: 1px solid var(--glass-border); 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+        .stat-card .value { font-size: 22px; font-weight: 800; color: var(--primary); }
+        .stat-card .label { font-size: 10px; color: var(--text-muted); font-weight: 700; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
 
-        .simulator-card { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 14px; padding: 12px; margin-bottom: 12px; font-size: 12px; }
+        .simulator-card { 
+            background: rgba(239, 246, 255, 0.65); 
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(191, 219, 254, 0.7); 
+            border-radius: 16px; 
+            padding: 14px; 
+            margin-bottom: 14px; 
+            font-size: 12px; 
+        }
         .simulator-card b { color: #1e40af; }
 
-        .calendar-container { background: #ffffff; border: 1px solid var(--border); border-radius: 14px; padding: 12px; margin: 12px 0; }
-        .calendar-header { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 800; margin-bottom: 8px; color: var(--text-main); }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; font-size: 10px; }
+        .calendar-container { 
+            background: var(--glass-card); 
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border); 
+            border-radius: 16px; 
+            padding: 14px; 
+            margin: 14px 0; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 800; margin-bottom: 10px; color: var(--text-main); }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; font-size: 10px; }
         .cal-day-head { font-weight: 700; color: var(--text-muted); padding-bottom: 4px; }
-        .cal-date { padding: 6px 2px; border-radius: 6px; font-weight: 600; background: #f8fafc; border: 1px solid #f1f5f9; }
-        .cal-p { background: #d1fae5; color: #047857; font-weight: 800; border-color: #a7f3d0; }
-        .cal-a { background: #fee2e2; color: #b91c1c; font-weight: 800; border-color: #fca5a5; }
-        .cal-off { background: #f1f5f9; color: #94a3b8; }
+        .cal-date { padding: 7px 2px; border-radius: 8px; font-weight: 600; background: rgba(255, 255, 255, 0.5); border: 1px solid rgba(255, 255, 255, 0.6); }
+        .cal-p { background: rgba(209, 250, 229, 0.85); color: #047857; font-weight: 800; border-color: #a7f3d0; }
+        .cal-a { background: rgba(254, 226, 226, 0.85); color: #b91c1c; font-weight: 800; border-color: #fca5a5; }
+        .cal-off { background: rgba(241, 245, 249, 0.5); color: #94a3b8; }
 
-        .tab-bar { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
-        .tab-item { flex: 1; padding: 10px; text-align: center; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; }
-        .tab-item.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .tab-bar { display: flex; background: rgba(255,255,255,0.4); border-radius: 14px; padding: 3px; border: 1px solid var(--glass-border); margin-bottom: 14px; }
+        .tab-item { flex: 1; padding: 10px; text-align: center; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--text-muted); border-radius: 12px; transition: all 0.25s; }
+        .tab-item.active { background: rgba(255, 255, 255, 0.85); color: var(--primary); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
 
-        .admin-nav { display: flex; gap: 4px; background: #f1f5f9; padding: 4px; border-radius: 12px; margin-bottom: 12px; }
-        .admin-nav-item { flex: 1; text-align: center; padding: 8px 4px; font-size: 10px; font-weight: 700; cursor: pointer; border-radius: 8px; color: var(--text-muted); transition: all 0.2s; }
-        .admin-nav-item.active { background: #ffffff; color: var(--primary); box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+        .admin-nav { display: flex; gap: 4px; background: rgba(255,255,255,0.4); padding: 4px; border-radius: 14px; border: 1px solid var(--glass-border); margin-bottom: 14px; }
+        .admin-nav-item { flex: 1; text-align: center; padding: 8px 4px; font-size: 10px; font-weight: 700; cursor: pointer; border-radius: 10px; color: var(--text-muted); transition: all 0.2s; }
+        .admin-nav-item.active { background: rgba(255, 255, 255, 0.85); color: var(--primary); box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
 
-        .table-container { max-height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: 12px; margin-top: 8px; }
+        .table-container { max-height: 220px; overflow-y: auto; border: 1px solid var(--glass-border); border-radius: 14px; margin-top: 8px; background: rgba(255, 255, 255, 0.4); }
         table { width: 100%; border-collapse: collapse; font-size: 11px; }
-        th { background: #f8fafc; color: var(--text-muted); padding: 8px; text-align: left; border-bottom: 1px solid var(--border); position: sticky; top: 0; }
-        td { padding: 8px; border-bottom: 1px solid #f1f5f9; }
+        th { background: rgba(255, 255, 255, 0.75); color: var(--text-muted); padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--glass-border); position: sticky; top: 0; backdrop-filter: blur(8px); }
+        td { padding: 9px 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.4); }
         
-        .badge { padding: 3px 7px; border-radius: 8px; font-size: 10px; font-weight: 700; }
-        .badge-present { background: #d1fae5; color: #047857; }
-        .action-btn { padding: 3px 6px; font-size: 10px; border-radius: 6px; border: none; cursor: pointer; font-weight: 700; }
-        .btn-del { background: #fef2f2; color: #ef4444; }
+        .badge { padding: 4px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+        .badge-present { background: rgba(209, 250, 229, 0.85); color: #047857; }
+        .action-btn { padding: 4px 8px; font-size: 10px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; }
+        .btn-del { background: rgba(254, 242, 242, 0.9); color: #ef4444; border: 1px solid #fca5a5; }
 
-        #msg { margin-top: 10px; font-size: 12px; text-align: center; padding: 9px; border-radius: 10px; font-weight: 600; display: none; }
-        .msg-success { background: #d1fae5; color: #047857; display: block !important; }
-        .msg-error { background: #fee2e2; color: #b91c1c; display: block !important; }
-        .admin-box { background: #ffffff; padding: 12px; border-radius: 14px; border: 1px solid var(--border); }
+        #msg { margin-top: 12px; font-size: 12px; text-align: center; padding: 10px; border-radius: 12px; font-weight: 600; display: none; backdrop-filter: blur(10px); }
+        .msg-success { background: rgba(209, 250, 229, 0.85); color: #047857; border: 1px solid #a7f3d0; display: block !important; }
+        .msg-error { background: rgba(254, 226, 226, 0.85); color: #b91c1c; border: 1px solid #fca5a5; display: block !important; }
+        .admin-box { background: var(--glass-card); backdrop-filter: blur(12px); padding: 14px; border-radius: 16px; border: 1px solid var(--glass-border); box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
         
-        .webcam-box { width: 100%; height: 220px; background: #000; border-radius: 12px; overflow: hidden; position: relative; margin-bottom: 8px; display: flex; justify-content: center; align-items: center; }
+        .webcam-box { width: 100%; height: 220px; background: #000; border-radius: 14px; overflow: hidden; position: relative; margin-bottom: 8px; display: flex; justify-content: center; align-items: center; border: 1px solid var(--glass-border); }
         video { width: 100%; height: 100%; object-fit: cover; }
         .scan-overlay { position: absolute; border: 2px dashed #10b981; border-radius: 50%; width: 130px; height: 160px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.4); }
     </style>
@@ -126,19 +226,19 @@
                     <span class="eye-icon" id="toggleEye" onclick="togglePassword()">👁️</span>
                 </div>
                 <button class="btn btn-primary" id="authBtn" onclick="handleAuth()">Sign In</button>
-                <span style="color:var(--primary); cursor:pointer; font-size:12px; display:block; text-align:center; margin-top:10px; font-weight:600;" id="toggleLink" onclick="toggleMode()">New Student? Register Account</span>
+                <span style="color:var(--primary); cursor:pointer; font-size:12px; display:block; text-align:center; margin-top:12px; font-weight:600;" id="toggleLink" onclick="toggleMode()">New Student? Register Account</span>
             </div>
                         <!-- DASHBOARD -->
             <div id="dash-box" style="display: none;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                     <div>
                         <h3 style="font-size:14px; font-weight:800;">
                             <span id="welcomeMsg">Welcome!</span>
                             <span id="defaulterTag" class="defaulter-badge" style="display:none;">DEBARRED RISK</span>
                         </h3>
-                        <p style="font-size: 11px; color: var(--text-muted);">Roll: <span id="userRoll" style="font-weight:700;"></span></p>
+                        <p style="font-size: 11px; color: var(--text-muted); font-weight:600;">Roll: <span id="userRoll" style="font-weight:700;"></span></p>
                     </div>
-                    <button class="btn btn-danger" style="width:auto; padding:5px 10px; margin:0; font-size:11px;" onclick="logout()">Logout</button>
+                    <button class="btn btn-danger" style="width:auto; padding:6px 12px; margin:0; font-size:11px;" onclick="logout()">Logout</button>
                 </div>
 
                 <div class="stats-grid">
@@ -157,11 +257,11 @@
                 </div>
 
                 <!-- AI FACE ID ENROLLMENT & REAL SCANNER MODAL -->
-                <div class="admin-box" style="margin-bottom:12px; background:#f0f9ff; border-color:#bae6fd;">
+                <div class="admin-box" style="margin-bottom:14px; background:rgba(240, 249, 255, 0.65); border-color:rgba(186, 230, 253, 0.7);">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
                             <span style="font-size:11px; font-weight:800; color:#0369a1;">👤 AI Face ID Status:</span>
-                            <span id="faceStatusBadge" class="badge" style="background:#e0f2fe; color:#0369a1; margin-left:4px;">Not Enrolled</span>
+                            <span id="faceStatusBadge" class="badge" style="background:rgba(224, 242, 254, 0.9); color:#0369a1; margin-left:4px;">Not Enrolled</span>
                         </div>
                         <button class="action-btn" style="background:#0284c7; color:white;" onclick="openCameraModal('ENROLL')">📸 Enroll / Update Face</button>
                     </div>
@@ -185,12 +285,12 @@
 
                 <!-- TAB 1: MARK ATTENDANCE -->
                 <div id="markTab">
-                    <button class="btn btn-accent" onclick="markFullDayAttendance()" style="background:linear-gradient(135deg, #2563eb, #1d4ed8);">⚡ Mark Full Day Attendance</button>
-                    <button class="btn btn-success" onclick="openCameraModal('CHECKIN')" style="margin-top:6px; background:linear-gradient(135deg, #059669, #10b981);">👤 Instant Check-In via AI Face Scan</button>
-                    <button class="btn btn-primary" onclick="openStudentQRScanner()" style="margin-top:6px; background:linear-gradient(135deg, #0284c7, #2563eb);">📲 Scan Projector QR Code</button>
+                    <button class="btn btn-accent" onclick="markFullDayAttendance()" style="background:linear-gradient(135deg, rgba(37,99,235,0.9), rgba(29,78,216,0.95));">⚡ Mark Full Day Attendance</button>
+                    <button class="btn btn-success" onclick="openCameraModal('CHECKIN')" style="margin-top:6px; background:linear-gradient(135deg, rgba(16,185,129,0.9), rgba(5,150,105,0.95));">👤 Instant Check-In via AI Face Scan</button>
+                    <button class="btn btn-primary" onclick="openStudentQRScanner()" style="margin-top:6px; background:linear-gradient(135deg, rgba(2,132,199,0.9), rgba(3,105,161,0.95));">📲 Scan Projector QR Code</button>
                     <button class="btn btn-outline" onclick="exportStudentCSV()" style="margin-top:6px;">📥 Download My Attendance Sheet (Excel)</button>
                     
-                    <div style="text-align:center; font-size:10px; color:var(--text-muted); margin: 8px 0 4px 0;">-- OR MARK SINGLE LECTURE --</div>
+                    <div style="text-align:center; font-size:10px; color:var(--text-muted); margin: 10px 0 6px 0; font-weight:700;">-- OR MARK SINGLE LECTURE --</div>
                     <select id="subjectSelect">
                         <option value="DAA">DAA - Design & Analysis of Algorithm</option>
                         <option value="FLA">FLA - Formal Language & Automata</option>
@@ -289,7 +389,7 @@
 
                     <div class="admin-box" style="margin-top:10px;">
                         <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">🏆 Class Attendance Summary:</span>
-                        <div style="display:flex; justify-content:space-between; font-size:11px; background:#f8fafc; padding:8px; border-radius:8px;">
+                        <div style="display:flex; justify-content:space-between; font-size:11px; background:rgba(255,255,255,0.6); padding:8px; border-radius:10px; border:1px solid var(--glass-border);">
                             <span>Class Avg: <b id="classAvgPct">0%</b></span>
                             <span>Total Students: <b id="totalStudentsCount">0</b></span>
                         </div>
@@ -323,7 +423,6 @@
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         const TIME_TABLE_MAP = { 1: "BDA", 2: "WT", 3: "FLA", 4: "DAA", 5: "CN" };
 
-        // INITIALIZE FACE-API NEURAL MODELS
         async function loadFaceAIModels() {
             if (isModelsLoaded) return true;
             try {
@@ -381,7 +480,6 @@
             video.srcObject = null;
         }
 
-        // STRICT 68-POINT MESH DETECTION & MATCHING LOGIC
         async function executeCameraAction() {
             const user = JSON.parse(localStorage.getItem('user'));
             const video = document.getElementById('webcamVideo');
@@ -391,7 +489,6 @@
 
             statusTxt.innerText = "⚡ Detecting 68 Facial Landmark Mesh Points...";
 
-            // DETECT FACE & DESCRIPTOR
             const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
 
             if (!detection) {
@@ -402,21 +499,18 @@
             const currentDescriptor = Array.from(detection.descriptor);
 
             if (currentCamMode === 'ENROLL') {
-                // SAVE EXACT 128-FLOAT VECTOR DESCRIPTOR
                 localStorage.setItem(`FACE_MESH_${user.rollNo}`, JSON.stringify(currentDescriptor));
                 checkUserFaceStatus();
                 showMsg("Face ID Enrolled Successfully!");
                 statusTxt.innerText = "✅ 68 Landmarks Registered!";
                 setTimeout(closeCameraModal, 1200);
             } else {
-                // STRICT VERIFICATION AGAINST SAVED VECTOR
                 const savedDescriptorRaw = localStorage.getItem(`FACE_MESH_${user.rollNo}`);
                 if (!savedDescriptorRaw) return showMsg("Face profile missing! Enroll first.", true);
 
                 const savedDescriptor = new Float32Array(JSON.parse(savedDescriptorRaw));
                 const distance = faceapi.euclideanDistance(detection.descriptor, savedDescriptor);
 
-                // STRICT THRESHOLD (Distance < 0.50 means ~85%+ match)
                 if (distance < 0.50) {
                     statusTxt.innerText = "✅ Identity Verified: " + user.name + ` (Match Score: ${((1-distance)*100).toFixed(0)}%)`;
                     showMsg("Identity Verified: " + user.name);
@@ -438,11 +532,11 @@
             const badge = document.getElementById('faceStatusBadge');
             if (isFaceEnrolled) {
                 badge.innerText = "✅ Registered";
-                badge.style.background = "#d1fae5";
+                badge.style.background = "rgba(209, 250, 229, 0.9)";
                 badge.style.color = "#047857";
             } else {
                 badge.innerText = "Not Enrolled";
-                badge.style.background = "#e0f2fe";
+                badge.style.background = "rgba(224, 242, 254, 0.9)";
                 badge.style.color = "#0369a1";
             }
         }
@@ -687,7 +781,7 @@
                 const firstDayOfWeek = new Date(year, mIdx, 1).getDay();
 
                 let gridHtml = `
-                    <div style="margin-bottom:12px; border-bottom:1px solid #f1f5f9; padding-bottom:8px;">
+                    <div style="margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.4); padding-bottom:8px;">
                         <div style="font-size:11px; font-weight:800; color:var(--primary); margin-bottom:6px;">${monthName} ${year}</div>
                         <div class="calendar-grid">
                             <div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div>
@@ -709,7 +803,7 @@
                     if (isWeekend) {
                         gridHtml += `<div class="cal-date cal-off">${d}</div>`;
                     } else if (isHoliday) {
-                        gridHtml += `<div class="cal-date cal-off" style="background:#fef3c7; color:#92400e; font-weight:800; border-color:#fcd34d;" title="Declared Holiday">${d}</div>`;
+                        gridHtml += `<div class="cal-date cal-off" style="background:rgba(254, 243, 199, 0.9); color:#92400e; font-weight:800; border-color:#fcd34d;" title="Declared Holiday">${d}</div>`;
                     } else if (attendedDates.has(dateStr)) {
                         gridHtml += `<div class="cal-date cal-p">${d}</div>`;
                     } else if (dtObj <= today) {
