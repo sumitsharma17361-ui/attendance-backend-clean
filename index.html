@@ -315,14 +315,14 @@
                     <button class="btn btn-primary" onclick="openStudentQRScanner()" style="margin-top:6px; background:linear-gradient(135deg, rgba(14, 165, 233, 0.9), rgba(3, 105, 161, 0.95));">📲 Scan Projector QR Code</button>
                     <button class="btn btn-outline" onclick="exportStudentCSV()" style="margin-top:6px;">📥 Download My Attendance Sheet (Excel)</button>
                     
-                    <!-- ADVANCED LIVE TIMETABLE PERIOD TRACKER -->
+                    <!-- REAL-TIME PERIOD TRACKER FROM OFFICIAL TIMETABLE -->
                     <div style="text-align:center; font-size:10px; color:var(--text-muted); margin: 12px 0 4px 0; font-weight:700;">-- LIVE TIMETABLE PERIOD TRACKER --</div>
-                    <div class="period-card">
+                    <div class="period-card" id="periodCardBox">
                         <div>
-                            <span style="font-size:10px; font-weight:700; color:#0369a1; text-transform:uppercase;">kaunsa lecture chal raha hai:</span>
-                            <h4 id="activePeriodName" style="font-size:13px; font-weight:800; color:#0f172a; margin-top:2px;">FLA - Formal Language & Automata</h4>
+                            <span style="font-size:10px; font-weight:700; color:#0369a1; text-transform:uppercase;" id="periodTimeSlotLabel">CURRENT PERIOD STATUS:</span>
+                            <h4 id="activePeriodName" style="font-size:13px; font-weight:800; color:#0f172a; margin-top:2px;">Checking Live Timetable...</h4>
                         </div>
-                        <button class="action-btn" style="background:#10b981; color:white; padding:6px 10px;" onclick="markActivePeriodAttendance()">Mark Lecture</button>
+                        <button class="action-btn" id="markPeriodBtn" style="background:#10b981; color:white; padding:6px 10px;" onclick="markActivePeriodAttendance()">Mark Lecture</button>
                     </div>
 
                     <div class="calendar-container">
@@ -399,7 +399,6 @@
                         <button class="btn btn-outline" onclick="generateDynamicQR()" style="padding:8px; font-size:11px;">🔄 Refresh OTP & QR Code Now</button>
                     </div>
 
-                    <!-- SPACIOUS DE-CONGESTED TOOLS PANEL -->
                     <div id="subTools" style="display:none;">
                         <div class="tool-sub-card">
                             <span class="tool-title" style="color:#0284c7;">➕ Register New Student Manually:</span>
@@ -469,10 +468,121 @@
         let isRegistering = false, globalAllRecords = [], globalMyRecords = [], globalHolidays = [], groupedAdminRecords = {};
         let currentCamMode = 'ENROLL', videoStream = null, isModelsLoaded = false;
         let currentDynamicOtp = "9842";
+        let activeSubjectSubjectCode = "";
 
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-        const TIME_TABLE_MAP = { 1: "BDA - Big Data Analytics", 2: "WT - Web Technology", 3: "FLA - Formal Language & Automata", 4: "DAA - Design & Analysis of Algorithm", 5: "CN - Computer Network" };
+
+        // OFFICIAL TIME TABLE MATRIX (B.Tech 5th Sem Room 203)
+        const WEEKLY_SCHEDULE = {
+            1: [ // MONDAY
+                { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
+                { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
+                { start: "10:50", end: "11:35", subject: "DAA - Design & Analysis of Algorithm", period: "P3" },
+                { start: "11:35", end: "12:20", subject: "FLA - Formal Language & Automata", period: "P4" },
+                { start: "12:20", end: "13:05", subject: "🍱 LUNCH BREAK", period: "LUNCH" },
+                { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
+                { start: "13:50", end: "14:35", subject: "CN - Computer Network", period: "P7" },
+                { start: "14:35", end: "15:20", subject: "WT - Web Technology", period: "P8" }
+            ],
+            2: [ // TUESDAY
+                { start: "09:20", end: "10:05", subject: "WT - Web Technology", period: "P1" },
+                { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
+                { start: "10:50", end: "11:35", subject: "Internet Lab (Ms. Geeta)", period: "P3" },
+                { start: "11:35", end: "12:20", subject: "FLA - Formal Language & Automata", period: "P4" },
+                { start: "12:20", end: "13:05", subject: "🍱 LUNCH BREAK", period: "LUNCH" },
+                { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
+                { start: "13:50", end: "14:35", subject: "BDA - Big Data Analytics", period: "P7" },
+                { start: "14:35", end: "15:20", subject: "SPORTS / Library", period: "P8" }
+            ],
+            3: [ // WEDNESDAY
+                { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
+                { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
+                { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
+                { start: "11:35", end: "12:20", subject: "SPORTS / Activity", period: "P4" },
+                { start: "12:20", end: "13:05", subject: "🍱 LUNCH BREAK", period: "LUNCH" },
+                { start: "13:05", end: "13:50", subject: "WT - Web Technology", period: "P6" },
+                { start: "13:50", end: "15:20", subject: "CN LAB - Computer Network Lab", period: "P7-P8" }
+            ],
+            4: [ // THURSDAY
+                { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
+                { start: "10:05", end: "10:50", subject: "CN - Computer Network", period: "P2" },
+                { start: "10:50", end: "11:35", subject: "SPORTS / Activity", period: "P3" },
+                { start: "11:35", end: "12:20", subject: "DAA - Design & Analysis of Algorithm", period: "P4" },
+                { start: "12:20", end: "13:05", subject: "🍱 LUNCH BREAK", period: "LUNCH" },
+                { start: "13:05", end: "14:35", subject: "DAA LAB - Algorithm Lab", period: "P6-P7" },
+                { start: "14:35", end: "15:20", subject: "HRM - Human Resource Mgmt", period: "P8" }
+            ],
+            5: [ // FRIDAY
+                { start: "09:20", end: "10:05", subject: "DAA - Design & Analysis of Algorithm", period: "P1" },
+                { start: "10:05", end: "10:50", subject: "CN - Computer Network", period: "P2" },
+                { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
+                { start: "11:35", end: "12:20", subject: "BDA - Big Data Analytics", period: "P4" },
+                { start: "12:20", end: "13:05", subject: "🍱 LUNCH BREAK", period: "LUNCH" },
+                { start: "13:05", end: "14:35", subject: "WT LAB - Web Technology Lab", period: "P6-P7" },
+                { start: "14:35", end: "15:20", subject: "SPORTS / Library", period: "P8" }
+            ]
+        };
+
+        function updatePeriodTrackerWidget() {
+            const now = new Date();
+            const dayOfWeek = now.getDay();
+            const labelEl = document.getElementById('periodTimeSlotLabel');
+            const nameEl = document.getElementById('activePeriodName');
+            const btn = document.getElementById('markPeriodBtn');
+
+            // Weekend Check (Saturday = 6, Sunday = 0)
+            if (dayOfWeek === 0 || dayOfWeek === 6) {
+                if(labelEl) labelEl.innerText = "WEEKEND STATUS:";
+                if(nameEl) nameEl.innerText = "☕ College Closed (Weekend)";
+                if(btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
+                activeSubjectSubjectCode = "";
+                return;
+            }
+
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            const daySchedule = WEEKLY_SCHEDULE[dayOfWeek] || [];
+
+            let foundSlot = null;
+
+            for (let slot of daySchedule) {
+                const sParts = slot.start.split(':');
+                const eParts = slot.end.split(':');
+                const startMins = parseInt(sParts[0]) * 60 + parseInt(sParts[1]);
+                const endMins = parseInt(eParts[0]) * 60 + parseInt(eParts[1]);
+
+                if (currentMinutes >= startMins && currentMinutes < endMins) {
+                    foundSlot = slot;
+                    break;
+                }
+            }
+
+            if (foundSlot) {
+                if (foundSlot.period === "LUNCH") {
+                    if(labelEl) labelEl.innerText = "LUNCH BREAK (12:20 - 01:05 PM):";
+                    if(nameEl) nameEl.innerText = "🍱 Lunch Time / Rest Hour";
+                    if(btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
+                    activeSubjectSubjectCode = "";
+                } else {
+                    if(labelEl) labelEl.innerText = `ACTIVE PERIOD (${foundSlot.start} - ${foundSlot.end}):`;
+                    if(nameEl) nameEl.innerText = foundSlot.subject;
+                    if(btn) { btn.disabled = false; btn.style.opacity = "1"; }
+                    activeSubjectSubjectCode = foundSlot.subject;
+                }
+            } else {
+                if(labelEl) labelEl.innerText = "CURRENT COLLEGE STATUS:";
+                if(nameEl) nameEl.innerText = "☕ College Off Hours / No Active Class";
+                if(btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
+                activeSubjectSubjectCode = "";
+            }
+        }
+
+        function markActivePeriodAttendance() {
+            if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("LUNCH")) {
+                return showMsg("Abhi koi active class nahi chal rahi!", true);
+            }
+            markSingleAttendance(activeSubjectSubjectCode);
+        }
 
         function openFullDayOtpPrompt() {
             const enteredOtp = prompt(`🔑 Enter 4-Digit Class OTP displayed by Teacher on Projector:`);
@@ -484,7 +594,6 @@
             }
         }
 
-        // REAL WEBAUTHN HARDWARE BIOMETRIC PROMPT FIX
         async function triggerBiometricFingerprint() {
             if (!window.PublicKeyCredential) {
                 return showMsg("Device biometric API not supported!", true);
@@ -492,8 +601,6 @@
 
             try {
                 showMsg("🖐️ Place finger on phone sensor...");
-                
-                // Real Hardware Biometric Challenge Prompt Request
                 const publicKeyCredentialCreationOptions = {
                     challenge: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]),
                     rp: { name: "BM Group ERP Portal" },
@@ -516,20 +623,8 @@
                     showMsg("❌ Biometric Verification Failed!", true);
                 }
             } catch (err) {
-                // Catches user cancel / mismatch / timeout
                 showMsg("❌ Biometric Scanning Cancelled or Mismatch!", true);
             }
-        }
-
-        function updatePeriodTrackerWidget() {
-            const dayOfWeek = new Date().getDay();
-            const sub = TIME_TABLE_MAP[dayOfWeek] || "WT LAB - Web Tech Practical";
-            const el = document.getElementById('activePeriodName');
-            if (el) el.innerText = sub;
-        }
-
-        function markActivePeriodAttendance() {
-            markSingleAttendance();
         }
 
         async function adminRegisterStudent() {
@@ -878,6 +973,7 @@
 
             checkUserFaceStatus();
             updatePeriodTrackerWidget();
+            setInterval(updatePeriodTrackerWidget, 30000); // AUTO CHECK EVERY 30 SECONDS
             fetchNotices();
 
             if (user.role === 'admin' || user.rollNo.toUpperCase() === '24CSE48') document.getElementById('adminTabHeader').style.display = 'block';
@@ -893,9 +989,8 @@
             }, () => showMsg('GPS Denied!', true));
         }
 
-        function markSingleAttendance() {
-            const dayOfWeek = new Date().getDay();
-            const sub = TIME_TABLE_MAP[dayOfWeek] || "WT LAB";
+        function markSingleAttendance(overrideSubject) {
+            const sub = overrideSubject || "WT LAB";
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 const user = JSON.parse(localStorage.getItem('user'));
                 const res = await fetch(`${API_BASE}/api/attendance/mark`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: user.rollNo, name: user.name, subject: sub, latitude: pos.coords.latitude, longitude: pos.coords.longitude }) });
@@ -934,7 +1029,7 @@
             });
             const data = await res.json();
             if (res.ok) { showMsg(data.message); fetchAllAttendance(); } else showMsg(data.error, true);
-            }
+        }
                     function calculateRealAttendancePercentage(attendedDaysCount) {
             const startDate = new Date(2026, 6, 15);
             const today = new Date();
