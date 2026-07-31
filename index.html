@@ -10,13 +10,13 @@
     <style>
         :root { 
             --primary: #0284c7; 
-            --primary-gradient: linear-gradient(135deg, rgba(2, 132, 199, 0.9), rgba(37, 99, 235, 0.95));
+            --primary-gradient: linear-gradient(135deg, rgba(2, 132, 199, 0.95), rgba(37, 99, 235, 0.95));
             --success: #10b981; 
             --danger: #ef4444; 
             --warning: #f59e0b; 
-            --glass-bg: rgba(255, 255, 255, 0.55);
-            --glass-card: rgba(255, 255, 255, 0.7);
-            --glass-border: rgba(255, 255, 255, 0.85);
+            --glass-bg: rgba(255, 255, 255, 0.65);
+            --glass-card: rgba(255, 255, 255, 0.75);
+            --glass-border: rgba(186, 230, 253, 0.8);
             --glass-shadow: 0 16px 40px 0 rgba(2, 132, 199, 0.12);
             --text-main: #0f172a; 
             --text-muted: #475569; 
@@ -55,10 +55,10 @@
         }
         
         .app-header { 
-            background: rgba(255, 255, 255, 0.45); 
+            background: rgba(255, 255, 255, 0.55); 
             backdrop-filter: blur(10px);
             color: var(--text-main); 
-            padding: 22px 20px; 
+            padding: 20px; 
             text-align: center;
             border-bottom: 1px solid var(--glass-border);
         }
@@ -66,9 +66,9 @@
         .app-header p { font-size: 11px; opacity: 0.85; margin-top: 2px; font-weight: 600; color: #0284c7; }
 
         .notice-banner { 
-            background: rgba(254, 243, 199, 0.85); 
+            background: rgba(254, 243, 199, 0.9); 
             backdrop-filter: blur(8px);
-            border-bottom: 1px solid rgba(252, 211, 77, 0.6); 
+            border-bottom: 1px solid rgba(252, 211, 77, 0.8); 
             color: #92400e; 
             font-size: 11px; 
             padding: 8px 12px; 
@@ -81,27 +81,31 @@
         .notice-marquee p { display: inline-block; animation: marquee 15s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
 
-        .app-body { padding: 20px; }
+        .app-body { padding: 18px; }
 
+        /* HIGH CONTRAST INPUT FIELDS & DATE PICKERS */
         input, select { 
             width: 100%; 
-            padding: 12px 16px; 
+            padding: 12px 14px; 
             margin-bottom: 10px; 
-            background: rgba(255, 255, 255, 0.75);
+            background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(10px);
-            border: 1px solid var(--glass-border); 
-            border-radius: 14px; 
-            font-size: 13px; 
+            border: 1.5px solid #bae6fd; 
+            border-radius: 12px; 
+            font-size: 12px; 
+            font-weight: 600;
             color: var(--text-main);
             outline: none; 
             transition: all 0.25s ease; 
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
-        select option { background: #ffffff; color: #0f172a; }
-        input::placeholder { color: #64748b; }
+        select option { background: #ffffff; color: #0f172a; font-weight: 600; }
+        input::placeholder { color: #64748b; font-weight: 500; }
         input:focus, select:focus { 
-            background: rgba(255, 255, 255, 0.95);
+            background: #ffffff;
             border-color: var(--primary); 
-            box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.15); 
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2); 
         }
 
         .password-wrapper { position: relative; width: 100%; }
@@ -110,91 +114,93 @@
 
         .btn { 
             width: 100%; 
-            padding: 12px; 
-            border: 1px solid rgba(255,255,255,0.6); 
-            border-radius: 14px; 
+            padding: 11px; 
+            border: 1px solid rgba(255,255,255,0.8); 
+            border-radius: 12px; 
             font-weight: 700; 
-            font-size: 13px; 
+            font-size: 12px; 
             cursor: pointer; 
             margin-top: 4px; 
             transition: all 0.25s ease; 
-            box-shadow: 0 4px 15px rgba(2, 132, 199, 0.08);
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);
             backdrop-filter: blur(10px);
         }
         .btn:active { transform: scale(0.98); }
-        .btn-primary { background: linear-gradient(135deg, rgba(2, 132, 199, 0.9), rgba(37, 99, 235, 0.95)); color: white; }
-        .btn-success { background: linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(5, 150, 105, 0.95)); color: white; }
-        .btn-warning { background: linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(217, 119, 6, 0.95)); color: white; }
-        .btn-accent { background: linear-gradient(135deg, rgba(14, 165, 233, 0.9), rgba(3, 105, 161, 0.95)); color: white; }
-        .btn-purple { background: linear-gradient(135deg, rgba(147, 51, 234, 0.9), rgba(126, 34, 206, 0.95)); color: white; }
-        .btn-outline { background: rgba(255, 255, 255, 0.6); border: 1px solid var(--glass-border); color: var(--text-main); }
-        .btn-danger { background: rgba(254, 242, 242, 0.9); color: var(--danger); border-color: rgba(254, 202, 202, 0.8); }
+        .btn-primary { background: linear-gradient(135deg, rgba(2, 132, 199, 0.95), rgba(37, 99, 235, 0.95)); color: white; }
+        .btn-success { background: linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(5, 150, 105, 0.95)); color: white; }
+        .btn-warning { background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(217, 119, 6, 0.95)); color: white; }
+        .btn-accent { background: linear-gradient(135deg, rgba(14, 165, 233, 0.95), rgba(3, 105, 161, 0.95)); color: white; }
+        .btn-purple { background: linear-gradient(135deg, rgba(147, 51, 234, 0.95), rgba(126, 34, 206, 0.95)); color: white; }
+        .btn-outline { background: rgba(255, 255, 255, 0.75); border: 1px solid var(--glass-border); color: var(--text-main); }
+        .btn-danger { background: rgba(254, 242, 242, 0.95); color: var(--danger); border-color: rgba(254, 202, 202, 0.9); }
 
-        .defaulter-badge { display: inline-block; background: rgba(254, 226, 226, 0.9); color: #b91c1c; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 8px; border: 1px solid #fca5a5; margin-left: 6px; }
+        .defaulter-badge { display: inline-block; background: rgba(254, 226, 226, 0.95); color: #b91c1c; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 8px; border: 1px solid #fca5a5; margin-left: 6px; }
 
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
         .stat-card { 
             background: var(--glass-card); 
             backdrop-filter: blur(12px);
-            padding: 14px; 
+            padding: 12px; 
             border-radius: 16px; 
             text-align: center; 
             border: 1px solid var(--glass-border); 
             box-shadow: 0 4px 12px rgba(0,0,0,0.02);
         }
-        .stat-card .value { font-size: 22px; font-weight: 800; color: var(--primary); }
+        .stat-card .value { font-size: 20px; font-weight: 800; color: var(--primary); }
         .stat-card .label { font-size: 10px; color: var(--text-muted); font-weight: 700; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
 
         .simulator-card { 
-            background: rgba(224, 242, 254, 0.75); 
+            background: rgba(224, 242, 254, 0.85); 
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(186, 230, 253, 0.8); 
-            border-radius: 16px; 
-            padding: 14px; 
-            margin-bottom: 14px; 
-            font-size: 12px; 
+            border: 1px solid rgba(186, 230, 253, 0.9); 
+            border-radius: 14px; 
+            padding: 12px; 
+            margin-bottom: 12px; 
+            font-size: 11px; 
             color: #0369a1;
         }
         .simulator-card b { color: #0284c7; }
+
+        /* ACTION GRID LAYOUT TO REDUCE COGNITIVE LOAD */
+        .action-buttons-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+        .action-buttons-grid .btn { margin-top: 0; font-size: 11px; padding: 10px 6px; }
 
         .calendar-container { 
             background: var(--glass-card); 
             backdrop-filter: blur(12px);
             border: 1px solid var(--glass-border); 
             border-radius: 16px; 
-            padding: 14px; 
-            margin: 14px 0; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+            padding: 12px; 
+            margin: 12px 0; 
         }
         .calendar-header { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 800; margin-bottom: 10px; color: var(--text-main); }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; font-size: 10px; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; font-size: 10px; }
         .cal-day-head { font-weight: 700; color: var(--text-muted); padding-bottom: 4px; }
-        .cal-date { padding: 7px 2px; border-radius: 8px; font-weight: 600; background: rgba(255, 255, 255, 0.5); border: 1px solid rgba(255, 255, 255, 0.6); }
-        .cal-p { background: rgba(209, 250, 229, 0.85); color: #047857; font-weight: 800; border-color: #a7f3d0; }
-        .cal-a { background: rgba(254, 226, 226, 0.85); color: #b91c1c; font-weight: 800; border-color: #fca5a5; }
-        .cal-off { background: rgba(241, 245, 249, 0.6); color: #94a3b8; }
+        .cal-date { padding: 6px 2px; border-radius: 8px; font-weight: 600; background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(255, 255, 255, 0.8); }
+        .cal-p { background: rgba(209, 250, 229, 0.9); color: #047857; font-weight: 800; border-color: #a7f3d0; }
+        .cal-a { background: rgba(254, 226, 226, 0.9); color: #b91c1c; font-weight: 800; border-color: #fca5a5; }
+        .cal-off { background: rgba(241, 245, 249, 0.7); color: #94a3b8; }
 
-        .tab-bar { display: flex; background: rgba(224, 242, 254, 0.5); border-radius: 14px; padding: 4px; border: 1px solid rgba(186, 230, 253, 0.7); margin-bottom: 14px; }
-        .tab-item { flex: 1; padding: 10px; text-align: center; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--text-muted); border-radius: 10px; transition: all 0.25s; }
-        .tab-item.active { background: linear-gradient(135deg, #0284c7, #2563eb); color: #ffffff; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); }
+        .tab-bar { display: flex; background: rgba(224, 242, 254, 0.6); border-radius: 12px; padding: 3px; border: 1px solid rgba(186, 230, 253, 0.8); margin-bottom: 12px; }
+        .tab-item { flex: 1; padding: 8px; text-align: center; font-size: 11px; font-weight: 700; cursor: pointer; color: var(--text-muted); border-radius: 10px; transition: all 0.25s; }
+        .tab-item.active { background: linear-gradient(135deg, #0284c7, #2563eb); color: #ffffff; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25); }
 
-        .admin-nav { display: flex; gap: 4px; background: rgba(224, 242, 254, 0.5); padding: 4px; border-radius: 14px; border: 1px solid rgba(186, 230, 253, 0.7); margin-bottom: 14px; }
-        .admin-nav-item { flex: 1; text-align: center; padding: 8px 4px; font-size: 10px; font-weight: 700; cursor: pointer; border-radius: 10px; color: var(--text-muted); transition: all 0.2s; }
+        .admin-nav { display: flex; gap: 3px; background: rgba(224, 242, 254, 0.6); padding: 3px; border-radius: 12px; border: 1px solid rgba(186, 230, 253, 0.8); margin-bottom: 12px; }
+        .admin-nav-item { flex: 1; text-align: center; padding: 7px 2px; font-size: 10px; font-weight: 700; cursor: pointer; border-radius: 8px; color: var(--text-muted); transition: all 0.2s; white-space: nowrap; }
         .admin-nav-item.active { background: linear-gradient(135deg, #0284c7, #2563eb); color: #ffffff; box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25); }
 
         .tool-sub-card { 
-            background: rgba(255, 255, 255, 0.65); 
+            background: rgba(255, 255, 255, 0.8); 
             border: 1px solid var(--glass-border); 
-            border-radius: 16px; 
-            padding: 14px; 
-            margin-bottom: 12px; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.01);
+            border-radius: 14px; 
+            padding: 12px; 
+            margin-bottom: 10px; 
         }
         .tool-title { font-size: 11px; font-weight: 800; margin-bottom: 8px; display: block; }
 
         .period-card {
-            background: linear-gradient(135deg, rgba(224, 242, 254, 0.9), rgba(219, 234, 254, 0.9));
-            border: 1px solid rgba(186, 230, 253, 0.9);
+            background: linear-gradient(135deg, rgba(224, 242, 254, 0.95), rgba(219, 234, 254, 0.95));
+            border: 1px solid rgba(186, 230, 253, 0.95);
             border-radius: 14px;
             padding: 12px;
             margin: 10px 0;
@@ -203,24 +209,24 @@
             align-items: center;
         }
 
-        .table-container { max-height: 220px; overflow-y: auto; border: 1px solid var(--glass-border); border-radius: 14px; margin-top: 8px; background: rgba(255, 255, 255, 0.4); }
+        .table-container { max-height: 240px; overflow-y: auto; border: 1px solid var(--glass-border); border-radius: 12px; margin-top: 8px; background: rgba(255, 255, 255, 0.6); }
         table { width: 100%; border-collapse: collapse; font-size: 11px; }
-        th { background: rgba(255, 255, 255, 0.85); color: var(--text-muted); padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--glass-border); position: sticky; top: 0; backdrop-filter: blur(8px); }
-        td { padding: 9px 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.4); }
+        th { background: rgba(255, 255, 255, 0.95); color: var(--text-muted); padding: 9px 8px; text-align: left; border-bottom: 1px solid var(--glass-border); position: sticky; top: 0; backdrop-filter: blur(8px); }
+        td { padding: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.5); }
         
-        .badge { padding: 4px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
-        .badge-present { background: rgba(209, 250, 229, 0.85); color: #047857; }
+        .badge { padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 700; }
+        .badge-present { background: rgba(209, 250, 229, 0.9); color: #047857; }
         .action-btn { padding: 4px 8px; font-size: 10px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; }
-        .btn-del { background: rgba(254, 242, 242, 0.9); color: #ef4444; border: 1px solid #fca5a5; }
+        .btn-del { background: rgba(254, 242, 242, 0.95); color: #ef4444; border: 1px solid #fca5a5; }
 
-        #msg { margin-top: 12px; font-size: 12px; text-align: center; padding: 10px; border-radius: 12px; font-weight: 600; display: none; backdrop-filter: blur(10px); }
-        .msg-success { background: rgba(209, 250, 229, 0.85); color: #047857; border: 1px solid #a7f3d0; display: block !important; }
-        .msg-error { background: rgba(254, 226, 226, 0.85); color: #b91c1c; border: 1px solid #fca5a5; display: block !important; }
-        .admin-box { background: var(--glass-card); backdrop-filter: blur(12px); padding: 14px; border-radius: 16px; border: 1px solid var(--glass-border); box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
+        #msg { margin-top: 10px; font-size: 12px; text-align: center; padding: 9px; border-radius: 10px; font-weight: 600; display: none; backdrop-filter: blur(10px); }
+        .msg-success { background: rgba(209, 250, 229, 0.9); color: #047857; border: 1px solid #a7f3d0; display: block !important; }
+        .msg-error { background: rgba(254, 226, 226, 0.9); color: #b91c1c; border: 1px solid #fca5a5; display: block !important; }
+        .admin-box { background: var(--glass-card); backdrop-filter: blur(12px); padding: 12px; border-radius: 16px; border: 1px solid var(--glass-border); }
         
-        .webcam-box { width: 100%; height: 220px; background: #000; border-radius: 14px; overflow: hidden; position: relative; margin-bottom: 8px; display: flex; justify-content: center; align-items: center; border: 1px solid var(--glass-border); }
+        .webcam-box { width: 100%; height: 200px; background: #000; border-radius: 12px; overflow: hidden; position: relative; margin-bottom: 8px; display: flex; justify-content: center; align-items: center; border: 1px solid var(--glass-border); }
         video { width: 100%; height: 100%; object-fit: cover; }
-        .scan-overlay { position: absolute; border: 2px dashed #0284c7; border-radius: 50%; width: 130px; height: 160px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.4); }
+        .scan-overlay { position: absolute; border: 2px dashed #0284c7; border-radius: 50%; width: 120px; height: 150px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.4); }
     </style>
 </head>
 <body>
@@ -265,6 +271,7 @@
                     <button class="btn btn-danger" style="width:auto; padding:6px 12px; margin:0; font-size:11px;" onclick="logout()">Logout</button>
                 </div>
 
+                <!-- FIXED REDUNDANT DATA LABELS -->
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="value" id="totalDaysCount">0 Days</div>
@@ -280,17 +287,16 @@
                     <b>🎯 Attendance Advisor:</b> <span id="advisorText">Calculating criteria...</span>
                 </div>
 
-                <!-- AI FACE ID ENROLLMENT & REAL SCANNER MODAL -->
-                <div class="admin-box" style="margin-bottom:14px; background:rgba(224, 242, 254, 0.7); border-color:rgba(186, 230, 253, 0.8);">
+                <!-- AI FACE ID ENROLLMENT & SCANNER MODAL -->
+                <div class="admin-box" style="margin-bottom:12px; background:rgba(224, 242, 254, 0.7); border-color:rgba(186, 230, 253, 0.8);">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
                             <span style="font-size:11px; font-weight:800; color:#0369a1;">👤 AI Face ID Status:</span>
                             <span id="faceStatusBadge" class="badge" style="background:rgba(224, 242, 254, 0.9); color:#0369a1; margin-left:4px;">Not Enrolled</span>
                         </div>
-                        <button class="action-btn" style="background:#0284c7; color:white;" onclick="openCameraModal('ENROLL')">📸 Enroll / Update Face</button>
+                        <button class="action-btn" style="background:#0284c7; color:white;" onclick="openCameraModal('ENROLL')">📸 Enroll Face</button>
                     </div>
 
-                    <!-- CAMERA SCANNER CONTAINER -->
                     <div id="cameraModal" style="display:none; margin-top:10px; text-align:center;">
                         <div class="webcam-box">
                             <video id="webcamVideo" autoplay playsinline muted></video>
@@ -307,20 +313,25 @@
                     <div class="tab-item" id="adminTabHeader" style="display:none;" onclick="switchTab('adminTab')">👑 Admin Control</div>
                 </div>
 
-                <!-- TAB 1: MARK ATTENDANCE -->
+                <!-- TAB 1: MARK ATTENDANCE (STREAMLINED ACTION CARDS) -->
                 <div id="markTab">
-                    <button class="btn btn-accent" onclick="openFullDayOtpPrompt()" style="background:linear-gradient(135deg, rgba(2, 132, 199, 0.9), rgba(37, 99, 235, 0.95));">⚡ Mark Full Day Attendance (via OTP)</button>
-                    <button class="btn btn-success" onclick="openCameraModal('CHECKIN')" style="margin-top:6px; background:linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(5, 150, 105, 0.95));">👤 Instant Check-In via AI Face Scan</button>
-                    <button class="btn btn-purple" onclick="triggerBiometricFingerprint()" style="margin-top:6px;">🖐️ Biometric Fingerprint Check-In</button>
-                    <button class="btn btn-primary" onclick="openStudentQRScanner()" style="margin-top:6px; background:linear-gradient(135deg, rgba(14, 165, 233, 0.9), rgba(3, 105, 161, 0.95));">📲 Scan Projector QR Code</button>
-                    <button class="btn btn-outline" onclick="exportStudentCSV()" style="margin-top:6px;">📥 Download My Attendance Sheet (Excel)</button>
+                    <!-- MAIN PRIMARY ACTION -->
+                    <button class="btn btn-accent" onclick="openFullDayOtpPrompt()" style="background:linear-gradient(135deg, rgba(2, 132, 199, 0.95), rgba(37, 99, 235, 0.95)); padding:12px;">⚡ Mark Full Day Attendance (via OTP)</button>
+                    
+                    <!-- SECONDARY ACTIONS GRID -->
+                    <div class="action-buttons-grid">
+                        <button class="btn btn-success" onclick="openCameraModal('CHECKIN')">👤 Face Scan</button>
+                        <button class="btn btn-purple" onclick="triggerBiometricFingerprint()">🖐️ Biometric</button>
+                        <button class="btn btn-primary" onclick="openStudentQRScanner()">📲 Scan QR</button>
+                        <button class="btn btn-outline" onclick="exportStudentCSV()">📥 Excel Sheet</button>
+                    </div>
                     
                     <!-- REAL-TIME PERIOD TRACKER FROM OFFICIAL TIMETABLE -->
                     <div style="text-align:center; font-size:10px; color:var(--text-muted); margin: 12px 0 4px 0; font-weight:700;">-- LIVE TIMETABLE PERIOD TRACKER --</div>
                     <div class="period-card" id="periodCardBox">
                         <div>
                             <span style="font-size:10px; font-weight:700; color:#0369a1; text-transform:uppercase;" id="periodTimeSlotLabel">CURRENT PERIOD STATUS:</span>
-                            <h4 id="activePeriodName" style="font-size:13px; font-weight:800; color:#0f172a; margin-top:2px;">Checking Live Timetable...</h4>
+                            <h4 id="activePeriodName" style="font-size:12px; font-weight:800; color:#0f172a; margin-top:2px;">Checking Live Timetable...</h4>
                         </div>
                         <button class="action-btn" id="markPeriodBtn" style="background:#10b981; color:white; padding:6px 10px;" onclick="markActivePeriodAttendance()">Mark Lecture</button>
                     </div>
@@ -330,7 +341,7 @@
                             <span>📅 Attendance Calendar</span>
                             <select id="calendarViewMode" onchange="toggleCalendarView()" style="width:auto; padding:4px 8px; font-size:11px; margin:0;">
                                 <option value="CURRENT_MONTH">Current Month</option>
-                                <option value="FULL_SEMESTER">🌟 Full Semester (July - Dec)</option>
+                                <option value="FULL_SEMESTER">🌟 Full Semester (Jul-Dec 2026)</option>
                             </select>
                         </div>
                         <div id="calendarDisplayWrapper"></div>
@@ -346,20 +357,22 @@
                         </div>
                     </div>
                 </div>
-                                <!-- ADMIN CONTROL TAB -->
+                                <!-- ADMIN CONTROL TAB (REPETITIVE DIRECTORY TABLE REMOVED) -->
                 <div id="adminTab" style="display:none;">
                     <div class="admin-nav">
                         <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">📊 Excel</div>
                         <div class="admin-nav-item" onclick="switchAdminSubTab('subAttendance')">⚡ Entry</div>
                         <div class="admin-nav-item" onclick="switchAdminSubTab('subHoliday')">🏖️ Holiday</div>
-                        <div class="admin-nav-item" onclick="switchAdminSubTab('subQR')">📲 Live QR</div>
+                        <div class="admin-nav-item" onclick="switchAdminSubTab('subQR')">📲 QR</div>
                         <div class="admin-nav-item" onclick="switchAdminSubTab('subTools')">🛠️ Tools</div>
+                        <div class="admin-nav-item" onclick="switchAdminSubTab('subDirectory')">📁 Directory</div>
                     </div>
 
+                    <!-- FIXED TRUNCATED TEXT IN EXPORT DROPDOWN -->
                     <div id="subReports" class="admin-box">
                         <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">📥 Export Excel Reports:</span>
-                        <select id="exportSelection" style="padding:8px; margin-bottom:6px;">
-                            <option value="ALL_SEMESTER">🌟 Full Semester (July 2026 - Dec 2026)</option>
+                        <select id="exportSelection" style="padding:10px; margin-bottom:8px;">
+                            <option value="ALL_SEMESTER">🌟 Full Semester (Jul-Dec 2026)</option>
                             <option value="6">July 2026</option>
                             <option value="7">August 2026</option>
                             <option value="8">September 2026</option>
@@ -372,19 +385,20 @@
 
                     <div id="subAttendance" class="admin-box" style="display:none;">
                         <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">⚡ Manual Backdate Attendance:</span>
-                        <input type="text" id="manualRoll" placeholder="Student Roll No (e.g. 24CSE14)" style="padding:8px; margin-bottom:6px;">
-                        <input type="date" id="manualDate" style="padding:8px; margin-bottom:6px;">
-                        <select id="manualStatus" style="padding:8px; margin-bottom:6px;">
+                        <input type="text" id="manualRoll" placeholder="Student Roll No (e.g. 24CSE14)">
+                        <input type="date" id="manualDate">
+                        <select id="manualStatus">
                             <option value="Present">Present</option>
                             <option value="Duty Leave">Duty Leave (DL)</option>
                         </select>
                         <button class="btn btn-primary" onclick="markManualAttendance()" style="margin-top:0; padding:10px;">✅ Mark Attendance</button>
                     </div>
 
+                    <!-- FIXED INVISIBLE DATE INPUT FIELD CONTRAST -->
                     <div id="subHoliday" class="admin-box" style="display:none;">
                         <span style="font-size:11px; font-weight:700; color:#b06000; display:block; margin-bottom:6px;">🏖️ Declare Official Holiday:</span>
-                        <input type="date" id="holidayDate" style="padding:8px; margin-bottom:6px;">
-                        <input type="text" id="holidayReason" placeholder="Reason (e.g. Diwali/Rainy Day)" style="padding:8px; margin-bottom:6px;">
+                        <input type="date" id="holidayDate" style="background:#ffffff; border:1.5px solid #bae6fd;">
+                        <input type="text" id="holidayReason" placeholder="Reason (e.g. Diwali/Rainy Day)">
                         <button class="btn btn-warning" onclick="declareHoliday()" style="margin-top:0; padding:10px;">Mark Date as Holiday</button>
                     </div>
 
@@ -402,52 +416,53 @@
                     <div id="subTools" style="display:none;">
                         <div class="tool-sub-card">
                             <span class="tool-title" style="color:#0284c7;">➕ Register New Student Manually:</span>
-                            <input type="text" id="adminRegName" placeholder="Full Student Name" style="padding:8px; margin-bottom:6px;">
-                            <input type="text" id="adminRegRoll" placeholder="Roll Number (e.g. 24CSE14)" style="padding:8px; margin-bottom:6px;">
-                            <input type="text" id="adminRegPass" placeholder="Password (Default: 123456)" style="padding:8px; margin-bottom:6px;">
-                            <button class="btn btn-accent" onclick="adminRegisterStudent()" style="margin-top:0; padding:8px;">Register Student</button>
+                            <input type="text" id="adminRegName" placeholder="Full Student Name">
+                            <input type="text" id="adminRegRoll" placeholder="Roll Number (e.g. 24CSE14)">
+                            <input type="text" id="adminRegPass" placeholder="Password (Default: 123456)">
+                            <button class="btn btn-accent" onclick="adminRegisterStudent()" style="margin-top:0;">Register Student</button>
                         </div>
 
                         <div class="tool-sub-card">
                             <span class="tool-title" style="color:var(--primary);">📢 Broadcast Announcement Notice:</span>
-                            <input type="text" id="noticeMsg" placeholder="Notice text (e.g. Mid-Sem Exams from Monday)" style="padding:8px; margin-bottom:6px;">
-                            <button class="btn btn-primary" onclick="postNotice()" style="margin-top:0; padding:8px; margin-bottom:6px;">Publish Notice</button>
-                            <button class="btn btn-danger" onclick="clearNotice()" style="margin-top:0; padding:8px;">🗑️ Clear Active Notice</button>
+                            <input type="text" id="noticeMsg" placeholder="Notice text (e.g. Mid-Sem Exams from Monday)">
+                            <button class="btn btn-primary" onclick="postNotice()" style="margin-top:0; margin-bottom:6px;">Publish Notice</button>
+                            <button class="btn btn-danger" onclick="clearNotice()" style="margin-top:0;">🗑️ Clear Active Notice</button>
                         </div>
 
                         <div class="tool-sub-card">
                             <span class="tool-title" style="color:#0284c7;">✏️ Fix / Update Student Roll Number Format:</span>
-                            <input type="text" id="oldRollFormat" placeholder="Old Roll No (e.g. 24-CSE-14)" style="padding:8px; margin-bottom:6px;">
-                            <input type="text" id="newRollFormat" placeholder="New Clean Roll No (e.g. 24CSE14)" style="padding:8px; margin-bottom:6px;">
-                            <button class="btn btn-primary" onclick="updateRollNumberFormat()" style="margin-top:0; padding:8px; background:#0284c7;">Update Roll Number</button>
+                            <input type="text" id="oldRollFormat" placeholder="Old Roll No (e.g. 24-CSE-14)">
+                            <input type="text" id="newRollFormat" placeholder="New Clean Roll No (e.g. 24CSE14)">
+                            <button class="btn btn-primary" onclick="updateRollNumberFormat()" style="margin-top:0; background:#0284c7;">Update Roll Number</button>
                         </div>
 
                         <div class="tool-sub-card">
                             <span class="tool-title" style="color:#d97706;">🔑 Reset Student Password:</span>
-                            <input type="text" id="resetRoll" placeholder="Student Roll No (e.g. 24CSE14)" style="padding:8px; margin-bottom:6px;">
-                            <input type="text" id="resetPass" placeholder="New Password (Default: 123456)" style="padding:8px; margin-bottom:6px;">
-                            <button class="btn btn-warning" onclick="resetStudentPassword()" style="margin-top:0; padding:8px;">Reset Password</button>
+                            <input type="text" id="resetRoll" placeholder="Student Roll No (e.g. 24CSE14)">
+                            <input type="text" id="resetPass" placeholder="New Password (Default: 123456)">
+                            <button class="btn btn-warning" onclick="resetStudentPassword()" style="margin-top:0;">Reset Password</button>
                         </div>
 
                         <div class="tool-sub-card" style="border-color:rgba(239, 68, 68, 0.4); background:rgba(254, 242, 242, 0.6);">
                             <span class="tool-title" style="color:#b91c1c;">🗑️ Permanently Delete Student Account:</span>
-                            <input type="text" id="deleteStudentRoll" placeholder="Roll No to Delete (e.g. 24-CSE-14)" style="padding:8px; margin-bottom:6px;">
-                            <button class="btn btn-danger" onclick="deleteEntireStudentAccount()" style="margin-top:0; padding:8px;">Delete Account Permanently</button>
+                            <input type="text" id="deleteStudentRoll" placeholder="Roll No to Delete (e.g. 24-CSE-14)">
+                            <button class="btn btn-danger" onclick="deleteEntireStudentAccount()" style="margin-top:0;">Delete Account Permanently</button>
                         </div>
                     </div>
 
-                    <div class="admin-box" style="margin-top:10px;">
-                        <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">🏆 Class Attendance Summary:</span>
-                        <div style="display:flex; justify-content:space-between; font-size:11px; background:rgba(255,255,255,0.6); padding:8px; border-radius:10px; border:1px solid var(--glass-border);">
-                            <span>Class Avg: <b id="classAvgPct">0%</b></span>
-                            <span>Total Students: <b id="totalStudentsCount">0</b></span>
+                    <!-- DEDICATED DIRECTORY TAB (CLEANED FROM OTHER TABS) -->
+                    <div id="subDirectory" style="display:none;">
+                        <div class="admin-box" style="margin-bottom:10px;">
+                            <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">🏆 Class Attendance Summary:</span>
+                            <div style="display:flex; justify-content:space-between; font-size:11px; background:rgba(255,255,255,0.7); padding:8px; border-radius:10px; border:1px solid var(--glass-border);">
+                                <span>Class Avg: <b id="classAvgPct">0%</b></span>
+                                <span>Total Students: <b id="totalStudentsCount">0</b></span>
+                            </div>
                         </div>
-                    </div>
 
-                    <button class="btn btn-outline" onclick="fetchAllAttendance()" style="margin-top:12px;">🔄 Refresh Records Directory</button>
-                    
-                    <div style="margin-top:12px;">
-                        <h4 style="font-size:11px; color:var(--text-muted);">Class Records Directory:</h4>
+                        <button class="btn btn-outline" onclick="fetchAllAttendance()" style="margin-bottom:8px;">🔄 Refresh Records Directory</button>
+                        
+                        <h4 style="font-size:11px; color:var(--text-muted); margin-top:6px;">Class Records Directory:</h4>
                         <div class="table-container">
                             <table id="allHistoryTable">
                                 <thead><tr><th>Roll</th><th>Name</th><th>Date</th><th>Attended</th><th>Actions</th></tr></thead>
@@ -473,9 +488,16 @@
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-        // OFFICIAL TIME TABLE MATRIX (B.Tech 5th Sem Room 203)
+        // STRICT ROLL NUMBER FORMATTER (PREVENTS INCONSISTENT FORMATS LIKE 24-CSE-14)
+        function sanitizeAndValidateRollNo(rawRoll) {
+            if (!rawRoll) return { isValid: false, cleanRoll: "" };
+            let clean = rawRoll.toUpperCase().replace(/[^A-Z0-9]/g, ''); // Removes spaces & hyphens
+            const strictRegex = /^\d{2}[A-Z]{3}\d{2,3}$/;
+            return { isValid: strictRegex.test(clean), cleanRoll: clean };
+        }
+
         const WEEKLY_SCHEDULE = {
-            1: [ // MONDAY
+            1: [
                 { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
                 { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
                 { start: "10:50", end: "11:35", subject: "DAA - Design & Analysis of Algorithm", period: "P3" },
@@ -485,7 +507,7 @@
                 { start: "13:50", end: "14:35", subject: "CN - Computer Network", period: "P7" },
                 { start: "14:35", end: "15:20", subject: "WT - Web Technology", period: "P8" }
             ],
-            2: [ // TUESDAY
+            2: [
                 { start: "09:20", end: "10:05", subject: "WT - Web Technology", period: "P1" },
                 { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
                 { start: "10:50", end: "11:35", subject: "Internet Lab (Ms. Geeta)", period: "P3" },
@@ -495,7 +517,7 @@
                 { start: "13:50", end: "14:35", subject: "BDA - Big Data Analytics", period: "P7" },
                 { start: "14:35", end: "15:20", subject: "SPORTS / Library", period: "P8" }
             ],
-            3: [ // WEDNESDAY
+            3: [
                 { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
                 { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
                 { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
@@ -504,7 +526,7 @@
                 { start: "13:05", end: "13:50", subject: "WT - Web Technology", period: "P6" },
                 { start: "13:50", end: "15:20", subject: "CN LAB - Computer Network Lab", period: "P7-P8" }
             ],
-            4: [ // THURSDAY
+            4: [
                 { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
                 { start: "10:05", end: "10:50", subject: "CN - Computer Network", period: "P2" },
                 { start: "10:50", end: "11:35", subject: "SPORTS / Activity", period: "P3" },
@@ -513,7 +535,7 @@
                 { start: "13:05", end: "14:35", subject: "DAA LAB - Algorithm Lab", period: "P6-P7" },
                 { start: "14:35", end: "15:20", subject: "HRM - Human Resource Mgmt", period: "P8" }
             ],
-            5: [ // FRIDAY
+            5: [
                 { start: "09:20", end: "10:05", subject: "DAA - Design & Analysis of Algorithm", period: "P1" },
                 { start: "10:05", end: "10:50", subject: "CN - Computer Network", period: "P2" },
                 { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
@@ -531,7 +553,6 @@
             const nameEl = document.getElementById('activePeriodName');
             const btn = document.getElementById('markPeriodBtn');
 
-            // Weekend Check (Saturday = 6, Sunday = 0)
             if (dayOfWeek === 0 || dayOfWeek === 6) {
                 if(labelEl) labelEl.innerText = "WEEKEND STATUS:";
                 if(nameEl) nameEl.innerText = "☕ College Closed (Weekend)";
@@ -542,7 +563,6 @@
 
             const currentMinutes = now.getHours() * 60 + now.getMinutes();
             const daySchedule = WEEKLY_SCHEDULE[dayOfWeek] || [];
-
             let foundSlot = null;
 
             for (let slot of daySchedule) {
@@ -604,11 +624,7 @@
                 const publicKeyCredentialCreationOptions = {
                     challenge: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]),
                     rp: { name: "BM Group ERP Portal" },
-                    user: {
-                        id: new Uint8Array([1, 2, 3, 4]),
-                        name: "student@bmerp.edu",
-                        displayName: "Student Biometric"
-                    },
+                    user: { id: new Uint8Array([1, 2, 3, 4]), name: "student@bmerp.edu", displayName: "Student Biometric" },
                     pubKeyCredParams: [{ alg: -7, type: "public-key" }],
                     authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
                     timeout: 60000
@@ -629,23 +645,23 @@
 
         async function adminRegisterStudent() {
             const name = document.getElementById('adminRegName').value.trim();
-            const rollNo = document.getElementById('adminRegRoll').value.trim();
+            const rawRoll = document.getElementById('adminRegRoll').value.trim();
             const password = document.getElementById('adminRegPass').value.trim() || '123456';
 
-            if (!name || !rollNo) return showMsg('Name and Roll Number required!', true);
+            const validation = sanitizeAndValidateRollNo(rawRoll);
+            if (!name || !validation.isValid) return showMsg('Valid Name and Roll No required (e.g. 24CSE14)!', true);
 
             const res = await fetch(`${API_BASE}/api/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, rollNo, password })
+                body: JSON.stringify({ name, rollNo: validation.cleanRoll, password })
             });
             const data = await res.json();
             if (res.ok) {
-                showMsg(`Student ${name} (${rollNo}) Registered Successfully!`);
+                showMsg(`Student ${name} (${validation.cleanRoll}) Registered Successfully!`);
                 document.getElementById('adminRegName').value = '';
                 document.getElementById('adminRegRoll').value = '';
                 document.getElementById('adminRegPass').value = '';
-                fetchAllAttendance();
             } else {
                 showMsg(data.error || "Failed to register student", true);
             }
@@ -654,21 +670,21 @@
         async function updateRollNumberFormat() {
             const user = JSON.parse(localStorage.getItem('user'));
             const oldRoll = document.getElementById('oldRollFormat').value.trim();
-            const newRoll = document.getElementById('newRollFormat').value.trim();
+            const rawNewRoll = document.getElementById('newRollFormat').value.trim();
 
-            if (!oldRoll || !newRoll) return showMsg('Both Old and New Roll Numbers required!', true);
+            const validation = sanitizeAndValidateRollNo(rawNewRoll);
+            if (!oldRoll || !validation.isValid) return showMsg('Valid New Roll No required (e.g. 24CSE14)!', true);
 
             const res = await fetch(`${API_BASE}/api/admin/update-rollno`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ requesterRollNo: user.rollNo, oldRoll, newRoll })
+                body: JSON.stringify({ requesterRollNo: user.rollNo, oldRoll, newRoll: validation.cleanRoll })
             });
             const data = await res.json();
             if (res.ok) {
                 showMsg(data.message || "Roll Number format updated successfully!");
                 document.getElementById('oldRollFormat').value = '';
                 document.getElementById('newRollFormat').value = '';
-                fetchAllAttendance();
             } else {
                 showMsg(data.error || "Failed to update Roll Number", true);
             }
@@ -691,10 +707,8 @@
                 globalAllRecords = globalAllRecords.filter(r => r.rollNo.toUpperCase() !== targetRoll.toUpperCase());
                 showMsg(data.message || `Account ${targetRoll} Deleted Successfully!`);
                 document.getElementById('deleteStudentRoll').value = '';
-                fetchAllAttendance();
             } catch(err) {
                 showMsg("Account deleted from directory!", false);
-                fetchAllAttendance();
             }
         }
 
@@ -845,9 +859,10 @@
         }
 
         function switchAdminSubTab(subId) {
-            const subTabs = ['subReports', 'subAttendance', 'subHoliday', 'subQR', 'subTools'];
+            const subTabs = ['subReports', 'subAttendance', 'subHoliday', 'subQR', 'subTools', 'subDirectory'];
             subTabs.forEach(id => {
-                document.getElementById(id).style.display = (id === subId) ? 'block' : 'none';
+                const el = document.getElementById(id);
+                if (el) el.style.display = (id === subId) ? 'block' : 'none';
             });
 
             const navItems = document.querySelectorAll('.admin-nav-item');
@@ -856,6 +871,7 @@
             });
 
             if (subId === 'subQR') generateDynamicQR();
+            if (subId === 'subDirectory') fetchAllAttendance();
         }
 
         function openStudentQRScanner() { markFullDayAttendance(); }
@@ -944,17 +960,21 @@
         }
 
         async function handleAuth() {
-            const rollNo = document.getElementById('rollNo').value.trim(), password = document.getElementById('password').value.trim();
-            if (!rollNo || !password) return showMsg('Fill all fields!', true);
+            const rawRoll = document.getElementById('rollNo').value.trim();
+            const password = document.getElementById('password').value.trim();
+
+            const validation = sanitizeAndValidateRollNo(rawRoll);
+            if (!validation.isValid || !password) return showMsg('Enter valid Roll No (e.g. 24CSE48)!', true);
+
             showMsg('Connecting...');
             if (isRegistering) {
                 const name = document.getElementById('regName').value.trim();
                 if (!name) return showMsg('Enter Full Name!', true);
-                const res = await fetch(`${API_BASE}/api/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, rollNo, password }) });
+                const res = await fetch(`${API_BASE}/api/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, rollNo: validation.cleanRoll, password }) });
                 const data = await res.json();
                 if (res.ok) { showMsg('Registered! Sign in now.'); toggleMode(); } else showMsg(data.error, true);
             } else {
-                const res = await fetch(`${API_BASE}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo, password }) });
+                const res = await fetch(`${API_BASE}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: validation.cleanRoll, password }) });
                 const data = await res.json();
                 if (res.ok) { localStorage.setItem('user', JSON.stringify(data.user)); loadDashboard(); } else showMsg(data.error, true);
             }
@@ -973,7 +993,7 @@
 
             checkUserFaceStatus();
             updatePeriodTrackerWidget();
-            setInterval(updatePeriodTrackerWidget, 30000); // AUTO CHECK EVERY 30 SECONDS
+            setInterval(updatePeriodTrackerWidget, 30000);
             fetchNotices();
 
             if (user.role === 'admin' || user.rollNo.toUpperCase() === '24CSE48') document.getElementById('adminTabHeader').style.display = 'block';
@@ -1013,7 +1033,7 @@
                 body: JSON.stringify({ requesterRollNo: user.rollNo, studentRollNo, date, status })
             });
             const data = await res.json();
-            if (res.ok) { showMsg(data.message); fetchAllAttendance(); } else showMsg(data.error, true);
+            if (res.ok) { showMsg(data.message); } else showMsg(data.error, true);
         }
 
         async function declareHoliday() {
@@ -1028,7 +1048,7 @@
                 body: JSON.stringify({ requesterRollNo: user.rollNo, date, reason })
             });
             const data = await res.json();
-            if (res.ok) { showMsg(data.message); fetchAllAttendance(); } else showMsg(data.error, true);
+            if (res.ok) { showMsg(data.message); } else showMsg(data.error, true);
         }
                     function calculateRealAttendancePercentage(attendedDaysCount) {
             const startDate = new Date(2026, 6, 15);
@@ -1199,12 +1219,16 @@
                 groupedAdminRecords[key].count++;
             });
 
-            document.getElementById('totalStudentsCount').innerText = uniqueStudents.size;
-            document.getElementById('classAvgPct').innerText = uniqueStudents.size > 0 ? '78.5%' : '0%';
+            const totalCountEl = document.getElementById('totalStudentsCount');
+            if (totalCountEl) totalCountEl.innerText = uniqueStudents.size;
+            
+            const classAvgEl = document.getElementById('classAvgPct');
+            if (classAvgEl) classAvgEl.innerText = uniqueStudents.size > 0 ? '78.5%' : '0%';
 
             const sortedArray = Object.values(groupedAdminRecords).sort((a, b) => a.roll.localeCompare(b.roll, undefined, { numeric: true }));
 
             const tbody = document.querySelector('#allHistoryTable tbody');
+            if (!tbody) return;
             if (sortedArray.length === 0) return tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No records</td></tr>';
             
             tbody.innerHTML = sortedArray.map(g => `
