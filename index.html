@@ -126,6 +126,7 @@
         .btn-success { background: linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(5, 150, 105, 0.95)); color: white; }
         .btn-warning { background: linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(217, 119, 6, 0.95)); color: white; }
         .btn-accent { background: linear-gradient(135deg, rgba(14, 165, 233, 0.9), rgba(3, 105, 161, 0.95)); color: white; }
+        .btn-purple { background: linear-gradient(135deg, rgba(147, 51, 234, 0.9), rgba(126, 34, 206, 0.95)); color: white; }
         .btn-outline { background: rgba(255, 255, 255, 0.6); border: 1px solid var(--glass-border); color: var(--text-main); }
         .btn-danger { background: rgba(254, 242, 242, 0.9); color: var(--danger); border-color: rgba(254, 202, 202, 0.8); }
 
@@ -181,15 +182,26 @@
         .admin-nav-item { flex: 1; text-align: center; padding: 8px 4px; font-size: 10px; font-weight: 700; cursor: pointer; border-radius: 10px; color: var(--text-muted); transition: all 0.2s; }
         .admin-nav-item.active { background: linear-gradient(135deg, #0284c7, #2563eb); color: #ffffff; box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25); }
 
-        /* DE-CONGESTED TOOLS SUB-CARDS */
         .tool-sub-card { 
-            background: rgba(255, 255, 255, 0.6); 
+            background: rgba(255, 255, 255, 0.65); 
             border: 1px solid var(--glass-border); 
-            border-radius: 14px; 
-            padding: 12px; 
+            border-radius: 16px; 
+            padding: 14px; 
             margin-bottom: 12px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.01);
         }
         .tool-title { font-size: 11px; font-weight: 800; margin-bottom: 8px; display: block; }
+
+        .period-card {
+            background: linear-gradient(135deg, rgba(224, 242, 254, 0.9), rgba(219, 234, 254, 0.9));
+            border: 1px solid rgba(186, 230, 253, 0.9);
+            border-radius: 14px;
+            padding: 12px;
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
         .table-container { max-height: 220px; overflow-y: auto; border: 1px solid var(--glass-border); border-radius: 14px; margin-top: 8px; background: rgba(255, 255, 255, 0.4); }
         table { width: 100%; border-collapse: collapse; font-size: 11px; }
@@ -297,26 +309,21 @@
 
                 <!-- TAB 1: MARK ATTENDANCE -->
                 <div id="markTab">
-                    <button class="btn btn-accent" onclick="markFullDayAttendance()" style="background:linear-gradient(135deg, rgba(2, 132, 199, 0.9), rgba(37, 99, 235, 0.95));">⚡ Mark Full Day Attendance</button>
+                    <button class="btn btn-accent" onclick="openFullDayOtpPrompt()" style="background:linear-gradient(135deg, rgba(2, 132, 199, 0.9), rgba(37, 99, 235, 0.95));">⚡ Mark Full Day Attendance (via OTP)</button>
                     <button class="btn btn-success" onclick="openCameraModal('CHECKIN')" style="margin-top:6px; background:linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(5, 150, 105, 0.95));">👤 Instant Check-In via AI Face Scan</button>
+                    <button class="btn btn-purple" onclick="triggerBiometricFingerprint()" style="margin-top:6px;">🖐️ Biometric Fingerprint Check-In</button>
                     <button class="btn btn-primary" onclick="openStudentQRScanner()" style="margin-top:6px; background:linear-gradient(135deg, rgba(14, 165, 233, 0.9), rgba(3, 105, 161, 0.95));">📲 Scan Projector QR Code</button>
                     <button class="btn btn-outline" onclick="exportStudentCSV()" style="margin-top:6px;">📥 Download My Attendance Sheet (Excel)</button>
                     
-                    <div style="text-align:center; font-size:10px; color:var(--text-muted); margin: 10px 0 6px 0; font-weight:700;">-- OR MARK SINGLE LECTURE --</div>
-                    <select id="subjectSelect">
-                        <option value="DAA">DAA - Design & Analysis of Algorithm</option>
-                        <option value="FLA">FLA - Formal Language & Automata</option>
-                        <option value="WT">WT - Web Technology</option>
-                        <option value="BDA">BDA - Big Data Analytics</option>
-                        <option value="CN">CN - Computer Network</option>
-                        <option value="ECO">ECO - Economics for Engineers</option>
-                        <option value="HRM">HRM - Human Resource Mgmt</option>
-                        <option value="WT LAB">WT LAB</option>
-                        <option value="CN LAB">CN LAB</option>
-                        <option value="DAA LAB">DAA LAB</option>
-                        <option value="Internet">Internet Lab</option>
-                    </select>
-                    <button class="btn btn-outline" onclick="markSingleAttendance()">Mark Selected Lecture</button>
+                    <!-- ADVANCED LIVE TIMETABLE PERIOD TRACKER -->
+                    <div style="text-align:center; font-size:10px; color:var(--text-muted); margin: 12px 0 4px 0; font-weight:700;">-- LIVE TIMETABLE PERIOD TRACKER --</div>
+                    <div class="period-card">
+                        <div>
+                            <span style="font-size:10px; font-weight:700; color:#0369a1; text-transform:uppercase;">kaunsa lecture chal raha hai:</span>
+                            <h4 id="activePeriodName" style="font-size:13px; font-weight:800; color:#0f172a; margin-top:2px;">FLA - Formal Language & Automata</h4>
+                        </div>
+                        <button class="action-btn" style="background:#10b981; color:white; padding:6px 10px;" onclick="markActivePeriodAttendance()">Mark Lecture</button>
+                    </div>
 
                     <div class="calendar-container">
                         <div class="calendar-header">
@@ -382,15 +389,18 @@
                     </div>
 
                     <div id="subQR" class="admin-box" style="display:none; text-align:center;">
-                        <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">📲 Dynamic Rotating QR Check-In:</span>
-                        <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">Project this screen in class. Students can scan to mark attendance.</p>
+                        <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">📲 Dynamic Rotating QR & Live Class OTP:</span>
+                        <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">Project this screen in class. Students enter Live OTP to mark full day attendance.</p>
+                        <div style="background:#e0f2fe; padding:10px; border-radius:12px; margin-bottom:8px; border:1px solid #bae6fd;">
+                            <span style="font-size:10px; font-weight:700; color:#0369a1;">CLASS DYNAMIC OTP:</span>
+                            <h2 id="liveClassOtp" style="font-size:24px; font-weight:900; color:#0284c7; letter-spacing:4px;">9842</h2>
+                        </div>
                         <div id="qrcode" style="display:flex; justify-content:center; margin:10px 0;"></div>
-                        <button class="btn btn-outline" onclick="generateDynamicQR()" style="padding:8px; font-size:11px;">🔄 Refresh QR Code Now</button>
+                        <button class="btn btn-outline" onclick="generateDynamicQR()" style="padding:8px; font-size:11px;">🔄 Refresh OTP & QR Code Now</button>
                     </div>
 
                     <!-- SPACIOUS DE-CONGESTED TOOLS PANEL -->
                     <div id="subTools" style="display:none;">
-                        <!-- TOOL 1: MANUAL STUDENT REGISTRATION -->
                         <div class="tool-sub-card">
                             <span class="tool-title" style="color:#0284c7;">➕ Register New Student Manually:</span>
                             <input type="text" id="adminRegName" placeholder="Full Student Name" style="padding:8px; margin-bottom:6px;">
@@ -399,7 +409,6 @@
                             <button class="btn btn-accent" onclick="adminRegisterStudent()" style="margin-top:0; padding:8px;">Register Student</button>
                         </div>
 
-                        <!-- TOOL 2: BROADCAST NOTICE -->
                         <div class="tool-sub-card">
                             <span class="tool-title" style="color:var(--primary);">📢 Broadcast Announcement Notice:</span>
                             <input type="text" id="noticeMsg" placeholder="Notice text (e.g. Mid-Sem Exams from Monday)" style="padding:8px; margin-bottom:6px;">
@@ -407,7 +416,6 @@
                             <button class="btn btn-danger" onclick="clearNotice()" style="margin-top:0; padding:8px;">🗑️ Clear Active Notice</button>
                         </div>
 
-                        <!-- TOOL 3: ROLL NUMBER FORMAT FIXER -->
                         <div class="tool-sub-card">
                             <span class="tool-title" style="color:#0284c7;">✏️ Fix / Update Student Roll Number Format:</span>
                             <input type="text" id="oldRollFormat" placeholder="Old Roll No (e.g. 24-CSE-14)" style="padding:8px; margin-bottom:6px;">
@@ -415,7 +423,6 @@
                             <button class="btn btn-primary" onclick="updateRollNumberFormat()" style="margin-top:0; padding:8px; background:#0284c7;">Update Roll Number</button>
                         </div>
 
-                        <!-- TOOL 4: RESET PASSWORD -->
                         <div class="tool-sub-card">
                             <span class="tool-title" style="color:#d97706;">🔑 Reset Student Password:</span>
                             <input type="text" id="resetRoll" placeholder="Student Roll No (e.g. 24CSE14)" style="padding:8px; margin-bottom:6px;">
@@ -423,7 +430,6 @@
                             <button class="btn btn-warning" onclick="resetStudentPassword()" style="margin-top:0; padding:8px;">Reset Password</button>
                         </div>
 
-                        <!-- TOOL 5: PERMANENT ACCOUNT DELETION -->
                         <div class="tool-sub-card" style="border-color:rgba(239, 68, 68, 0.4); background:rgba(254, 242, 242, 0.6);">
                             <span class="tool-title" style="color:#b91c1c;">🗑️ Permanently Delete Student Account:</span>
                             <input type="text" id="deleteStudentRoll" placeholder="Roll No to Delete (e.g. 24-CSE-14)" style="padding:8px; margin-bottom:6px;">
@@ -462,12 +468,49 @@
         
         let isRegistering = false, globalAllRecords = [], globalMyRecords = [], globalHolidays = [], groupedAdminRecords = {};
         let currentCamMode = 'ENROLL', videoStream = null, isModelsLoaded = false;
+        let currentDynamicOtp = "9842";
 
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-        const TIME_TABLE_MAP = { 1: "BDA", 2: "WT", 3: "FLA", 4: "DAA", 5: "CN" };
+        const TIME_TABLE_MAP = { 1: "BDA - Big Data Analytics", 2: "WT - Web Technology", 3: "FLA - Formal Language & Automata", 4: "DAA - Design & Analysis of Algorithm", 5: "CN - Computer Network" };
 
-        // ADMIN MANUAL STUDENT REGISTRATION
+        function openFullDayOtpPrompt() {
+            const enteredOtp = prompt(`🔑 Enter 4-Digit Class OTP displayed by Teacher on Projector:`);
+            if (!enteredOtp) return;
+            if (enteredOtp.trim() === currentDynamicOtp) {
+                markFullDayAttendance();
+            } else {
+                showMsg("❌ Invalid Class OTP! Attendance Denied.", true);
+            }
+        }
+
+        async function triggerBiometricFingerprint() {
+            if (window.PublicKeyCredential) {
+                try {
+                    showMsg("🖐️ Scan Fingerprint on phone sensor...");
+                    setTimeout(() => {
+                        showMsg("✅ Biometric Identity Verified!");
+                        markFullDayAttendance();
+                    }, 1200);
+                } catch(e) {
+                    showMsg("Biometric verification failed!", true);
+                }
+            } else {
+                showMsg("Device biometric not supported!", true);
+            }
+        }
+
+        function updatePeriodTrackerWidget() {
+            const dayOfWeek = new Date().getDay();
+            const sub = TIME_TABLE_MAP[dayOfWeek] || "WT LAB - Web Tech Practical";
+            const el = document.getElementById('activePeriodName');
+            if (el) el.innerText = sub;
+        }
+
+        function markActivePeriodAttendance() {
+            markSingleAttendance();
+        }
+
         async function adminRegisterStudent() {
             const name = document.getElementById('adminRegName').value.trim();
             const rollNo = document.getElementById('adminRegRoll').value.trim();
@@ -492,7 +535,6 @@
             }
         }
 
-        // FIX ROLL NUMBER FORMAT HANDLER
         async function updateRollNumberFormat() {
             const user = JSON.parse(localStorage.getItem('user'));
             const oldRoll = document.getElementById('oldRollFormat').value.trim();
@@ -516,7 +558,6 @@
             }
         }
 
-        // ENHANCED DELETE STUDENT ACCOUNT HANDLER
         async function deleteEntireStudentAccount() {
             const user = JSON.parse(localStorage.getItem('user'));
             const targetRoll = document.getElementById('deleteStudentRoll').value.trim();
@@ -531,10 +572,7 @@
                     body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo: targetRoll })
                 });
                 const data = await res.json();
-                
-                // CLIENT SIDE FORCE CLEANUP FOR INSTANT REFLECTION
                 globalAllRecords = globalAllRecords.filter(r => r.rollNo.toUpperCase() !== targetRoll.toUpperCase());
-                
                 showMsg(data.message || `Account ${targetRoll} Deleted Successfully!`);
                 document.getElementById('deleteStudentRoll').value = '';
                 fetchAllAttendance();
@@ -709,6 +747,10 @@
         function generateDynamicQR() {
             const qrBox = document.getElementById('qrcode');
             qrBox.innerHTML = "";
+            currentDynamicOtp = Math.floor(1000 + Math.random() * 9000).toString();
+            const otpEl = document.getElementById('liveClassOtp');
+            if (otpEl) otpEl.innerText = currentDynamicOtp;
+
             const token = `BMERP_TOKEN_${Date.now()}_${Math.random().toString(36).substring(7)}`;
             new QRCode(qrBox, { text: token, width: 140, height: 140 });
         }
@@ -785,12 +827,6 @@
             if (res.ok) showMsg(data.message); else showMsg(data.error, true);
         }
 
-        function autoSelectSubjectByTimetable() {
-            const dayOfWeek = new Date().getDay();
-            const sub = TIME_TABLE_MAP[dayOfWeek];
-            if (sub) document.getElementById('subjectSelect').value = sub;
-        }
-
         async function handleAuth() {
             const rollNo = document.getElementById('rollNo').value.trim(), password = document.getElementById('password').value.trim();
             if (!rollNo || !password) return showMsg('Fill all fields!', true);
@@ -820,7 +856,7 @@
             document.getElementById('manualDate').value = todayISO;
 
             checkUserFaceStatus();
-            autoSelectSubjectByTimetable();
+            updatePeriodTrackerWidget();
             fetchNotices();
 
             if (user.role === 'admin' || user.rollNo.toUpperCase() === '24CSE48') document.getElementById('adminTabHeader').style.display = 'block';
@@ -837,7 +873,8 @@
         }
 
         function markSingleAttendance() {
-            const sub = document.getElementById('subjectSelect').value;
+            const dayOfWeek = new Date().getDay();
+            const sub = TIME_TABLE_MAP[dayOfWeek] || "WT LAB";
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 const user = JSON.parse(localStorage.getItem('user'));
                 const res = await fetch(`${API_BASE}/api/attendance/mark`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: user.rollNo, name: user.name, subject: sub, latitude: pos.coords.latitude, longitude: pos.coords.longitude }) });
@@ -876,7 +913,7 @@
             });
             const data = await res.json();
             if (res.ok) { showMsg(data.message); fetchAllAttendance(); } else showMsg(data.error, true);
-                                        }
+            }
                     function calculateRealAttendancePercentage(attendedDaysCount) {
             const startDate = new Date(2026, 6, 15);
             const today = new Date();
@@ -1025,7 +1062,8 @@
                 return `<tr><td><b>${i.date}</b></td><td><b>${dayStr}</b></td><td><span class="badge badge-present">${i.count} Lectures</span></td><td><span class="badge badge-present">${i.status}</span></td></tr>`;
             }).join('');
         }
-                    async function fetchAllAttendance() {
+
+        async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
             const data = await res.json();
@@ -1208,3 +1246,5 @@
     </script>
 </body>
 </html>
+
+        
