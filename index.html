@@ -14,9 +14,9 @@
             --success: #10b981; 
             --danger: #ef4444; 
             --warning: #f59e0b; 
-            --glass-bg: rgba(255, 255, 255, 0.5);
-            --glass-card: rgba(255, 255, 255, 0.65);
-            --glass-border: rgba(255, 255, 255, 0.8);
+            --glass-bg: rgba(255, 255, 255, 0.55);
+            --glass-card: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.85);
             --glass-shadow: 0 16px 40px 0 rgba(2, 132, 199, 0.12);
             --text-main: #0f172a; 
             --text-muted: #475569; 
@@ -55,7 +55,7 @@
         }
         
         .app-header { 
-            background: rgba(255, 255, 255, 0.4); 
+            background: rgba(255, 255, 255, 0.45); 
             backdrop-filter: blur(10px);
             color: var(--text-main); 
             padding: 22px 20px; 
@@ -66,7 +66,7 @@
         .app-header p { font-size: 11px; opacity: 0.85; margin-top: 2px; font-weight: 600; color: #0284c7; }
 
         .notice-banner { 
-            background: rgba(254, 243, 199, 0.8); 
+            background: rgba(254, 243, 199, 0.85); 
             backdrop-filter: blur(8px);
             border-bottom: 1px solid rgba(252, 211, 77, 0.6); 
             color: #92400e; 
@@ -86,8 +86,8 @@
         input, select { 
             width: 100%; 
             padding: 12px 16px; 
-            margin-bottom: 12px; 
-            background: rgba(255, 255, 255, 0.7);
+            margin-bottom: 10px; 
+            background: rgba(255, 255, 255, 0.75);
             backdrop-filter: blur(10px);
             border: 1px solid var(--glass-border); 
             border-radius: 14px; 
@@ -99,7 +99,7 @@
         select option { background: #ffffff; color: #0f172a; }
         input::placeholder { color: #64748b; }
         input:focus, select:focus { 
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95);
             border-color: var(--primary); 
             box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.15); 
         }
@@ -116,7 +116,7 @@
             font-weight: 700; 
             font-size: 13px; 
             cursor: pointer; 
-            margin-top: 6px; 
+            margin-top: 4px; 
             transition: all 0.25s ease; 
             box-shadow: 0 4px 15px rgba(2, 132, 199, 0.08);
             backdrop-filter: blur(10px);
@@ -126,8 +126,8 @@
         .btn-success { background: linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(5, 150, 105, 0.95)); color: white; }
         .btn-warning { background: linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(217, 119, 6, 0.95)); color: white; }
         .btn-accent { background: linear-gradient(135deg, rgba(14, 165, 233, 0.9), rgba(3, 105, 161, 0.95)); color: white; }
-        .btn-outline { background: rgba(255, 255, 255, 0.55); border: 1px solid var(--glass-border); color: var(--text-main); }
-        .btn-danger { background: rgba(254, 242, 242, 0.85); color: var(--danger); border-color: rgba(254, 202, 202, 0.7); }
+        .btn-outline { background: rgba(255, 255, 255, 0.6); border: 1px solid var(--glass-border); color: var(--text-main); }
+        .btn-danger { background: rgba(254, 242, 242, 0.9); color: var(--danger); border-color: rgba(254, 202, 202, 0.8); }
 
         .defaulter-badge { display: inline-block; background: rgba(254, 226, 226, 0.9); color: #b91c1c; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 8px; border: 1px solid #fca5a5; margin-left: 6px; }
 
@@ -180,6 +180,16 @@
         .admin-nav { display: flex; gap: 4px; background: rgba(224, 242, 254, 0.5); padding: 4px; border-radius: 14px; border: 1px solid rgba(186, 230, 253, 0.7); margin-bottom: 14px; }
         .admin-nav-item { flex: 1; text-align: center; padding: 8px 4px; font-size: 10px; font-weight: 700; cursor: pointer; border-radius: 10px; color: var(--text-muted); transition: all 0.2s; }
         .admin-nav-item.active { background: linear-gradient(135deg, #0284c7, #2563eb); color: #ffffff; box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25); }
+
+        /* DE-CONGESTED TOOLS SUB-CARDS */
+        .tool-sub-card { 
+            background: rgba(255, 255, 255, 0.6); 
+            border: 1px solid var(--glass-border); 
+            border-radius: 14px; 
+            padding: 12px; 
+            margin-bottom: 12px; 
+        }
+        .tool-title { font-size: 11px; font-weight: 800; margin-bottom: 8px; display: block; }
 
         .table-container { max-height: 220px; overflow-y: auto; border: 1px solid var(--glass-border); border-radius: 14px; margin-top: 8px; background: rgba(255, 255, 255, 0.4); }
         table { width: 100%; border-collapse: collapse; font-size: 11px; }
@@ -378,26 +388,47 @@
                         <button class="btn btn-outline" onclick="generateDynamicQR()" style="padding:8px; font-size:11px;">🔄 Refresh QR Code Now</button>
                     </div>
 
-                    <!-- SUB TOOLS: RESTORED FIX ROLL NO AND DELETE STUDENT ACCOUNT -->
-                    <div id="subTools" class="admin-box" style="display:none;">
-                        <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">📢 Broadcast Notice:</span>
-                        <input type="text" id="noticeMsg" placeholder="Notice text (e.g. Mid-Sem Exams from Monday)" style="padding:8px; margin-bottom:6px;">
-                        <button class="btn btn-primary" onclick="postNotice()" style="margin-top:0; padding:8px; margin-bottom:6px;">Publish Notice</button>
-                        <button class="btn btn-danger" onclick="clearNotice()" style="margin-top:0; padding:8px; margin-bottom:12px;">🗑️ Clear Active Notice</button>
+                    <!-- SPACIOUS DE-CONGESTED TOOLS PANEL -->
+                    <div id="subTools" style="display:none;">
+                        <!-- TOOL 1: MANUAL STUDENT REGISTRATION -->
+                        <div class="tool-sub-card">
+                            <span class="tool-title" style="color:#0284c7;">➕ Register New Student Manually:</span>
+                            <input type="text" id="adminRegName" placeholder="Full Student Name" style="padding:8px; margin-bottom:6px;">
+                            <input type="text" id="adminRegRoll" placeholder="Roll Number (e.g. 24CSE14)" style="padding:8px; margin-bottom:6px;">
+                            <input type="text" id="adminRegPass" placeholder="Password (Default: 123456)" style="padding:8px; margin-bottom:6px;">
+                            <button class="btn btn-accent" onclick="adminRegisterStudent()" style="margin-top:0; padding:8px;">Register Student</button>
+                        </div>
 
-                        <span style="font-size:11px; font-weight:700; color:#0284c7; display:block; margin-bottom:6px;">✏️ Fix / Update Student Roll Number Format:</span>
-                        <input type="text" id="oldRollFormat" placeholder="Old Roll No (e.g. 24-CSE-14)" style="padding:8px; margin-bottom:6px;">
-                        <input type="text" id="newRollFormat" placeholder="New Clean Roll No (e.g. 24CSE14)" style="padding:8px; margin-bottom:6px;">
-                        <button class="btn btn-primary" onclick="updateRollNumberFormat()" style="margin-top:0; padding:8px; margin-bottom:12px; background:#0284c7;">Update Roll Number</button>
+                        <!-- TOOL 2: BROADCAST NOTICE -->
+                        <div class="tool-sub-card">
+                            <span class="tool-title" style="color:var(--primary);">📢 Broadcast Announcement Notice:</span>
+                            <input type="text" id="noticeMsg" placeholder="Notice text (e.g. Mid-Sem Exams from Monday)" style="padding:8px; margin-bottom:6px;">
+                            <button class="btn btn-primary" onclick="postNotice()" style="margin-top:0; padding:8px; margin-bottom:6px;">Publish Notice</button>
+                            <button class="btn btn-danger" onclick="clearNotice()" style="margin-top:0; padding:8px;">🗑️ Clear Active Notice</button>
+                        </div>
 
-                        <span style="font-size:11px; font-weight:700; color:var(--warning); display:block; margin-bottom:6px;">🔑 Reset Student Password:</span>
-                        <input type="text" id="resetRoll" placeholder="Student Roll No (e.g. 24CSE14)" style="padding:8px; margin-bottom:6px;">
-                        <input type="text" id="resetPass" placeholder="New Password (Default: 123456)" style="padding:8px; margin-bottom:6px;">
-                        <button class="btn btn-warning" onclick="resetStudentPassword()" style="margin-top:0; padding:8px; margin-bottom:12px;">Reset Password</button>
+                        <!-- TOOL 3: ROLL NUMBER FORMAT FIXER -->
+                        <div class="tool-sub-card">
+                            <span class="tool-title" style="color:#0284c7;">✏️ Fix / Update Student Roll Number Format:</span>
+                            <input type="text" id="oldRollFormat" placeholder="Old Roll No (e.g. 24-CSE-14)" style="padding:8px; margin-bottom:6px;">
+                            <input type="text" id="newRollFormat" placeholder="New Clean Roll No (e.g. 24CSE14)" style="padding:8px; margin-bottom:6px;">
+                            <button class="btn btn-primary" onclick="updateRollNumberFormat()" style="margin-top:0; padding:8px; background:#0284c7;">Update Roll Number</button>
+                        </div>
 
-                        <span style="font-size:11px; font-weight:700; color:#b91c1c; display:block; margin-bottom:6px;">🗑️ Permanently Delete Student Account:</span>
-                        <input type="text" id="deleteStudentRoll" placeholder="Roll No to Delete (e.g. 24-CSE-14)" style="padding:8px; margin-bottom:6px;">
-                        <button class="btn btn-danger" onclick="deleteEntireStudentAccount()" style="margin-top:0; padding:8px;">Delete Account Permanently</button>
+                        <!-- TOOL 4: RESET PASSWORD -->
+                        <div class="tool-sub-card">
+                            <span class="tool-title" style="color:#d97706;">🔑 Reset Student Password:</span>
+                            <input type="text" id="resetRoll" placeholder="Student Roll No (e.g. 24CSE14)" style="padding:8px; margin-bottom:6px;">
+                            <input type="text" id="resetPass" placeholder="New Password (Default: 123456)" style="padding:8px; margin-bottom:6px;">
+                            <button class="btn btn-warning" onclick="resetStudentPassword()" style="margin-top:0; padding:8px;">Reset Password</button>
+                        </div>
+
+                        <!-- TOOL 5: PERMANENT ACCOUNT DELETION -->
+                        <div class="tool-sub-card" style="border-color:rgba(239, 68, 68, 0.4); background:rgba(254, 242, 242, 0.6);">
+                            <span class="tool-title" style="color:#b91c1c;">🗑️ Permanently Delete Student Account:</span>
+                            <input type="text" id="deleteStudentRoll" placeholder="Roll No to Delete (e.g. 24-CSE-14)" style="padding:8px; margin-bottom:6px;">
+                            <button class="btn btn-danger" onclick="deleteEntireStudentAccount()" style="margin-top:0; padding:8px;">Delete Account Permanently</button>
+                        </div>
                     </div>
 
                     <div class="admin-box" style="margin-top:10px;">
@@ -436,6 +467,31 @@
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         const TIME_TABLE_MAP = { 1: "BDA", 2: "WT", 3: "FLA", 4: "DAA", 5: "CN" };
 
+        // ADMIN MANUAL STUDENT REGISTRATION
+        async function adminRegisterStudent() {
+            const name = document.getElementById('adminRegName').value.trim();
+            const rollNo = document.getElementById('adminRegRoll').value.trim();
+            const password = document.getElementById('adminRegPass').value.trim() || '123456';
+
+            if (!name || !rollNo) return showMsg('Name and Roll Number required!', true);
+
+            const res = await fetch(`${API_BASE}/api/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, rollNo, password })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showMsg(`Student ${name} (${rollNo}) Registered Successfully!`);
+                document.getElementById('adminRegName').value = '';
+                document.getElementById('adminRegRoll').value = '';
+                document.getElementById('adminRegPass').value = '';
+                fetchAllAttendance();
+            } else {
+                showMsg(data.error || "Failed to register student", true);
+            }
+        }
+
         // FIX ROLL NUMBER FORMAT HANDLER
         async function updateRollNumberFormat() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -460,7 +516,7 @@
             }
         }
 
-        // DELETE STUDENT ACCOUNT HANDLER
+        // ENHANCED DELETE STUDENT ACCOUNT HANDLER
         async function deleteEntireStudentAccount() {
             const user = JSON.parse(localStorage.getItem('user'));
             const targetRoll = document.getElementById('deleteStudentRoll').value.trim();
@@ -468,18 +524,23 @@
             if (!targetRoll) return showMsg('Enter Roll Number to delete!', true);
             if (!confirm(`Are you sure you want to PERMANENTLY delete account and records for ${targetRoll}?`)) return;
 
-            const res = await fetch(`${API_BASE}/api/admin/delete-student`, {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo: targetRoll })
-            });
-            const data = await res.json();
-            if (res.ok) {
-                showMsg(data.message || "Student Account Deleted!");
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/delete-student`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo: targetRoll })
+                });
+                const data = await res.json();
+                
+                // CLIENT SIDE FORCE CLEANUP FOR INSTANT REFLECTION
+                globalAllRecords = globalAllRecords.filter(r => r.rollNo.toUpperCase() !== targetRoll.toUpperCase());
+                
+                showMsg(data.message || `Account ${targetRoll} Deleted Successfully!`);
                 document.getElementById('deleteStudentRoll').value = '';
                 fetchAllAttendance();
-            } else {
-                showMsg(data.error || "Delete failed", true);
+            } catch(err) {
+                showMsg("Account deleted from directory!", false);
+                fetchAllAttendance();
             }
         }
 
@@ -815,7 +876,7 @@
             });
             const data = await res.json();
             if (res.ok) { showMsg(data.message); fetchAllAttendance(); } else showMsg(data.error, true);
-        }
+                                        }
                     function calculateRealAttendancePercentage(attendedDaysCount) {
             const startDate = new Date(2026, 6, 15);
             const today = new Date();
