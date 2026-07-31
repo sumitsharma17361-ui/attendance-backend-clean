@@ -378,15 +378,26 @@
                         <button class="btn btn-outline" onclick="generateDynamicQR()" style="padding:8px; font-size:11px;">🔄 Refresh QR Code Now</button>
                     </div>
 
+                    <!-- SUB TOOLS: RESTORED FIX ROLL NO AND DELETE STUDENT ACCOUNT -->
                     <div id="subTools" class="admin-box" style="display:none;">
                         <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">📢 Broadcast Notice:</span>
                         <input type="text" id="noticeMsg" placeholder="Notice text (e.g. Mid-Sem Exams from Monday)" style="padding:8px; margin-bottom:6px;">
-                        <button class="btn btn-primary" onclick="postNotice()" style="margin-top:0; padding:8px; margin-bottom:12px;">Publish Notice</button>
+                        <button class="btn btn-primary" onclick="postNotice()" style="margin-top:0; padding:8px; margin-bottom:6px;">Publish Notice</button>
+                        <button class="btn btn-danger" onclick="clearNotice()" style="margin-top:0; padding:8px; margin-bottom:12px;">🗑️ Clear Active Notice</button>
 
-                        <span style="font-size:11px; font-weight:700; color:var(--danger); display:block; margin-bottom:6px;">🔑 Reset Student Password:</span>
+                        <span style="font-size:11px; font-weight:700; color:#0284c7; display:block; margin-bottom:6px;">✏️ Fix / Update Student Roll Number Format:</span>
+                        <input type="text" id="oldRollFormat" placeholder="Old Roll No (e.g. 24-CSE-14)" style="padding:8px; margin-bottom:6px;">
+                        <input type="text" id="newRollFormat" placeholder="New Clean Roll No (e.g. 24CSE14)" style="padding:8px; margin-bottom:6px;">
+                        <button class="btn btn-primary" onclick="updateRollNumberFormat()" style="margin-top:0; padding:8px; margin-bottom:12px; background:#0284c7;">Update Roll Number</button>
+
+                        <span style="font-size:11px; font-weight:700; color:var(--warning); display:block; margin-bottom:6px;">🔑 Reset Student Password:</span>
                         <input type="text" id="resetRoll" placeholder="Student Roll No (e.g. 24CSE14)" style="padding:8px; margin-bottom:6px;">
                         <input type="text" id="resetPass" placeholder="New Password (Default: 123456)" style="padding:8px; margin-bottom:6px;">
-                        <button class="btn btn-danger" onclick="resetStudentPassword()" style="margin-top:0; padding:8px;">Reset Password</button>
+                        <button class="btn btn-warning" onclick="resetStudentPassword()" style="margin-top:0; padding:8px; margin-bottom:12px;">Reset Password</button>
+
+                        <span style="font-size:11px; font-weight:700; color:#b91c1c; display:block; margin-bottom:6px;">🗑️ Permanently Delete Student Account:</span>
+                        <input type="text" id="deleteStudentRoll" placeholder="Roll No to Delete (e.g. 24-CSE-14)" style="padding:8px; margin-bottom:6px;">
+                        <button class="btn btn-danger" onclick="deleteEntireStudentAccount()" style="margin-top:0; padding:8px;">Delete Account Permanently</button>
                     </div>
 
                     <div class="admin-box" style="margin-top:10px;">
@@ -424,6 +435,53 @@
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         const TIME_TABLE_MAP = { 1: "BDA", 2: "WT", 3: "FLA", 4: "DAA", 5: "CN" };
+
+        // FIX ROLL NUMBER FORMAT HANDLER
+        async function updateRollNumberFormat() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            const oldRoll = document.getElementById('oldRollFormat').value.trim();
+            const newRoll = document.getElementById('newRollFormat').value.trim();
+
+            if (!oldRoll || !newRoll) return showMsg('Both Old and New Roll Numbers required!', true);
+
+            const res = await fetch(`${API_BASE}/api/admin/update-rollno`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ requesterRollNo: user.rollNo, oldRoll, newRoll })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showMsg(data.message || "Roll Number format updated successfully!");
+                document.getElementById('oldRollFormat').value = '';
+                document.getElementById('newRollFormat').value = '';
+                fetchAllAttendance();
+            } else {
+                showMsg(data.error || "Failed to update Roll Number", true);
+            }
+        }
+
+        // DELETE STUDENT ACCOUNT HANDLER
+        async function deleteEntireStudentAccount() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            const targetRoll = document.getElementById('deleteStudentRoll').value.trim();
+
+            if (!targetRoll) return showMsg('Enter Roll Number to delete!', true);
+            if (!confirm(`Are you sure you want to PERMANENTLY delete account and records for ${targetRoll}?`)) return;
+
+            const res = await fetch(`${API_BASE}/api/admin/delete-student`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo: targetRoll })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showMsg(data.message || "Student Account Deleted!");
+                document.getElementById('deleteStudentRoll').value = '';
+                fetchAllAttendance();
+            } else {
+                showMsg(data.error || "Delete failed", true);
+            }
+        }
 
         async function loadFaceAIModels() {
             if (isModelsLoaded) return true;
@@ -596,13 +654,31 @@
 
         async function fetchNotices() {
             try {
+                const activeNotice = localStorage.getItem("ACTIVE_BROADCAST_NOTICE");
+                if (activeNotice && activeNotice.trim() !== "") {
+                    document.getElementById('noticeBanner').style.display = 'flex';
+                    document.getElementById('noticeText').innerText = `📢 ${activeNotice}`;
+                    return;
+                }
+
                 const res = await fetch(`${API_BASE}/api/notices`);
                 const data = await res.json();
                 if (data.length > 0) {
+                    const latestNotice = data[data.length - 1].message;
                     document.getElementById('noticeBanner').style.display = 'flex';
-                    document.getElementById('noticeText').innerText = data.map(n => `📢 ${n.message}`).join('   |   ');
+                    document.getElementById('noticeText').innerText = `📢 ${latestNotice}`;
+                } else {
+                    document.getElementById('noticeBanner').style.display = 'none';
                 }
-            } catch (err) {}
+            } catch (err) {
+                const activeNotice = localStorage.getItem("ACTIVE_BROADCAST_NOTICE");
+                if (activeNotice && activeNotice.trim() !== "") {
+                    document.getElementById('noticeBanner').style.display = 'flex';
+                    document.getElementById('noticeText').innerText = `📢 ${activeNotice}`;
+                } else {
+                    document.getElementById('noticeBanner').style.display = 'none';
+                }
+            }
         }
 
         async function postNotice() {
@@ -610,13 +686,26 @@
             const message = document.getElementById('noticeMsg').value.trim();
             if (!message) return showMsg('Notice text required!', true);
 
-            const res = await fetch(`${API_BASE}/api/admin/notice`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ requesterRollNo: user.rollNo, title: 'Announcement', message })
-            });
-            const data = await res.json();
-            if (res.ok) { showMsg('Notice Published!'); fetchNotices(); document.getElementById('noticeMsg').value = ''; } else showMsg(data.error, true);
+            localStorage.setItem("ACTIVE_BROADCAST_NOTICE", message);
+            document.getElementById('noticeBanner').style.display = 'flex';
+            document.getElementById('noticeText').innerText = `📢 ${message}`;
+            showMsg('Notice Updated & Published!');
+            document.getElementById('noticeMsg').value = '';
+
+            try {
+                await fetch(`${API_BASE}/api/admin/notice`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requesterRollNo: user.rollNo, title: 'Announcement', message })
+                });
+            } catch (err) {}
+        }
+
+        function clearNotice() {
+            localStorage.removeItem("ACTIVE_BROADCAST_NOTICE");
+            document.getElementById('noticeBanner').style.display = 'none';
+            document.getElementById('noticeText').innerText = '';
+            showMsg('Active Notice Cleared!');
         }
 
         async function resetStudentPassword() {
@@ -870,11 +959,11 @@
             
             tbody.innerHTML = sortedDates.map(i => {
                 const parts = i.date.split('-');
-                const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                const dayStr = DAY_NAMES[dateObj.getDay()];
+                const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])).getDay();
+                const dayStr = DAY_NAMES[dateObj];
                 return `<tr><td><b>${i.date}</b></td><td><b>${dayStr}</b></td><td><span class="badge badge-present">${i.count} Lectures</span></td><td><span class="badge badge-present">${i.status}</span></td></tr>`;
             }).join('');
-                                     }
+        }
                     async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
