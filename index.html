@@ -9,23 +9,23 @@
     <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
     <style>
         :root { 
-            --primary: #38bdf8; 
-            --primary-gradient: linear-gradient(135deg, rgba(14, 165, 233, 0.9), rgba(3, 105, 161, 0.95));
-            --success: #34d399; 
-            --danger: #f87171; 
-            --warning: #fbbf24; 
-            --glass-bg: rgba(15, 23, 42, 0.55);
-            --glass-card: rgba(255, 255, 255, 0.08);
-            --glass-border: rgba(255, 255, 255, 0.18);
-            --glass-shadow: 0 20px 50px 0 rgba(0, 0, 0, 0.35);
-            --text-main: #f8fafc; 
-            --text-muted: #cbd5e1; 
+            --primary: #0284c7; 
+            --primary-gradient: linear-gradient(135deg, rgba(2, 132, 199, 0.9), rgba(37, 99, 235, 0.95));
+            --success: #10b981; 
+            --danger: #ef4444; 
+            --warning: #f59e0b; 
+            --glass-bg: rgba(255, 255, 255, 0.5);
+            --glass-card: rgba(255, 255, 255, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.8);
+            --glass-shadow: 0 16px 40px 0 rgba(2, 132, 199, 0.12);
+            --text-main: #0f172a; 
+            --text-muted: #475569; 
         }
 
         * { box-sizing: border-box; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
         
         body { 
-            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0284c7 100%);
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #e0e7ff 100%);
             background-size: 200% 200%;
             animation: gradientBG 12s ease infinite;
             color: var(--text-main); 
@@ -46,8 +46,8 @@
             width: 100%; 
             max-width: 520px; 
             background: var(--glass-bg); 
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border-radius: 24px; 
             box-shadow: var(--glass-shadow); 
             border: 1px solid var(--glass-border); 
@@ -55,21 +55,21 @@
         }
         
         .app-header { 
-            background: rgba(255, 255, 255, 0.05); 
-            backdrop-filter: blur(12px);
+            background: rgba(255, 255, 255, 0.4); 
+            backdrop-filter: blur(10px);
             color: var(--text-main); 
             padding: 22px 20px; 
             text-align: center;
             border-bottom: 1px solid var(--glass-border);
         }
-        .app-header h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.4px; color: #ffffff; }
-        .app-header p { font-size: 11px; opacity: 0.85; margin-top: 2px; font-weight: 600; color: #94a3b8; }
+        .app-header h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.4px; color: #0369a1; }
+        .app-header p { font-size: 11px; opacity: 0.85; margin-top: 2px; font-weight: 600; color: #0284c7; }
 
         .notice-banner { 
-            background: rgba(251, 191, 36, 0.15); 
+            background: rgba(254, 243, 199, 0.8); 
             backdrop-filter: blur(8px);
-            border-bottom: 1px solid rgba(251, 191, 36, 0.3); 
-            color: #fef08a; 
+            border-bottom: 1px solid rgba(252, 211, 77, 0.6); 
+            color: #92400e; 
             font-size: 11px; 
             padding: 8px 12px; 
             font-weight: 600; 
@@ -87,49 +87,49 @@
             width: 100%; 
             padding: 12px 16px; 
             margin-bottom: 12px; 
-            background: rgba(255, 255, 255, 0.07);
+            background: rgba(255, 255, 255, 0.7);
             backdrop-filter: blur(10px);
             border: 1px solid var(--glass-border); 
             border-radius: 14px; 
             font-size: 13px; 
-            color: #ffffff;
+            color: var(--text-main);
             outline: none; 
             transition: all 0.25s ease; 
         }
-        select option { background: #0f172a; color: #ffffff; }
-        input::placeholder { color: #94a3b8; }
+        select option { background: #ffffff; color: #0f172a; }
+        input::placeholder { color: #64748b; }
         input:focus, select:focus { 
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.9);
             border-color: var(--primary); 
-            box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.2); 
+            box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.15); 
         }
 
         .password-wrapper { position: relative; width: 100%; }
         .password-wrapper input { padding-right: 42px; }
-        .eye-icon { position: absolute; right: 14px; top: 38%; transform: translateY(-50%); cursor: pointer; opacity: 0.8; }
+        .eye-icon { position: absolute; right: 14px; top: 38%; transform: translateY(-50%); cursor: pointer; opacity: 0.6; }
 
         .btn { 
             width: 100%; 
             padding: 12px; 
-            border: 1px solid rgba(255,255,255,0.25); 
+            border: 1px solid rgba(255,255,255,0.6); 
             border-radius: 14px; 
             font-weight: 700; 
             font-size: 13px; 
             cursor: pointer; 
             margin-top: 6px; 
             transition: all 0.25s ease; 
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 15px rgba(2, 132, 199, 0.08);
             backdrop-filter: blur(10px);
         }
         .btn:active { transform: scale(0.98); }
-        .btn-primary { background: linear-gradient(135deg, rgba(14, 165, 233, 0.85), rgba(3, 105, 161, 0.95)); color: white; }
-        .btn-success { background: linear-gradient(135deg, rgba(16, 185, 129, 0.85), rgba(5, 150, 105, 0.95)); color: white; }
-        .btn-warning { background: linear-gradient(135deg, rgba(245, 158, 11, 0.85), rgba(217, 119, 6, 0.95)); color: white; }
-        .btn-accent { background: linear-gradient(135deg, rgba(56, 189, 248, 0.85), rgba(2, 132, 199, 0.95)); color: white; }
-        .btn-outline { background: rgba(255, 255, 255, 0.08); border: 1px solid var(--glass-border); color: #ffffff; }
-        .btn-danger { background: rgba(239, 68, 68, 0.2); color: #f87171; border-color: rgba(239, 68, 68, 0.4); }
+        .btn-primary { background: linear-gradient(135deg, rgba(2, 132, 199, 0.9), rgba(37, 99, 235, 0.95)); color: white; }
+        .btn-success { background: linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(5, 150, 105, 0.95)); color: white; }
+        .btn-warning { background: linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(217, 119, 6, 0.95)); color: white; }
+        .btn-accent { background: linear-gradient(135deg, rgba(14, 165, 233, 0.9), rgba(3, 105, 161, 0.95)); color: white; }
+        .btn-outline { background: rgba(255, 255, 255, 0.55); border: 1px solid var(--glass-border); color: var(--text-main); }
+        .btn-danger { background: rgba(254, 242, 242, 0.85); color: var(--danger); border-color: rgba(254, 202, 202, 0.7); }
 
-        .defaulter-badge { display: inline-block; background: rgba(239, 68, 68, 0.25); color: #fca5a5; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.4); margin-left: 6px; }
+        .defaulter-badge { display: inline-block; background: rgba(254, 226, 226, 0.9); color: #b91c1c; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 8px; border: 1px solid #fca5a5; margin-left: 6px; }
 
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
         .stat-card { 
@@ -139,21 +139,22 @@
             border-radius: 16px; 
             text-align: center; 
             border: 1px solid var(--glass-border); 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
         }
         .stat-card .value { font-size: 22px; font-weight: 800; color: var(--primary); }
         .stat-card .label { font-size: 10px; color: var(--text-muted); font-weight: 700; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
 
         .simulator-card { 
-            background: rgba(14, 165, 233, 0.12); 
+            background: rgba(224, 242, 254, 0.75); 
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(56, 189, 248, 0.3); 
+            border: 1px solid rgba(186, 230, 253, 0.8); 
             border-radius: 16px; 
             padding: 14px; 
             margin-bottom: 14px; 
             font-size: 12px; 
-            color: #e0f2fe;
+            color: #0369a1;
         }
-        .simulator-card b { color: #38bdf8; }
+        .simulator-card b { color: #0284c7; }
 
         .calendar-container { 
             background: var(--glass-card); 
@@ -162,41 +163,42 @@
             border-radius: 16px; 
             padding: 14px; 
             margin: 14px 0; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
         }
         .calendar-header { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 800; margin-bottom: 10px; color: var(--text-main); }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; font-size: 10px; }
         .cal-day-head { font-weight: 700; color: var(--text-muted); padding-bottom: 4px; }
-        .cal-date { padding: 7px 2px; border-radius: 8px; font-weight: 600; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .cal-p { background: rgba(16, 185, 129, 0.3); color: #6ee7b7; font-weight: 800; border-color: rgba(16, 185, 129, 0.5); }
-        .cal-a { background: rgba(239, 68, 68, 0.3); color: #fca5a5; font-weight: 800; border-color: rgba(239, 68, 68, 0.5); }
-        .cal-off { background: rgba(255, 255, 255, 0.03); color: #64748b; }
+        .cal-date { padding: 7px 2px; border-radius: 8px; font-weight: 600; background: rgba(255, 255, 255, 0.5); border: 1px solid rgba(255, 255, 255, 0.6); }
+        .cal-p { background: rgba(209, 250, 229, 0.85); color: #047857; font-weight: 800; border-color: #a7f3d0; }
+        .cal-a { background: rgba(254, 226, 226, 0.85); color: #b91c1c; font-weight: 800; border-color: #fca5a5; }
+        .cal-off { background: rgba(241, 245, 249, 0.6); color: #94a3b8; }
 
-        .tab-bar { display: flex; background: rgba(0, 0, 0, 0.25); border-radius: 14px; padding: 4px; border: 1px solid var(--glass-border); margin-bottom: 14px; }
+        .tab-bar { display: flex; background: rgba(224, 242, 254, 0.5); border-radius: 14px; padding: 4px; border: 1px solid rgba(186, 230, 253, 0.7); margin-bottom: 14px; }
         .tab-item { flex: 1; padding: 10px; text-align: center; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--text-muted); border-radius: 10px; transition: all 0.25s; }
-        .tab-item.active { background: linear-gradient(135deg, #0284c7, #2563eb); color: #ffffff; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4); }
+        .tab-item.active { background: linear-gradient(135deg, #0284c7, #2563eb); color: #ffffff; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); }
 
-        .admin-nav { display: flex; gap: 4px; background: rgba(0, 0, 0, 0.25); padding: 4px; border-radius: 14px; border: 1px solid var(--glass-border); margin-bottom: 14px; }
+        .admin-nav { display: flex; gap: 4px; background: rgba(224, 242, 254, 0.5); padding: 4px; border-radius: 14px; border: 1px solid rgba(186, 230, 253, 0.7); margin-bottom: 14px; }
         .admin-nav-item { flex: 1; text-align: center; padding: 8px 4px; font-size: 10px; font-weight: 700; cursor: pointer; border-radius: 10px; color: var(--text-muted); transition: all 0.2s; }
-        .admin-nav-item.active { background: linear-gradient(135deg, #0284c7, #2563eb); color: #ffffff; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.4); }
+        .admin-nav-item.active { background: linear-gradient(135deg, #0284c7, #2563eb); color: #ffffff; box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25); }
 
-        .table-container { max-height: 220px; overflow-y: auto; border: 1px solid var(--glass-border); border-radius: 14px; margin-top: 8px; background: rgba(0, 0, 0, 0.2); }
+        .table-container { max-height: 220px; overflow-y: auto; border: 1px solid var(--glass-border); border-radius: 14px; margin-top: 8px; background: rgba(255, 255, 255, 0.4); }
         table { width: 100%; border-collapse: collapse; font-size: 11px; }
-        th { background: rgba(15, 23, 42, 0.85); color: var(--text-muted); padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--glass-border); position: sticky; top: 0; backdrop-filter: blur(8px); }
-        td { padding: 9px 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); color: #e2e8f0; }
+        th { background: rgba(255, 255, 255, 0.85); color: var(--text-muted); padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--glass-border); position: sticky; top: 0; backdrop-filter: blur(8px); }
+        td { padding: 9px 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.4); }
         
         .badge { padding: 4px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
-        .badge-present { background: rgba(16, 185, 129, 0.25); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4); }
+        .badge-present { background: rgba(209, 250, 229, 0.85); color: #047857; }
         .action-btn { padding: 4px 8px; font-size: 10px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; }
-        .btn-del { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+        .btn-del { background: rgba(254, 242, 242, 0.9); color: #ef4444; border: 1px solid #fca5a5; }
 
         #msg { margin-top: 12px; font-size: 12px; text-align: center; padding: 10px; border-radius: 12px; font-weight: 600; display: none; backdrop-filter: blur(10px); }
-        .msg-success { background: rgba(16, 185, 129, 0.25); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4); display: block !important; }
-        .msg-error { background: rgba(239, 68, 68, 0.25); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); display: block !important; }
-        .admin-box { background: var(--glass-card); backdrop-filter: blur(12px); padding: 14px; border-radius: 16px; border: 1px solid var(--glass-border); }
+        .msg-success { background: rgba(209, 250, 229, 0.85); color: #047857; border: 1px solid #a7f3d0; display: block !important; }
+        .msg-error { background: rgba(254, 226, 226, 0.85); color: #b91c1c; border: 1px solid #fca5a5; display: block !important; }
+        .admin-box { background: var(--glass-card); backdrop-filter: blur(12px); padding: 14px; border-radius: 16px; border: 1px solid var(--glass-border); box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
         
         .webcam-box { width: 100%; height: 220px; background: #000; border-radius: 14px; overflow: hidden; position: relative; margin-bottom: 8px; display: flex; justify-content: center; align-items: center; border: 1px solid var(--glass-border); }
         video { width: 100%; height: 100%; object-fit: cover; }
-        .scan-overlay { position: absolute; border: 2px dashed #38bdf8; border-radius: 50%; width: 130px; height: 160px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5); }
+        .scan-overlay { position: absolute; border: 2px dashed #0284c7; border-radius: 50%; width: 130px; height: 160px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.4); }
     </style>
 </head>
 <body>
@@ -257,11 +259,11 @@
                 </div>
 
                 <!-- AI FACE ID ENROLLMENT & REAL SCANNER MODAL -->
-                <div class="admin-box" style="margin-bottom:14px; background:rgba(14, 165, 233, 0.1); border-color:rgba(56, 189, 248, 0.3);">
+                <div class="admin-box" style="margin-bottom:14px; background:rgba(224, 242, 254, 0.7); border-color:rgba(186, 230, 253, 0.8);">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
-                            <span style="font-size:11px; font-weight:800; color:#e0f2fe;">👤 AI Face ID Status:</span>
-                            <span id="faceStatusBadge" class="badge" style="background:rgba(56, 189, 248, 0.2); color:#38bdf8; margin-left:4px;">Not Enrolled</span>
+                            <span style="font-size:11px; font-weight:800; color:#0369a1;">👤 AI Face ID Status:</span>
+                            <span id="faceStatusBadge" class="badge" style="background:rgba(224, 242, 254, 0.9); color:#0369a1; margin-left:4px;">Not Enrolled</span>
                         </div>
                         <button class="action-btn" style="background:#0284c7; color:white;" onclick="openCameraModal('ENROLL')">📸 Enroll / Update Face</button>
                     </div>
@@ -285,9 +287,9 @@
 
                 <!-- TAB 1: MARK ATTENDANCE -->
                 <div id="markTab">
-                    <button class="btn btn-accent" onclick="markFullDayAttendance()" style="background:linear-gradient(135deg, rgba(14, 165, 233, 0.9), rgba(3, 105, 161, 0.95));">⚡ Mark Full Day Attendance</button>
-                    <button class="btn btn-success" onclick="openCameraModal('CHECKIN')" style="margin-top:6px; background:linear-gradient(135deg, rgba(16, 185, 129, 0.85), rgba(5, 150, 105, 0.95));">👤 Instant Check-In via AI Face Scan</button>
-                    <button class="btn btn-primary" onclick="openStudentQRScanner()" style="margin-top:6px; background:linear-gradient(135deg, rgba(2, 132, 199, 0.9), rgba(3, 105, 161, 0.95));">📲 Scan Projector QR Code</button>
+                    <button class="btn btn-accent" onclick="markFullDayAttendance()" style="background:linear-gradient(135deg, rgba(2, 132, 199, 0.9), rgba(37, 99, 235, 0.95));">⚡ Mark Full Day Attendance</button>
+                    <button class="btn btn-success" onclick="openCameraModal('CHECKIN')" style="margin-top:6px; background:linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(5, 150, 105, 0.95));">👤 Instant Check-In via AI Face Scan</button>
+                    <button class="btn btn-primary" onclick="openStudentQRScanner()" style="margin-top:6px; background:linear-gradient(135deg, rgba(14, 165, 233, 0.9), rgba(3, 105, 161, 0.95));">📲 Scan Projector QR Code</button>
                     <button class="btn btn-outline" onclick="exportStudentCSV()" style="margin-top:6px;">📥 Download My Attendance Sheet (Excel)</button>
                     
                     <div style="text-align:center; font-size:10px; color:var(--text-muted); margin: 10px 0 6px 0; font-weight:700;">-- OR MARK SINGLE LECTURE --</div>
@@ -363,7 +365,7 @@
                     </div>
 
                     <div id="subHoliday" class="admin-box" style="display:none;">
-                        <span style="font-size:11px; font-weight:700; color:#fbbf24; display:block; margin-bottom:6px;">🏖️ Declare Official Holiday:</span>
+                        <span style="font-size:11px; font-weight:700; color:#b06000; display:block; margin-bottom:6px;">🏖️ Declare Official Holiday:</span>
                         <input type="date" id="holidayDate" style="padding:8px; margin-bottom:6px;">
                         <input type="text" id="holidayReason" placeholder="Reason (e.g. Diwali/Rainy Day)" style="padding:8px; margin-bottom:6px;">
                         <button class="btn btn-warning" onclick="declareHoliday()" style="margin-top:0; padding:10px;">Mark Date as Holiday</button>
@@ -389,7 +391,7 @@
 
                     <div class="admin-box" style="margin-top:10px;">
                         <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">🏆 Class Attendance Summary:</span>
-                        <div style="display:flex; justify-content:space-between; font-size:11px; background:rgba(0,0,0,0.25); padding:8px; border-radius:10px; border:1px solid var(--glass-border);">
+                        <div style="display:flex; justify-content:space-between; font-size:11px; background:rgba(255,255,255,0.6); padding:8px; border-radius:10px; border:1px solid var(--glass-border);">
                             <span>Class Avg: <b id="classAvgPct">0%</b></span>
                             <span>Total Students: <b id="totalStudentsCount">0</b></span>
                         </div>
@@ -532,12 +534,12 @@
             const badge = document.getElementById('faceStatusBadge');
             if (isFaceEnrolled) {
                 badge.innerText = "✅ Registered";
-                badge.style.background = "rgba(16, 185, 129, 0.25)";
-                badge.style.color = "#6ee7b7";
+                badge.style.background = "rgba(209, 250, 229, 0.9)";
+                badge.style.color = "#047857";
             } else {
                 badge.innerText = "Not Enrolled";
-                badge.style.background = "rgba(56, 189, 248, 0.2)";
-                badge.style.color = "#38bdf8";
+                badge.style.background = "rgba(224, 242, 254, 0.9)";
+                badge.style.color = "#0369a1";
             }
         }
 
@@ -781,7 +783,7 @@
                 const firstDayOfWeek = new Date(year, mIdx, 1).getDay();
 
                 let gridHtml = `
-                    <div style="margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px;">
+                    <div style="margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.4); padding-bottom:8px;">
                         <div style="font-size:11px; font-weight:800; color:var(--primary); margin-bottom:6px;">${monthName} ${year}</div>
                         <div class="calendar-grid">
                             <div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div>
@@ -803,7 +805,7 @@
                     if (isWeekend) {
                         gridHtml += `<div class="cal-date cal-off">${d}</div>`;
                     } else if (isHoliday) {
-                        gridHtml += `<div class="cal-date cal-off" style="background:rgba(245, 158, 11, 0.25); color:#fef08a; font-weight:800; border-color:rgba(245, 158, 11, 0.4);" title="Declared Holiday">${d}</div>`;
+                        gridHtml += `<div class="cal-date cal-off" style="background:rgba(254, 243, 199, 0.9); color:#92400e; font-weight:800; border-color:#fcd34d;" title="Declared Holiday">${d}</div>`;
                     } else if (attendedDates.has(dateStr)) {
                         gridHtml += `<div class="cal-date cal-p">${d}</div>`;
                     } else if (dtObj <= today) {
@@ -872,7 +874,7 @@
                 const dayStr = DAY_NAMES[dateObj.getDay()];
                 return `<tr><td><b>${i.date}</b></td><td><b>${dayStr}</b></td><td><span class="badge badge-present">${i.count} Lectures</span></td><td><span class="badge badge-present">${i.status}</span></td></tr>`;
             }).join('');
-        }
+                                     }
                     async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
