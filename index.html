@@ -43,7 +43,6 @@
             100% { background-position: 0% 50%; }
         }
 
-        /* FLOATING ENTERPRISE GLASS TOAST SYSTEM */
         #toast-container {
             position: fixed;
             top: 20px;
@@ -75,23 +74,9 @@
             pointer-events: auto;
         }
 
-        .toast-card.show {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-        }
-
-        .toast-card.toast-success {
-            background: rgba(209, 250, 229, 0.92);
-            color: #047857;
-            border-color: #a7f3d0;
-        }
-
-        .toast-card.toast-error {
-            background: rgba(254, 226, 226, 0.92);
-            color: #b91c1c;
-            border-color: #fca5a5;
-            animation: shake 0.4s ease-in-out;
-        }
+        .toast-card.show { opacity: 1; transform: translateY(0) scale(1); }
+        .toast-card.toast-success { background: rgba(209, 250, 229, 0.92); color: #047857; border-color: #a7f3d0; }
+        .toast-card.toast-error { background: rgba(254, 226, 226, 0.92); color: #b91c1c; border-color: #fca5a5; animation: shake 0.4s ease-in-out; }
 
         @keyframes shake {
             0%, 100% { transform: translateX(0) scale(1); }
@@ -577,11 +562,11 @@
         let currentDynamicOtp = "9842";
         let activeSubjectSubjectCode = "";
         let toastTimeout = null;
+        let activeCloudFaceDescriptor = null; // Sync vector variable
 
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-        // ADVANCE ADVANCED FLOATING TOAST NOTIFICATION ENGINE
         function showMsg(text, isError = false) {
             const toast = document.getElementById('toast');
             const toastMsg = document.getElementById('toast-msg');
@@ -904,14 +889,45 @@
             }
         }
 
+        // MONGODB CROSS-DEVICE FACE STATUS AUTO-SYNC
+        async function checkUserFaceStatus() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user) return;
+            const badge = document.getElementById('faceStatusBadge');
+
+            // 1. Local Device Check
+            const localMesh = localStorage.getItem(`FACE_MESH_${user.rollNo}`);
+            if (localMesh) {
+                activeCloudFaceDescriptor = JSON.parse(localMesh);
+                if (badge) { badge.innerText = "✅ Registered"; badge.style.background = "rgba(209, 250, 229, 0.9)"; badge.style.color = "#047857"; }
+                return;
+            }
+
+            // 2. MongoDB Cloud Sync Check
+            try {
+                const res = await fetch(`${API_BASE}/api/face/get/${user.rollNo}`);
+                const data = await res.json();
+                if (res.ok && data.enrolled) {
+                    activeCloudFaceDescriptor = data.faceDescriptor;
+                    localStorage.setItem(`FACE_MESH_${user.rollNo}`, JSON.stringify(data.faceDescriptor));
+                    if (badge) { badge.innerText = "✅ Registered"; badge.style.background = "rgba(209, 250, 229, 0.9)"; badge.style.color = "#047857"; }
+                } else {
+                    activeCloudFaceDescriptor = null;
+                    if (badge) { badge.innerText = "Not Enrolled"; badge.style.background = "rgba(224, 242, 254, 0.9)"; badge.style.color = "#0369a1"; }
+                }
+            } catch (err) {
+                if (badge) { badge.innerText = "Not Enrolled"; badge.style.background = "rgba(224, 242, 254, 0.9)"; badge.style.color = "#0369a1"; }
+            }
+        }
+
         async function openCameraModal(mode) {
             const user = JSON.parse(localStorage.getItem('user'));
             currentCamMode = mode;
             
             if (mode === 'CHECKIN') {
-                const isFaceEnrolled = localStorage.getItem(`FACE_MESH_${user.rollNo}`);
-                if (!isFaceEnrolled) {
-                    return showMsg("Pehle Face ID Enroll karo!", true);
+                if (!activeCloudFaceDescriptor) {
+                    await checkUserFaceStatus();
+                    if (!activeCloudFaceDescriptor) return showMsg("Pehle Face ID Enroll karo!", true);
                 }
             }
 
@@ -963,16 +979,26 @@
             const currentDescriptor = Array.from(detection.descriptor);
 
             if (currentCamMode === 'ENROLL') {
+                // SAVE LOCALLY & SYNC GLOBALLY TO MONGODB
                 localStorage.setItem(`FACE_MESH_${user.rollNo}`, JSON.stringify(currentDescriptor));
+                activeCloudFaceDescriptor = currentDescriptor;
+
+                try {
+                    await fetch(`${API_BASE}/api/face/enroll`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ rollNo: user.rollNo, faceDescriptor: currentDescriptor })
+                    });
+                } catch(e) {}
+
                 checkUserFaceStatus();
-                showMsg("Face ID Enrolled Successfully!");
-                statusTxt.innerText = "✅ 68 Landmarks Registered!";
+                showMsg("Face ID Enrolled & Synced Globally!");
+                statusTxt.innerText = "✅ 68 Landmarks Registered & Synced!";
                 setTimeout(closeCameraModal, 1200);
             } else {
-                const savedDescriptorRaw = localStorage.getItem(`FACE_MESH_${user.rollNo}`);
-                if (!savedDescriptorRaw) return showMsg("Face profile missing! Enroll first.", true);
+                if (!activeCloudFaceDescriptor) return showMsg("Face profile missing! Enroll first.", true);
 
-                const savedDescriptor = new Float32Array(JSON.parse(savedDescriptorRaw));
+                const savedDescriptor = new Float32Array(activeCloudFaceDescriptor);
                 const distance = faceapi.euclideanDistance(detection.descriptor, savedDescriptor);
 
                 if (distance < 0.50) {
@@ -986,22 +1012,6 @@
                     statusTxt.innerText = "❌ Face Mismatch! Identity Not Verified.";
                     showMsg("❌ Face Mismatch! Proxy Attempt Detected.", true);
                 }
-            }
-        }
-
-        function checkUserFaceStatus() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (!user) return;
-            const isFaceEnrolled = localStorage.getItem(`FACE_MESH_${user.rollNo}`);
-            const badge = document.getElementById('faceStatusBadge');
-            if (isFaceEnrolled) {
-                badge.innerText = "✅ Registered";
-                badge.style.background = "rgba(209, 250, 229, 0.9)";
-                badge.style.color = "#047857";
-            } else {
-                badge.innerText = "Not Enrolled";
-                badge.style.background = "rgba(224, 242, 254, 0.9)";
-                badge.style.color = "#0369a1";
             }
         }
 
