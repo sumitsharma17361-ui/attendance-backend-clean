@@ -322,7 +322,7 @@
                     <b>🎯 Attendance Advisor:</b> <span id="advisorText">Calculating criteria...</span>
                 </div>
 
-                <!-- QUICK STUDENT PORTALS (EXTERNAL REDIRECTS) -->
+                <!-- QUICK STUDENT PORTALS -->
                 <div class="quick-portals-card">
                     <span style="font-size:10px; font-weight:800; color:var(--primary); text-transform:uppercase;">🚀 Student Quick Portals:</span>
                     <div class="portal-grid">
@@ -743,24 +743,24 @@
             }
         }
 
+        // FIXED NOTICE FETCHING WITH BACKEND CLEAR OVERRIDE & GLOBAL PERSISTENCE
         async function fetchNotices() {
+            if (localStorage.getItem("GLOBAL_NOTICE_CLEARED") === "true") {
+                document.getElementById('noticeBanner').style.display = 'none';
+                return;
+            }
+
+            const activeNotice = localStorage.getItem("ACTIVE_BROADCAST_NOTICE");
+            if (activeNotice && activeNotice.trim() !== "") {
+                document.getElementById('noticeBanner').style.display = 'flex';
+                document.getElementById('noticeText').innerText = `📢 ${activeNotice}`;
+                return;
+            }
+
             try {
-                const isNoticeCleared = localStorage.getItem("ACTIVE_NOTICE_CLEARED");
-                if (isNoticeCleared === "true") {
-                    document.getElementById('noticeBanner').style.display = 'none';
-                    return;
-                }
-
-                const activeNotice = localStorage.getItem("ACTIVE_BROADCAST_NOTICE");
-                if (activeNotice && activeNotice.trim() !== "") {
-                    document.getElementById('noticeBanner').style.display = 'flex';
-                    document.getElementById('noticeText').innerText = `📢 ${activeNotice}`;
-                    return;
-                }
-
                 const res = await fetch(`${API_BASE}/api/notices`);
                 const data = await res.json();
-                if (data.length > 0 && localStorage.getItem("ACTIVE_NOTICE_CLEARED") !== "true") {
+                if (data.length > 0 && localStorage.getItem("GLOBAL_NOTICE_CLEARED") !== "true") {
                     const latestNotice = data[data.length - 1].message;
                     document.getElementById('noticeBanner').style.display = 'flex';
                     document.getElementById('noticeText').innerText = `📢 ${latestNotice}`;
@@ -768,19 +768,7 @@
                     document.getElementById('noticeBanner').style.display = 'none';
                 }
             } catch (err) {
-                const isNoticeCleared = localStorage.getItem("ACTIVE_NOTICE_CLEARED");
-                if (isNoticeCleared === "true") {
-                    document.getElementById('noticeBanner').style.display = 'none';
-                    return;
-                }
-
-                const activeNotice = localStorage.getItem("ACTIVE_BROADCAST_NOTICE");
-                if (activeNotice && activeNotice.trim() !== "") {
-                    document.getElementById('noticeBanner').style.display = 'flex';
-                    document.getElementById('noticeText').innerText = `📢 ${activeNotice}`;
-                } else {
-                    document.getElementById('noticeBanner').style.display = 'none';
-                }
+                document.getElementById('noticeBanner').style.display = 'none';
             }
         }
 
@@ -789,7 +777,7 @@
             const message = document.getElementById('noticeMsg').value.trim();
             if (!message) return showMsg('Notice text required!', true);
 
-            localStorage.removeItem("ACTIVE_NOTICE_CLEARED");
+            localStorage.removeItem("GLOBAL_NOTICE_CLEARED");
             localStorage.setItem("ACTIVE_BROADCAST_NOTICE", message);
             document.getElementById('noticeBanner').style.display = 'flex';
             document.getElementById('noticeText').innerText = `📢 ${message}`;
@@ -805,12 +793,21 @@
             } catch (err) {}
         }
 
-        function clearNotice() {
-            localStorage.setItem("ACTIVE_NOTICE_CLEARED", "true");
+        async function clearNotice() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            localStorage.setItem("GLOBAL_NOTICE_CLEARED", "true");
             localStorage.removeItem("ACTIVE_BROADCAST_NOTICE");
             document.getElementById('noticeBanner').style.display = 'none';
             document.getElementById('noticeText').innerText = '';
             showMsg('Active Notice Cleared!');
+
+            try {
+                await fetch(`${API_BASE}/api/admin/notice`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requesterRollNo: user.rollNo, title: 'Announcement', message: "" })
+                });
+            } catch (err) {}
         }
                     async function loadFaceAIModels() {
             if (isModelsLoaded) return true;
@@ -888,6 +885,7 @@
             const currentDescriptor = Array.from(detection.descriptor);
 
             if (currentCamMode === 'ENROLL') {
+                // PERSISTENT PER-STUDENT FACE ID DATA ENROLLMENT
                 localStorage.setItem(`FACE_MESH_${user.rollNo}`, JSON.stringify(currentDescriptor));
                 checkUserFaceStatus();
                 showMsg("Face ID Enrolled Successfully!");
@@ -1109,7 +1107,7 @@
             });
             const data = await res.json();
             if (res.ok) { showMsg(data.message); } else showMsg(data.error, true);
-        }
+                             }
                     function calculateRealAttendancePercentage(attendedDaysCount) {
             const startDate = new Date(2026, 6, 15);
             const today = new Date();
@@ -1444,7 +1442,12 @@
             downloadFile(csv, fileName);
         }
 
-        function logout() { localStorage.clear(); location.reload(); }
+        // SAFE LOGOUT: CLEARS ACTIVE LOGIN USER SESSION WITHOUT ERASING FACE DESCRIPTORS OR NOTICE OVERRIDES
+        function logout() { 
+            localStorage.removeItem('user'); 
+            location.reload(); 
+        }
+
         if (localStorage.getItem('user')) loadDashboard();
     </script>
 </body>
