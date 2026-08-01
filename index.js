@@ -27,12 +27,13 @@ if (MONGO_URI) {
     .catch(err => console.log('DB ERROR:', err.message));
 }
 
-// SCHEMAS
+// SCHEMAS (WITH CROSS-DEVICE FACE MESH VECTOR ARRAY)
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   rollNo: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  role: { type: String, default: 'student' }
+  role: { type: String, default: 'student' },
+  faceDescriptor: { type: [Number], default: [] } // 68-Point Vector Array
 }, { timestamps: true });
 
 const attendanceSchema = new mongoose.Schema({
@@ -94,6 +95,35 @@ app.post('/api/auth/login', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// GLOBAL MONGODB FACE MESH ENROLL & SYNC APIs
+app.post('/api/face/enroll', async (req, res) => {
+  try {
+    const { rollNo, faceDescriptor } = req.body;
+    if (!rollNo || !faceDescriptor || faceDescriptor.length === 0) {
+      return res.status(400).json({ error: 'Valid Roll No and Face Neural Mesh required!' });
+    }
+    const cleanRoll = rollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const updatedUser = await User.findOneAndUpdate(
+      { rollNo: cleanRoll },
+      { faceDescriptor },
+      { new: true }
+    );
+    if (!updatedUser) return res.status(404).json({ error: 'Student Profile Not Found!' });
+    res.json({ message: 'Face ID Enrolled & Synced Globally to MongoDB!' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/face/get/:rollNo', async (req, res) => {
+  try {
+    const cleanRoll = req.params.rollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const user = await User.findOne({ rollNo: cleanRoll });
+    if (!user || !user.faceDescriptor || user.faceDescriptor.length === 0) {
+      return res.status(404).json({ enrolled: false, message: 'Face ID Not Enrolled' });
+    }
+    res.json({ enrolled: true, faceDescriptor: user.faceDescriptor });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ADMIN RESET STUDENT PASSWORD
 app.post('/api/admin/reset-password', async (req, res) => {
   try {
@@ -142,7 +172,7 @@ app.delete('/api/admin/delete-student', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// BROADCAST NOTICES API (WITH PERMANENT CLEAR SUPPORT)
+// BROADCAST NOTICES API
 app.get('/api/notices', async (req, res) => {
   try {
     const notices = await Notice.find().sort({ date: -1 }).limit(3);
@@ -157,21 +187,20 @@ app.post('/api/admin/notice', async (req, res) => {
       return res.status(403).json({ error: 'Access Denied!' });
     }
 
-    // IF MESSAGE IS BLANK, DELETE ALL EXISTING NOTICES FROM DATABASE
     if (!message || message.trim() === "") {
       await Notice.deleteMany({});
       return res.json({ message: 'All Active Notices Cleared Permanently!' });
     }
 
-    await Notice.deleteMany({}); // Keep only latest broadcast
+    await Notice.deleteMany({});
     await new Notice({ title: title || 'Announcement', message }).save();
     res.status(201).json({ message: 'Broadcast Notice Published!' });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// STRICT GEOFENCE LOCATION DISTANCE CHECK (50 METERS RADIUS LIMIT)
+// STRICT GEOFENCE LOCATION CHECK (50 METERS RADIUS LIMIT)
 function checkLocation(lat, lng) {
-  const COLLEGE_LAT = 28.4509, COLLEGE_LNG = 76.8188, R = 6371000; // Radius in Meters
+  const COLLEGE_LAT = 28.4509, COLLEGE_LNG = 76.8188, R = 6371000;
   
   if (!lat || !lng || lat === 0 || lng === 0) {
     return { isInside: false, distance: "GPS Disconnected" };
@@ -182,7 +211,6 @@ function checkLocation(lat, lng) {
   const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(COLLEGE_LAT * (Math.PI / 180)) * Math.cos(lat * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
   const distance = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 
-  // STRICT 50 METERS CLASSROOM RADIUS LIMIT
   return { isInside: distance <= 50, distance: distance.toFixed(0) };
 }
 
@@ -313,4 +341,4 @@ app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-    
+                                     
