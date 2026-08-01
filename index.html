@@ -219,7 +219,7 @@
 
         #msg { margin-top: 10px; font-size: 12px; text-align: center; padding: 9px; border-radius: 10px; font-weight: 600; display: none; backdrop-filter: blur(10px); }
         .msg-success { background: rgba(209, 250, 229, 0.9); color: #047857; border: 1px solid #a7f3d0; display: block !important; }
-        .msg-error { background: rgba(254, 226, 226, 0.9); color: #b91c1c; border: 1px solid #fca5a5; display: block !important; }
+        .msg-error { background: rgba(224, 226, 226, 0.9); color: #b91c1c; border: 1px solid #fca5a5; display: block !important; }
         .admin-box { background: var(--glass-card); backdrop-filter: blur(12px); padding: 12px; border-radius: 16px; border: 1px solid var(--glass-border); }
         
         .webcam-box { width: 100%; height: 200px; background: #000; border-radius: 12px; overflow: hidden; position: relative; margin-bottom: 8px; display: flex; justify-content: center; align-items: center; border: 1px solid var(--glass-border); }
@@ -269,7 +269,7 @@
                     <button class="btn btn-danger" style="width:auto; padding:6px 12px; margin:0; font-size:11px;" onclick="logout()">Logout</button>
                 </div>
 
-                <!-- STUDENT DYNAMIC STATS CARD (FIXED REDUNDANT 'DAYS' LABEL) -->
+                <!-- STUDENT DYNAMIC STATS CARD -->
                 <div class="stats-grid" id="studentStatsGrid">
                     <div class="stat-card">
                         <div class="value" id="totalDaysCount">0</div>
@@ -278,6 +278,18 @@
                     <div class="stat-card">
                         <div class="value" id="attendancePct">0%</div>
                         <div class="label">Attendance Status</div>
+                    </div>
+                </div>
+
+                <!-- PURE SUPER ADMIN STATS CARD -->
+                <div class="stats-grid" id="adminStatsGrid" style="display:none;">
+                    <div class="stat-card">
+                        <div class="value" id="adminTotalStudents">0</div>
+                        <div class="label">Enrolled Students</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value" id="adminClassAvg">78.5%</div>
+                        <div class="label">Class Attendance Avg</div>
                     </div>
                 </div>
 
@@ -965,7 +977,7 @@
             }
         }
 
-        // DUAL MODE DASHBOARD LOGIC (RESTORES PERSONAL DASHBOARD FOR ROLL 24CSE48 + EXCLUSIVE ADMIN TAB)
+        // FAIL-SAFE LOAD DASHBOARD FOR ROLL 24CSE48
         function loadDashboard() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user) return;
@@ -973,9 +985,9 @@
             document.getElementById('dash-box').style.display = 'block';
             document.getElementById('welcomeMsg').innerText = `Hello, ${user.name}!`;
 
-            const isAdmin = (user.role === 'admin' || user.rollNo.toUpperCase() === '24CSE48');
+            const userRollClean = (user.rollNo || "").toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const isAdmin = (user.role === 'admin' || userRollClean === '24CSE48' || userRollClean.includes('24CSE48'));
 
-            // EVERYONE GETS PERSONAL STUDENT PROFILE BY DEFAULT
             document.getElementById('roleLabel').innerText = "Roll";
             document.getElementById('userRoll').innerText = user.rollNo;
             document.getElementById('studentStatsGrid').style.display = 'grid';
@@ -985,7 +997,6 @@
             document.getElementById('studentTabHeader').style.display = 'block';
 
             if (isAdmin) {
-                // ADMIN TAB HEADER IS ONLY VISIBLE TO SUMIT (24CSE48) AND ADMINS
                 document.getElementById('adminTabHeader').style.display = 'block';
             } else {
                 document.getElementById('adminTabHeader').style.display = 'none';
@@ -1166,7 +1177,6 @@
 
             const uniqueDays = Object.keys(dateGrouped).length;
             
-            // FIXED REDUNDANT 'DAYS' LABEL
             const totalDaysEl = document.getElementById('totalDaysCount');
             if (totalDaysEl) totalDaysEl.innerText = uniqueDays;
             
@@ -1206,7 +1216,6 @@
             }).join('');
         }
 
-        // REAL-TIME AUTO SANITIZED DIRECTORY RENDERING
         async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
@@ -1218,7 +1227,6 @@
             const uniqueStudents = new Set();
 
             data.forEach(r => {
-                // Auto-Sanitize dirty roll numbers for uniform display
                 const cleanRoll = r.rollNo.toUpperCase().replace(/[^A-Z0-9]/g, '');
                 uniqueStudents.add(cleanRoll);
 
