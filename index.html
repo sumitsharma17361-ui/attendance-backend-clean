@@ -163,6 +163,30 @@
         .action-buttons-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
         .action-buttons-grid .btn { margin-top: 0; font-size: 11px; padding: 10px 6px; }
 
+        /* QUICK EXTERNAL PORTALS SECTION */
+        .quick-portals-card {
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 12px;
+            margin: 12px 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.01);
+        }
+        .portal-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 8px; }
+        .portal-btn {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid #bae6fd;
+            border-radius: 10px;
+            padding: 8px 4px;
+            text-align: center;
+            font-size: 10px;
+            font-weight: 700;
+            color: #0369a1;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .portal-btn:hover { background: #e0f2fe; transform: translateY(-2px); }
+
         .calendar-container { 
             background: var(--glass-card); 
             backdrop-filter: blur(12px);
@@ -296,6 +320,16 @@
                 <!-- STUDENT ADVISOR CARD -->
                 <div class="simulator-card" id="simulatorBox">
                     <b>🎯 Attendance Advisor:</b> <span id="advisorText">Calculating criteria...</span>
+                </div>
+
+                <!-- QUICK STUDENT PORTALS (EXTERNAL REDIRECTS) -->
+                <div class="quick-portals-card">
+                    <span style="font-size:10px; font-weight:800; color:var(--primary); text-transform:uppercase;">🚀 Student Quick Portals:</span>
+                    <div class="portal-grid">
+                        <div class="portal-btn" onclick="window.open('https://erp.bmctm.com/fees', '_blank')">💳 Pay Fees</div>
+                        <div class="portal-btn" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login', '_blank')">📑 Admit Card</div>
+                        <div class="portal-btn" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login', '_blank')">📊 Results</div>
+                    </div>
                 </div>
 
                 <!-- AI FACE ID ENROLLMENT & SCANNER MODAL -->
@@ -486,7 +520,6 @@
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-        // STRICT ROLL NUMBER SANITIZER (CONVERTS 24-CSE-14 TO 24CSE14)
         function sanitizeAndValidateRollNo(rawRoll) {
             if (!rawRoll) return { isValid: false, cleanRoll: "" };
             let clean = rawRoll.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -710,7 +743,6 @@
             }
         }
 
-        // FIXED NOTICE FETCHING WITH PERISTENT CLEAR OVERRIDE
         async function fetchNotices() {
             try {
                 const isNoticeCleared = localStorage.getItem("ACTIVE_NOTICE_CLEARED");
@@ -757,7 +789,7 @@
             const message = document.getElementById('noticeMsg').value.trim();
             if (!message) return showMsg('Notice text required!', true);
 
-            localStorage.removeItem("ACTIVE_NOTICE_CLEARED"); // RESET CLEAR STATE
+            localStorage.removeItem("ACTIVE_NOTICE_CLEARED");
             localStorage.setItem("ACTIVE_BROADCAST_NOTICE", message);
             document.getElementById('noticeBanner').style.display = 'flex';
             document.getElementById('noticeText').innerText = `📢 ${message}`;
@@ -774,7 +806,7 @@
         }
 
         function clearNotice() {
-            localStorage.setItem("ACTIVE_NOTICE_CLEARED", "true"); // PERSIST CLEAR STATE
+            localStorage.setItem("ACTIVE_NOTICE_CLEARED", "true");
             localStorage.removeItem("ACTIVE_BROADCAST_NOTICE");
             document.getElementById('noticeBanner').style.display = 'none';
             document.getElementById('noticeText').innerText = '';
@@ -992,7 +1024,6 @@
             }
         }
 
-        // FAIL-SAFE LOAD DASHBOARD FOR ROLL 24CSE48
         function loadDashboard() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user) return;
