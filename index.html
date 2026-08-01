@@ -4,45 +4,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BM Group of Institutions - Enterprise ERP Portal</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
     <style>
         :root { 
-            --primary: #0284c7; 
-            --primary-gradient: linear-gradient(135deg, rgba(2, 132, 199, 0.95), rgba(37, 99, 235, 0.95));
-            --success: #10b981; 
-            --danger: #ef4444; 
-            --warning: #f59e0b; 
-            --glass-bg: rgba(255, 255, 255, 0.65);
-            --glass-card: rgba(255, 255, 255, 0.75);
-            --glass-border: rgba(186, 230, 253, 0.8);
-            --glass-shadow: 0 16px 40px 0 rgba(2, 132, 199, 0.12);
+            --bg-body: #f8fafc;
+            --primary: #2563eb; 
+            --primary-hover: #1d4ed8;
+            --success: #16a34a; 
+            --danger: #dc2626; 
+            --warning: #d97706; 
+            --card-bg: #ffffff;
+            --card-border: #e2e8f0;
+            --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
             --text-main: #0f172a; 
-            --text-muted: #475569; 
+            --text-muted: #64748b; 
         }
 
-        * { box-sizing: border-box; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
+        * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 0; }
         
         body { 
-            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #e0e7ff 100%);
-            background-size: 200% 200%;
-            animation: gradientBG 12s ease infinite;
+            background: var(--bg-body);
             color: var(--text-main); 
             min-height: 100vh; 
             display: flex; 
             justify-content: center; 
             align-items: center; 
-            padding: 15px; 
+            padding: 16px; 
             position: relative;
         }
 
-        @keyframes gradientBG {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
+        /* FLOATING TOAST SYSTEM */
         #toast-container {
             position: fixed;
             top: 20px;
@@ -50,221 +44,255 @@
             transform: translateX(-50%);
             z-index: 9999;
             width: 90%;
-            max-width: 440px;
+            max-width: 420px;
             pointer-events: none;
         }
 
         .toast-card {
-            padding: 14px 18px;
-            border-radius: 16px;
-            font-size: 12px;
-            font-weight: 700;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
             text-align: center;
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--card-border);
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
             opacity: 0;
-            transform: translateY(-20px) scale(0.95);
-            transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform: translateY(-16px) scale(0.96);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
             pointer-events: auto;
         }
 
-        .toast-card.show { opacity: 1; transform: translateY(0) scale(1); }
-        .toast-card.toast-success { background: rgba(209, 250, 229, 0.92); color: #047857; border-color: #a7f3d0; }
-        .toast-card.toast-error { background: rgba(254, 226, 226, 0.92); color: #b91c1c; border-color: #fca5a5; animation: shake 0.4s ease-in-out; }
+        .toast-card.show {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        .toast-card.toast-success { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
+        .toast-card.toast-error { background: #fef2f2; color: #991b1b; border-color: #fecaca; animation: shake 0.35s ease-in-out; }
 
         @keyframes shake {
-            0%, 100% { transform: translateX(0) scale(1); }
-            20%, 60% { transform: translateX(-6px) scale(1); }
-            40%, 80% { transform: translateX(6px) scale(1); }
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-4px); }
+            40%, 80% { transform: translateX(4px); }
         }
 
         .app-container { 
             width: 100%; 
-            max-width: 520px; 
-            background: var(--glass-bg); 
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-radius: 24px; 
-            box-shadow: var(--glass-shadow); 
-            border: 1px solid var(--glass-border); 
+            max-width: 480px; 
+            background: var(--card-bg); 
+            border-radius: 20px; 
+            box-shadow: var(--shadow-md); 
+            border: 1px solid var(--card-border); 
             overflow: hidden; 
+            animation: fadeIn 0.3s ease-out;
         }
-        
-        .app-header { 
-            background: rgba(255, 255, 255, 0.55); 
-            backdrop-filter: blur(10px);
-            color: var(--text-main); 
-            padding: 20px; 
-            text-align: center;
-            border-bottom: 1px solid var(--glass-border);
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        .app-header h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.4px; color: #0369a1; }
-        .app-header p { font-size: 11px; opacity: 0.85; margin-top: 2px; font-weight: 600; color: #0284c7; }
+                .app-header { 
+            background: #ffffff; 
+            padding: 18px 20px; 
+            border-bottom: 1px solid var(--card-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .app-header-title h1 { font-size: 16px; font-weight: 800; color: #0f172a; letter-spacing: -0.3px; }
+        .app-header-title p { font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 1px; }
+
+        .header-avatar-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .avatar-circle {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #eff6ff;
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #dbeafe;
+        }
 
         .notice-banner { 
-            background: rgba(254, 243, 199, 0.9); 
-            backdrop-filter: blur(8px);
-            border-bottom: 1px solid rgba(252, 211, 77, 0.8); 
+            background: #fffbeb; 
+            border-bottom: 1px solid #fef3c7; 
             color: #92400e; 
             font-size: 11px; 
-            padding: 8px 12px; 
+            padding: 8px 14px; 
             font-weight: 600; 
             display: flex; 
             align-items: center; 
             gap: 8px; 
         }
         .notice-marquee { overflow: hidden; white-space: nowrap; width: 100%; }
-        .notice-marquee p { display: inline-block; animation: marquee 15s linear infinite; }
+        .notice-marquee p { display: inline-block; animation: marquee 16s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
 
         .app-body { padding: 18px; }
 
         input, select { 
             width: 100%; 
-            padding: 12px 14px; 
+            padding: 10px 14px; 
             margin-bottom: 10px; 
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            border: 1.5px solid #bae6fd; 
-            border-radius: 12px; 
+            background: #f8fafc;
+            border: 1px solid var(--card-border); 
+            border-radius: 10px; 
             font-size: 12px; 
             font-weight: 600;
             color: var(--text-main);
             outline: none; 
-            transition: all 0.25s ease; 
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            transition: all 0.2s ease-in-out; 
         }
-        select option { background: #ffffff; color: #0f172a; font-weight: 600; }
-        input::placeholder { color: #64748b; font-weight: 500; }
+        select option { background: #ffffff; color: #0f172a; }
+        input::placeholder { color: #94a3b8; font-weight: 500; }
         input:focus, select:focus { 
             background: #ffffff;
             border-color: var(--primary); 
-            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2); 
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); 
         }
 
         .password-wrapper { position: relative; width: 100%; }
-        .password-wrapper input { padding-right: 42px; }
-        .eye-icon { position: absolute; right: 14px; top: 38%; transform: translateY(-50%); cursor: pointer; opacity: 0.6; }
+        .password-wrapper input { padding-right: 40px; }
+        .eye-icon { position: absolute; right: 12px; top: 38%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); }
 
         .btn { 
             width: 100%; 
-            padding: 11px; 
-            border: 1px solid rgba(255,255,255,0.8); 
-            border-radius: 12px; 
+            padding: 10px 14px; 
+            border-radius: 10px; 
             font-weight: 700; 
             font-size: 12px; 
             cursor: pointer; 
             margin-top: 4px; 
-            transition: all 0.25s ease; 
-            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);
-            backdrop-filter: blur(10px);
+            transition: all 0.2s ease-in-out; 
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
         }
         .btn:active { transform: scale(0.98); }
-        .btn-primary { background: linear-gradient(135deg, rgba(2, 132, 199, 0.95), rgba(37, 99, 235, 0.95)); color: white; }
-        .btn-success { background: linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(5, 150, 105, 0.95)); color: white; }
-        .btn-warning { background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(217, 119, 6, 0.95)); color: white; }
-        .btn-accent { background: linear-gradient(135deg, rgba(14, 165, 233, 0.95), rgba(3, 105, 161, 0.95)); color: white; }
-        .btn-purple { background: linear-gradient(135deg, rgba(147, 51, 234, 0.95), rgba(126, 34, 206, 0.95)); color: white; }
-        .btn-outline { background: rgba(255, 255, 255, 0.75); border: 1px solid var(--glass-border); color: var(--text-main); }
-        .btn-danger { background: rgba(254, 242, 242, 0.95); color: var(--danger); border-color: rgba(254, 202, 202, 0.9); }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-warning { background: var(--warning); color: white; }
+        .btn-accent { background: #0284c7; color: white; }
+        .btn-purple { background: #7c3aed; color: white; }
+        .btn-outline { background: #ffffff; border: 1px solid var(--card-border); color: var(--text-main); }
+        .btn-outline:hover { background: #f8fafc; }
+        .btn-danger { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
 
-        .defaulter-badge { display: inline-block; background: rgba(254, 226, 226, 0.95); color: #b91c1c; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 8px; border: 1px solid #fca5a5; margin-left: 6px; }
-
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
-        .stat-card { 
-            background: var(--glass-card); 
-            backdrop-filter: blur(12px);
-            padding: 12px; 
-            border-radius: 16px; 
-            text-align: center; 
-            border: 1px solid var(--glass-border); 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+        .defaulter-badge { 
+            display: inline-block; 
+            background: #fef2f2; 
+            color: #991b1b; 
+            font-size: 10px; 
+            font-weight: 700; 
+            padding: 2px 8px; 
+            border-radius: 6px; 
+            border: 1px solid #fecaca; 
+            margin-left: 6px; 
         }
-        .stat-card .value { font-size: 20px; font-weight: 800; color: var(--primary); }
+                .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+        .stat-card { 
+            background: #f8fafc; 
+            padding: 12px; 
+            border-radius: 12px; 
+            text-align: center; 
+            border: 1px solid var(--card-border); 
+        }
+        .stat-card .value { font-size: 20px; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; }
         .stat-card .label { font-size: 10px; color: var(--text-muted); font-weight: 700; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
 
         .simulator-card { 
-            background: rgba(224, 242, 254, 0.85); 
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(186, 230, 253, 0.9); 
-            border-radius: 14px; 
-            padding: 12px; 
+            background: #f0f9ff; 
+            border: 1px solid #bae6fd; 
+            border-radius: 12px; 
+            padding: 10px 12px; 
             margin-bottom: 12px; 
             font-size: 11px; 
             color: #0369a1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
-        .simulator-card b { color: #0284c7; }
 
         .action-buttons-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-        .action-buttons-grid .btn { margin-top: 0; font-size: 11px; padding: 10px 6px; }
+        .action-buttons-grid .btn { margin-top: 0; font-size: 11px; padding: 9px; }
 
         .quick-portals-card {
-            background: rgba(255, 255, 255, 0.7);
-            border: 1px solid var(--glass-border);
-            border-radius: 16px;
+            background: #ffffff;
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
             padding: 12px;
             margin: 12px 0;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.01);
         }
         .portal-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 8px; }
         .portal-btn {
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid #bae6fd;
-            border-radius: 10px;
+            background: #f8fafc;
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
             padding: 8px 4px;
             text-align: center;
             font-size: 10px;
             font-weight: 700;
-            color: #0369a1;
+            color: var(--text-main);
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.2s ease-in-out;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
         }
-        .portal-btn:hover { background: #e0f2fe; transform: translateY(-2px); }
+        .portal-btn:hover { background: #f1f5f9; border-color: #cbd5e1; }
 
         .calendar-container { 
-            background: var(--glass-card); 
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--glass-border); 
-            border-radius: 16px; 
+            background: #ffffff; 
+            border: 1px solid var(--card-border); 
+            border-radius: 14px; 
             padding: 12px; 
             margin: 12px 0; 
         }
-        .calendar-header { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 800; margin-bottom: 10px; color: var(--text-main); }
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 800; margin-bottom: 10px; color: var(--text-main); }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; font-size: 10px; }
         .cal-day-head { font-weight: 700; color: var(--text-muted); padding-bottom: 4px; }
-        .cal-date { padding: 6px 2px; border-radius: 8px; font-weight: 600; background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(255, 255, 255, 0.8); }
-        .cal-p { background: rgba(209, 250, 229, 0.9); color: #047857; font-weight: 800; border-color: #a7f3d0; }
-        .cal-a { background: rgba(254, 226, 226, 0.9); color: #b91c1c; font-weight: 800; border-color: #fca5a5; }
-        .cal-off { background: rgba(241, 245, 249, 0.7); color: #94a3b8; }
+        .cal-date { padding: 6px 2px; border-radius: 6px; font-weight: 600; background: #f8fafc; border: 1px solid #f1f5f9; }
+        .cal-p { background: #dcfce7; color: #15803d; font-weight: 800; border-color: #bbf7d0; }
+        .cal-a { background: #fee2e2; color: #b91c1c; font-weight: 800; border-color: #fecaca; }
+        .cal-off { background: #f1f5f9; color: #94a3b8; }
 
-        .tab-bar { display: flex; background: rgba(224, 242, 254, 0.6); border-radius: 12px; padding: 3px; border: 1px solid rgba(186, 230, 253, 0.8); margin-bottom: 12px; }
-        .tab-item { flex: 1; padding: 8px; text-align: center; font-size: 11px; font-weight: 700; cursor: pointer; color: var(--text-muted); border-radius: 10px; transition: all 0.25s; }
-        .tab-item.active { background: linear-gradient(135deg, #0284c7, #2563eb); color: #ffffff; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25); }
+        .tab-bar { display: flex; background: #f1f5f9; border-radius: 10px; padding: 3px; margin-bottom: 12px; }
+        .tab-item { flex: 1; padding: 7px; text-align: center; font-size: 11px; font-weight: 700; cursor: pointer; color: var(--text-muted); border-radius: 8px; transition: all 0.2s ease-in-out; }
+        .tab-item.active { background: #ffffff; color: var(--primary); box-shadow: var(--shadow-sm); }
 
-        .admin-nav { display: flex; gap: 3px; background: rgba(224, 242, 254, 0.6); padding: 3px; border-radius: 12px; border: 1px solid rgba(186, 230, 253, 0.8); margin-bottom: 12px; }
-        .admin-nav-item { flex: 1; text-align: center; padding: 7px 2px; font-size: 10px; font-weight: 700; cursor: pointer; border-radius: 8px; color: var(--text-muted); transition: all 0.2s; white-space: nowrap; }
-        .admin-nav-item.active { background: linear-gradient(135deg, #0284c7, #2563eb); color: #ffffff; box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25); }
+        .admin-nav { display: flex; gap: 3px; background: #f1f5f9; padding: 3px; border-radius: 10px; margin-bottom: 12px; overflow-x: auto; }
+        .admin-nav-item { flex: 1; text-align: center; padding: 6px 4px; font-size: 10px; font-weight: 700; cursor: pointer; border-radius: 6px; color: var(--text-muted); transition: all 0.2s; white-space: nowrap; }
+        .admin-nav-item.active { background: #ffffff; color: var(--primary); box-shadow: var(--shadow-sm); }
 
         .tool-sub-card { 
-            background: rgba(255, 255, 255, 0.8); 
-            border: 1px solid var(--glass-border); 
-            border-radius: 14px; 
+            background: #f8fafc; 
+            border: 1px solid var(--card-border); 
+            border-radius: 12px; 
             padding: 12px; 
             margin-bottom: 10px; 
         }
         .tool-title { font-size: 11px; font-weight: 800; margin-bottom: 8px; display: block; }
 
         .period-card {
-            background: linear-gradient(135deg, rgba(224, 242, 254, 0.95), rgba(219, 234, 254, 0.95));
-            border: 1px solid rgba(186, 230, 253, 0.95);
-            border-radius: 14px;
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 12px;
             padding: 12px;
             margin: 10px 0;
             display: flex;
@@ -272,41 +300,47 @@
             align-items: center;
         }
 
-        .table-container { max-height: 240px; overflow-y: auto; border: 1px solid var(--glass-border); border-radius: 12px; margin-top: 8px; background: rgba(255, 255, 255, 0.6); }
+        .table-container { max-height: 220px; overflow-y: auto; border: 1px solid var(--card-border); border-radius: 10px; margin-top: 8px; background: #ffffff; }
         table { width: 100%; border-collapse: collapse; font-size: 11px; }
-        th { background: rgba(255, 255, 255, 0.95); color: var(--text-muted); padding: 9px 8px; text-align: left; border-bottom: 1px solid var(--glass-border); position: sticky; top: 0; backdrop-filter: blur(8px); }
-        td { padding: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.5); }
+        th { background: #f8fafc; color: var(--text-muted); padding: 8px; text-align: left; border-bottom: 1px solid var(--card-border); position: sticky; top: 0; font-weight: 700; }
+        td { padding: 8px; border-bottom: 1px solid #f1f5f9; }
         
-        .badge { padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 700; }
-        .badge-present { background: rgba(209, 250, 229, 0.9); color: #047857; }
-        .action-btn { padding: 4px 8px; font-size: 10px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; }
-        .btn-del { background: rgba(254, 242, 242, 0.95); color: #ef4444; border: 1px solid #fca5a5; }
+        .badge { padding: 3px 6px; border-radius: 6px; font-size: 10px; font-weight: 700; }
+        .badge-present { background: #dcfce7; color: #15803d; }
+        .action-btn { padding: 4px 8px; font-size: 10px; border-radius: 6px; border: none; cursor: pointer; font-weight: 700; }
+        .btn-del { background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; }
 
-        .admin-box { background: var(--glass-card); backdrop-filter: blur(12px); padding: 12px; border-radius: 16px; border: 1px solid var(--glass-border); }
+        .admin-box { background: #ffffff; padding: 12px; border-radius: 14px; border: 1px solid var(--card-border); }
         
-        .webcam-box { width: 100%; height: 200px; background: #000; border-radius: 12px; overflow: hidden; position: relative; margin-bottom: 8px; display: flex; justify-content: center; align-items: center; border: 1px solid var(--glass-border); }
+        .webcam-box { width: 100%; height: 190px; background: #0f172a; border-radius: 10px; overflow: hidden; position: relative; margin-bottom: 8px; display: flex; justify-content: center; align-items: center; border: 1px solid var(--card-border); }
         video { width: 100%; height: 100%; object-fit: cover; }
-        .scan-overlay { position: absolute; border: 2px dashed #0284c7; border-radius: 50%; width: 120px; height: 150px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.4); }
+        .scan-overlay { position: absolute; border: 2px dashed #38bdf8; border-radius: 50%; width: 110px; height: 140px; }
+        
+        .svg-icon { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: inline-block; vertical-align: middle; }
     </style>
 </head>
 <body>
-
-    <!-- FLOATING GLASS TOAST CONTAINER -->
+        <!-- FLOATING GLASS TOAST CONTAINER -->
     <div id="toast-container">
         <div id="toast" class="toast-card">
-            <span id="toast-icon">✨</span>
+            <svg id="toast-icon" class="svg-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
             <span id="toast-msg">System Active</span>
         </div>
     </div>
 
     <div class="app-container">
         <div class="app-header">
-            <h1>🎓 BM Group of Institutions</h1>
-            <p>B.Tech CSE - 5th Semester (Room 203)</p>
+            <div class="app-header-title">
+                <h1>BM Group of Institutions</h1>
+                <p>B.Tech CSE - 5th Semester (Room 203)</p>
+            </div>
+            <div class="header-avatar-badge" id="headerAvatarBox" style="display:none;">
+                <div class="avatar-circle" id="userAvatarText">SS</div>
+            </div>
         </div>
 
         <div class="notice-banner" id="noticeBanner" style="display:none;">
-            <span>📢</span>
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             <div class="notice-marquee">
                 <p id="noticeText">Loading announcements...</p>
             </div>
@@ -321,12 +355,15 @@
                 <input type="text" id="rollNo" placeholder="Roll Number (e.g. 24CSE48)">
                 <div class="password-wrapper">
                     <input type="password" id="password" placeholder="Password">
-                    <span class="eye-icon" id="toggleEye" onclick="togglePassword()">👁️</span>
+                    <span class="eye-icon" id="toggleEye" onclick="togglePassword()">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </span>
                 </div>
                 <button class="btn btn-primary" id="authBtn" onclick="handleAuth()">Sign In</button>
                 <span style="color:var(--primary); cursor:pointer; font-size:12px; display:block; text-align:center; margin-top:12px; font-weight:600;" id="toggleLink" onclick="toggleMode()">New Student? Register Account</span>
             </div>
-                        <!-- DASHBOARD -->
+
+            <!-- DASHBOARD -->
             <div id="dash-box" style="display: none;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                     <div>
@@ -336,7 +373,7 @@
                         </h3>
                         <p style="font-size: 11px; color: var(--text-muted); font-weight:600;"><span id="roleLabel">Roll</span>: <span id="userRoll" style="font-weight:700;"></span></p>
                     </div>
-                    <button class="btn btn-danger" style="width:auto; padding:6px 12px; margin:0; font-size:11px;" onclick="logout()">Logout</button>
+                    <button class="btn btn-danger" style="width:auto; padding:5px 10px; margin:0; font-size:11px;" onclick="logout()">Logout</button>
                 </div>
 
                 <!-- STUDENT DYNAMIC STATS CARD -->
@@ -365,27 +402,40 @@
 
                 <!-- STUDENT ADVISOR CARD -->
                 <div class="simulator-card" id="simulatorBox">
-                    <b>🎯 Attendance Advisor:</b> <span id="advisorText">Calculating criteria...</span>
+                    <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                    <div><b>Attendance Advisor:</b> <span id="advisorText">Calculating criteria...</span></div>
                 </div>
 
                 <!-- QUICK STUDENT PORTALS -->
                 <div class="quick-portals-card">
-                    <span style="font-size:10px; font-weight:800; color:var(--primary); text-transform:uppercase;">🚀 Student Quick Portals:</span>
+                    <span style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Quick Portals</span>
                     <div class="portal-grid">
-                        <div class="portal-btn" onclick="window.open('https://erp.bmctm.com/fees', '_blank')">💳 Pay Fees</div>
-                        <div class="portal-btn" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login', '_blank')">📑 Admit Card</div>
-                        <div class="portal-btn" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login', '_blank')">📊 Results</div>
+                        <div class="portal-btn" onclick="window.open('https://erp.bmctm.com/fees', '_blank')">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                            <span>Pay Fees</span>
+                        </div>
+                        <div class="portal-btn" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login', '_blank')">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            <span>Admit Card</span>
+                        </div>
+                        <div class="portal-btn" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login', '_blank')">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+                            <span>Results</span>
+                        </div>
                     </div>
                 </div>
 
                 <!-- AI FACE ID ENROLLMENT & SCANNER MODAL -->
-                <div class="admin-box" id="faceEnrollBox" style="margin-bottom:12px; background:rgba(224, 242, 254, 0.7); border-color:rgba(186, 230, 253, 0.8);">
+                <div class="admin-box" id="faceEnrollBox" style="margin-bottom:12px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
-                            <span style="font-size:11px; font-weight:800; color:#0369a1;">👤 AI Face ID Status:</span>
-                            <span id="faceStatusBadge" class="badge" style="background:rgba(224, 242, 254, 0.9); color:#0369a1; margin-left:4px;">Not Enrolled</span>
+                            <span style="font-size:11px; font-weight:800; color:var(--text-main);">AI Face ID Status:</span>
+                            <span id="faceStatusBadge" class="badge" style="background:#f1f5f9; color:var(--text-muted); margin-left:4px;">Not Enrolled</span>
                         </div>
-                        <button class="action-btn" style="background:#0284c7; color:white;" onclick="openCameraModal('ENROLL')">📸 Enroll Face</button>
+                        <button class="action-btn" style="background:var(--primary); color:white;" onclick="openCameraModal('ENROLL')">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                            Enroll Face
+                        </button>
                     </div>
 
                     <div id="cameraModal" style="display:none; margin-top:10px; text-align:center;">
@@ -393,50 +443,64 @@
                             <video id="webcamVideo" autoplay playsinline muted></video>
                             <div class="scan-overlay"></div>
                         </div>
-                        <p id="cameraScanStatus" style="font-size:11px; font-weight:700; color:var(--primary); margin-bottom:6px;">Loading Face-AI Engine Neural Models...</p>
-                        <button class="btn btn-primary" id="camActionBtn" onclick="executeCameraAction()" style="padding:8px; font-size:11px;">✨ Scan 68-Point Mesh</button>
+                        <p id="cameraScanStatus" style="font-size:11px; font-weight:700; color:var(--primary); margin-bottom:6px;">Loading Face-AI Neural Engine...</p>
+                        <button class="btn btn-primary" id="camActionBtn" onclick="executeCameraAction()" style="padding:8px; font-size:11px;">Scan 68-Point Mesh</button>
                         <button class="btn btn-outline" onclick="closeCameraModal()" style="padding:6px; font-size:10px; margin-top:4px;">Cancel</button>
                     </div>
                 </div>
-
-                <div class="tab-bar">
-                    <div class="tab-item active" id="studentTabHeader" onclick="switchTab('markTab')">📍 Attendance</div>
-                    <div class="tab-item" id="adminTabHeader" style="display:none;" onclick="switchTab('adminTab')">👑 Admin Control</div>
+                                <div class="tab-bar">
+                    <div class="tab-item active" id="studentTabHeader" onclick="switchTab('markTab')">Attendance</div>
+                    <div class="tab-item" id="adminTabHeader" style="display:none;" onclick="switchTab('adminTab')">Admin Control</div>
                 </div>
 
                 <!-- TAB 1: MARK ATTENDANCE -->
                 <div id="markTab">
-                    <button class="btn btn-accent" onclick="openFullDayOtpPrompt()" style="background:linear-gradient(135deg, rgba(2, 132, 199, 0.95), rgba(37, 99, 235, 0.95)); padding:12px;">⚡ Mark Full Day Attendance (via OTP)</button>
+                    <button class="btn btn-primary" onclick="openFullDayOtpPrompt()" style="padding:11px;">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                        Mark Full Day Attendance (via OTP)
+                    </button>
                     
                     <div class="action-buttons-grid">
-                        <button class="btn btn-success" onclick="openCameraModal('CHECKIN')">👤 Face Scan</button>
-                        <button class="btn btn-purple" onclick="triggerBiometricFingerprint()">🖐️ Biometric</button>
-                        <button class="btn btn-primary" onclick="openStudentQRScanner()">📲 Scan QR</button>
-                        <button class="btn btn-outline" onclick="exportStudentCSV()">📥 Excel Sheet</button>
+                        <button class="btn btn-outline" onclick="openCameraModal('CHECKIN')">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            Face Scan
+                        </button>
+                        <button class="btn btn-outline" onclick="triggerBiometricFingerprint()">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 12v3"/><path d="M12 2a10 10 0 0 0-10 10c0 4.42 2.87 8.17 6.84 9.5"/><path d="M12 6a6 6 0 0 0-6 6c0 2.22 1.21 4.15 3 5.19"/></svg>
+                            Biometric
+                        </button>
+                        <button class="btn btn-outline" onclick="openStudentQRScanner()">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/></svg>
+                            Scan QR
+                        </button>
+                        <button class="btn btn-outline" onclick="exportStudentCSV()">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                            Excel Sheet
+                        </button>
                     </div>
                     
-                    <div style="text-align:center; font-size:10px; color:var(--text-muted); margin: 12px 0 4px 0; font-weight:700;">-- LIVE TIMETABLE PERIOD TRACKER --</div>
+                    <div style="text-align:center; font-size:10px; color:var(--text-muted); margin: 12px 0 4px 0; font-weight:700; uppercase; letter-spacing:0.5px;">Live Timetable Period Tracker</div>
                     <div class="period-card" id="periodCardBox">
                         <div>
-                            <span style="font-size:10px; font-weight:700; color:#0369a1; text-transform:uppercase;" id="periodTimeSlotLabel">CURRENT PERIOD STATUS:</span>
+                            <span style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase;" id="periodTimeSlotLabel">CURRENT PERIOD STATUS:</span>
                             <h4 id="activePeriodName" style="font-size:12px; font-weight:800; color:#0f172a; margin-top:2px;">Checking Live Timetable...</h4>
                         </div>
-                        <button class="action-btn" id="markPeriodBtn" style="background:#10b981; color:white; padding:6px 10px;" onclick="markActivePeriodAttendance()">Mark Lecture</button>
+                        <button class="action-btn" id="markPeriodBtn" style="background:var(--success); color:white; padding:6px 12px;" onclick="markActivePeriodAttendance()">Mark Lecture</button>
                     </div>
 
                     <div class="calendar-container">
                         <div class="calendar-header">
-                            <span>📅 Attendance Calendar</span>
+                            <span>Attendance Calendar</span>
                             <select id="calendarViewMode" onchange="toggleCalendarView()" style="width:auto; padding:4px 8px; font-size:11px; margin:0;">
                                 <option value="CURRENT_MONTH">Current Month</option>
-                                <option value="FULL_SEMESTER">🌟 Full Semester (Jul-Dec 2026)</option>
+                                <option value="FULL_SEMESTER">Full Semester (Jul-Dec 2026)</option>
                             </select>
                         </div>
                         <div id="calendarDisplayWrapper"></div>
                     </div>
 
                     <div style="margin-top:10px;">
-                        <h4 style="font-size:11px; color:var(--text-muted);">My Attendance Logs (Date-Wise):</h4>
+                        <h4 style="font-size:11px; color:var(--text-muted); font-weight:700;">My Attendance Logs (Date-Wise):</h4>
                         <div class="table-container">
                             <table id="myHistoryTable">
                                 <thead><tr><th>Date</th><th>Day</th><th>Lectures Attended</th><th>Status</th></tr></thead>
@@ -445,21 +509,22 @@
                         </div>
                     </div>
                 </div>
-                                <!-- ADMIN CONTROL TAB -->
+
+                <!-- ADMIN CONTROL TAB -->
                 <div id="adminTab" style="display:none;">
                     <div class="admin-nav">
-                        <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">📊 Excel</div>
-                        <div class="admin-nav-item" onclick="switchAdminSubTab('subAttendance')">⚡ Entry</div>
-                        <div class="admin-nav-item" onclick="switchAdminSubTab('subHoliday')">🏖️ Holiday</div>
-                        <div class="admin-nav-item" onclick="switchAdminSubTab('subQR')">📲 QR</div>
-                        <div class="admin-nav-item" onclick="switchAdminSubTab('subTools')">🛠️ Tools</div>
-                        <div class="admin-nav-item" onclick="switchAdminSubTab('subDirectory')">📁 Directory</div>
+                        <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">Excel</div>
+                        <div class="admin-nav-item" onclick="switchAdminSubTab('subAttendance')">Entry</div>
+                        <div class="admin-nav-item" onclick="switchAdminSubTab('subHoliday')">Holiday</div>
+                        <div class="admin-nav-item" onclick="switchAdminSubTab('subQR')">QR</div>
+                        <div class="admin-nav-item" onclick="switchAdminSubTab('subTools')">Tools</div>
+                        <div class="admin-nav-item" onclick="switchAdminSubTab('subDirectory')">Directory</div>
                     </div>
 
                     <div id="subReports" class="admin-box">
-                        <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">📥 Export Excel Reports:</span>
+                        <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Export Excel Reports:</span>
                         <select id="exportSelection" style="padding:10px; margin-bottom:8px;">
-                            <option value="ALL_SEMESTER">🌟 Full Semester (Jul-Dec 2026)</option>
+                            <option value="ALL_SEMESTER">Full Semester (Jul-Dec 2026)</option>
                             <option value="6">July 2026</option>
                             <option value="7">August 2026</option>
                             <option value="8">September 2026</option>
@@ -467,80 +532,80 @@
                             <option value="10">November 2026</option>
                             <option value="11">December 2026</option>
                         </select>
-                        <button class="btn btn-success" onclick="exportExcelGrid()" style="margin-top:0; padding:10px;">📥 Download Excel Report</button>
+                        <button class="btn btn-success" onclick="exportExcelGrid()" style="margin-top:0; padding:10px;">Download Excel Report</button>
                     </div>
 
                     <div id="subAttendance" class="admin-box" style="display:none;">
-                        <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">⚡ Manual Backdate Attendance:</span>
+                        <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Manual Backdate Attendance:</span>
                         <input type="text" id="manualRoll" placeholder="Student Roll No (e.g. 24CSE14)">
-                        <input type="date" id="manualDate" style="background:#ffffff; border:1.5px solid #bae6fd;">
+                        <input type="date" id="manualDate">
                         <select id="manualStatus">
                             <option value="Present">Present</option>
                             <option value="Duty Leave">Duty Leave (DL)</option>
                         </select>
-                        <button class="btn btn-primary" onclick="markManualAttendance()" style="margin-top:0; padding:10px;">✅ Mark Attendance</button>
+                        <button class="btn btn-primary" onclick="markManualAttendance()" style="margin-top:0; padding:10px;">Mark Attendance</button>
                     </div>
 
                     <div id="subHoliday" class="admin-box" style="display:none;">
-                        <span style="font-size:11px; font-weight:700; color:#b06000; display:block; margin-bottom:6px;">🏖️ Declare Official Holiday:</span>
-                        <input type="date" id="holidayDate" style="background:#ffffff; border:1.5px solid #bae6fd; color:#0f172a;">
+                        <span style="font-size:11px; font-weight:700; color:var(--warning); display:block; margin-bottom:6px;">Declare Official Holiday:</span>
+                        <input type="date" id="holidayDate">
                         <input type="text" id="holidayReason" placeholder="Reason (e.g. Diwali/Rainy Day)">
                         <button class="btn btn-warning" onclick="declareHoliday()" style="margin-top:0; padding:10px;">Mark Date as Holiday</button>
                     </div>
 
                     <div id="subQR" class="admin-box" style="display:none; text-align:center;">
-                        <span style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px;">📲 Dynamic Rotating QR & Live Class OTP:</span>
-                        <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">Project this screen in class. Students enter Live OTP to mark full day attendance.</p>
-                        <div style="background:#e0f2fe; padding:10px; border-radius:12px; margin-bottom:8px; border:1px solid #bae6fd;">
-                            <span style="font-size:10px; font-weight:700; color:#0369a1;">CLASS DYNAMIC OTP:</span>
-                            <h2 id="liveClassOtp" style="font-size:24px; font-weight:900; color:#0284c7; letter-spacing:4px;">9842</h2>
+                        <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Dynamic Rotating QR & Live Class OTP:</span>
+                        <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">Project this screen in class. Students enter Live OTP to mark attendance.</p>
+                        <div style="background:#f8fafc; padding:10px; border-radius:10px; margin-bottom:8px; border:1px solid var(--card-border);">
+                            <span style="font-size:10px; font-weight:700; color:var(--text-muted);">CLASS DYNAMIC OTP:</span>
+                            <h2 id="liveClassOtp" style="font-size:24px; font-weight:900; color:var(--primary); letter-spacing:4px;">9842</h2>
                         </div>
                         <div id="qrcode" style="display:flex; justify-content:center; margin:10px 0;"></div>
-                        <button class="btn btn-outline" onclick="generateDynamicQR()" style="padding:8px; font-size:11px;">🔄 Refresh OTP & QR Code Now</button>
+                        <button class="btn btn-outline" onclick="generateDynamicQR()" style="padding:8px; font-size:11px;">Refresh OTP & QR Code Now</button>
                     </div>
 
                     <div id="subTools" style="display:none;">
                         <div class="tool-sub-card">
-                            <span class="tool-title" style="color:#0284c7;">➕ Register New Student Manually:</span>
+                            <span class="tool-title" style="color:var(--primary);">Register New Student Manually:</span>
                             <input type="text" id="adminRegName" placeholder="Full Student Name">
                             <input type="text" id="adminRegRoll" placeholder="Roll Number (e.g. 24CSE14)">
                             <input type="text" id="adminRegPass" placeholder="Password (Default: 123456)">
-                            <button class="btn btn-accent" onclick="adminRegisterStudent()" style="margin-top:0;">Register Student</button>
+                            <button class="btn btn-primary" onclick="adminRegisterStudent()" style="margin-top:0;">Register Student</button>
                         </div>
 
                         <div class="tool-sub-card">
-                            <span class="tool-title" style="color:var(--primary);">📢 Broadcast Announcement Notice:</span>
+                            <span class="tool-title" style="color:var(--text-main);">Broadcast Announcement Notice:</span>
                             <input type="text" id="noticeMsg" placeholder="Notice text (e.g. Mid-Sem Exams from Monday)">
                             <button class="btn btn-primary" onclick="postNotice()" style="margin-top:0; margin-bottom:6px;">Publish Notice</button>
-                            <button class="btn btn-danger" onclick="clearNotice()" style="margin-top:0;">🗑️ Clear Active Notice</button>
+                            <button class="btn btn-danger" onclick="clearNotice()" style="margin-top:0;">Clear Active Notice</button>
                         </div>
 
                         <div class="tool-sub-card">
-                            <span class="tool-title" style="color:#0284c7;">✏️ Fix / Update Student Roll Number Format:</span>
+                            <span class="tool-title" style="color:var(--primary);">Fix / Update Student Roll Number Format:</span>
                             <input type="text" id="oldRollFormat" placeholder="Old Roll No (e.g. 24-CSE-14)">
                             <input type="text" id="newRollFormat" placeholder="New Clean Roll No (e.g. 24CSE14)">
-                            <button class="btn btn-primary" onclick="updateRollNumberFormat()" style="margin-top:0; background:#0284c7;">Update Roll Number</button>
+                            <button class="btn btn-primary" onclick="updateRollNumberFormat()" style="margin-top:0;">Update Roll Number</button>
                         </div>
 
                         <div class="tool-sub-card">
-                            <span class="tool-title" style="color:#d97706;">🔑 Reset Student Password:</span>
+                            <span class="tool-title" style="color:var(--warning);">Reset Student Password:</span>
                             <input type="text" id="resetRoll" placeholder="Student Roll No (e.g. 24CSE14)">
                             <input type="text" id="resetPass" placeholder="New Password (Default: 123456)">
                             <button class="btn btn-warning" onclick="resetStudentPassword()" style="margin-top:0;">Reset Password</button>
                         </div>
 
-                        <div class="tool-sub-card" style="border-color:rgba(239, 68, 68, 0.4); background:rgba(254, 242, 242, 0.6);">
-                            <span class="tool-title" style="color:#b91c1c;">🗑️ Permanently Delete Student Account:</span>
+                        <div class="tool-sub-card" style="border-color:#fecaca; background:#fef2f2;">
+                            <span class="tool-title" style="color:#b91c1c;">Permanently Delete Student Account:</span>
                             <input type="text" id="deleteStudentRoll" placeholder="Roll No to Delete (e.g. 24-CSE-14)">
                             <button class="btn btn-danger" onclick="deleteEntireStudentAccount()" style="margin-top:0;">Delete Account Permanently</button>
                         </div>
                     </div>
 
-                    <!-- DEDICATED DIRECTORY TAB -->
+                    <!-- DIRECTORY TAB -->
                     <div id="subDirectory" style="display:none;">
-                        <button class="btn btn-outline" onclick="fetchAllAttendance()" style="margin-bottom:8px;">🔄 Refresh Records Directory</button>
+                        <button class="btn btn-outline" onclick="fetchAllAttendance()" style="margin-bottom:8px;">Refresh Records Directory</button>
                         
-                        <h4 style="font-size:11px; color:var(--text-muted); margin-top:6px;">Class Records Directory (Standardized Formats):</h4>
+                        <h4 style="font-size:11px; color:var(--text-muted); margin-top:6px; font-weight:700;">Class Records Directory:</h4>
                         <div class="table-container">
                             <table id="allHistoryTable">
                                 <thead><tr><th>Roll</th><th>Name</th><th>Date</th><th>Attended</th><th>Actions</th></tr></thead>
@@ -562,7 +627,7 @@
         let currentDynamicOtp = "9842";
         let activeSubjectSubjectCode = "";
         let toastTimeout = null;
-        let activeCloudFaceDescriptor = null; // Sync vector variable
+        let activeCloudFaceDescriptor = null;
 
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -575,7 +640,12 @@
             if (!toast || !toastMsg) return;
 
             toastMsg.innerText = text;
-            toastIcon.innerText = isError ? "⚠️" : "✅";
+            toastIcon.setAttribute("viewBox", "0 0 24 24");
+            if (isError) {
+                toastIcon.innerHTML = `<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>`;
+            } else {
+                toastIcon.innerHTML = `<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>`;
+            }
             toast.className = `toast-card ${isError ? 'toast-error' : 'toast-success'} show`;
 
             if (toastTimeout) clearTimeout(toastTimeout);
@@ -597,7 +667,7 @@
                 { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
                 { start: "10:50", end: "11:35", subject: "DAA - Design & Analysis of Algorithm", period: "P3" },
                 { start: "11:35", end: "12:20", subject: "FLA - Formal Language & Automata", period: "P4" },
-                { start: "12:20", end: "13:05", subject: "🍱 LUNCH BREAK", period: "LUNCH" },
+                { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
                 { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
                 { start: "13:50", end: "14:35", subject: "CN - Computer Network", period: "P7" },
                 { start: "14:35", end: "15:20", subject: "WT - Web Technology", period: "P8" }
@@ -607,26 +677,26 @@
                 { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
                 { start: "10:50", end: "11:35", subject: "Internet Lab (Ms. Geeta)", period: "P3" },
                 { start: "11:35", end: "12:20", subject: "FLA - Formal Language & Automata", period: "P4" },
-                { start: "12:20", end: "13:05", subject: "🍱 LUNCH BREAK", period: "LUNCH" },
+                { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
                 { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
                 { start: "13:50", end: "14:35", subject: "BDA - Big Data Analytics", period: "P7" },
-                { start: "14:35", end: "15:20", subject: "SPORTS / Library", period: "P8" }
+                { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
             ],
             3: [
                 { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
                 { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
                 { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
-                { start: "11:35", end: "12:20", subject: "SPORTS / Activity", period: "P4" },
-                { start: "12:20", end: "13:05", subject: "🍱 LUNCH BREAK", period: "LUNCH" },
+                { start: "11:35", end: "12:20", subject: "Sports / Activity", period: "P4" },
+                { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
                 { start: "13:05", end: "13:50", subject: "WT - Web Technology", period: "P6" },
                 { start: "13:50", end: "15:20", subject: "CN LAB - Computer Network Lab", period: "P7-P8" }
             ],
             4: [
                 { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
                 { start: "10:05", end: "10:50", subject: "CN - Computer Network", period: "P2" },
-                { start: "10:50", end: "11:35", subject: "SPORTS / Activity", period: "P3" },
+                { start: "10:50", end: "11:35", subject: "Sports / Activity", period: "P3" },
                 { start: "11:35", end: "12:20", subject: "DAA - Design & Analysis of Algorithm", period: "P4" },
-                { start: "12:20", end: "13:05", subject: "🍱 LUNCH BREAK", period: "LUNCH" },
+                { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
                 { start: "13:05", end: "14:35", subject: "DAA LAB - Algorithm Lab", period: "P6-P7" },
                 { start: "14:35", end: "15:20", subject: "HRM - Human Resource Mgmt", period: "P8" }
             ],
@@ -635,9 +705,9 @@
                 { start: "10:05", end: "10:50", subject: "CN - Computer Network", period: "P2" },
                 { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
                 { start: "11:35", end: "12:20", subject: "BDA - Big Data Analytics", period: "P4" },
-                { start: "12:20", end: "13:05", subject: "🍱 LUNCH BREAK", period: "LUNCH" },
+                { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
                 { start: "13:05", end: "14:35", subject: "WT LAB - Web Technology Lab", period: "P6-P7" },
-                { start: "14:35", end: "15:20", subject: "SPORTS / Library", period: "P8" }
+                { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
             ]
         };
 
@@ -650,7 +720,7 @@
 
             if (dayOfWeek === 0 || dayOfWeek === 6) {
                 if(labelEl) labelEl.innerText = "WEEKEND STATUS:";
-                if(nameEl) nameEl.innerText = "☕ College Closed (Weekend)";
+                if(nameEl) nameEl.innerText = "College Closed (Weekend)";
                 if(btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
                 activeSubjectSubjectCode = "";
                 return;
@@ -675,7 +745,7 @@
             if (foundSlot) {
                 if (foundSlot.period === "LUNCH") {
                     if(labelEl) labelEl.innerText = "LUNCH BREAK (12:20 - 01:05 PM):";
-                    if(nameEl) nameEl.innerText = "🍱 Lunch Time / Rest Hour";
+                    if(nameEl) nameEl.innerText = "Lunch Time / Rest Hour";
                     if(btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
                     activeSubjectSubjectCode = "";
                 } else {
@@ -686,26 +756,26 @@
                 }
             } else {
                 if(labelEl) labelEl.innerText = "CURRENT COLLEGE STATUS:";
-                if(nameEl) nameEl.innerText = "☕ College Off Hours / No Active Class";
+                if(nameEl) nameEl.innerText = "College Off Hours / No Active Class";
                 if(btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
                 activeSubjectSubjectCode = "";
             }
         }
 
         function markActivePeriodAttendance() {
-            if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("LUNCH")) {
+            if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
                 return showMsg("Abhi koi active class nahi chal rahi!", true);
             }
             markSingleAttendance(activeSubjectSubjectCode);
         }
 
         function openFullDayOtpPrompt() {
-            const enteredOtp = prompt(`🔑 Enter 4-Digit Class OTP displayed by Teacher on Projector:`);
+            const enteredOtp = prompt(`Enter 4-Digit Class OTP displayed by Teacher on Projector:`);
             if (!enteredOtp) return;
             if (enteredOtp.trim() === currentDynamicOtp) {
                 markFullDayAttendance();
             } else {
-                showMsg("❌ Invalid Class OTP! Attendance Denied.", true);
+                showMsg("Invalid Class OTP! Attendance Denied.", true);
             }
         }
 
@@ -715,7 +785,7 @@
             }
 
             try {
-                showMsg("🖐️ Place finger on phone sensor...");
+                showMsg("Place finger on phone sensor...");
                 const publicKeyCredentialCreationOptions = {
                     challenge: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]),
                     rp: { name: "BM Group ERP Portal" },
@@ -728,13 +798,13 @@
                 const credential = await navigator.credentials.create({ publicKey: publicKeyCredentialCreationOptions });
 
                 if (credential) {
-                    showMsg("✅ Biometric Identity Verified!");
+                    showMsg("Biometric Identity Verified!");
                     setTimeout(markFullDayAttendance, 800);
                 } else {
-                    showMsg("❌ Biometric Verification Failed!", true);
+                    showMsg("Biometric Verification Failed!", true);
                 }
             } catch (err) {
-                showMsg("❌ Biometric Scanning Cancelled or Mismatch!", true);
+                showMsg("Biometric Scanning Cancelled or Mismatch!", true);
             }
         }
 
@@ -816,7 +886,7 @@
             const activeNotice = localStorage.getItem("ACTIVE_BROADCAST_NOTICE");
             if (activeNotice && activeNotice.trim() !== "") {
                 document.getElementById('noticeBanner').style.display = 'flex';
-                document.getElementById('noticeText').innerText = `📢 ${activeNotice}`;
+                document.getElementById('noticeText').innerText = `${activeNotice}`;
                 return;
             }
 
@@ -826,7 +896,7 @@
                 if (data.length > 0 && localStorage.getItem("GLOBAL_NOTICE_CLEARED") !== "true") {
                     const latestNotice = data[data.length - 1].message;
                     document.getElementById('noticeBanner').style.display = 'flex';
-                    document.getElementById('noticeText').innerText = `📢 ${latestNotice}`;
+                    document.getElementById('noticeText').innerText = `${latestNotice}`;
                 } else {
                     document.getElementById('noticeBanner').style.display = 'none';
                 }
@@ -843,7 +913,7 @@
             localStorage.removeItem("GLOBAL_NOTICE_CLEARED");
             localStorage.setItem("ACTIVE_BROADCAST_NOTICE", message);
             document.getElementById('noticeBanner').style.display = 'flex';
-            document.getElementById('noticeText').innerText = `📢 ${message}`;
+            document.getElementById('noticeText').innerText = `${message}`;
             showMsg('Notice Updated & Published!');
             document.getElementById('noticeMsg').value = '';
 
@@ -889,34 +959,31 @@
             }
         }
 
-        // MONGODB CROSS-DEVICE FACE STATUS AUTO-SYNC
         async function checkUserFaceStatus() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user) return;
             const badge = document.getElementById('faceStatusBadge');
 
-            // 1. Local Device Check
             const localMesh = localStorage.getItem(`FACE_MESH_${user.rollNo}`);
             if (localMesh) {
                 activeCloudFaceDescriptor = JSON.parse(localMesh);
-                if (badge) { badge.innerText = "✅ Registered"; badge.style.background = "rgba(209, 250, 229, 0.9)"; badge.style.color = "#047857"; }
+                if (badge) { badge.innerText = "Registered"; badge.style.background = "#dcfce7"; badge.style.color = "#15803d"; }
                 return;
             }
 
-            // 2. MongoDB Cloud Sync Check
             try {
                 const res = await fetch(`${API_BASE}/api/face/get/${user.rollNo}`);
                 const data = await res.json();
                 if (res.ok && data.enrolled) {
                     activeCloudFaceDescriptor = data.faceDescriptor;
                     localStorage.setItem(`FACE_MESH_${user.rollNo}`, JSON.stringify(data.faceDescriptor));
-                    if (badge) { badge.innerText = "✅ Registered"; badge.style.background = "rgba(209, 250, 229, 0.9)"; badge.style.color = "#047857"; }
+                    if (badge) { badge.innerText = "Registered"; badge.style.background = "#dcfce7"; badge.style.color = "#15803d"; }
                 } else {
                     activeCloudFaceDescriptor = null;
-                    if (badge) { badge.innerText = "Not Enrolled"; badge.style.background = "rgba(224, 242, 254, 0.9)"; badge.style.color = "#0369a1"; }
+                    if (badge) { badge.innerText = "Not Enrolled"; badge.style.background = "#f1f5f9"; badge.style.color = "var(--text-muted)"; }
                 }
             } catch (err) {
-                if (badge) { badge.innerText = "Not Enrolled"; badge.style.background = "rgba(224, 242, 254, 0.9)"; badge.style.color = "#0369a1"; }
+                if (badge) { badge.innerText = "Not Enrolled"; badge.style.background = "#f1f5f9"; badge.style.color = "var(--text-muted)"; }
             }
         }
 
@@ -936,7 +1003,7 @@
             const actionBtn = document.getElementById('camActionBtn');
 
             modal.style.display = 'block';
-            actionBtn.innerText = (mode === 'ENROLL') ? "✨ Scan & Save 68-Point Face ID" : "🔍 Verify Face & Mark Attendance";
+            actionBtn.innerText = (mode === 'ENROLL') ? "Scan & Save 68-Point Face ID" : "Verify Face & Mark Attendance";
 
             navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
                 .then(async stream => {
@@ -967,19 +1034,18 @@
 
             if (!videoStream || !isModelsLoaded) return showMsg("Camera/Models not ready!", true);
 
-            statusTxt.innerText = "⚡ Detecting 68 Facial Landmark Mesh Points...";
+            statusTxt.innerText = "Detecting 68 Facial Landmark Mesh Points...";
 
             const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
 
             if (!detection) {
-                statusTxt.innerText = "❌ No Face Detected! Please look straight at camera.";
+                statusTxt.innerText = "No Face Detected! Look straight at camera.";
                 return showMsg("No Face Detected! Look straight at camera.", true);
             }
 
             const currentDescriptor = Array.from(detection.descriptor);
 
             if (currentCamMode === 'ENROLL') {
-                // SAVE LOCALLY & SYNC GLOBALLY TO MONGODB
                 localStorage.setItem(`FACE_MESH_${user.rollNo}`, JSON.stringify(currentDescriptor));
                 activeCloudFaceDescriptor = currentDescriptor;
 
@@ -993,7 +1059,7 @@
 
                 checkUserFaceStatus();
                 showMsg("Face ID Enrolled & Synced Globally!");
-                statusTxt.innerText = "✅ 68 Landmarks Registered & Synced!";
+                statusTxt.innerText = "68 Landmarks Registered & Synced!";
                 setTimeout(closeCameraModal, 1200);
             } else {
                 if (!activeCloudFaceDescriptor) return showMsg("Face profile missing! Enroll first.", true);
@@ -1002,23 +1068,22 @@
                 const distance = faceapi.euclideanDistance(detection.descriptor, savedDescriptor);
 
                 if (distance < 0.50) {
-                    statusTxt.innerText = "✅ Identity Verified: " + user.name + ` (Match Score: ${((1-distance)*100).toFixed(0)}%)`;
+                    statusTxt.innerText = "Identity Verified: " + user.name + ` (Match Score: ${((1-distance)*100).toFixed(0)}%)`;
                     showMsg("Identity Verified: " + user.name);
                     setTimeout(() => {
                         closeCameraModal();
                         markFullDayAttendance();
                     }, 1200);
                 } else {
-                    statusTxt.innerText = "❌ Face Mismatch! Identity Not Verified.";
-                    showMsg("❌ Face Mismatch! Proxy Attempt Detected.", true);
+                    statusTxt.innerText = "Face Mismatch! Identity Not Verified.";
+                    showMsg("Face Mismatch! Proxy Attempt Detected.", true);
                 }
             }
         }
 
         function togglePassword() {
-            const p = document.getElementById('password'), e = document.getElementById('toggleEye');
+            const p = document.getElementById('password');
             p.type = p.type === 'password' ? 'text' : 'password';
-            e.innerText = p.type === 'password' ? '👁️' : '🙈';
         }
 
         function toggleMode() {
@@ -1031,7 +1096,7 @@
         function switchTab(tabId) {
             document.getElementById('markTab').style.display = tabId === 'markTab' ? 'block' : 'none';
             document.getElementById('adminTab').style.display = tabId === 'adminTab' ? 'block' : 'none';
-            const tabs = document.querySelectorAll('.tab-item');
+            const tabs = document.querySelectorAll('.tab-bar .tab-item');
             tabs[0].classList.toggle('active', tabId === 'markTab');
             if(tabs[1]) tabs[1].classList.toggle('active', tabId === 'adminTab');
             if(tabId === 'adminTab') fetchAllAttendance();
@@ -1063,7 +1128,7 @@
             if (otpEl) otpEl.innerText = currentDynamicOtp;
 
             const token = `BMERP_TOKEN_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-            new QRCode(qrBox, { text: token, width: 140, height: 140 });
+            new QRCode(qrBox, { text: token, width: 130, height: 130 });
         }
 
         async function resetStudentPassword() {
@@ -1108,7 +1173,11 @@
             if (!user) return;
             document.getElementById('auth-box').style.display = 'none';
             document.getElementById('dash-box').style.display = 'block';
+            document.getElementById('headerAvatarBox').style.display = 'flex';
             document.getElementById('welcomeMsg').innerText = `Hello, ${user.name}!`;
+
+            const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 'ST';
+            document.getElementById('userAvatarText').innerText = initials;
 
             const userRollClean = (user.rollNo || "").toUpperCase().replace(/[^A-Z0-9]/g, '');
             const isAdmin = (user.role === 'admin' || userRollClean === '24CSE48' || userRollClean.includes('24CSE48'));
@@ -1117,7 +1186,7 @@
             document.getElementById('userRoll').innerText = user.rollNo;
             document.getElementById('studentStatsGrid').style.display = 'grid';
             document.getElementById('adminStatsGrid').style.display = 'none';
-            document.getElementById('simulatorBox').style.display = 'block';
+            document.getElementById('simulatorBox').style.display = 'flex';
             document.getElementById('faceEnrollBox').style.display = 'block';
             document.getElementById('studentTabHeader').style.display = 'block';
 
@@ -1188,8 +1257,9 @@
             });
             const data = await res.json();
             if (res.ok) { showMsg(data.message); } else showMsg(data.error, true);
-            }
-                    function calculateRealAttendancePercentage(attendedDaysCount) {
+        }
+
+        function calculateRealAttendancePercentage(attendedDaysCount) {
             const startDate = new Date(2026, 6, 15);
             const today = new Date();
             const holidayDatesList = globalHolidays.map(h => h.date);
@@ -1245,7 +1315,7 @@
                 const firstDayOfWeek = new Date(year, mIdx, 1).getDay();
 
                 let gridHtml = `
-                    <div style="margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.4); padding-bottom:8px;">
+                    <div style="margin-bottom:12px; border-bottom:1px solid var(--card-border); padding-bottom:8px;">
                         <div style="font-size:11px; font-weight:800; color:var(--primary); margin-bottom:6px;">${monthName} ${year}</div>
                         <div class="calendar-grid">
                             <div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div>
@@ -1267,7 +1337,7 @@
                     if (isWeekend) {
                         gridHtml += `<div class="cal-date cal-off">${d}</div>`;
                     } else if (isHoliday) {
-                        gridHtml += `<div class="cal-date cal-off" style="background:rgba(254, 243, 199, 0.9); color:#92400e; font-weight:800; border-color:#fcd34d;" title="Declared Holiday">${d}</div>`;
+                        gridHtml += `<div class="cal-date cal-off" style="background:#fef3c7; color:#92400e; font-weight:800; border-color:#fde68a;" title="Declared Holiday">${d}</div>`;
                     } else if (attendedDates.has(dateStr)) {
                         gridHtml += `<div class="cal-date cal-p">${d}</div>`;
                     } else if (dtObj <= today) {
@@ -1319,10 +1389,10 @@
             if (advisorBox) {
                 if (calc.pct >= 75) {
                     const skippableDays = Math.floor((uniqueDays - 0.75 * calc.totalWorkingDays) / 0.75);
-                    advisorBox.innerHTML = ` Safe Zone (<b>${calc.pct}%</b>). You can skip <b>${Math.max(0, skippableDays)}</b> upcoming classes safely.`;
+                    advisorBox.innerHTML = `Safe Zone (<b>${calc.pct}%</b>). You can skip <b>${Math.max(0, skippableDays)}</b> upcoming classes safely.`;
                 } else {
                     const neededDays = Math.ceil((0.75 * calc.totalWorkingDays - uniqueDays) / 0.25);
-                    advisorBox.innerHTML = ` ⚠️ <b>Low Attendance (${calc.pct}%)</b>. Attend next <b>${Math.max(0, neededDays)}</b> consecutive classes to reach 75%.`;
+                    advisorBox.innerHTML = `Low Attendance (<b>${calc.pct}%</b>). Attend next <b>${Math.max(0, neededDays)}</b> consecutive classes to reach 75%.`;
                 }
             }
 
