@@ -19,6 +19,7 @@
             --card-border: #e2e8f0;
             --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
             --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+            --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
             --text-main: #0f172a; 
             --text-muted: #64748b; 
         }
@@ -62,7 +63,7 @@
             gap: 10px;
             opacity: 0;
             transform: translateY(-16px) scale(0.96);
-            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             pointer-events: auto;
         }
 
@@ -88,12 +89,22 @@
             box-shadow: var(--shadow-md); 
             border: 1px solid var(--card-border); 
             overflow: hidden; 
-            animation: fadeIn 0.3s ease-out;
+            animation: cardScaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        @keyframes fadeIn {
+        @keyframes cardScaleUp {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* TAB & SCREEN TRANSITION ANIMATION */
+        @keyframes fadeInSlide {
             from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+
+        .tab-content-active {
+            animation: fadeInSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
                 .app-header { 
             background: #ffffff; 
@@ -123,7 +134,9 @@
             align-items: center;
             justify-content: center;
             border: 1px solid #dbeafe;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
+        .avatar-circle:hover { transform: scale(1.05); }
 
         .notice-banner { 
             background: #fffbeb; 
@@ -153,7 +166,7 @@
             font-weight: 600;
             color: var(--text-main);
             outline: none; 
-            transition: all 0.2s ease-in-out; 
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
         }
         select option { background: #ffffff; color: #0f172a; }
         input::placeholder { color: #94a3b8; font-weight: 500; }
@@ -165,8 +178,10 @@
 
         .password-wrapper { position: relative; width: 100%; }
         .password-wrapper input { padding-right: 40px; }
-        .eye-icon { position: absolute; right: 12px; top: 38%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); }
+        .eye-icon { position: absolute; right: 12px; top: 38%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); transition: color 0.2s; }
+        .eye-icon:hover { color: var(--primary); }
 
+        /* BUTTON & TILE MICRO-INTERACTIONS */
         .btn { 
             width: 100%; 
             padding: 10px 14px; 
@@ -175,14 +190,22 @@
             font-size: 12px; 
             cursor: pointer; 
             margin-top: 4px; 
-            transition: all 0.2s ease-in-out; 
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
             border: none;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
+            box-shadow: var(--shadow-sm);
         }
-        .btn:active { transform: scale(0.98); }
+        .btn:hover { 
+            transform: translateY(-2px); 
+            box-shadow: var(--shadow-hover);
+        }
+        .btn:active { 
+            transform: scale(0.97) translateY(0); 
+        }
+
         .btn-primary { background: var(--primary); color: white; }
         .btn-primary:hover { background: var(--primary-hover); }
         .btn-success { background: var(--success); color: white; }
@@ -190,9 +213,17 @@
         .btn-accent { background: #0284c7; color: white; }
         .btn-purple { background: #7c3aed; color: white; }
         .btn-outline { background: #ffffff; border: 1px solid var(--card-border); color: var(--text-main); }
-        .btn-outline:hover { background: #f8fafc; }
+        .btn-outline:hover { background: #f8fafc; border-color: #cbd5e1; }
         .btn-danger { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
 
+        /* BADGES & PULSE ANIMATIONS */
+        .badge { 
+            padding: 3px 8px; 
+            border-radius: 6px; 
+            font-size: 10px; 
+            font-weight: 700; 
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
         .defaulter-badge { 
             display: inline-block; 
             background: #fef2f2; 
@@ -203,6 +234,12 @@
             border-radius: 6px; 
             border: 1px solid #fecaca; 
             margin-left: 6px; 
+            animation: pulseFade 2s infinite ease-in-out;
+        }
+
+        @keyframes pulseFade {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.65; }
         }
                 .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
         .stat-card { 
@@ -211,7 +248,9 @@
             border-radius: 12px; 
             text-align: center; 
             border: 1px solid var(--card-border); 
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
+        .stat-card:hover { transform: translateY(-2px); border-color: #cbd5e1; box-shadow: var(--shadow-sm); }
         .stat-card .value { font-size: 20px; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; }
         .stat-card .label { font-size: 10px; color: var(--text-muted); font-weight: 700; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
 
@@ -231,6 +270,7 @@
         .action-buttons-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
         .action-buttons-grid .btn { margin-top: 0; font-size: 11px; padding: 9px; }
 
+        /* QUICK PORTAL CARDS WITH ACCENT BORDER HOVER */
         .quick-portals-card {
             background: #ffffff;
             border: 1px solid var(--card-border);
@@ -249,14 +289,22 @@
             font-weight: 700;
             color: var(--text-main);
             cursor: pointer;
-            transition: all 0.2s ease-in-out;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 4px;
         }
-        .portal-btn:hover { background: #f1f5f9; border-color: #cbd5e1; }
+        .portal-btn:hover { 
+            background: #ffffff; 
+            border-color: var(--primary); 
+            transform: translateY(-2px); 
+            box-shadow: var(--shadow-sm); 
+            color: var(--primary);
+        }
+        .portal-btn:active { transform: scale(0.97); }
 
+        /* CALENDAR DROPDOWN SPACING FIX */
         .calendar-container { 
             background: #ffffff; 
             border: 1px solid var(--card-border); 
@@ -265,19 +313,22 @@
             margin: 12px 0; 
         }
         .calendar-header { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 800; margin-bottom: 10px; color: var(--text-main); }
+        .calendar-header select { margin-top: 8px; } /* Added margin-top: 8px fix */
+        
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; font-size: 10px; }
         .cal-day-head { font-weight: 700; color: var(--text-muted); padding-bottom: 4px; }
-        .cal-date { padding: 6px 2px; border-radius: 6px; font-weight: 600; background: #f8fafc; border: 1px solid #f1f5f9; }
+        .cal-date { padding: 6px 2px; border-radius: 6px; font-weight: 600; background: #f8fafc; border: 1px solid #f1f5f9; transition: all 0.15s ease; }
+        .cal-date:hover { transform: scale(1.08); z-index: 1; }
         .cal-p { background: #dcfce7; color: #15803d; font-weight: 800; border-color: #bbf7d0; }
         .cal-a { background: #fee2e2; color: #b91c1c; font-weight: 800; border-color: #fecaca; }
         .cal-off { background: #f1f5f9; color: #94a3b8; }
 
         .tab-bar { display: flex; background: #f1f5f9; border-radius: 10px; padding: 3px; margin-bottom: 12px; }
-        .tab-item { flex: 1; padding: 7px; text-align: center; font-size: 11px; font-weight: 700; cursor: pointer; color: var(--text-muted); border-radius: 8px; transition: all 0.2s ease-in-out; }
+        .tab-item { flex: 1; padding: 7px; text-align: center; font-size: 11px; font-weight: 700; cursor: pointer; color: var(--text-muted); border-radius: 8px; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
         .tab-item.active { background: #ffffff; color: var(--primary); box-shadow: var(--shadow-sm); }
 
         .admin-nav { display: flex; gap: 3px; background: #f1f5f9; padding: 3px; border-radius: 10px; margin-bottom: 12px; overflow-x: auto; }
-        .admin-nav-item { flex: 1; text-align: center; padding: 6px 4px; font-size: 10px; font-weight: 700; cursor: pointer; border-radius: 6px; color: var(--text-muted); transition: all 0.2s; white-space: nowrap; }
+        .admin-nav-item { flex: 1; text-align: center; padding: 6px 4px; font-size: 10px; font-weight: 700; cursor: pointer; border-radius: 6px; color: var(--text-muted); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); white-space: nowrap; }
         .admin-nav-item.active { background: #ffffff; color: var(--primary); box-shadow: var(--shadow-sm); }
 
         .tool-sub-card { 
@@ -305,18 +356,22 @@
         th { background: #f8fafc; color: var(--text-muted); padding: 8px; text-align: left; border-bottom: 1px solid var(--card-border); position: sticky; top: 0; font-weight: 700; }
         td { padding: 8px; border-bottom: 1px solid #f1f5f9; }
         
-        .badge { padding: 3px 6px; border-radius: 6px; font-size: 10px; font-weight: 700; }
-        .badge-present { background: #dcfce7; color: #15803d; }
-        .action-btn { padding: 4px 8px; font-size: 10px; border-radius: 6px; border: none; cursor: pointer; font-weight: 700; }
-        .btn-del { background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; }
-
-        .admin-box { background: #ffffff; padding: 12px; border-radius: 14px; border: 1px solid var(--card-border); }
+        .admin-box { background: #ffffff; padding: 12px; border-radius: 14px; border: 1px solid var(--card-border); animation: cardScaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
         
         .webcam-box { width: 100%; height: 190px; background: #0f172a; border-radius: 10px; overflow: hidden; position: relative; margin-bottom: 8px; display: flex; justify-content: center; align-items: center; border: 1px solid var(--card-border); }
         video { width: 100%; height: 100%; object-fit: cover; }
         .scan-overlay { position: absolute; border: 2px dashed #38bdf8; border-radius: 50%; width: 110px; height: 140px; }
         
-        .svg-icon { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: inline-block; vertical-align: middle; }
+        .svg-icon { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: inline-block; vertical-align: middle; transition: transform 0.3s ease; }
+
+        /* ROTATION ANIMATION FOR REFRESH ICON */
+        .spin-rotate {
+            animation: spin 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -348,7 +403,7 @@
 
         <div class="app-body">
             <!-- AUTH -->
-            <div id="auth-box">
+            <div id="auth-box" class="tab-content-active">
                 <div id="register-fields" style="display: none;">
                     <input type="text" id="regName" placeholder="Full Student Name">
                 </div>
@@ -454,7 +509,7 @@
                 </div>
 
                 <!-- TAB 1: MARK ATTENDANCE -->
-                <div id="markTab">
+                <div id="markTab" class="tab-content-active">
                     <button class="btn btn-primary" onclick="openFullDayOtpPrompt()" style="padding:11px;">
                         <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                         Mark Full Day Attendance (via OTP)
@@ -479,7 +534,7 @@
                         </button>
                     </div>
                     
-                    <div style="text-align:center; font-size:10px; color:var(--text-muted); margin: 12px 0 4px 0; font-weight:700; uppercase; letter-spacing:0.5px;">Live Timetable Period Tracker</div>
+                    <div style="text-align:center; font-size:10px; color:var(--text-muted); margin: 12px 0 4px 0; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Live Timetable Period Tracker</div>
                     <div class="period-card" id="periodCardBox">
                         <div>
                             <span style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase;" id="periodTimeSlotLabel">CURRENT PERIOD STATUS:</span>
@@ -521,7 +576,7 @@
                         <div class="admin-nav-item" onclick="switchAdminSubTab('subDirectory')">Directory</div>
                     </div>
 
-                    <div id="subReports" class="admin-box">
+                    <div id="subReports" class="admin-box tab-content-active">
                         <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Export Excel Reports:</span>
                         <select id="exportSelection" style="padding:10px; margin-bottom:8px;">
                             <option value="ALL_SEMESTER">Full Semester (Jul-Dec 2026)</option>
@@ -561,7 +616,10 @@
                             <h2 id="liveClassOtp" style="font-size:24px; font-weight:900; color:var(--primary); letter-spacing:4px;">9842</h2>
                         </div>
                         <div id="qrcode" style="display:flex; justify-content:center; margin:10px 0;"></div>
-                        <button class="btn btn-outline" onclick="generateDynamicQR()" style="padding:8px; font-size:11px;">Refresh OTP & QR Code Now</button>
+                        <button class="btn btn-outline" id="refreshQrBtn" onclick="generateDynamicQR()" style="padding:8px; font-size:11px;">
+                            <svg id="refreshIcon" class="svg-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+                            Refresh OTP & QR Code Now
+                        </button>
                     </div>
 
                     <div id="subTools" style="display:none;">
@@ -942,6 +1000,66 @@
                 });
             } catch (err) {}
         }
+
+        // DUAL-ROLE SEGMENT VIEW SWITCHER (NO PAGE RELOADS)
+        function switchTab(tabId) {
+            const markTab = document.getElementById('markTab');
+            const adminTab = document.getElementById('adminTab');
+
+            markTab.style.display = tabId === 'markTab' ? 'block' : 'none';
+            adminTab.style.display = tabId === 'adminTab' ? 'block' : 'none';
+
+            markTab.classList.remove('tab-content-active');
+            adminTab.classList.remove('tab-content-active');
+
+            if (tabId === 'markTab') markTab.classList.add('tab-content-active');
+            if (tabId === 'adminTab') adminTab.classList.add('tab-content-active');
+
+            const tabs = document.querySelectorAll('.tab-bar .tab-item');
+            tabs[0].classList.toggle('active', tabId === 'markTab');
+            if(tabs[1]) tabs[1].classList.toggle('active', tabId === 'adminTab');
+
+            if(tabId === 'adminTab') fetchAllAttendance();
+        }
+
+        function switchAdminSubTab(subId) {
+            const subTabs = ['subReports', 'subAttendance', 'subHoliday', 'subQR', 'subTools', 'subDirectory'];
+            subTabs.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.style.display = (id === subId) ? 'block' : 'none';
+                    el.classList.remove('tab-content-active');
+                    if (id === subId) el.classList.add('tab-content-active');
+                }
+            });
+
+            const navItems = document.querySelectorAll('.admin-nav-item');
+            navItems.forEach((item, idx) => {
+                item.classList.toggle('active', subTabs[idx] === subId);
+            });
+
+            if (subId === 'subQR') generateDynamicQR();
+            if (subId === 'subDirectory') fetchAllAttendance();
+        }
+
+        // ROTATION ANIMATION FOR REFRESH OTP & QR CODE BUTTON
+        function generateDynamicQR() {
+            const refreshIcon = document.getElementById('refreshIcon');
+            if (refreshIcon) {
+                refreshIcon.classList.remove('spin-rotate');
+                void refreshIcon.offsetWidth; // Trigger reflow
+                refreshIcon.classList.add('spin-rotate');
+            }
+
+            const qrBox = document.getElementById('qrcode');
+            qrBox.innerHTML = "";
+            currentDynamicOtp = Math.floor(1000 + Math.random() * 9000).toString();
+            const otpEl = document.getElementById('liveClassOtp');
+            if (otpEl) otpEl.innerText = currentDynamicOtp;
+
+            const token = `BMERP_TOKEN_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+            new QRCode(qrBox, { text: token, width: 130, height: 130 });
+            }
                     async function loadFaceAIModels() {
             if (isModelsLoaded) return true;
             try {
@@ -1093,43 +1211,7 @@
             document.getElementById('toggleLink').innerText = isRegistering ? 'Already registered? Sign In' : 'New Student? Register Account';
         }
 
-        function switchTab(tabId) {
-            document.getElementById('markTab').style.display = tabId === 'markTab' ? 'block' : 'none';
-            document.getElementById('adminTab').style.display = tabId === 'adminTab' ? 'block' : 'none';
-            const tabs = document.querySelectorAll('.tab-bar .tab-item');
-            tabs[0].classList.toggle('active', tabId === 'markTab');
-            if(tabs[1]) tabs[1].classList.toggle('active', tabId === 'adminTab');
-            if(tabId === 'adminTab') fetchAllAttendance();
-        }
-
-        function switchAdminSubTab(subId) {
-            const subTabs = ['subReports', 'subAttendance', 'subHoliday', 'subQR', 'subTools', 'subDirectory'];
-            subTabs.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.style.display = (id === subId) ? 'block' : 'none';
-            });
-
-            const navItems = document.querySelectorAll('.admin-nav-item');
-            navItems.forEach((item, idx) => {
-                item.classList.toggle('active', subTabs[idx] === subId);
-            });
-
-            if (subId === 'subQR') generateDynamicQR();
-            if (subId === 'subDirectory') fetchAllAttendance();
-        }
-
         function openStudentQRScanner() { markFullDayAttendance(); }
-
-        function generateDynamicQR() {
-            const qrBox = document.getElementById('qrcode');
-            qrBox.innerHTML = "";
-            currentDynamicOtp = Math.floor(1000 + Math.random() * 9000).toString();
-            const otpEl = document.getElementById('liveClassOtp');
-            if (otpEl) otpEl.innerText = currentDynamicOtp;
-
-            const token = `BMERP_TOKEN_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-            new QRCode(qrBox, { text: token, width: 130, height: 130 });
-        }
 
         async function resetStudentPassword() {
             const user = JSON.parse(localStorage.getItem('user'));
