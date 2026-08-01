@@ -34,12 +34,69 @@
             justify-content: center; 
             align-items: center; 
             padding: 15px; 
+            position: relative;
         }
 
         @keyframes gradientBG {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
+        }
+
+        /* FLOATING ENTERPRISE GLASS TOAST SYSTEM */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            width: 90%;
+            max-width: 440px;
+            pointer-events: none;
+        }
+
+        .toast-card {
+            padding: 14px 18px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 700;
+            text-align: center;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            opacity: 0;
+            transform: translateY(-20px) scale(0.95);
+            transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+            pointer-events: auto;
+        }
+
+        .toast-card.show {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        .toast-card.toast-success {
+            background: rgba(209, 250, 229, 0.92);
+            color: #047857;
+            border-color: #a7f3d0;
+        }
+
+        .toast-card.toast-error {
+            background: rgba(254, 226, 226, 0.92);
+            color: #b91c1c;
+            border-color: #fca5a5;
+            animation: shake 0.4s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0) scale(1); }
+            20%, 60% { transform: translateX(-6px) scale(1); }
+            40%, 80% { transform: translateX(6px) scale(1); }
         }
 
         .app-container { 
@@ -163,7 +220,6 @@
         .action-buttons-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
         .action-buttons-grid .btn { margin-top: 0; font-size: 11px; padding: 10px 6px; }
 
-        /* QUICK EXTERNAL PORTALS SECTION */
         .quick-portals-card {
             background: rgba(255, 255, 255, 0.7);
             border: 1px solid var(--glass-border);
@@ -241,9 +297,6 @@
         .action-btn { padding: 4px 8px; font-size: 10px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; }
         .btn-del { background: rgba(254, 242, 242, 0.95); color: #ef4444; border: 1px solid #fca5a5; }
 
-        #msg { margin-top: 10px; font-size: 12px; text-align: center; padding: 9px; border-radius: 10px; font-weight: 600; display: none; backdrop-filter: blur(10px); }
-        .msg-success { background: rgba(209, 250, 229, 0.9); color: #047857; border: 1px solid #a7f3d0; display: block !important; }
-        .msg-error { background: rgba(224, 226, 226, 0.9); color: #b91c1c; border: 1px solid #fca5a5; display: block !important; }
         .admin-box { background: var(--glass-card); backdrop-filter: blur(12px); padding: 12px; border-radius: 16px; border: 1px solid var(--glass-border); }
         
         .webcam-box { width: 100%; height: 200px; background: #000; border-radius: 12px; overflow: hidden; position: relative; margin-bottom: 8px; display: flex; justify-content: center; align-items: center; border: 1px solid var(--glass-border); }
@@ -252,6 +305,14 @@
     </style>
 </head>
 <body>
+
+    <!-- FLOATING GLASS TOAST CONTAINER -->
+    <div id="toast-container">
+        <div id="toast" class="toast-card">
+            <span id="toast-icon">✨</span>
+            <span id="toast-msg">System Active</span>
+        </div>
+    </div>
 
     <div class="app-container">
         <div class="app-header">
@@ -505,7 +566,6 @@
                 </div>
 
             </div>
-            <p id="msg"></p>
         </div>
     </div>
         <script>
@@ -516,9 +576,28 @@
         let currentCamMode = 'ENROLL', videoStream = null, isModelsLoaded = false;
         let currentDynamicOtp = "9842";
         let activeSubjectSubjectCode = "";
+        let toastTimeout = null;
 
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+        // ADVANCE ADVANCED FLOATING TOAST NOTIFICATION ENGINE
+        function showMsg(text, isError = false) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+            const toastIcon = document.getElementById('toast-icon');
+
+            if (!toast || !toastMsg) return;
+
+            toastMsg.innerText = text;
+            toastIcon.innerText = isError ? "⚠️" : "✅";
+            toast.className = `toast-card ${isError ? 'toast-error' : 'toast-success'} show`;
+
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3500);
+        }
 
         function sanitizeAndValidateRollNo(rawRoll) {
             if (!rawRoll) return { isValid: false, cleanRoll: "" };
@@ -743,7 +822,6 @@
             }
         }
 
-        // FIXED NOTICE FETCHING WITH BACKEND CLEAR OVERRIDE & GLOBAL PERSISTENCE
         async function fetchNotices() {
             if (localStorage.getItem("GLOBAL_NOTICE_CLEARED") === "true") {
                 document.getElementById('noticeBanner').style.display = 'none';
@@ -885,7 +963,6 @@
             const currentDescriptor = Array.from(detection.descriptor);
 
             if (currentCamMode === 'ENROLL') {
-                // PERSISTENT PER-STUDENT FACE ID DATA ENROLLMENT
                 localStorage.setItem(`FACE_MESH_${user.rollNo}`, JSON.stringify(currentDescriptor));
                 checkUserFaceStatus();
                 showMsg("Face ID Enrolled Successfully!");
@@ -932,12 +1009,6 @@
             const p = document.getElementById('password'), e = document.getElementById('toggleEye');
             p.type = p.type === 'password' ? 'text' : 'password';
             e.innerText = p.type === 'password' ? '👁️' : '🙈';
-        }
-
-        function showMsg(text, isError = false) {
-            const msg = document.getElementById('msg');
-            msg.innerText = text;
-            msg.className = isError ? 'msg-error' : 'msg-success';
         }
 
         function toggleMode() {
@@ -1107,7 +1178,7 @@
             });
             const data = await res.json();
             if (res.ok) { showMsg(data.message); } else showMsg(data.error, true);
-                             }
+            }
                     function calculateRealAttendancePercentage(attendedDaysCount) {
             const startDate = new Date(2026, 6, 15);
             const today = new Date();
@@ -1442,7 +1513,6 @@
             downloadFile(csv, fileName);
         }
 
-        // SAFE LOGOUT: CLEARS ACTIVE LOGIN USER SESSION WITHOUT ERASING FACE DESCRIPTORS OR NOTICE OVERRIDES
         function logout() { 
             localStorage.removeItem('user'); 
             location.reload(); 
