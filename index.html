@@ -709,6 +709,77 @@
                 showMsg("Account deleted from directory!", false);
             }
         }
+
+        // FIXED NOTICE FETCHING WITH PERISTENT CLEAR OVERRIDE
+        async function fetchNotices() {
+            try {
+                const isNoticeCleared = localStorage.getItem("ACTIVE_NOTICE_CLEARED");
+                if (isNoticeCleared === "true") {
+                    document.getElementById('noticeBanner').style.display = 'none';
+                    return;
+                }
+
+                const activeNotice = localStorage.getItem("ACTIVE_BROADCAST_NOTICE");
+                if (activeNotice && activeNotice.trim() !== "") {
+                    document.getElementById('noticeBanner').style.display = 'flex';
+                    document.getElementById('noticeText').innerText = `📢 ${activeNotice}`;
+                    return;
+                }
+
+                const res = await fetch(`${API_BASE}/api/notices`);
+                const data = await res.json();
+                if (data.length > 0 && localStorage.getItem("ACTIVE_NOTICE_CLEARED") !== "true") {
+                    const latestNotice = data[data.length - 1].message;
+                    document.getElementById('noticeBanner').style.display = 'flex';
+                    document.getElementById('noticeText').innerText = `📢 ${latestNotice}`;
+                } else {
+                    document.getElementById('noticeBanner').style.display = 'none';
+                }
+            } catch (err) {
+                const isNoticeCleared = localStorage.getItem("ACTIVE_NOTICE_CLEARED");
+                if (isNoticeCleared === "true") {
+                    document.getElementById('noticeBanner').style.display = 'none';
+                    return;
+                }
+
+                const activeNotice = localStorage.getItem("ACTIVE_BROADCAST_NOTICE");
+                if (activeNotice && activeNotice.trim() !== "") {
+                    document.getElementById('noticeBanner').style.display = 'flex';
+                    document.getElementById('noticeText').innerText = `📢 ${activeNotice}`;
+                } else {
+                    document.getElementById('noticeBanner').style.display = 'none';
+                }
+            }
+        }
+
+        async function postNotice() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            const message = document.getElementById('noticeMsg').value.trim();
+            if (!message) return showMsg('Notice text required!', true);
+
+            localStorage.removeItem("ACTIVE_NOTICE_CLEARED"); // RESET CLEAR STATE
+            localStorage.setItem("ACTIVE_BROADCAST_NOTICE", message);
+            document.getElementById('noticeBanner').style.display = 'flex';
+            document.getElementById('noticeText').innerText = `📢 ${message}`;
+            showMsg('Notice Updated & Published!');
+            document.getElementById('noticeMsg').value = '';
+
+            try {
+                await fetch(`${API_BASE}/api/admin/notice`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requesterRollNo: user.rollNo, title: 'Announcement', message })
+                });
+            } catch (err) {}
+        }
+
+        function clearNotice() {
+            localStorage.setItem("ACTIVE_NOTICE_CLEARED", "true"); // PERSIST CLEAR STATE
+            localStorage.removeItem("ACTIVE_BROADCAST_NOTICE");
+            document.getElementById('noticeBanner').style.display = 'none';
+            document.getElementById('noticeText').innerText = '';
+            showMsg('Active Notice Cleared!');
+        }
                     async function loadFaceAIModels() {
             if (isModelsLoaded) return true;
             try {
@@ -884,62 +955,6 @@
             new QRCode(qrBox, { text: token, width: 140, height: 140 });
         }
 
-        async function fetchNotices() {
-            try {
-                const activeNotice = localStorage.getItem("ACTIVE_BROADCAST_NOTICE");
-                if (activeNotice && activeNotice.trim() !== "") {
-                    document.getElementById('noticeBanner').style.display = 'flex';
-                    document.getElementById('noticeText').innerText = `📢 ${activeNotice}`;
-                    return;
-                }
-
-                const res = await fetch(`${API_BASE}/api/notices`);
-                const data = await res.json();
-                if (data.length > 0) {
-                    const latestNotice = data[data.length - 1].message;
-                    document.getElementById('noticeBanner').style.display = 'flex';
-                    document.getElementById('noticeText').innerText = `📢 ${latestNotice}`;
-                } else {
-                    document.getElementById('noticeBanner').style.display = 'none';
-                }
-            } catch (err) {
-                const activeNotice = localStorage.getItem("ACTIVE_BROADCAST_NOTICE");
-                if (activeNotice && activeNotice.trim() !== "") {
-                    document.getElementById('noticeBanner').style.display = 'flex';
-                    document.getElementById('noticeText').innerText = `📢 ${activeNotice}`;
-                } else {
-                    document.getElementById('noticeBanner').style.display = 'none';
-                }
-            }
-        }
-
-        async function postNotice() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            const message = document.getElementById('noticeMsg').value.trim();
-            if (!message) return showMsg('Notice text required!', true);
-
-            localStorage.setItem("ACTIVE_BROADCAST_NOTICE", message);
-            document.getElementById('noticeBanner').style.display = 'flex';
-            document.getElementById('noticeText').innerText = `📢 ${message}`;
-            showMsg('Notice Updated & Published!');
-            document.getElementById('noticeMsg').value = '';
-
-            try {
-                await fetch(`${API_BASE}/api/admin/notice`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ requesterRollNo: user.rollNo, title: 'Announcement', message })
-                });
-            } catch (err) {}
-        }
-
-        function clearNotice() {
-            localStorage.removeItem("ACTIVE_BROADCAST_NOTICE");
-            document.getElementById('noticeBanner').style.display = 'none';
-            document.getElementById('noticeText').innerText = '';
-            showMsg('Active Notice Cleared!');
-        }
-
         async function resetStudentPassword() {
             const user = JSON.parse(localStorage.getItem('user'));
             const targetRollNo = document.getElementById('resetRoll').value.trim();
@@ -1063,7 +1078,7 @@
             });
             const data = await res.json();
             if (res.ok) { showMsg(data.message); } else showMsg(data.error, true);
-            }
+        }
                     function calculateRealAttendancePercentage(attendedDaysCount) {
             const startDate = new Date(2026, 6, 15);
             const today = new Date();
