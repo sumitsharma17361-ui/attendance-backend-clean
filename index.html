@@ -152,9 +152,8 @@
         .notice-marquee { overflow: hidden; white-space: nowrap; width: 100%; }
         .notice-marquee p { display: inline-block; animation: marquee 16s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-
-        .app-body { padding: 18px; }
-                input, select { 
+                .app-body { padding: 18px; }
+        input, select { 
             width: 100%; 
             padding: 10px 14px; 
             margin-bottom: 10px; 
@@ -573,7 +572,8 @@
                         </div>
                     </div>
                 </div>
-                                <!-- ADMIN CONTROL TAB -->
+
+                <!-- ADMIN CONTROL TAB -->
                 <div id="adminTab" style="display:none;">
                     <div class="admin-nav">
                         <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">Excel</div>
@@ -1211,7 +1211,7 @@
                     showMsg("Face Mismatch! Proxy Attempt Detected.", true);
                 }
             }
-        }
+            }
                     function togglePassword() {
             const p = document.getElementById('password');
             p.type = p.type === 'password' ? 'text' : 'password';
@@ -1476,9 +1476,8 @@
             });
 
             wrapper.innerHTML = wrapperHtml;
-        }
-
-        async function fetchHistory(rollNo) {
+            }
+                    async function fetchHistory(rollNo) {
             try {
                 const hRes = await fetch(`${API_BASE}/api/holidays`);
                 globalHolidays = await hRes.json();
@@ -1601,7 +1600,13 @@
             fetchAllAttendance();
         }
 
-        function downloadFile(content, fileName);
+        /* FIXED FUNCTION DECLARATION BELOW */
+        function downloadFile(content, fileName) {
+            const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', fileName);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
