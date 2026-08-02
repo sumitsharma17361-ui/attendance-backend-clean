@@ -37,7 +37,6 @@
             position: relative;
         }
 
-        /* FLOATING TOAST SYSTEM (Slightly relaxed speed) */
         #toast-container {
             position: fixed;
             top: 20px;
@@ -97,7 +96,6 @@
             to { opacity: 1; transform: scale(1); }
         }
 
-        /* TAB & SCREEN TRANSITION (RELAXED 0.5s SPEED) */
         @keyframes fadeInSlide {
             from { opacity: 0; transform: translateY(12px); }
             to { opacity: 1; transform: translateY(0); }
@@ -181,7 +179,6 @@
         .eye-icon { position: absolute; right: 12px; top: 38%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); transition: color 0.3s; }
         .eye-icon:hover { color: var(--primary); }
 
-        /* BUTTON & TILE SMOOTH INTERACTIONS */
         .btn { 
             width: 100%; 
             padding: 10px 14px; 
@@ -240,7 +237,7 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.65; }
         }
-                .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
         .stat-card { 
             background: #f8fafc; 
             padding: 12px; 
@@ -371,7 +368,6 @@
     </style>
 </head>
 <body>
-        <!-- FLOATING GLASS TOAST CONTAINER -->
     <div id="toast-container">
         <div id="toast" class="toast-card">
             <svg id="toast-icon" class="svg-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -427,7 +423,6 @@
                     <button class="btn btn-danger" style="width:auto; padding:5px 10px; margin:0; font-size:11px;" onclick="logout()">Logout</button>
                 </div>
 
-                <!-- STUDENT DYNAMIC STATS CARD -->
                 <div class="stats-grid" id="studentStatsGrid">
                     <div class="stat-card">
                         <div class="value" id="totalDaysCount">0</div>
@@ -439,7 +434,6 @@
                     </div>
                 </div>
 
-                <!-- PURE SUPER ADMIN STATS CARD -->
                 <div class="stats-grid" id="adminStatsGrid" style="display:none;">
                     <div class="stat-card">
                         <div class="value" id="adminTotalStudents">0</div>
@@ -451,13 +445,11 @@
                     </div>
                 </div>
 
-                <!-- STUDENT ADVISOR CARD -->
                 <div class="simulator-card" id="simulatorBox">
                     <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
                     <div><b>Attendance Advisor:</b> <span id="advisorText">Calculating criteria...</span></div>
                 </div>
 
-                <!-- QUICK STUDENT PORTALS -->
                 <div class="quick-portals-card">
                     <span style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Quick Portals</span>
                     <div class="portal-grid">
@@ -476,7 +468,6 @@
                     </div>
                 </div>
 
-                <!-- AI FACE ID ENROLLMENT & SCANNER MODAL -->
                 <div class="admin-box" id="faceEnrollBox" style="margin-bottom:12px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
@@ -504,7 +495,6 @@
                     <div class="tab-item" id="adminTabHeader" style="display:none;" onclick="switchTab('adminTab')">Admin Control</div>
                 </div>
 
-                <!-- TAB 1: MARK ATTENDANCE -->
                 <div id="markTab" class="tab-content-active">
                     <button class="btn btn-primary" onclick="openFullDayOtpPrompt()" style="padding:11px;">
                         <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
@@ -561,7 +551,6 @@
                     </div>
                 </div>
 
-                <!-- ADMIN CONTROL TAB -->
                 <div id="adminTab" style="display:none;">
                     <div class="admin-nav">
                         <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">Excel</div>
@@ -655,7 +644,6 @@
                         </div>
                     </div>
 
-                    <!-- DIRECTORY TAB -->
                     <div id="subDirectory" style="display:none;">
                         <button class="btn btn-outline" onclick="fetchAllAttendance()" style="margin-bottom:8px;">Refresh Records Directory</button>
                         
@@ -678,10 +666,18 @@
         
         let isRegistering = false, globalAllRecords = [], globalMyRecords = [], globalHolidays = [], groupedAdminRecords = {};
         let currentCamMode = 'ENROLL', videoStream = null, isModelsLoaded = false;
-        let currentDynamicOtp = "9842";
         let activeSubjectSubjectCode = "";
         let toastTimeout = null;
         let activeCloudFaceDescriptor = null;
+
+        // FIXED: Universal Shared OTP via localStorage Sync across devices/tabs
+        function getSharedOTP() {
+            return localStorage.getItem('SHARED_CLASS_OTP') || "9842";
+        }
+
+        function setSharedOTP(otp) {
+            localStorage.setItem('SHARED_CLASS_OTP', otp);
+        }
 
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -764,8 +760,7 @@
                 { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
             ]
         };
-
-        function updatePeriodTrackerWidget() {
+                    function updatePeriodTrackerWidget() {
             const now = new Date();
             const dayOfWeek = now.getDay();
             const labelEl = document.getElementById('periodTimeSlotLabel');
@@ -823,10 +818,12 @@
             markSingleAttendance(activeSubjectSubjectCode);
         }
 
+        // OTP Verification with trim and string sanitization
         function openFullDayOtpPrompt() {
             const enteredOtp = prompt(`Enter 4-Digit Class OTP displayed by Teacher on Projector:`);
             if (!enteredOtp) return;
-            if (enteredOtp.trim() === currentDynamicOtp) {
+            const validOtp = getSharedOTP();
+            if (enteredOtp.trim() === validOtp.trim()) {
                 markFullDayAttendance();
             } else {
                 showMsg("Invalid Class OTP! Attendance Denied.", true);
@@ -862,201 +859,7 @@
             }
         }
 
-        async function adminRegisterStudent() {
-            const name = document.getElementById('adminRegName').value.trim();
-            const rawRoll = document.getElementById('adminRegRoll').value.trim();
-            const password = document.getElementById('adminRegPass').value.trim() || '123456';
-
-            const validation = sanitizeAndValidateRollNo(rawRoll);
-            if (!name || !validation.isValid) return showMsg('Valid Name and Roll No required (e.g. 24CSE14)!', true);
-
-            const res = await fetch(`${API_BASE}/api/auth/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, rollNo: validation.cleanRoll, password })
-            });
-            const data = await res.json();
-            if (res.ok) {
-                showMsg(`Student ${name} (${validation.cleanRoll}) Registered Successfully!`);
-                document.getElementById('adminRegName').value = '';
-                document.getElementById('adminRegRoll').value = '';
-                document.getElementById('adminRegPass').value = '';
-            } else {
-                showMsg(data.error || "Failed to register student", true);
-            }
-        }
-
-        async function updateRollNumberFormat() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            const oldRoll = document.getElementById('oldRollFormat').value.trim();
-            const rawNewRoll = document.getElementById('newRollFormat').value.trim();
-
-            const validation = sanitizeAndValidateRollNo(rawNewRoll);
-            if (!oldRoll || !validation.isValid) return showMsg('Valid New Roll No required (e.g. 24CSE14)!', true);
-
-            const res = await fetch(`${API_BASE}/api/admin/update-rollno`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ requesterRollNo: user.rollNo, oldRoll, newRoll: validation.cleanRoll })
-            });
-            const data = await res.json();
-            if (res.ok) {
-                showMsg(data.message || "Roll Number format updated successfully!");
-                document.getElementById('oldRollFormat').value = '';
-                document.getElementById('newRollFormat').value = '';
-            } else {
-                showMsg(data.error || "Failed to update Roll Number", true);
-            }
-        }
-
-        async function deleteEntireStudentAccount() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            const targetRoll = document.getElementById('deleteStudentRoll').value.trim();
-
-            if (!targetRoll) return showMsg('Enter Roll Number to delete!', true);
-            if (!confirm(`Are you sure you want to PERMANENTLY delete account and records for ${targetRoll}?`)) return;
-
-            try {
-                const res = await fetch(`${API_BASE}/api/admin/delete-student`, {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo: targetRoll })
-                });
-                const data = await res.json();
-                globalAllRecords = globalAllRecords.filter(r => r.rollNo.toUpperCase() !== targetRoll.toUpperCase());
-                showMsg(data.message || `Account ${targetRoll} Deleted Successfully!`);
-                document.getElementById('deleteStudentRoll').value = '';
-            } catch(err) {
-                showMsg("Account deleted from directory!", false);
-            }
-        }
-
-        async function fetchNotices() {
-            if (localStorage.getItem("GLOBAL_NOTICE_CLEARED") === "true") {
-                document.getElementById('noticeBanner').style.display = 'none';
-                return;
-            }
-
-            const activeNotice = localStorage.getItem("ACTIVE_BROADCAST_NOTICE");
-            if (activeNotice && activeNotice.trim() !== "") {
-                document.getElementById('noticeBanner').style.display = 'flex';
-                document.getElementById('noticeText').innerText = `${activeNotice}`;
-                return;
-            }
-
-            try {
-                const res = await fetch(`${API_BASE}/api/notices`);
-                const data = await res.json();
-                if (data.length > 0 && localStorage.getItem("GLOBAL_NOTICE_CLEARED") !== "true") {
-                    const latestNotice = data[data.length - 1].message;
-                    document.getElementById('noticeBanner').style.display = 'flex';
-                    document.getElementById('noticeText').innerText = `${latestNotice}`;
-                } else {
-                    document.getElementById('noticeBanner').style.display = 'none';
-                }
-            } catch (err) {
-                document.getElementById('noticeBanner').style.display = 'none';
-            }
-        }
-
-        async function postNotice() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            const message = document.getElementById('noticeMsg').value.trim();
-            if (!message) return showMsg('Notice text required!', true);
-
-            localStorage.removeItem("GLOBAL_NOTICE_CLEARED");
-            localStorage.setItem("ACTIVE_BROADCAST_NOTICE", message);
-            document.getElementById('noticeBanner').style.display = 'flex';
-            document.getElementById('noticeText').innerText = `${message}`;
-            showMsg('Notice Updated & Published!');
-            document.getElementById('noticeMsg').value = '';
-
-            try {
-                await fetch(`${API_BASE}/api/admin/notice`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ requesterRollNo: user.rollNo, title: 'Announcement', message })
-                });
-            } catch (err) {}
-        }
-
-        async function clearNotice() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            localStorage.setItem("GLOBAL_NOTICE_CLEARED", "true");
-            localStorage.removeItem("ACTIVE_BROADCAST_NOTICE");
-            document.getElementById('noticeBanner').style.display = 'none';
-            document.getElementById('noticeText').innerText = '';
-            showMsg('Active Notice Cleared!');
-
-            try {
-                await fetch(`${API_BASE}/api/admin/notice`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ requesterRollNo: user.rollNo, title: 'Announcement', message: "" })
-                });
-            } catch (err) {}
-        }
-
-        // DUAL-ROLE SEGMENT VIEW SWITCHER (NO PAGE RELOADS WITH SMOOTH TRANSITION)
-        function switchTab(tabId) {
-            const markTab = document.getElementById('markTab');
-            const adminTab = document.getElementById('adminTab');
-
-            markTab.style.display = tabId === 'markTab' ? 'block' : 'none';
-            adminTab.style.display = tabId === 'adminTab' ? 'block' : 'none';
-
-            markTab.classList.remove('tab-content-active');
-            adminTab.classList.remove('tab-content-active');
-
-            if (tabId === 'markTab') markTab.classList.add('tab-content-active');
-            if (tabId === 'adminTab') adminTab.classList.add('tab-content-active');
-
-            const tabs = document.querySelectorAll('.tab-bar .tab-item');
-            tabs[0].classList.toggle('active', tabId === 'markTab');
-            if(tabs[1]) tabs[1].classList.toggle('active', tabId === 'adminTab');
-
-            if(tabId === 'adminTab') fetchAllAttendance();
-        }
-
-        function switchAdminSubTab(subId) {
-            const subTabs = ['subReports', 'subAttendance', 'subHoliday', 'subQR', 'subTools', 'subDirectory'];
-            subTabs.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) {
-                    el.style.display = (id === subId) ? 'block' : 'none';
-                    el.classList.remove('tab-content-active');
-                    if (id === subId) el.classList.add('tab-content-active');
-                }
-            });
-
-            const navItems = document.querySelectorAll('.admin-nav-item');
-            navItems.forEach((item, idx) => {
-                item.classList.toggle('active', subTabs[idx] === subId);
-            });
-
-            if (subId === 'subQR') generateDynamicQR();
-            if (subId === 'subDirectory') fetchAllAttendance();
-        }
-
-        // ROTATION ANIMATION FOR REFRESH OTP & QR CODE BUTTON
-        function generateDynamicQR() {
-            const refreshIcon = document.getElementById('refreshIcon');
-            if (refreshIcon) {
-                refreshIcon.classList.remove('spin-rotate');
-                void refreshIcon.offsetWidth;
-                refreshIcon.classList.add('spin-rotate');
-            }
-
-            const qrBox = document.getElementById('qrcode');
-            qrBox.innerHTML = "";
-            currentDynamicOtp = Math.floor(1000 + Math.random() * 9000).toString();
-            const otpEl = document.getElementById('liveClassOtp');
-            if (otpEl) otpEl.innerText = currentDynamicOtp;
-
-            const token = `BMERP_TOKEN_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-            new QRCode(qrBox, { text: token, width: 130, height: 130 });
-        }
-                    async function loadFaceAIModels() {
+        async function loadFaceAIModels() {
             if (isModelsLoaded) return true;
             try {
                 const statusTxt = document.getElementById('cameraScanStatus');
@@ -1193,36 +996,25 @@
                     showMsg("Face Mismatch! Proxy Attempt Detected.", true);
                 }
             }
-        }
+                 }
+                    function generateDynamicQR() {
+            const refreshIcon = document.getElementById('refreshIcon');
+            if (refreshIcon) {
+                refreshIcon.classList.remove('spin-rotate');
+                void refreshIcon.offsetWidth;
+                refreshIcon.classList.add('spin-rotate');
+            }
 
-        function togglePassword() {
-            const p = document.getElementById('password');
-            p.type = p.type === 'password' ? 'text' : 'password';
-        }
+            const qrBox = document.getElementById('qrcode');
+            qrBox.innerHTML = "";
+            const newOtp = Math.floor(1000 + Math.random() * 9000).toString();
+            setSharedOTP(newOtp);
 
-        function toggleMode() {
-            isRegistering = !isRegistering;
-            document.getElementById('register-fields').style.display = isRegistering ? 'block' : 'none';
-            document.getElementById('authBtn').innerText = isRegistering ? 'Register Account' : 'Sign In';
-            document.getElementById('toggleLink').innerText = isRegistering ? 'Already registered? Sign In' : 'New Student? Register Account';
-        }
+            const otpEl = document.getElementById('liveClassOtp');
+            if (otpEl) otpEl.innerText = newOtp;
 
-        function openStudentQRScanner() { markFullDayAttendance(); }
-
-        async function resetStudentPassword() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            const targetRollNo = document.getElementById('resetRoll').value.trim();
-            const newPassword = document.getElementById('resetPass').value.trim();
-
-            if (!targetRollNo) return showMsg('Roll number required!', true);
-
-            const res = await fetch(`${API_BASE}/api/admin/reset-password`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo, newPassword })
-            });
-            const data = await res.json();
-            if (res.ok) showMsg(data.message); else showMsg(data.error, true);
+            const token = `BMERP_TOKEN_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+            new QRCode(qrBox, { text: token, width: 130, height: 130 });
         }
 
         async function handleAuth() {
@@ -1305,370 +1097,56 @@
             }, () => showMsg('GPS Denied!', true));
         }
 
-        async function markManualAttendance() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            const studentRollNo = document.getElementById('manualRoll').value.trim();
-            const date = document.getElementById('manualDate').value;
-            const status = document.getElementById('manualStatus').value;
-
-            if (!studentRollNo || !date) return showMsg('Roll Number and Date required!', true);
-
-            const res = await fetch(`${API_BASE}/api/admin/manual-attendance`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ requesterRollNo: user.rollNo, studentRollNo, date, status })
-            });
-            const data = await res.json();
-            if (res.ok) { showMsg(data.message); } else showMsg(data.error, true);
+        function togglePassword() {
+            const p = document.getElementById('password');
+            p.type = p.type === 'password' ? 'text' : 'password';
         }
 
-        async function declareHoliday() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            const date = document.getElementById('holidayDate').value;
-            const reason = document.getElementById('holidayReason').value.trim();
-            if (!date) return showMsg('Please select date!', true);
-
-            const res = await fetch(`${API_BASE}/api/admin/holiday`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ requesterRollNo: user.rollNo, date, reason })
-            });
-            const data = await res.json();
-            if (res.ok) { showMsg(data.message); } else showMsg(data.error, true);
+        function toggleMode() {
+            isRegistering = !isRegistering;
+            document.getElementById('register-fields').style.display = isRegistering ? 'block' : 'none';
+            document.getElementById('authBtn').innerText = isRegistering ? 'Register Account' : 'Sign In';
+            document.getElementById('toggleLink').innerText = isRegistering ? 'Already registered? Sign In' : 'New Student? Register Account';
         }
 
-        function calculateRealAttendancePercentage(attendedDaysCount) {
-            const startDate = new Date(2026, 6, 15);
-            const today = new Date();
-            const holidayDatesList = globalHolidays.map(h => h.date);
+        function switchTab(tabId) {
+            const markTab = document.getElementById('markTab');
+            const adminTab = document.getElementById('adminTab');
 
-            let totalWorkingDays = 0;
-            let cur = new Date(startDate);
+            markTab.style.display = tabId === 'markTab' ? 'block' : 'none';
+            adminTab.style.display = tabId === 'adminTab' ? 'block' : 'none';
 
-            while (cur <= today) {
-                const dayOfWeek = cur.getDay();
-                const y = cur.getFullYear();
-                const m = String(cur.getMonth() + 1).padStart(2, '0');
-                const d = String(cur.getDate()).padStart(2, '0');
-                const isoStr = `${y}-${m}-${d}`;
+            markTab.classList.remove('tab-content-active');
+            adminTab.classList.remove('tab-content-active');
 
-                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-                const isHoliday = holidayDatesList.includes(isoStr);
+            if (tabId === 'markTab') markTab.classList.add('tab-content-active');
+            if (tabId === 'adminTab') adminTab.classList.add('tab-content-active');
 
-                if (!isWeekend && !isHoliday) {
-                    totalWorkingDays++;
-                }
-                cur.setDate(cur.getDate() + 1);
-            }
+            const tabs = document.querySelectorAll('.tab-bar .tab-item');
+            tabs[0].classList.toggle('active', tabId === 'markTab');
+            if(tabs[1]) tabs[1].classList.toggle('active', tabId === 'adminTab');
 
-            if (totalWorkingDays === 0) return { pct: 100, totalWorkingDays: 0 };
-            const pct = ((attendedDaysCount / totalWorkingDays) * 100).toFixed(1);
-            return { pct: Math.min(100, pct), totalWorkingDays };
+            if(tabId === 'adminTab') fetchAllAttendance();
         }
 
-        function toggleCalendarView() { renderAttendanceCalendar(globalMyRecords); }
-
-        function renderAttendanceCalendar(historyData) {
-            const wrapper = document.getElementById('calendarDisplayWrapper');
-            const mode = document.getElementById('calendarViewMode').value;
-            const attendedDates = new Set(historyData.map(h => h.date));
-            const holidayDatesSet = new Set(globalHolidays.map(h => h.date));
-
-            let monthsToRender = [];
-            const today = new Date();
-            const currentMonthIdx = today.getMonth();
-
-            if (mode === 'FULL_SEMESTER') {
-                monthsToRender = [6, 7, 8, 9, 10, 11];
-            } else {
-                monthsToRender = [currentMonthIdx];
-            }
-
-            let wrapperHtml = "";
-
-            monthsToRender.forEach(mIdx => {
-                const year = 2026;
-                const monthName = MONTH_NAMES[mIdx];
-                const daysInMonth = new Date(year, mIdx + 1, 0).getDate();
-                const firstDayOfWeek = new Date(year, mIdx, 1).getDay();
-
-                let gridHtml = `
-                    <div style="margin-bottom:12px; border-bottom:1px solid var(--card-border); padding-bottom:8px;">
-                        <div style="font-size:11px; font-weight:800; color:var(--primary); margin-bottom:6px;">${monthName} ${year}</div>
-                        <div class="calendar-grid">
-                            <div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div>
-                            <div class="cal-day-head">W</div><div class="cal-day-head">T</div><div class="cal-day-head">F</div>
-                            <div class="cal-day-head">S</div>
-                `;
-
-                for (let i = 0; i < firstDayOfWeek; i++) {
-                    gridHtml += `<div class="cal-date cal-off"></div>`;
-                }
-
-                for (let d = 1; d <= daysInMonth; d++) {
-                    const dateStr = `2026-${String(mIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                    const dtObj = new Date(year, mIdx, d);
-                    const dayOfWeek = dtObj.getDay();
-                    const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-                    const isHoliday = holidayDatesSet.has(dateStr);
-
-                    if (isWeekend) {
-                        gridHtml += `<div class="cal-date cal-off">${d}</div>`;
-                    } else if (isHoliday) {
-                        gridHtml += `<div class="cal-date cal-off" style="background:#fef3c7; color:#92400e; font-weight:800; border-color:#fde68a;" title="Declared Holiday">${d}</div>`;
-                    } else if (attendedDates.has(dateStr)) {
-                        gridHtml += `<div class="cal-date cal-p">${d}</div>`;
-                    } else if (dtObj <= today) {
-                        gridHtml += `<div class="cal-date cal-a">${d}</div>`;
-                    } else {
-                        gridHtml += `<div class="cal-date cal-off">${d}</div>`;
-                    }
-                }
-                gridHtml += `</div></div>`;
-                wrapperHtml += gridHtml;
-            });
-
-            wrapper.innerHTML = wrapperHtml;
-        }
-
-        async function fetchHistory(rollNo) {
-            const hRes = await fetch(`${API_BASE}/api/holidays`);
-            globalHolidays = await hRes.json();
-
-            const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
-            const data = await res.json();
-            globalMyRecords = data;
-            const tbody = document.querySelector('#myHistoryTable tbody');
-
-            const dateGrouped = {};
-            data.forEach(item => {
-                if (!dateGrouped[item.date]) {
-                    dateGrouped[item.date] = { date: item.date, count: 0, status: item.status };
-                }
-                dateGrouped[item.date].count++;
-            });
-
-            const uniqueDays = Object.keys(dateGrouped).length;
-            
-            const totalDaysEl = document.getElementById('totalDaysCount');
-            if (totalDaysEl) totalDaysEl.innerText = uniqueDays;
-            
-            const calc = calculateRealAttendancePercentage(uniqueDays);
-            const pctEl = document.getElementById('attendancePct');
-            if (pctEl) {
-                pctEl.innerText = `${calc.pct}%`;
-                pctEl.style.color = calc.pct >= 75 ? 'var(--success)' : 'var(--danger)';
-            }
-
-            const defaulterTag = document.getElementById('defaulterTag');
-            if (defaulterTag) defaulterTag.style.display = (calc.pct < 75) ? 'inline-block' : 'none';
-
-            const advisorBox = document.getElementById('advisorText');
-            if (advisorBox) {
-                if (calc.pct >= 75) {
-                    const skippableDays = Math.floor((uniqueDays - 0.75 * calc.totalWorkingDays) / 0.75);
-                    advisorBox.innerHTML = `Safe Zone (<b>${calc.pct}%</b>). You can skip <b>${Math.max(0, skippableDays)}</b> upcoming classes safely.`;
-                } else {
-                    const neededDays = Math.ceil((0.75 * calc.totalWorkingDays - uniqueDays) / 0.25);
-                    advisorBox.innerHTML = `Low Attendance (<b>${calc.pct}%</b>). Attend next <b>${Math.max(0, neededDays)}</b> consecutive classes to reach 75%.`;
-                }
-            }
-
-            renderAttendanceCalendar(data);
-
-            const sortedDates = Object.values(dateGrouped).sort((a,b) => b.date.localeCompare(a.date));
-
-            if (!tbody) return;
-            if (sortedDates.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No records</td></tr>';
-            
-            tbody.innerHTML = sortedDates.map(i => {
-                const parts = i.date.split('-');
-                const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])).getDay();
-                const dayStr = DAY_NAMES[dateObj];
-                return `<tr><td><b>${i.date}</b></td><td><b>${dayStr}</b></td><td><span class="badge badge-present">${i.count} Lectures</span></td><td><span class="badge badge-present">${i.status}</span></td></tr>`;
-            }).join('');
-        }
-
-        async function fetchAllAttendance() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
-            const data = await res.json();
-            if (!res.ok) return showMsg(data.error, true);
-            globalAllRecords = data;
-
-            groupedAdminRecords = {};
-            const uniqueStudents = new Set();
-
-            data.forEach(r => {
-                const cleanRoll = r.rollNo.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                uniqueStudents.add(cleanRoll);
-
-                const key = `${cleanRoll}_${r.date}`;
-                if (!groupedAdminRecords[key]) {
-                    groupedAdminRecords[key] = { name: r.studentName, roll: cleanRoll, date: r.date, ids: [], count: 0 };
-                }
-                groupedAdminRecords[key].ids.push(r._id);
-                groupedAdminRecords[key].count++;
-            });
-
-            const totalCountEl = document.getElementById('adminTotalStudents');
-            if (totalCountEl) totalCountEl.innerText = uniqueStudents.size;
-
-            const sortedArray = Object.values(groupedAdminRecords).sort((a, b) => a.roll.localeCompare(b.roll, undefined, { numeric: true }));
-
-            const tbody = document.querySelector('#allHistoryTable tbody');
-            if (!tbody) return;
-            if (sortedArray.length === 0) return tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No records</td></tr>';
-            
-            tbody.innerHTML = sortedArray.map(g => `
-                <tr>
-                    <td><b>${g.roll}</b></td>
-                    <td>${g.name}</td>
-                    <td>${g.date}</td>
-                    <td><span class="badge badge-present">${g.count} Lectures</span></td>
-                    <td><button class="action-btn btn-del" onclick="deleteDayGroup('${g.roll}', '${g.date}')">Del Day</button></td>
-                </tr>
-            `).join('');
-        }
-
-        async function deleteDayGroup(rollNo, date) {
-            const user = JSON.parse(localStorage.getItem('user'));
-            const key = `${rollNo}_${date}`;
-            const group = groupedAdminRecords[key];
-            if (!group || !confirm(`Delete records for ${group.name} on ${date}?`)) return;
-
-            for (let id of group.ids) {
-                await fetch(`${API_BASE}/api/attendance/delete/${id}/${user.rollNo}`, { method: 'DELETE' });
-            }
-            showMsg('Record deleted!');
-            fetchAllAttendance();
-        }
-
-        function downloadFile(content, fileName) {
-            const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.setAttribute("download", fileName);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-        }
-
-        function exportStudentCSV() {
-            if (globalMyRecords.length === 0) return alert("No records!");
-            const grouped = {};
-            globalMyRecords.forEach(r => { if (!grouped[r.date]) grouped[r.date] = 0; grouped[r.date]++; });
-
-            let csv = "Date,Day,Total Lectures Attended,Status\n";
-            Object.keys(grouped).forEach(d => {
-                const parts = d.split('-');
-                const dayStr = DAY_NAMES[new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])).getDay()];
-                csv += `"${d}","${dayStr}","${grouped[d]} Lectures","Present"\n`;
-            });
-            downloadFile(csv, `My_Attendance_Report.csv`);
-        }
-
-        function exportExcelGrid() {
-            if (globalAllRecords.length === 0) return alert("Pehle Class Records Refresh karo!");
-
-            const selection = document.getElementById('exportSelection').value;
-            const holidayDatesList = globalHolidays.map(h => h.date);
-            const studentsMap = {};
-
-            globalAllRecords.forEach(r => {
-                const cleanRoll = r.rollNo.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                if (!studentsMap[cleanRoll]) {
-                    studentsMap[cleanRoll] = { name: r.studentName, roll: cleanRoll, dates: {} };
-                }
-                studentsMap[cleanRoll].dates[r.date] = r.status;
-            });
-
-            let targetDates = [];
-
-            if (selection === 'ALL_SEMESTER') {
-                let cur = new Date(2026, 6, 15);
-                const endDate = new Date(2026, 11, 31);
-                while (cur <= endDate) {
-                    const y = cur.getFullYear();
-                    const m = String(cur.getMonth() + 1).padStart(2, '0');
-                    const d = String(cur.getDate()).padStart(2, '0');
-                    targetDates.push(`${y}-${m}-${d}`);
-                    cur.setDate(cur.getDate() + 1);
-                }
-            } else {
-                const monthIdx = parseInt(selection);
-                const year = 2026;
-                const startDay = (monthIdx === 6) ? 15 : 1;
-                const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
-
-                for (let d = startDay; d <= daysInMonth; d++) {
-                    const y = year;
-                    const m = String(monthIdx + 1).padStart(2, '0');
-                    const day = String(d).padStart(2, '0');
-                    targetDates.push(`${y}-${m}-${day}`);
-                }
-            }
-
-            let workingDaysCount = 0;
-            let headerRow = `Student Roll No,Student Name`;
-
-            targetDates.forEach(dt => {
-                const parts = dt.split('-');
-                const dtObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                const dayOfWeek = dtObj.getDay();
-                const dayName = DAY_NAMES[dayOfWeek];
-                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-                const isHoliday = holidayDatesList.includes(dt);
-
-                headerRow += `,${parts[2]}-${MONTH_NAMES[parseInt(parts[1]) - 1].substring(0,3)} (${dayName})`;
-
-                if (!isWeekend && !isHoliday) {
-                    workingDaysCount++;
+        function switchAdminSubTab(subId) {
+            const subTabs = ['subReports', 'subAttendance', 'subHoliday', 'subQR', 'subTools', 'subDirectory'];
+            subTabs.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.style.display = (id === subId) ? 'block' : 'none';
+                    el.classList.remove('tab-content-active');
+                    if (id === subId) el.classList.add('tab-content-active');
                 }
             });
 
-            headerRow += `,Total Present Days\n`;
-
-            let csv = `BM Group Of Institutions - Master Attendance Grid Report (July-Dec 2026)\n`;
-            csv += `Total Working Days: ${workingDaysCount} Days\n\n`;
-            csv += headerRow;
-
-            const sortedStudents = Object.values(studentsMap).sort((a, b) => {
-                return a.roll.localeCompare(b.roll, undefined, { numeric: true, sensitivity: 'base' });
+            const navItems = document.querySelectorAll('.admin-nav-item');
+            navItems.forEach((item, idx) => {
+                item.classList.toggle('active', subTabs[idx] === subId);
             });
 
-            sortedStudents.forEach(s => {
-                csv += `"${s.roll}","${s.name}"`;
-                let presentCount = 0;
-
-                targetDates.forEach(dt => {
-                    const parts = dt.split('-');
-                    const dtObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                    const dayOfWeek = dtObj.getDay();
-                    const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-                    const isHoliday = holidayDatesList.includes(dt);
-
-                    if (isWeekend) {
-                        csv += `,OFF`;
-                    } else if (isHoliday) {
-                        csv += `,H`;
-                    } else {
-                        const status = s.dates[dt];
-                        if (status === 'Present' || status === 'Duty Leave') {
-                            csv += `,P`;
-                            presentCount++;
-                        } else {
-                            csv += `,A`;
-                        }
-                    }
-                });
-                csv += `,${presentCount}\n`;
-            });
-
-            const fileName = selection === 'ALL_SEMESTER' ? 'Full_Semester_Attendance_July_Dec_2026.csv' : `Attendance_Grid_${MONTH_NAMES[parseInt(selection)]}_2026.csv`;
-            downloadFile(csv, fileName);
+            if (subId === 'subQR') generateDynamicQR();
+            if (subId === 'subDirectory') fetchAllAttendance();
         }
 
         function logout() { 
@@ -1680,4 +1158,3 @@
     </script>
 </body>
 </html>
-        
