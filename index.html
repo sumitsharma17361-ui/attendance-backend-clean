@@ -175,8 +175,7 @@
             border-color: var(--primary); 
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); 
         }
-
-        .password-wrapper { position: relative; width: 100%; }
+                .password-wrapper { position: relative; width: 100%; }
         .password-wrapper input { padding-right: 40px; }
         .eye-icon { position: absolute; right: 12px; top: 38%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); transition: color 0.3s; }
         .eye-icon:hover { color: var(--primary); }
@@ -491,8 +490,7 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- AI FACE ID ENROLLMENT & SCANNER MODAL -->
+                                <!-- AI FACE ID ENROLLMENT & SCANNER MODAL -->
                 <div class="admin-box" id="faceEnrollBox" style="margin-bottom:12px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
@@ -523,9 +521,9 @@
 
                 <!-- TAB 1: MARK ATTENDANCE -->
                 <div id="markTab" class="tab-content-active">
-                    <button class="btn btn-primary" onclick="openFullDayOtpPrompt()" style="padding:11px;">
+                    <button class="btn btn-primary" onclick="openFullDayPasscodePrompt()" style="padding:11px;">
                         <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                        Mark Full Day Attendance (via OTP)
+                        Mark Full Day Attendance (via Class Passcode)
                     </button>
                     
                     <div class="action-buttons-grid">
@@ -576,8 +574,7 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- ADMIN CONTROL TAB -->
+                                <!-- ADMIN CONTROL TAB -->
                 <div id="adminTab" style="display:none;">
                     <div class="admin-nav">
                         <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">Excel</div>
@@ -621,16 +618,16 @@
                     </div>
 
                     <div id="subQR" class="admin-box" style="display:none; text-align:center;">
-                        <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Dynamic Rotating QR & Live Class OTP:</span>
-                        <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">Project this screen in class. Students enter Live OTP to mark attendance.</p>
+                        <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Dynamic Rotating QR & Daily Master Secret:</span>
+                        <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">Project this screen in class. Students enter Daily Master Secret to mark attendance.</p>
                         <div style="background:#f8fafc; padding:10px; border-radius:10px; margin-bottom:8px; border:1px solid var(--card-border);">
-                            <span style="font-size:10px; font-weight:700; color:var(--text-muted);">CLASS DYNAMIC OTP:</span>
-                            <h2 id="liveClassOtp" style="font-size:24px; font-weight:900; color:var(--primary); letter-spacing:4px;">9842</h2>
+                            <span style="font-size:10px; font-weight:700; color:var(--text-muted);">DAILY MASTER SECRET / CLASS PASSCODE:</span>
+                            <h2 id="liveClassPasscode" style="font-size:24px; font-weight:900; color:var(--primary); letter-spacing:4px;">9842</h2>
                         </div>
                         <div id="qrcode" style="display:flex; justify-content:center; margin:10px 0;"></div>
                         <button class="btn btn-outline" id="refreshQrBtn" onclick="generateDynamicQR()" style="padding:8px; font-size:11px;">
                             <svg id="refreshIcon" class="svg-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
-                            Refresh OTP & QR Code Now
+                            Refresh Passcode & QR Code Now
                         </button>
                     </div>
 
@@ -688,13 +685,13 @@
             </div>
         </div>
     </div>
-    <script>
+        <script>
         const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; 
         const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/";
         
         let isRegistering = false, globalAllRecords = [], globalMyRecords = [], globalHolidays = [], groupedAdminRecords = {};
         let currentCamMode = 'ENROLL', videoStream = null, isModelsLoaded = false;
-        let currentDynamicOtp = "9842";
+        let currentDailyPasscode = "9842";
         let activeSubjectSubjectCode = "";
         let toastTimeout = null;
         let activeCloudFaceDescriptor = null;
@@ -839,13 +836,13 @@
             markSingleAttendance(activeSubjectSubjectCode);
         }
 
-        function openFullDayOtpPrompt() {
-            const enteredOtp = prompt(`Enter 4-Digit Class OTP displayed by Teacher on Projector:`);
-            if (!enteredOtp) return;
-            if (enteredOtp.trim() === currentDynamicOtp) {
+        function openFullDayPasscodePrompt() {
+            const enteredPasscode = prompt(`Enter Class Passcode / Daily Master Secret displayed by Teacher:`);
+            if (!enteredPasscode) return;
+            if (enteredPasscode.trim() === currentDailyPasscode) {
                 markFullDayAttendance();
             } else {
-                showMsg("Invalid Class OTP! Attendance Denied.", true);
+                showMsg("Invalid Class Passcode! Attendance Denied.", true);
             }
         }
 
@@ -877,8 +874,7 @@
                 showMsg("Biometric Scanning Cancelled or Mismatch!", true);
             }
         }
-
-        async function adminRegisterStudent() {
+                    async function adminRegisterStudent() {
             const name = document.getElementById('adminRegName').value.trim();
             const rawRoll = document.getElementById('adminRegRoll').value.trim();
             const password = document.getElementById('adminRegPass').value.trim() || '123456';
@@ -954,6 +950,7 @@
                 showMsg("Account deleted from directory!", false);
             }
         }
+
         async function fetchNotices() {
             if (localStorage.getItem("GLOBAL_NOTICE_CLEARED") === "true") {
                 document.getElementById('noticeBanner').style.display = 'none';
@@ -1070,9 +1067,9 @@
 
             const qrBox = document.getElementById('qrcode');
             qrBox.innerHTML = "";
-            currentDynamicOtp = Math.floor(1000 + Math.random() * 9000).toString();
-            const otpEl = document.getElementById('liveClassOtp');
-            if (otpEl) otpEl.innerText = currentDynamicOtp;
+            currentDailyPasscode = Math.floor(1000 + Math.random() * 9000).toString();
+            const passcodeEl = document.getElementById('liveClassPasscode');
+            if (passcodeEl) passcodeEl.innerText = currentDailyPasscode;
 
             const token = `BMERP_TOKEN_${Date.now()}_${Math.random().toString(36).substring(7)}`;
             new QRCode(qrBox, { text: token, width: 130, height: 130 });
@@ -1215,7 +1212,8 @@
                     showMsg("Face Mismatch! Proxy Attempt Detected.", true);
                 }
             }
-                                         }
+        }
+
         function togglePassword() {
             const p = document.getElementById('password');
             p.type = p.type === 'password' ? 'text' : 'password';
@@ -1741,4 +1739,3 @@
     </script>
 </body>
 </html>
-  
