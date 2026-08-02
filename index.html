@@ -574,7 +574,8 @@
                         </div>
                     </div>
                 </div>
-                                <!-- ADMIN CONTROL TAB -->
+
+                <!-- ADMIN CONTROL TAB -->
                 <div id="adminTab" style="display:none;">
                     <div class="admin-nav">
                         <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">Excel</div>
@@ -1212,9 +1213,8 @@
                     showMsg("Face Mismatch! Proxy Attempt Detected.", true);
                 }
             }
-        }
-
-        function togglePassword() {
+            }
+                    function togglePassword() {
             const p = document.getElementById('password');
             p.type = p.type === 'password' ? 'text' : 'password';
         }
