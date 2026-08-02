@@ -80,107 +80,7 @@
             20%, 60% { transform: translateX(-4px); }
             40%, 80% { transform: translateX(4px); }
         }
-
-        .app-container { 
-            width: 100%; 
-            max-width: 480px; 
-            background: var(--card-bg); 
-            border-radius: 20px; 
-            box-shadow: var(--shadow-md); 
-            border: 1px solid var(--card-border); 
-            overflow: hidden; 
-            animation: cardScaleUp 0.75s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        @keyframes cardScaleUp {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        @keyframes fadeInSlide {
-            from { opacity: 0; transform: translateY(12px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .tab-content-active {
-            animation: fadeInSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-
-        .app-header { 
-            background: #ffffff; 
-            padding: 18px 20px; 
-            border-bottom: 1px solid var(--card-border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .app-header-title h1 { font-size: 16px; font-weight: 800; color: #0f172a; letter-spacing: -0.3px; }
-        .app-header-title p { font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 1px; }
-
-        .header-avatar-badge {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .avatar-circle {
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            background: #eff6ff;
-            color: var(--primary);
-            font-weight: 700;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid #dbeafe;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .avatar-circle:hover { transform: scale(1.05); }
-
-        .notice-banner { 
-            background: #fffbeb; 
-            border-bottom: 1px solid #fef3c7; 
-            color: #92400e; 
-            font-size: 11px; 
-            padding: 8px 14px; 
-            font-weight: 600; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px; 
-        }
-        .notice-marquee { overflow: hidden; white-space: nowrap; width: 100%; }
-        .notice-marquee p { display: inline-block; animation: marquee 16s linear infinite; }
-        @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-
-        .app-body { padding: 18px; }
-
-        input, select { 
-            width: 100%; 
-            padding: 10px 14px; 
-            margin-bottom: 10px; 
-            background: #f8fafc;
-            border: 1px solid var(--card-border); 
-            border-radius: 10px; 
-            font-size: 12px; 
-            font-weight: 600;
-            color: var(--text-main);
-            outline: none; 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-        }
-        select option { background: #ffffff; color: #0f172a; }
-        input::placeholder { color: #94a3b8; font-weight: 500; }
-        input:focus, select:focus { 
-            background: #ffffff;
-            border-color: var(--primary); 
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); 
-        }
-                .password-wrapper { position: relative; width: 100%; }
-        .password-wrapper input { padding-right: 40px; }
-        .eye-icon { position: absolute; right: 12px; top: 38%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); transition: color 0.3s; }
-        .eye-icon:hover { color: var(--primary); }
-
-        .btn { 
+                .btn { 
             width: 100%; 
             padding: 10px 14px; 
             border-radius: 10px; 
@@ -428,8 +328,7 @@
                 <button class="btn btn-primary" id="authBtn" onclick="handleAuth()">Sign In</button>
                 <span style="color:var(--primary); cursor:pointer; font-size:12px; display:block; text-align:center; margin-top:12px; font-weight:600;" id="toggleLink" onclick="toggleMode()">New Student? Register Account</span>
             </div>
-
-            <!-- DASHBOARD -->
+                        <!-- DASHBOARD -->
             <div id="dash-box" style="display: none;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                     <div>
@@ -490,7 +389,8 @@
                         </div>
                     </div>
                 </div>
-                                <!-- AI FACE ID ENROLLMENT & SCANNER MODAL -->
+
+                <!-- AI FACE ID ENROLLMENT & SCANNER MODAL -->
                 <div class="admin-box" id="faceEnrollBox" style="margin-bottom:12px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
@@ -574,8 +474,7 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- ADMIN CONTROL TAB -->
+                                <!-- ADMIN CONTROL TAB -->
                 <div id="adminTab" style="display:none;">
                     <div class="admin-nav">
                         <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">Excel</div>
@@ -1213,8 +1112,9 @@
                     showMsg("Face Mismatch! Proxy Attempt Detected.", true);
                 }
             }
-            }
-                    function togglePassword() {
+        }
+
+        function togglePassword() {
             const p = document.getElementById('password');
             p.type = p.type === 'password' ? 'text' : 'password';
         }
