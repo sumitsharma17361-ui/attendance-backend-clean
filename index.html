@@ -37,6 +37,7 @@
             position: relative;
         }
 
+        /* FLOATING TOAST SYSTEM */
         #toast-container {
             position: fixed;
             top: 20px;
@@ -383,6 +384,7 @@
     </style>
 </head>
 <body>
+    <!-- FLOATING GLASS TOAST CONTAINER -->
     <div id="toast-container">
         <div id="toast" class="toast-card">
             <svg id="toast-icon" class="svg-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -409,6 +411,7 @@
         </div>
 
         <div class="app-body">
+            <!-- AUTH -->
             <div id="auth-box" class="tab-content-active">
                 <div id="register-fields" style="display: none;">
                     <input type="text" id="regName" placeholder="Full Student Name">
@@ -424,6 +427,7 @@
                 <span style="color:var(--primary); cursor:pointer; font-size:12px; display:block; text-align:center; margin-top:12px; font-weight:600;" id="toggleLink" onclick="toggleMode()">New Student? Register Account</span>
             </div>
 
+            <!-- DASHBOARD -->
             <div id="dash-box" style="display: none;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                     <div>
@@ -436,6 +440,7 @@
                     <button class="btn btn-danger" style="width:auto; padding:5px 10px; margin:0; font-size:11px;" onclick="logout()">Logout</button>
                 </div>
 
+                <!-- STUDENT DYNAMIC STATS CARD -->
                 <div class="stats-grid" id="studentStatsGrid">
                     <div class="stat-card">
                         <div class="value" id="totalDaysCount">0</div>
@@ -447,6 +452,7 @@
                     </div>
                 </div>
 
+                <!-- PURE SUPER ADMIN STATS CARD -->
                 <div class="stats-grid" id="adminStatsGrid" style="display:none;">
                     <div class="stat-card">
                         <div class="value" id="adminTotalStudents">0</div>
@@ -458,11 +464,13 @@
                     </div>
                 </div>
 
+                <!-- STUDENT ADVISOR CARD -->
                 <div class="simulator-card" id="simulatorBox">
                     <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
                     <div><b>Attendance Advisor:</b> <span id="advisorText">Calculating criteria...</span></div>
                 </div>
 
+                <!-- QUICK STUDENT PORTALS -->
                 <div class="quick-portals-card">
                     <span style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Quick Portals</span>
                     <div class="portal-grid">
@@ -480,7 +488,8 @@
                         </div>
                     </div>
                 </div>
-                                <div class="admin-box" id="faceEnrollBox" style="margin-bottom:12px;">
+                                <!-- AI FACE ID ENROLLMENT & SCANNER MODAL -->
+                <div class="admin-box" id="faceEnrollBox" style="margin-bottom:12px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
                             <span style="font-size:11px; font-weight:800; color:var(--text-main);">AI Face ID Status:</span>
@@ -508,6 +517,7 @@
                     <div class="tab-item" id="adminTabHeader" style="display:none;" onclick="switchTab('adminTab')">Admin Control</div>
                 </div>
 
+                <!-- TAB 1: MARK ATTENDANCE -->
                 <div id="markTab" class="tab-content-active">
                     <button class="btn btn-primary" onclick="openFullDayPasscodePrompt()" style="padding:11px;">
                         <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
@@ -563,6 +573,7 @@
                     </div>
                 </div>
 
+                <!-- ADMIN CONTROL TAB -->
                 <div id="adminTab" style="display:none;">
                     <div class="admin-nav">
                         <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">Excel</div>
@@ -656,6 +667,7 @@
                         </div>
                     </div>
 
+                    <!-- DIRECTORY TAB -->
                     <div id="subDirectory" style="display:none;">
                         <button class="btn btn-outline" onclick="fetchAllAttendance()" style="margin-bottom:8px;">Refresh Records Directory</button>
                         
@@ -675,11 +687,40 @@
         <script>
         const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; 
         const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/";
-        
-        // BM GI FARRUKHNAGAR EXACT COORDINATES (From Screenshot)
-        const COLLEGE_LAT = 28.447194;
-        const COLLEGE_LNG = 76.811806;
-        const MAX_ALLOWED_DISTANCE_KM = 0.5; // 500 Meters Radius
+
+        // Target College Coordinates (BM Group of Institutions, Farrukhnagar)
+        const TARGET_LAT = 28.4235;
+        const TARGET_LNG = 76.8122;
+        const MAX_ALLOWED_DISTANCE_METERS = 500; // Radius tolerance in meters
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // Earth radius in meters
+            const rad = Math.PI / 180;
+            
+            const dLat = (lat2 - lat1) * rad;
+            const dLon = (lon2 - lon1) * rad;
+            
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * rad) * Math.cos(lat2 * rad) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                      
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            
+            return R * c; // Distance in meters
+        }
+
+        function verifyUserLocation(position) {
+            const userLat = position.coords.latitude;
+            const userLng = position.coords.longitude;
+
+            const distance = Math.round(calculateDistance(userLat, userLng, TARGET_LAT, TARGET_LNG));
+
+            if (distance > MAX_ALLOWED_DISTANCE_METERS) {
+                alert(`Outside Classroom Boundary! (${distance}m away)`);
+                return false;
+            }
+            return true;
+        }
 
         let isRegistering = false, globalAllRecords = [], globalMyRecords = [], globalHolidays = [], groupedAdminRecords = {};
         let currentCamMode = 'ENROLL', videoStream = null, isModelsLoaded = false;
@@ -690,18 +731,6 @@
 
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-
-        // Haversine Formula for Distance Calculation (in KM)
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371;
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return R * c;
-        }
 
         function showMsg(text, isError = false) {
             const toast = document.getElementById('toast');
@@ -832,8 +861,7 @@
                 activeSubjectSubjectCode = "";
             }
         }
-
-        function markActivePeriodAttendance() {
+                    function markActivePeriodAttendance() {
             if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
                 return showMsg("Abhi koi active class nahi chal rahi!", true);
             }
@@ -878,7 +906,8 @@
                 showMsg("Biometric Scanning Cancelled or Mismatch!", true);
             }
         }
-                    async function adminRegisterStudent() {
+
+        async function adminRegisterStudent() {
             const name = document.getElementById('adminRegName').value.trim();
             const rawRoll = document.getElementById('adminRegRoll').value.trim();
             const password = document.getElementById('adminRegPass').value.trim() || '123456';
@@ -1316,28 +1345,16 @@
             fetchNotices();
         }
 
-        // Updated Geolocation Checking with Fallback Coordinates Integration
         function markFullDayAttendance() {
             if (!navigator.geolocation) {
                 return showMsg('Geolocation is not supported!', true);
             }
             navigator.geolocation.getCurrentPosition(async (pos) => {
+                if (!verifyUserLocation(pos)) return;
+
                 const user = JSON.parse(localStorage.getItem('user'));
-                let userLat = pos.coords.latitude;
-                let userLng = pos.coords.longitude;
-
-                const dist = calculateDistance(userLat, userLng, COLLEGE_LAT, COLLEGE_LNG);
-                if (dist <= MAX_ALLOWED_DISTANCE_KM) {
-                    userLat = COLLEGE_LAT;
-                    userLng = COLLEGE_LNG;
-                }
-
                 try {
-                    const res = await fetch(`${API_BASE}/api/attendance/mark-fullday`, { 
-                        method: 'POST', 
-                        headers: { 'Content-Type': 'application/json' }, 
-                        body: JSON.stringify({ rollNo: user.rollNo, name: user.name, latitude: userLat, longitude: userLng }) 
-                    });
+                    const res = await fetch(`${API_BASE}/api/attendance/mark-fullday`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: user.rollNo, name: user.name, latitude: pos.coords.latitude, longitude: pos.coords.longitude }) });
                     const data = await res.json();
                     if (res.ok) { showMsg(data.message); fetchHistory(user.rollNo); } else showMsg(data.error || "Attendance marking failed", true);
                 } catch(e) {
@@ -1352,22 +1369,11 @@
                 return showMsg('Geolocation is not supported!', true);
             }
             navigator.geolocation.getCurrentPosition(async (pos) => {
+                if (!verifyUserLocation(pos)) return;
+
                 const user = JSON.parse(localStorage.getItem('user'));
-                let userLat = pos.coords.latitude;
-                let userLng = pos.coords.longitude;
-
-                const dist = calculateDistance(userLat, userLng, COLLEGE_LAT, COLLEGE_LNG);
-                if (dist <= MAX_ALLOWED_DISTANCE_KM) {
-                    userLat = COLLEGE_LAT;
-                    userLng = COLLEGE_LNG;
-                }
-
                 try {
-                    const res = await fetch(`${API_BASE}/api/attendance/mark`, { 
-                        method: 'POST', 
-                        headers: { 'Content-Type': 'application/json' }, 
-                        body: JSON.stringify({ rollNo: user.rollNo, name: user.name, subject: sub, latitude: userLat, longitude: userLng }) 
-                    });
+                    const res = await fetch(`${API_BASE}/api/attendance/mark`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: user.rollNo, name: user.name, subject: sub, latitude: pos.coords.latitude, longitude: pos.coords.longitude }) });
                     const data = await res.json();
                     if (res.ok) { showMsg(data.message); fetchHistory(user.rollNo); } else showMsg(data.error || "Attendance marking failed", true);
                 } catch(e) {
