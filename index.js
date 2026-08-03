@@ -198,9 +198,9 @@ app.post('/api/admin/notice', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// STRICT GEOFENCE LOCATION CHECK (50 METERS RADIUS LIMIT)
+// UPDATED GEOFENCE LOCATION CHECK (500 METERS RADIUS LIMIT)
 function checkLocation(lat, lng) {
-  const COLLEGE_LAT = 28.4509, COLLEGE_LNG = 76.8188, R = 6371000;
+  const COLLEGE_LAT = 28.4235, COLLEGE_LNG = 76.8122, R = 6371000;
   
   if (!lat || !lng || lat === 0 || lng === 0) {
     return { isInside: false, distance: "GPS Disconnected" };
@@ -211,7 +211,7 @@ function checkLocation(lat, lng) {
   const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(COLLEGE_LAT * (Math.PI / 180)) * Math.cos(lat * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
   const distance = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 
-  return { isInside: distance <= 50, distance: distance.toFixed(0) };
+  return { isInside: distance <= 500, distance: distance.toFixed(0) };
 }
 
 // ATTENDANCE MARKING
@@ -291,7 +291,7 @@ app.post('/api/admin/manual-attendance', async (req, res) => {
     for (let sub of targetSubjects) {
       const exists = await Attendance.findOne({ rollNo: targetRoll, subject: sub, date });
       if (!exists) {
-        await new Attendance({ rollNo: targetRoll, studentName: user.name, subject: sub, date, status: status || 'Present', location: { latitude: 28.4509, longitude: 76.8188 } }).save();
+        await new Attendance({ rollNo: targetRoll, studentName: user.name, subject: sub, date, status: status || 'Present', location: { latitude: 28.4235, longitude: 76.8122 } }).save();
         markedCount++;
       }
     }
@@ -341,4 +341,4 @@ app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-                                     
+        
