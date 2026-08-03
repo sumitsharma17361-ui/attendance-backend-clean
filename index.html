@@ -152,8 +152,8 @@
         .notice-marquee { overflow: hidden; white-space: nowrap; width: 100%; }
         .notice-marquee p { display: inline-block; animation: marquee 16s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-                .app-body { padding: 18px; }
-        input, select { 
+        .app-body { padding: 18px; }
+                input, select { 
             width: 100%; 
             padding: 10px 14px; 
             margin-bottom: 10px; 
@@ -687,41 +687,7 @@
         <script>
         const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; 
         const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/";
-
-        // Target College Coordinates (BM Group of Institutions, Farrukhnagar)
-        const TARGET_LAT = 28.4235;
-        const TARGET_LNG = 76.8122;
-        const MAX_ALLOWED_DISTANCE_METERS = 500; // Radius tolerance in meters
-
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371e3; // Earth radius in meters
-            const rad = Math.PI / 180;
-            
-            const dLat = (lat2 - lat1) * rad;
-            const dLon = (lon2 - lon1) * rad;
-            
-            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                      Math.cos(lat1 * rad) * Math.cos(lat2 * rad) *
-                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-                      
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            
-            return R * c; // Distance in meters
-        }
-
-        function verifyUserLocation(position) {
-            const userLat = position.coords.latitude;
-            const userLng = position.coords.longitude;
-
-            const distance = Math.round(calculateDistance(userLat, userLng, TARGET_LAT, TARGET_LNG));
-
-            if (distance > MAX_ALLOWED_DISTANCE_METERS) {
-                alert(`Outside Classroom Boundary! (${distance}m away)`);
-                return false;
-            }
-            return true;
-        }
-
+        
         let isRegistering = false, globalAllRecords = [], globalMyRecords = [], globalHolidays = [], groupedAdminRecords = {};
         let currentCamMode = 'ENROLL', videoStream = null, isModelsLoaded = false;
         let currentDailyPasscode = "9842";
@@ -861,7 +827,8 @@
                 activeSubjectSubjectCode = "";
             }
         }
-                    function markActivePeriodAttendance() {
+
+        function markActivePeriodAttendance() {
             if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
                 return showMsg("Abhi koi active class nahi chal rahi!", true);
             }
@@ -906,8 +873,7 @@
                 showMsg("Biometric Scanning Cancelled or Mismatch!", true);
             }
         }
-
-        async function adminRegisterStudent() {
+                    async function adminRegisterStudent() {
             const name = document.getElementById('adminRegName').value.trim();
             const rawRoll = document.getElementById('adminRegRoll').value.trim();
             const password = document.getElementById('adminRegPass').value.trim() || '123456';
@@ -1151,9 +1117,8 @@
             } catch (err) {
                 if (badge) { badge.innerText = "Not Enrolled"; badge.style.background = "#f1f5f9"; badge.style.color = "var(--text-muted)"; }
             }
-        }
-
-        async function openCameraModal(mode) {
+                }
+                    async function openCameraModal(mode) {
             const user = JSON.parse(localStorage.getItem('user'));
             currentCamMode = mode;
             
@@ -1245,8 +1210,9 @@
                     showMsg("Face Mismatch! Proxy Attempt Detected.", true);
                 }
             }
-            }
-                    function togglePassword() {
+        }
+
+        function togglePassword() {
             const p = document.getElementById('password');
             p.type = p.type === 'password' ? 'text' : 'password';
         }
@@ -1343,15 +1309,12 @@
             updatePeriodTrackerWidget();
             setInterval(updatePeriodTrackerWidget, 30000);
             fetchNotices();
-        }
-
-        function markFullDayAttendance() {
+            }
+                    function markFullDayAttendance() {
             if (!navigator.geolocation) {
                 return showMsg('Geolocation is not supported!', true);
             }
             navigator.geolocation.getCurrentPosition(async (pos) => {
-                if (!verifyUserLocation(pos)) return;
-
                 const user = JSON.parse(localStorage.getItem('user'));
                 try {
                     const res = await fetch(`${API_BASE}/api/attendance/mark-fullday`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: user.rollNo, name: user.name, latitude: pos.coords.latitude, longitude: pos.coords.longitude }) });
@@ -1369,8 +1332,6 @@
                 return showMsg('Geolocation is not supported!', true);
             }
             navigator.geolocation.getCurrentPosition(async (pos) => {
-                if (!verifyUserLocation(pos)) return;
-
                 const user = JSON.parse(localStorage.getItem('user'));
                 try {
                     const res = await fetch(`${API_BASE}/api/attendance/mark`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: user.rollNo, name: user.name, subject: sub, latitude: pos.coords.latitude, longitude: pos.coords.longitude }) });
@@ -1420,8 +1381,9 @@
             } catch(e) {
                 showMsg("Network Connection Error!", true);
             }
-            }
-                    function calculateRealAttendancePercentage(attendedDaysCount) {
+        }
+
+        function calculateRealAttendancePercentage(attendedDaysCount) {
             const startDate = new Date(2026, 6, 15);
             const today = new Date();
             const holidayDatesList = globalHolidays.map(h => h.date);
@@ -1774,3 +1736,4 @@
     </script>
 </body>
 </html>
+           
