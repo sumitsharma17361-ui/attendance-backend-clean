@@ -153,7 +153,8 @@
         .notice-marquee p { display: inline-block; animation: marquee 16s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
         .app-body { padding: 18px; }
-                input, select { 
+        
+        input, select { 
             width: 100%; 
             padding: 10px 14px; 
             margin-bottom: 10px; 
@@ -444,7 +445,7 @@
                 <div class="stats-grid" id="studentStatsGrid">
                     <div class="stat-card">
                         <div class="value" id="totalDaysCount">0</div>
-                        <div class="label">Days Attended</div>
+                        <div class="label">Lectures Attended</div>
                     </div>
                     <div class="stat-card">
                         <div class="value" id="attendancePct">0%</div>
@@ -488,7 +489,8 @@
                         </div>
                     </div>
                 </div>
-                                <!-- AI FACE ID ENROLLMENT & SCANNER MODAL -->
+
+                <!-- AI FACE ID ENROLLMENT & SCANNER MODAL -->
                 <div class="admin-box" id="faceEnrollBox" style="margin-bottom:12px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
@@ -684,7 +686,7 @@
             </div>
         </div>
     </div>
-        <script>
+    <script>
         const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; 
         const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/";
         
@@ -873,7 +875,8 @@
                 showMsg("Biometric Scanning Cancelled or Mismatch!", true);
             }
         }
-                    async function adminRegisterStudent() {
+
+        async function adminRegisterStudent() {
             const name = document.getElementById('adminRegName').value.trim();
             const rawRoll = document.getElementById('adminRegRoll').value.trim();
             const password = document.getElementById('adminRegPass').value.trim() || '123456';
@@ -977,7 +980,6 @@
                 document.getElementById('noticeBanner').style.display = 'none';
             }
         }
-
         async function postNotice() {
             const user = JSON.parse(localStorage.getItem('user'));
             const message = document.getElementById('noticeMsg').value.trim();
@@ -1117,8 +1119,9 @@
             } catch (err) {
                 if (badge) { badge.innerText = "Not Enrolled"; badge.style.background = "#f1f5f9"; badge.style.color = "var(--text-muted)"; }
             }
-            }
-                    async function openCameraModal(mode) {
+        }
+
+        async function openCameraModal(mode) {
             const user = JSON.parse(localStorage.getItem('user'));
             currentCamMode = mode;
             
@@ -1309,8 +1312,8 @@
             updatePeriodTrackerWidget();
             setInterval(updatePeriodTrackerWidget, 30000);
             fetchNotices();
-            }
-                    function markFullDayAttendance() {
+                }
+        function markFullDayAttendance() {
             if (!navigator.geolocation) {
                 return showMsg('Geolocation is not supported!', true);
             }
@@ -1383,7 +1386,8 @@
             }
         }
 
-        function calculateRealAttendancePercentage(attendedDaysCount) {
+        // UPDATED PORTAL ATTENDANCE CALCULATION (Default 6 lectures per working day matching college portal)
+        function calculateRealAttendancePercentage() {
             const startDate = new Date(2026, 6, 15);
             const today = new Date();
             const holidayDatesList = globalHolidays.map(h => h.date);
@@ -1407,9 +1411,13 @@
                 cur.setDate(cur.getDate() + 1);
             }
 
-            if (totalWorkingDays === 0) return { pct: 100, totalWorkingDays: 0 };
-            const pct = ((attendedDaysCount / totalWorkingDays) * 100).toFixed(1);
-            return { pct: Math.min(100, pct), totalWorkingDays };
+            const DEFAULT_DAILY_LECTURES = 6;
+            const totalConductedLectures = totalWorkingDays * DEFAULT_DAILY_LECTURES;
+            const totalAttendedLectures = globalMyRecords.length;
+
+            if (totalConductedLectures === 0) return { pct: 100, totalWorkingDays, totalConductedLectures, totalAttendedLectures };
+            const pct = Math.min(100, ((totalAttendedLectures / totalConductedLectures) * 100)).toFixed(1);
+            return { pct, totalWorkingDays, totalConductedLectures, totalAttendedLectures };
         }
 
         function toggleCalendarView() { renderAttendanceCalendar(globalMyRecords); }
@@ -1497,12 +1505,11 @@
                     dateGrouped[item.date].count++;
                 });
 
-                const uniqueDays = Object.keys(dateGrouped).length;
+                const calc = calculateRealAttendancePercentage();
                 
                 const totalDaysEl = document.getElementById('totalDaysCount');
-                if (totalDaysEl) totalDaysEl.innerText = uniqueDays;
+                if (totalDaysEl) totalDaysEl.innerText = calc.totalAttendedLectures;
                 
-                const calc = calculateRealAttendancePercentage(uniqueDays);
                 const pctEl = document.getElementById('attendancePct');
                 if (pctEl) {
                     pctEl.innerText = `${calc.pct}%`;
@@ -1515,11 +1522,12 @@
                 const advisorBox = document.getElementById('advisorText');
                 if (advisorBox) {
                     if (calc.pct >= 75) {
-                        const skippableDays = Math.floor((uniqueDays - 0.75 * calc.totalWorkingDays) / 0.75);
-                        advisorBox.innerHTML = `Safe Zone (<b>${calc.pct}%</b>). You can skip <b>${Math.max(0, skippableDays)}</b> upcoming classes safely.`;
+                        const safeLectures = Math.floor(calc.totalAttendedLectures - 0.75 * calc.totalConductedLectures);
+                        const safeDays = Math.floor(safeLectures / 6);
+                        advisorBox.innerHTML = `Safe Zone (<b>${calc.pct}%</b>). You can skip approx <b>${Math.max(0, safeDays)}</b> upcoming days safely.`;
                     } else {
-                        const neededDays = Math.ceil((0.75 * calc.totalWorkingDays - uniqueDays) / 0.25);
-                        advisorBox.innerHTML = `Low Attendance (<b>${calc.pct}%</b>). Attend next <b>${Math.max(0, neededDays)}</b> consecutive classes to reach 75%.`;
+                        const neededLectures = Math.ceil(0.75 * calc.totalConductedLectures - calc.totalAttendedLectures);
+                        advisorBox.innerHTML = `Low Attendance (<b>${calc.pct}%</b>). Need <b>${Math.max(0, neededLectures)}</b> more lectures to reach 75%.`;
                     }
                 }
 
@@ -1540,7 +1548,6 @@
                 showMsg("Failed to sync attendance logs!", true);
             }
         }
-
         async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             try {
@@ -1688,7 +1695,7 @@
             headerRow += `,Total Present Days\n`;
 
             let csv = `BM Group Of Institutions - Master Attendance Grid Report (July-Dec 2026)\n`;
-            csv += `Total Working Days: ${workingDaysCount} Days\n\n`;
+            csv += `Total Working Days: ${workingDaysCount} Days (6 Lectures/Day Default)\n\n`;
             csv += headerRow;
 
             const sortedStudents = Object.values(studentsMap).sort((a, b) => {
@@ -1736,4 +1743,3 @@
     </script>
 </body>
 </html>
-           
