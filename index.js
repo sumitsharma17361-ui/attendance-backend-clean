@@ -27,12 +27,16 @@ if (MONGO_URI) {
     .catch(err => console.log('DB ERROR:', err.message));
 }
 
-// SCHEMAS (WITH CROSS-DEVICE FACE MESH VECTOR ARRAY)
+// ==========================================
+// SCHEMAS
+// ==========================================
+
+// UPDATED USER SCHEMA (Added 'faculty' and 'admin' enum for roles)
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   rollNo: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  role: { type: String, default: 'student' },
+  role: { type: String, enum: ['student', 'faculty', 'admin'], default: 'student' },
   faceDescriptor: { type: [Number], default: [] } // 68-Point Vector Array
 }, { timestamps: true });
 
@@ -61,9 +65,32 @@ const Attendance = mongoose.model('Attendance', attendanceSchema);
 const Holiday = mongoose.model('Holiday', holidaySchema);
 const Notice = mongoose.model('Notice', noticeSchema);
 
+// ==========================================
+// RBAC MIDDLEWARE (Role-Based Access Control)
+// ==========================================
+const verifyRole = (roles) => {
+  return (req, res, next) => {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return res.status(401).json({ error: "Access Denied" });
+    
+    try {
+      const verified = jwt.verify(token, JWT_SECRET);
+      if (!roles.includes(verified.role)) {
+        return res.status(403).json({ error: "Unauthorized Role!" });
+      }
+      req.user = verified;
+      next();
+    } catch (err) {
+      res.status(400).json({ error: "Invalid Token" });
+    }
+  };
+};
+
 app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active!'));
 
+// ==========================================
 // AUTH & REGISTRATION
+// ==========================================
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, rollNo, password } = req.body;
@@ -71,7 +98,6 @@ app.post('/api/auth/register', async (req, res) => {
     
     const cleanRoll = rollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
     
-    // YAHAN UPDATE KIYA GAYA HAI: Sirf CSE aur AIDS allow karega, max 2 digits in the end.
     if (!/^\d{2}(CSE|AIDS)\d{2}$/.test(cleanRoll)) return res.status(400).json({ error: 'Invalid Roll format! Only CSE and AIDS branches are allowed, ending with exactly 2 digits (e.g., 24CSE48, 24AIDS12).' });
 
     let user = await User.findOne({ rollNo: cleanRoll });
@@ -98,7 +124,9 @@ app.post('/api/auth/login', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ==========================================
 // GLOBAL MONGODB FACE MESH ENROLL & SYNC APIs
+// ==========================================
 app.post('/api/face/enroll', async (req, res) => {
   try {
     const { rollNo, faceDescriptor } = req.body;
@@ -127,7 +155,9 @@ app.get('/api/face/get/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ADMIN RESET STUDENT PASSWORD
+// ==========================================
+// ADMIN & FACULTY ROUTES
+// ==========================================
 app.post('/api/admin/reset-password', async (req, res) => {
   try {
     const { requesterRollNo, targetRollNo, newPassword } = req.body;
@@ -142,7 +172,6 @@ app.post('/api/admin/reset-password', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ADMIN UPDATE STUDENT ROLL NUMBER FORMAT
 app.post('/api/admin/update-rollno', async (req, res) => {
   try {
     const { requesterRollNo, oldRoll, newRoll } = req.body;
@@ -159,7 +188,6 @@ app.post('/api/admin/update-rollno', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ADMIN DELETE ENTIRE STUDENT ACCOUNT
 app.delete('/api/admin/delete-student', async (req, res) => {
   try {
     const { requesterRollNo, targetRollNo } = req.body;
@@ -175,7 +203,24 @@ app.delete('/api/admin/delete-student', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// NEW: Faculty Route for manual overrides using RBAC
+app.post('/api/faculty/override', verifyRole(['faculty', 'admin']), async (req, res) => {
+  try {
+    const { studentRollNo, subject, date, status } = req.body;
+    await Attendance.findOneAndUpdate(
+      { rollNo: studentRollNo, subject, date },
+      { status },
+      { new: true, upsert: true }
+    );
+    res.json({ message: "Attendance updated successfully" });
+  } catch (err) { 
+      res.status(500).json({ error: err.message }); 
+  }
+});
+
+// ==========================================
 // BROADCAST NOTICES API
+// ==========================================
 app.get('/api/notices', async (req, res) => {
   try {
     const notices = await Notice.find().sort({ date: -1 }).limit(3);
@@ -201,7 +246,9 @@ app.post('/api/admin/notice', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// UPDATED GEOFENCE LOCATION CHECK (500 METERS RADIUS LIMIT WITH NEW COORDINATES)
+// ==========================================
+// ATTENDANCE MARKING & GEOFENCING
+// ==========================================
 function checkLocation(lat, lng) {
   const COLLEGE_LAT = 28.4509370, COLLEGE_LNG = 76.7688120, R = 6371000;
   
@@ -217,7 +264,6 @@ function checkLocation(lat, lng) {
   return { isInside: distance <= 500, distance: distance.toFixed(0) };
 }
 
-// ATTENDANCE MARKING
 app.post('/api/attendance/mark', async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude } = req.body;
@@ -271,7 +317,6 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ADMIN BACKDATE
 app.post('/api/admin/manual-attendance', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNo, date, status } = req.body;
@@ -302,7 +347,9 @@ app.post('/api/admin/manual-attendance', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// HOLIDAYS & HISTORY
+// ==========================================
+// HOLIDAYS & HISTORY & ANALYTICS
+// ==========================================
 app.post('/api/admin/holiday', async (req, res) => {
   try {
     const { requesterRollNo, date, reason } = req.body;
@@ -342,6 +389,25 @@ app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// NEW: Analytics Route for Chart.js Dashboard
+app.get('/api/analytics/:rollNo', async (req, res) => {
+  try {
+    const cleanRoll = req.params.rollNo.trim().toUpperCase();
+    const records = await Attendance.find({ rollNo: cleanRoll });
+    
+    let subjectStats = {};
+    records.forEach(rec => {
+      if (!subjectStats[rec.subject]) subjectStats[rec.subject] = { present: 0, total: 0 };
+      subjectStats[rec.subject].total += 1;
+      if (rec.status === 'Present') subjectStats[rec.subject].present += 1;
+    });
+
+    res.json(subjectStats);
+  } catch (err) { 
+      res.status(500).json({ error: err.message }); 
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-                                      
+                                                
