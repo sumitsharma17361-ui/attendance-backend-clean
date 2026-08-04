@@ -725,7 +725,7 @@
         function sanitizeAndValidateRollNo(rawRoll) {
             if (!rawRoll) return { isValid: false, cleanRoll: "" };
             let clean = rawRoll.toUpperCase().replace(/[^A-Z0-9]/g, '');
-            const strictRegex = /^\d{2}[A-Z]{3}\d{2,3}$/;
+            const strictRegex = /^\d{2}(CSE|AIDS)\d{2}$/;
             return { isValid: strictRegex.test(clean), cleanRoll: clean };
         }
 
@@ -738,7 +738,7 @@
                 { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
                 { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
                 { start: "13:50", end: "14:35", subject: "CN - Computer Network", period: "P7" },
-                { start: "14:35", end: "15:20", subject: "WT - Web Technology", period: "P8" }
+                { start: "14:35", end: "15:20", subject: "LIB - Library", period: "P8" }
             ],
             2: [
                 { start: "09:20", end: "10:05", subject: "WT - Web Technology", period: "P1" },
@@ -761,8 +761,8 @@
             ],
             4: [
                 { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
-                { start: "10:05", end: "10:50", subject: "CN - Computer Network", period: "P2" },
-                { start: "10:50", end: "11:35", subject: "Sports / Activity", period: "P3" },
+                { start: "10:05", end: "10:50", subject: "WT - Web Technology", period: "P2" },
+                { start: "10:50", end: "11:35", subject: "CN - Computer Network", period: "P3" },
                 { start: "11:35", end: "12:20", subject: "DAA - Design & Analysis of Algorithm", period: "P4" },
                 { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
                 { start: "13:05", end: "14:35", subject: "DAA LAB - Algorithm Lab", period: "P6-P7" },
