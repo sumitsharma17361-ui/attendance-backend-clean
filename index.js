@@ -68,8 +68,11 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, rollNo, password } = req.body;
     if (!name || !rollNo || !password) return res.status(400).json({ error: 'All fields required!' });
+    
     const cleanRoll = rollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (!/^\d{2}[A-Z]{3}\d{2,3}$/.test(cleanRoll)) return res.status(400).json({ error: 'Invalid Roll format! Use 24CSE48 pattern.' });
+    
+    // YAHAN UPDATE KIYA GAYA HAI: Sirf CSE aur AIDS allow karega, max 2 digits in the end.
+    if (!/^\d{2}(CSE|AIDS)\d{2}$/.test(cleanRoll)) return res.status(400).json({ error: 'Invalid Roll format! Only CSE and AIDS branches are allowed, ending with exactly 2 digits (e.g., 24CSE48, 24AIDS12).' });
 
     let user = await User.findOne({ rollNo: cleanRoll });
     if (user) return res.status(400).json({ error: 'Roll number already registered!' });
@@ -341,4 +344,4 @@ app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-      
+                                      
