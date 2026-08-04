@@ -7,6 +7,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
+    <!-- Chart.js CDN Added -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { 
             --bg-body: #f8fafc;
@@ -471,6 +473,12 @@
                     <div><b>Attendance Advisor:</b> <span id="advisorText">Calculating criteria...</span></div>
                 </div>
 
+                <!-- SUBJECT-WISE ATTENDANCE ANALYTICS CHART -->
+                <div class="admin-box" id="analyticsBox" style="margin:12px 0; padding: 15px; background: #fff; border-radius: 14px; border: 1px solid var(--card-border);">
+                    <h4 style="font-size:12px; font-weight:800; color:var(--text-main); margin-bottom:10px;">Subject-wise Attendance</h4>
+                    <canvas id="attendanceChart" width="400" height="200"></canvas>
+                </div>
+
                 <!-- QUICK STUDENT PORTALS -->
                 <div class="quick-portals-card">
                     <span style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Quick Portals</span>
@@ -489,8 +497,7 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- AI FACE ID ENROLLMENT & SCANNER MODAL -->
+                                <!-- AI FACE ID ENROLLMENT & SCANNER MODAL -->
                 <div class="admin-box" id="faceEnrollBox" style="margin-bottom:12px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
@@ -574,8 +581,7 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- ADMIN CONTROL TAB -->
+                                <!-- ADMIN CONTROL TAB -->
                 <div id="adminTab" style="display:none;">
                     <div class="admin-nav">
                         <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">Excel</div>
@@ -686,7 +692,7 @@
             </div>
         </div>
     </div>
-    <script>
+        <script>
         const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; 
         const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/";
         
@@ -696,6 +702,7 @@
         let activeSubjectSubjectCode = "";
         let toastTimeout = null;
         let activeCloudFaceDescriptor = null;
+        let myChart = null;
 
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -829,8 +836,7 @@
                 activeSubjectSubjectCode = "";
             }
         }
-
-        function markActivePeriodAttendance() {
+                    function markActivePeriodAttendance() {
             if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
                 return showMsg("Abhi koi active class nahi chal rahi!", true);
             }
@@ -1074,9 +1080,8 @@
 
             const token = `BMERP_TOKEN_${Date.now()}_${Math.random().toString(36).substring(7)}`;
             new QRCode(qrBox, { text: token, width: 130, height: 130 });
-        }
-
-        async function loadFaceAIModels() {
+            }
+                    async function loadFaceAIModels() {
             if (isModelsLoaded) return true;
             try {
                 const statusTxt = document.getElementById('cameraScanStatus');
@@ -1254,17 +1259,13 @@
             const password = document.getElementById('password').value.trim();
 
             const validation = sanitizeAndValidateRollNo(rawRoll);
-            // 1. Pehle Roll No validate karein
-if (!validation.isValid) {
-    return showMsg('Enter valid Roll No (e.g. 24CSE09, 24AIDS07)!', true);
-}
+            if (!validation.isValid) {
+                return showMsg('Enter valid Roll No (e.g. 24CSE09, 24AIDS07)!', true);
+            }
 
-// 2. Phir check karein agar Password blank hai
-if (!password) {
-    return showMsg('Please enter your password!', true);
-}
-            
-            
+            if (!password) {
+                return showMsg('Please enter your password!', true);
+            }
 
             showMsg('Connecting...');
             try {
@@ -1281,6 +1282,53 @@ if (!password) {
                 }
             } catch (err) {
                 showMsg('Connection timeout! Please retry.', true);
+            }
+        }
+
+        // FUNCTION 1: RENDER ANALYTICS GRAPH
+        async function loadAnalyticsChart(rollNo) {
+            try {
+                const res = await fetch(`${API_BASE}/api/analytics/${rollNo}`);
+                const data = await res.json();
+                
+                const labels = Object.keys(data); // e.g., ["Math", "Physics"]
+                const presentData = labels.map(sub => data[sub].present); // e.g., [10, 8]
+
+                const ctx = document.getElementById('attendanceChart').getContext('2d');
+                
+                if(myChart) myChart.destroy(); 
+                
+                myChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Lectures Attended',
+                            data: presentData,
+                            backgroundColor: '#2563eb',
+                            borderRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                        }
+                    }
+                });
+            } catch(err) {
+                console.error("Chart data failed to load:", err);
+            }
+        }
+
+        // FUNCTION 2: ASK FOR PUSH NOTIFICATION PERMISSION
+        function requestNotificationPermission() {
+            if ("Notification" in window) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        console.log("Push Notifications enabled!");
+                    }
+                });
             }
         }
 
@@ -1322,8 +1370,12 @@ if (!password) {
             updatePeriodTrackerWidget();
             setInterval(updatePeriodTrackerWidget, 30000);
             fetchNotices();
-                }
-        function markFullDayAttendance() {
+
+            // Trigger New Integrated Features
+            requestNotificationPermission();
+            loadAnalyticsChart(user.rollNo);
+            }
+                    function markFullDayAttendance() {
             if (!navigator.geolocation) {
                 return showMsg('Geolocation is not supported!', true);
             }
@@ -1396,7 +1448,6 @@ if (!password) {
             }
         }
 
-        // UPDATED PORTAL ATTENDANCE CALCULATION (Default 6 lectures per working day matching college portal)
         function calculateRealAttendancePercentage() {
             const startDate = new Date(2026, 6, 15);
             const today = new Date();
@@ -1558,6 +1609,7 @@ if (!password) {
                 showMsg("Failed to sync attendance logs!", true);
             }
         }
+
         async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             try {
