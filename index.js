@@ -30,12 +30,14 @@ if (MONGO_URI) {
 // ==========================================
 // SCHEMAS
 // ==========================================
+
+// UPDATED USER SCHEMA (Added 'faculty' and 'admin' enum for roles)
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   rollNo: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, enum: ['student', 'faculty', 'admin'], default: 'student' },
-  faceDescriptor: { type: [Number], default: [] }
+  faceDescriptor: { type: [Number], default: [] } // 68-Point Vector Array
 }, { timestamps: true });
 
 const attendanceSchema = new mongoose.Schema({
@@ -64,7 +66,7 @@ const Holiday = mongoose.model('Holiday', holidaySchema);
 const Notice = mongoose.model('Notice', noticeSchema);
 
 // ==========================================
-// RBAC MIDDLEWARE
+// RBAC MIDDLEWARE (Role-Based Access Control)
 // ==========================================
 const verifyRole = (roles) => {
   return (req, res, next) => {
@@ -84,7 +86,7 @@ const verifyRole = (roles) => {
   };
 };
 
-app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active[span_0](start_span)[span_0](end_span)!'));
+app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active!'));
 
 // ==========================================
 // AUTH & REGISTRATION
@@ -118,12 +120,12 @@ app.post('/api/auth/login', async (req, res) => {
     if (!isMatch) return res.status(400).json({ error: 'Invalid password!' });
     const role = ADMIN_ROLL_NUMBERS.includes(cleanRoll) ? 'admin' : user.role;
     const token = jwt.sign({ id: user._id, rollNo: user.rollNo, name: user.name, role }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ message: 'Login successful!', token, user: { name: user.name, rollNo: user.rollNo, role, token } });
+    res.json({ message: 'Login successful!', token, user: { name: user.name, rollNo: user.rollNo, role } });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ==========================================
-// FACE MESH & ADMIN UTILITIES
+// GLOBAL MONGODB FACE MESH ENROLL & SYNC APIs
 // ==========================================
 app.post('/api/face/enroll', async (req, res) => {
   try {
@@ -153,6 +155,9 @@ app.get('/api/face/get/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ==========================================
+// ADMIN & FACULTY ROUTES
+// ==========================================
 app.post('/api/admin/reset-password', async (req, res) => {
   try {
     const { requesterRollNo, targetRollNo, newPassword } = req.body;
@@ -198,6 +203,7 @@ app.delete('/api/admin/delete-student', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// NEW: Faculty Route for manual overrides using RBAC
 app.post('/api/faculty/override', verifyRole(['faculty', 'admin']), async (req, res) => {
   try {
     const { studentRollNo, subject, date, status } = req.body;
@@ -212,6 +218,9 @@ app.post('/api/faculty/override', verifyRole(['faculty', 'admin']), async (req, 
   }
 });
 
+// ==========================================
+// BROADCAST NOTICES API
+// ==========================================
 app.get('/api/notices', async (req, res) => {
   try {
     const notices = await Notice.find().sort({ date: -1 }).limit(3);
@@ -237,6 +246,9 @@ app.post('/api/admin/notice', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ==========================================
+// ATTENDANCE MARKING & GEOFENCING
+// ==========================================
 function checkLocation(lat, lng) {
   const COLLEGE_LAT = 28.4509370, COLLEGE_LNG = 76.7688120, R = 6371000;
   
@@ -305,65 +317,6 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/attendance/mark-active', async (req, res) => {
-  try {
-    const { rollNo, name, latitude, longitude } = req.body;
-    const today = new Date(), todayDate = today.toISOString().split('T')[0];
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const dayName = days[today.getDay()];
-
-    if (dayName === 'Sunday' || dayName === 'Saturday') {
-      return res.status(400).json({ error: 'Weekend! College was OFF.' });
-    }
-    const isHoliday = await Holiday.findOne({ date: todayDate });
-    if (isHoliday) return res.status(400).json({ error: `Holiday: ${isHoliday.reason}` });
-
-    const locCheck = checkLocation(latitude, longitude);
-    if (!locCheck.isInside) return res.status(400).json({ error: `Outside Classroom Boundary! (${locCheck.distance}m away)` });
-
-    const cleanRoll = rollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    const user = await User.findOne({ rollNo: cleanRoll });
-    if (!user) return res.status(403).json({ error: 'Student profile not found!' });
-    const studentName = name || user.name;
-
-    const todaySubjects = TIME_TABLE[dayName] || [];
-
-    let requestedSubject = (req.body.subject || '').trim().toUpperCase();
-    if (!requestedSubject || !todaySubjects.map(s => s.toUpperCase()).includes(requestedSubject)) {
-      for (let sub of todaySubjects) {
-        const exists = await Attendance.findOne({ rollNo: cleanRoll, subject: sub, date: todayDate });
-        if (!exists) { requestedSubject = sub.toUpperCase(); break; }
-      }
-    }
-
-    if (!requestedSubject) {
-      return res.status(400).json({ error: 'No active / pending lecture detected on the timetable right now!' });
-    }
-
-    const canonicalSubject = todaySubjects.find(s => s.toUpperCase() === requestedSubject);
-    const exists = await Attendance.findOne({ rollNo: cleanRoll, subject: canonicalSubject, date: todayDate });
-    if (exists) {
-      return res.status(400).json({ error: `Already marked for ${canonicalSubject} today!` });
-    }
-
-    await new Attendance({
-      rollNo: cleanRoll,
-      studentName,
-      subject: canonicalSubject,
-      date: todayDate,
-      status: 'Present',
-      location: { latitude, longitude }
-    }).save();
-
-    res.status(201).json({
-      message: `Active Lecture Attendance Marked for ${canonicalSubject}!`,
-      subject: canonicalSubject,
-      dayName,
-      timestamp: today
-    });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
 app.post('/api/admin/manual-attendance', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNo, date, status } = req.body;
@@ -393,223 +346,68 @@ app.post('/api/admin/manual-attendance', async (req, res) => {
     res.status(201).json({ message: `Marked ${markedCount} lectures for ${user.name} on ${date}` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
-            // ==========================================
+
+// ==========================================
 // HOLIDAYS & HISTORY & ANALYTICS
 // ==========================================
-
 app.post('/api/admin/holiday', async (req, res) => {
-    try {
-        const { requesterRollNo, date, reason } = req.body;
-        if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''))) return res.status(403).json({ error: 'Access Denied!' });
-        
-        await Holiday.findOneAndUpdate({ date }, 
-            { date, reason: reason || 'College Holiday' }, 
-            { upsert: true, new: true }
-        );
-        res.json({ message: `Holiday declared for ${date}` });
-    } catch (err) 
-    { res.status(500).json({ error: err.message }); }
+  try {
+    const { requesterRollNo, date, reason } = req.body;
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''))) return res.status(403).json({ error: 'Access Denied!' });
+    await Holiday.findOneAndUpdate({ date }, { date, reason: reason || 'College Holiday' }, { upsert: true, new: true });
+    res.json({ message: `Holiday declared for ${date}` });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.get('/api/holidays', async (req, res) => {
-    try {
-        const holidays = await Holiday.find();
-        res.json(holidays);
-    } catch (err) 
-    { res.status(500).json({ error: err.message }); }
+  try {
+    const holidays = await Holiday.find();
+    res.json(holidays);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.get('/api/attendance/history/:rollNo', async (req, res) => {
-    try {
-        const history = await Attendance.find({ rollNo: req.params.rollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, '') }).sort({ date: -1 });
-        res.json(history);
-    } catch (err) 
-    { res.status(500).json({ error: err.message }); }
+  try {
+    const history = await Attendance.find({ rollNo: req.params.rollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, '') }).sort({ date: -1 });
+    res.json(history);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
-    try {
-        if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''))) return res.status(403).json({ error: 'Access Denied!' });
-        
-        const allRecords = await Attendance.find().sort({ rollNo: 1, date: -1 });
-        res.json(allRecords);
-    } catch (err) 
-    { res.status(500).json({ error: err.message }); }
+  try {
+    if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''))) return res.status(403).json({ error: 'Access Denied!' });
+    const allRecords = await Attendance.find().sort({ rollNo: 1, date: -1 });
+    res.json(allRecords);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
-    try {
-        if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''))) return res.status(403).json({ error: 'Access Denied!' });
-        
-        await Attendance.findByIdAndDelete(req.params.id);
-        res.json({ message: 'Record deleted!' });
-    } catch (err) 
-    { res.status(500).json({ error: err.message }); }
+  try {
+    if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''))) return res.status(403).json({ error: 'Access Denied!' });
+    await Attendance.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Record deleted!' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// OWN ATTENDANCE EXCEL EXPORT
-app.get('/api/attendance/export/:rollNo', async (req, res) => {
-    try {
-        const token = req.headers.authorization?.split(' ')[1];
-        let requester = null;
-        try { if (token) requester = jwt.verify(token, JWT_SECRET); } 
-        catch (e) {}
-
-        if (!requester) return res.status(401).json({ error: 'Access Denied: token missing!' });
-
-        const targetRollRaw = req.params.rollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-        const cleanTarget = targetRollRaw === 'ME' ? requester.rollNo : targetRollRaw;
-
-        const isSelf = requester.rollNo === cleanTarget;
-        const isPriv = ['admin', 'faculty'].includes(requester.role) || ADMIN_ROLL_NUMBERS.includes(cleanTarget);
-
-        if (!isSelf && !isPriv) {
-            return res.status(403).json({ error: 'Forbidden: students can only export their own attendance.' });
-        }
-
-        const user = await User.findOne({ rollNo: cleanTarget });
-        if (!user) return res.status(404).json({ error: `Student ${cleanTarget} not found!` });
-
-        const mode = (req.query.mode || 'SEMESTER').toUpperCase();
-        let startDate = null, endDate = new Date();
-
-        if (mode === 'MONTH') {
-            const monthParam = req.query.month;
-            if (!monthParam || !/^\d{4}-\d{2}$/.test(monthParam)) {
-                return res.status(400).json({ error: 'For MONTH mode, ?month=YYYY-MM is required.' });
-            }
-            const [y, m] = monthParam.split('-').map(Number);
-            startDate = new Date(y, m - 1, 1);
-            endDate = new Date(y, m, 0, 23, 59, 59);
-        } else if (mode === 'SEMESTER') {
-            startDate = new Date(2026, 6, 15); // Jul 15, 2026
-            endDate = new Date(2026, 11, 31, 23, 59, 59); // Dec 31, 2026
-        } else {
-            return res.status(400).json({ error: 'Invalid mode. Use SEMESTER (default) or MONTH.' });
-        }
-
-        const records = await Attendance.find({
-            rollNo: cleanTarget,
-            date: { $gte: startDate.toISOString().split('T')[0], $lte: endDate.toISOString().split('T')[0] }
-        }).sort({ date: 1, subject: 1 });
-
-        let ExcelJS;
-        try { ExcelJS = require('exceljs'); } 
-        catch (e) {
-            const lines = [
-                'BM Group Institutions - Attendance Export',
-                `Student: ${user.name} (${user.rollNo})`,
-                `Mode: ${mode}`,
-                `Range: ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`,
-                '',
-                'Date,Day,Subject,Status,Lecture Period'
-            ];
-            records.forEach(r => {
-                const parts = r.date.split('-');
-                const dayName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date(parts[0], parts[1] - 1, parts[2]).getDay()];
-                lines.push(`${r.date},${dayName},${r.subject},${r.status},${r.period || ''}`);
-            });
-            const csv = lines.join('\n');
-            res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-            res.setHeader('Content-Disposition', `attachment; filename="attendance_${cleanTarget}_${mode}.csv"`);
-            return res.send(csv);
-        }
-
-        const wb = new ExcelJS.Workbook();
-        wb.creator = 'BM Group ERP';
-        wb.created = new Date();
-
-        const sheet1 = wb.addWorksheet('Subject-wise Summary');
-        sheet1.columns = [
-            { header: 'Subject', key: 'subject', width: 30 },
-            { header: 'Present', key: 'present', width: 12 },
-            { header: 'Total Lectures', key: 'total', width: 18 },
-            { header: 'Attendance %', key: 'pct', width: 16 }
-        ];
-
-        const subjectStats = {};
-        records.forEach(rec => {
-            if (!subjectStats[rec.subject]) 
-                subjectStats[rec.subject] = { present: 0, total: 0 };
-            subjectStats[rec.subject].total += 1;
-            if (rec.status === 'Present' || rec.status === 'Duty Leave') 
-                subjectStats[rec.subject].present += 1;
-        });
-
-        // Fixed syntax bug for sorting object keys cleanly
-        Object.keys(subjectStats).sort().forEach(sub => {
-            const s = subjectStats[sub];
-            sheet1.addRow({
-                subject: sub,
-                present: s.present,
-                total: s.total,
-                pct: s.total ? ((s.present / s.total) * 100).toFixed(2) + '%' : '0.00%'
-            });
-        });
-
-        const sheet2 = wb.addWorksheet('Daily Lectures');
-        sheet2.columns = [
-            { header: 'Date', key: 'date', width: 14 },
-            { header: 'Day', key: 'day', width: 8 },
-            { header: 'Subject', key: 'subject', width: 28 },
-            { header: 'Status', key: 'status', width: 14 }
-        ];
-        records.forEach(r => {
-            const parts = r.date.split('-');
-            const dayName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date(parts[0], parts[1] - 1, parts[2]).getDay()];
-            sheet2.addRow({ date: r.date, day: dayName, subject: r.subject, status: r.status });
-        });
-
-        const metaSheet = wb.addWorksheet('Report Info');
-        metaSheet.columns = [
-            { header: 'Field', key: 'f', width: 24 },
-            { header: 'Value', key: 'v', width: 38 }
-        ];
-        metaSheet.addRow({ f: 'Student Name', v: user.name });
-        metaSheet.addRow({ f: 'Roll No', v: user.rollNo });
-        metaSheet.addRow({ f: 'Mode', v: mode });
-        metaSheet.addRow({ f: 'From', v: startDate.toISOString().split('T')[0] });
-        metaSheet.addRow({ f: 'To', v: endDate.toISOString().split('T')[0] });
-        metaSheet.addRow({ f: 'Generated At', v: new Date().toISOString() });
-        metaSheet.addRow({ f: 'Requested By', v: requester.rollNo });
-
-        const buffer = await wb.xlsx.writeBuffer();
-        const fileName = mode === 'MONTH'
-            ? `My_Attendance_${req.query.month}.xlsx`
-            : `My_Semester_Attendance_Jul_Dec_2026.xlsx`;
-
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-        res.setHeader('Content-Length', buffer.length);
-        res.send(buffer);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// ANALYTICS ROUTE
+// NEW: Analytics Route for Chart.js Dashboard
 app.get('/api/analytics/:rollNo', async (req, res) => {
-    try {
-        const cleanRoll = req.params.rollNo.trim().toUpperCase();
-        const records = await Attendance.find({ rollNo: cleanRoll });
+  try {
+    const cleanRoll = req.params.rollNo.trim().toUpperCase();
+    const records = await Attendance.find({ rollNo: cleanRoll });
+    
+    let subjectStats = {};
+    records.forEach(rec => {
+      if (!subjectStats[rec.subject]) subjectStats[rec.subject] = { present: 0, total: 0 };
+      subjectStats[rec.subject].total += 1;
+      if (rec.status === 'Present') subjectStats[rec.subject].present += 1;
+    });
 
-        let subjectStats = {};
-        records.forEach(rec => {
-            if (!subjectStats[rec.subject])
-                subjectStats[rec.subject] = { present: 0, total: 0 };
-            subjectStats[rec.subject].total += 1;
-            if (rec.status === 'Present')
-                subjectStats[rec.subject].present += 1;
-        });
-
-        res.json(subjectStats);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    res.json(subjectStats);
+  } catch (err) { 
+      res.status(500).json({ error: err.message }); 
+  }
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
-          
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+      
