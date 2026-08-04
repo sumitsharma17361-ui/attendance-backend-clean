@@ -1254,7 +1254,8 @@
             const password = document.getElementById('password').value.trim();
 
             const validation = sanitizeAndValidateRollNo(rawRoll);
-            if (!validation.isValid || !password) return showMsg('Enter valid Roll No (e.g. 24CSE48)!', true);
+            if (!validation.isValid || !password) return showMsg('Enter valid Roll No (e.g. 24CSE09, 24AIDS07)!', true);
+            
 
             showMsg('Connecting...');
             try {
