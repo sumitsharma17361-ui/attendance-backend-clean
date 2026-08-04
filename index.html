@@ -224,7 +224,7 @@
         }
         .badge-present { background: #dcfce7; color: #15803d; }
         .defaulter-badge { 
-            display: inline-block; 
+                    display: inline-block; 
             background: #fef2f2; 
             color: #991b1b; 
             font-size: 10px; 
@@ -235,7 +235,8 @@
             margin-left: 6px; 
             animation: pulseFade 2.5s infinite ease-in-out;
         }
-                @keyframes pulseFade {
+
+        @keyframes pulseFade {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.65; }
         }
@@ -441,14 +442,15 @@
                     </div>
                     <button class="btn btn-danger" style="width:auto; padding:5px 10px; margin:0; font-size:11px;" onclick="logout()">Logout</button>
                 </div>
-                                <!-- STUDENT DYNAMIC STATS CARD -->
+
+                <!-- STUDENT DYNAMIC STATS CARD -->
                 <div class="stats-grid" id="studentStatsGrid">
                     <div class="stat-card">
                         <div class="value" id="totalDaysCount">0</div>
                         <div class="label">Lectures Attended</div>
                     </div>
                     <div class="stat-card">
-                        <div class="value" id="attendancePct">0%</div>
+                                               <div class="value" id="attendancePct">0%</div>
                         <div class="label">Attendance Status</div>
                     </div>
                 </div>
@@ -544,9 +546,9 @@
                             <svg class="svg-icon" viewBox="0 0 24 24"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/></svg>
                             Scan QR
                         </button>
-                        <button class="btn btn-outline" onclick="exportMySemesterExcel()">
+                        <button class="btn btn-outline" onclick="exportStudentCSV()">
                             <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                            My Excel
+                            Excel Sheet
                         </button>
                     </div>
                     <div style="text-align:center; font-size:10px; color:var(--text-muted); margin: 12px 0 4px 0; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Live Timetable Period Tracker</div>
@@ -557,11 +559,6 @@
                         </div>
                         <button class="action-btn" id="markPeriodBtn" style="background:var(--success); color:white; padding:6px 12px;" onclick="markActivePeriodAttendance()">Mark Lecture</button>
                     </div>
-
-                    <button class="btn btn-outline" onclick="exportMyMonthExcel()" style="margin-top:6px; padding:9px; font-size:11px;">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-                        Download This Month's Excel
-                    </button>
 
                     <div class="calendar-container">
                         <div class="calendar-header">
@@ -594,7 +591,8 @@
                         <div class="admin-nav-item" onclick="switchAdminSubTab('subTools')">Tools</div>
                         <div class="admin-nav-item" onclick="switchAdminSubTab('subDirectory')">Directory</div>
                     </div>
-                                        <div id="subReports" class="admin-box tab-content-active">
+
+                    <div id="subReports" class="admin-box tab-content-active">
                         <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Export Excel Reports:</span>
                         <select id="exportSelection" style="padding:10px; margin-bottom:8px;">
                             <option value="ALL_SEMESTER">Full Semester (Jul-Dec 2026)</option>
@@ -678,7 +676,7 @@
                     </div>
 
                     <!-- DIRECTORY TAB -->
-                    <div id="subDirectory" style="display:none;">
+                        <div id="subDirectory" style="display:none;">
                         <button class="btn btn-outline" onclick="fetchAllAttendance()" style="margin-bottom:8px;">Refresh Records Directory</button>
                         
                         <h4 style="font-size:11px; color:var(--text-muted); margin-top:6px; font-weight:700;">Class Records Directory:</h4>
@@ -802,7 +800,8 @@
                 activeSubjectSubjectCode = "";
                 return;
             }
-                        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
             const daySchedule = WEEKLY_SCHEDULE[dayOfWeek] || [];
             let foundSlot = null;
 
@@ -838,18 +837,17 @@
             }
         }
                     function markActivePeriodAttendance() {
-            if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch") || activeSubjectSubjectCode.includes("Lunch Break")) {
+            if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
                 return showMsg("Abhi koi active class nahi chal rahi!", true);
             }
-            markActiveLectureOnBackend(activeSubjectSubjectCode);
+            markSingleAttendance(activeSubjectSubjectCode);
         }
 
         function openFullDayPasscodePrompt() {
             const enteredPasscode = prompt(`Enter Class Passcode / Daily Master Secret displayed by Teacher:`);
             if (!enteredPasscode) return;
             if (enteredPasscode.trim() === currentDailyPasscode) {
-                showMsg("Daily Passcode verified — sirf CURRENT lecture mark hogi (jaisa QR/face).", false);
-                setTimeout(markActivePeriodAttendance, 600);
+                markFullDayAttendance();
             } else {
                 showMsg("Invalid Class Passcode! Attendance Denied.", true);
             }
@@ -875,7 +873,7 @@
 
                 if (credential) {
                     showMsg("Biometric Identity Verified!");
-                    setTimeout(markActivePeriodAttendance, 800);
+                    setTimeout(markFullDayAttendance, 800);
                 } else {
                     showMsg("Biometric Verification Failed!", true);
                 }
@@ -904,7 +902,7 @@
                     document.getElementById('adminRegName').value = '';
                     document.getElementById('adminRegRoll').value = '';
                     document.getElementById('adminRegPass').value = '';
-                } else {
+                            } else {
                     showMsg(data.error || "Failed to register student", true);
                 }
             } catch(e) {
@@ -1044,7 +1042,7 @@
             if(tabs[1]) tabs[1].classList.toggle('active', tabId === 'adminTab');
 
             if(tabId === 'adminTab') fetchAllAttendance();
-       .
+        }
 
         function switchAdminSubTab(subId) {
             const subTabs = ['subReports', 'subAttendance', 'subHoliday', 'subQR', 'subTools', 'subDirectory'];
@@ -1126,10 +1124,11 @@
             } catch (err) {
                 if (badge) { badge.innerText = "Not Enrolled"; badge.style.background = "#f1f5f9"; badge.style.color = "var(--text-muted)"; }
             }
-            }
-                    async function openCameraModal(mode) {
+        }
+
+        async function openCameraModal(mode) {
             const user = JSON.parse(localStorage.getItem('user'));
-            currentCamMode = mode;
+                        currentCamMode = mode;
             
             if (mode === 'CHECKIN') {
                 if (!activeCloudFaceDescriptor) {
@@ -1212,7 +1211,7 @@
                     showMsg("Identity Verified: " + user.name);
                     setTimeout(() => {
                         closeCameraModal();
-                        markActivePeriodAttendance();
+                        markFullDayAttendance();
                     }, 1200);
                 } else {
                     statusTxt.innerText = "Face Mismatch! Identity Not Verified.";
@@ -1233,7 +1232,7 @@
             document.getElementById('toggleLink').innerText = isRegistering ? 'Already registered? Sign In' : 'New Student? Register Account';
         }
 
-        function openStudentQRScanner() { markActivePeriodAttendance(); }
+        function openStudentQRScanner() { markFullDayAttendance(); }
 
         async function resetStudentPassword() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -1292,8 +1291,8 @@
                 const res = await fetch(`${API_BASE}/api/analytics/${rollNo}`);
                 const data = await res.json();
                 
-                const labels = Object.keys(data);
-                const presentData = labels.map(sub => data[sub].present);
+                const labels = Object.keys(data); // e.g., ["Math", "Physics"]
+                const presentData = labels.map(sub => data[sub].present); // e.g., [10, 8]
 
                 const ctx = document.getElementById('attendanceChart').getContext('2d');
                 
@@ -1354,8 +1353,7 @@
             document.getElementById('simulatorBox').style.display = 'flex';
             document.getElementById('faceEnrollBox').style.display = 'block';
             document.getElementById('studentTabHeader').style.display = 'block';
-
-            if (isAdmin) {
+                        if (isAdmin) {
                 document.getElementById('adminTabHeader').style.display = 'block';
             } else {
                 document.getElementById('adminTabHeader').style.display = 'none';
@@ -1376,9 +1374,7 @@
             requestNotificationPermission();
             loadAnalyticsChart(user.rollNo);
             }
-                    // Legacy full-day endpoint retained server-side but no longer invoked from
-        // Biometric / Face / QR flows (those now mark only the active lecture).
-        async function markFullDayAttendance_legacy() {
+                    function markFullDayAttendance() {
             if (!navigator.geolocation) {
                 return showMsg('Geolocation is not supported!', true);
             }
@@ -1394,38 +1390,7 @@
             }, () => showMsg('GPS Denied!', true));
         }
 
-        function markActiveLectureOnBackend(subject) {
-            if (!navigator.geolocation) {
-                return showMsg('Geolocation is not supported!', true);
-            }
-            navigator.geolocation.getCurrentPosition(async (pos) => {
-                const user = JSON.parse(localStorage.getItem('user'));
-                try {
-                    const res = await fetch(`${API_BASE}/api/attendance/mark-active`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            rollNo: user.rollNo,
-                            name: user.name,
-                            subject: subject, // server validates against today's timetable
-                            latitude: pos.coords.latitude,
-                            longitude: pos.coords.longitude
-                        })
-                    });
-                    const data = await res.json();
-                    if (res.ok) {
-                        showMsg(`Active lecture marked: ${data.subject || subject}`);
-                        fetchHistory(user.rollNo);
-                        loadAnalyticsChart(user.rollNo);
-                    } else {
-                        showMsg(data.error || "Attendance marking failed", true);
-                    }
-                } catch(e) {
-                    showMsg("Network Error! Try again.", true);
-                }
-            }, () => showMsg('GPS Denied!', true));
-            }
-                    function markSingleAttendance(overrideSubject) {
+        function markSingleAttendance(overrideSubject) {
             const sub = overrideSubject || "WT LAB";
             if (!navigator.geolocation) {
                 return showMsg('Geolocation is not supported!', true);
@@ -1613,8 +1578,7 @@
 
                 const defaulterTag = document.getElementById('defaulterTag');
                 if (defaulterTag) defaulterTag.style.display = (calc.pct < 75) ? 'inline-block' : 'none';
-
-                const advisorBox = document.getElementById('advisorText');
+                            const advisorBox = document.getElementById('advisorText');
                 if (advisorBox) {
                     if (calc.pct >= 75) {
                         const safeLectures = Math.floor(calc.totalAttendedLectures - 0.75 * calc.totalConductedLectures);
@@ -1642,8 +1606,9 @@
             } catch(e) {
                 showMsg("Failed to sync attendance logs!", true);
             }
-            }
-                    async function fetchAllAttendance() {
+        }
+
+        async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             try {
                 const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
@@ -1716,68 +1681,6 @@
 
         function exportStudentCSV() {
             if (globalMyRecords.length === 0) return alert("No records!");
-            const grouped = {};
-            globalMyRecords.forEach(r => { if (!grouped[r.date]) grouped[r.date] = 0; grouped[r.date]++; });
-
-            let csv = "Date,Day,Total Lectures Attended,Status\n";
-            Object.keys(grouped).forEach(d => {
-                const parts = d.split('-');
-                const dayStr = DAY_NAMES[new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])).getDay()];
-                csv += `"${d}","${dayStr}","${grouped[d]} Lectures","Present"\n`;
-            });
-            downloadFile(csv, `My_Attendance_Report.csv`);
-        }
-
-        // ==========================================================
-        // OWN ATTENDANCE EXCEL/PDF EXPORT (student dashboard)
-        // Downloads .xlsx straight from backend via JWT-protected route.
-        // ==========================================================
-        async function downloadOwnAttendanceExcel(mode, extraPath = '') {
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (!user) return showMsg('Please login first!', true);
-            let url = `${API_BASE}/api/attendance/export/me?mode=${mode}`;
-            if (extraPath) url += extraPath;
-
-            try {
-                const stored = JSON.parse(localStorage.getItem('user') || '{}');
-                const token = stored.token || '';
-                const res = await fetch(url, {
-                    method: 'GET',
-                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-                });
-                if (!res.ok) {
-                    const txt = await res.text();
-                    let msg = 'Export failed';
-                    try { const j = JSON.parse(txt); msg = j.error || msg; } catch (e) {}
-                    return showMsg(msg, true);
-                }
-                const blob = await res.blob();
-                const blobUrl = URL.createObjectURL(blob);
-
-                let filename = 'My_Attendance.xlsx';
-                const cd = res.headers.get('Content-Disposition') || '';
-                const match = cd.match(/filename="?([^"]+)"?/);
-                if (match && match[1]) filename = match[1];
-
-                const a = document.createElement('a');
-                a.href = blobUrl;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
-                showMsg(`${mode === 'MONTH' ? 'Monthly' : 'Semester'} Excel downloaded!`);
-            } catch (err) {
-                showMsg('Network error while exporting Excel.', true);
-            }
-        }
-
-        function exportMySemesterExcel() { return downloadOwnAttendanceExcel('SEMESTER'); }
-        function exportMyMonthExcel()    { return downloadOwnAttendanceExcel('MONTH', `&month=${new Date().toISOString().slice(0, 7)}`); }
-
-        // patch old global export functions to use new routes if old elements still exist
-        function exportStudentCSV() {
-            if (typeof globalMyRecords === 'undefined' || globalMyRecords.length === 0) return alert("No records!");
             const grouped = {};
             globalMyRecords.forEach(r => { if (!grouped[r.date]) grouped[r.date] = 0; grouped[r.date]++; });
 
