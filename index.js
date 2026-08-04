@@ -413,57 +413,67 @@ app.post('/api/admin/manual-attendance', async (req, res) => {
 // ==========================================
 // HOLIDAYS & HISTORY & ANALYTICS
 // ==========================================
+
 app.post('/api/admin/holiday', async (req, res) => {
-  try {
-    const { requesterRollNo, date, reason } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''))) return res.status(403).json({ error: 'Access Denied!' });
-    await Holiday.findOneAndUpdate({ date }, { date, reason: reason || 'College Holiday' }, { upsert: true, new: true });
-    res.json({ message: `Holiday declared for ${date}` });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+    try {
+        const { requesterRollNo, date, reason } = req.body;
+        if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''))) return res.status(403).json({ error: 'Access Denied!' });
+        
+        await Holiday.findOneAndUpdate({ date }, 
+            { date, reason: reason || 'College Holiday' }, 
+            { upsert: true, new: true }
+        );
+        res.json({ message: `Holiday declared for ${date}` });
+    } catch (err) 
+    { res.status(500).json({ error: err.message }); }
 });
 
 app.get('/api/holidays', async (req, res) => {
-  try {
-    const holidays = await Holiday.find();
-    res.json(holidays);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+    try {
+        const holidays = await Holiday.find();
+        res.json(holidays);
+    } catch (err) 
+    { res.status(500).json({ error: err.message }); }
 });
 
 app.get('/api/attendance/history/:rollNo', async (req, res) => {
-  try {
-    const history = await Attendance.find({ rollNo: req.params.rollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, '') }).sort({ date: -1 });
-    res.json(history);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+    try {
+        const history = await Attendance.find({ rollNo: req.params.rollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, '') }).sort({ date: -1 });
+        res.json(history);
+    } catch (err) 
+    { res.status(500).json({ error: err.message }); }
 });
 
 app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
-  try {
-    if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''))) return res.status(403).json({ error: 'Access Denied!' });
-    const allRecords = await Attendance.find().sort({ rollNo: 1, date: -1 });
-    res.json(allRecords);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+    try {
+        if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''))) return res.status(403).json({ error: 'Access Denied!' });
+        
+        const allRecords = await Attendance.find().sort({ rollNo: 1, date: -1 });
+        res.json(allRecords);
+    } catch (err) 
+    { res.status(500).json({ error: err.message }); }
 });
 
 app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
     try {
-        if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''))) 
-            return res.status(403).json({ error: 'Access Denied!' });
+        if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''))) return res.status(403).json({ error: 'Access Denied!' });
         
         await Attendance.findByIdAndDelete(req.params.id);
         res.json({ message: 'Record deleted!' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) 
+    { res.status(500).json({ error: err.message }); }
 });
 
 // OWN ATTENDANCE EXCEL EXPORT
 // JWT identifies the student; student can only export own data.
 // ?mode=SEMESTER (Jul-Dec 2026) | ?mode=MONTH&month=YYYY-MM
+
 app.get('/api/attendance/export/:rollNo', async (req, res) => {
     try {
         const token = req.headers.authorization?.split(' ')[1];
         let requester = null;
-        try { if (token) requester = jwt.verify(token, JWT_SECRET); } catch (e) {}
+        try { if (token) requester = jwt.verify(token, JWT_SECRET); } 
+        catch (e) {}
 
         if (!requester) return res.status(401).json({ error: 'Access Denied: token missing!' });
 
@@ -504,7 +514,26 @@ app.get('/api/attendance/export/:rollNo', async (req, res) => {
         }).sort({ date: 1, subject: 1 });
 
         let ExcelJS;
-        try { ExcelJS = require('exceljs'); } catch (e) {}
+        try { ExcelJS = require('exceljs'); } 
+        catch (e) {
+            const lines = [
+                'BM Group Institutions - Attendance Export',
+                `Student: ${user.name} (${user.rollNo})`,
+                `Mode: ${mode}`,
+                `Range: ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`,
+                '',
+                'Date,Day,Subject,Status,Lecture Period'
+            ];
+            records.forEach(r => {
+                const parts = r.date.split('-');
+                const dayName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date(parts[0], parts[1] - 1, parts[2]).getDay()];
+                lines.push(`${r.date},${dayName},${r.subject},${r.status},${r.period || ''}`);
+            });
+            const csv = lines.join('\n');
+            res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+            res.setHeader('Content-Disposition', `attachment; filename="attendance_${cleanTarget}_${mode}.csv"`);
+            return res.send(csv);
+        }
 
         const wb = new ExcelJS.Workbook();
         wb.creator = 'BM Group ERP';
@@ -523,7 +552,7 @@ app.get('/api/attendance/export/:rollNo', async (req, res) => {
             if (!subjectStats[rec.subject]) 
                 subjectStats[rec.subject] = { present: 0, total: 0 };
             subjectStats[rec.subject].total += 1;
-            if (rec.status === 'Present' || rec.status === 'Duty Leave')
+            if (rec.status === 'Present' || rec.status === 'Duty Leave') 
                 subjectStats[rec.subject].present += 1;
         });
 
@@ -544,10 +573,9 @@ app.get('/api/attendance/export/:rollNo', async (req, res) => {
             { header: 'Subject', key: 'subject', width: 28 },
             { header: 'Status', key: 'status', width: 14 }
         ];
-
         records.forEach(r => {
             const parts = r.date.split('-');
-            const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(parts[0], parts[1]-1, parts[2]).getDay()];
+            const dayName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date(parts[0], parts[1] - 1, parts[2]).getDay()];
             sheet2.addRow({ date: r.date, day: dayName, subject: r.subject, status: r.status });
         });
 
@@ -565,8 +593,10 @@ app.get('/api/attendance/export/:rollNo', async (req, res) => {
         metaSheet.addRow({ f: 'Requested By', v: requester.rollNo });
 
         const buffer = await wb.xlsx.writeBuffer();
-        const fileName = mode === 'MONTH' ? `My_Attendance_${req.query.month}.xlsx` : `My_Semester_Attendance_Jul_Dec_2026.xlsx`;
-        
+        const fileName = mode === 'MONTH'
+            ? `My_Attendance_${req.query.month}.xlsx`
+            : `My_Semester_Attendance_Jul_Dec_2026.xlsx`;
+
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
         res.setHeader('Content-Length', buffer.length);
@@ -581,16 +611,14 @@ app.get('/api/analytics/:rollNo', async (req, res) => {
     try {
         const cleanRoll = req.params.rollNo.trim().toUpperCase();
         const records = await Attendance.find({ rollNo: cleanRoll });
+
         let subjectStats = {};
-        
         records.forEach(rec => {
-            if (!subjectStats[rec.subject]) {
+            if (!subjectStats[rec.subject])
                 subjectStats[rec.subject] = { present: 0, total: 0 };
-            }
             subjectStats[rec.subject].total += 1;
-            if (rec.status === 'Present') {
+            if (rec.status === 'Present')
                 subjectStats[rec.subject].present += 1;
-            }
         });
 
         res.json(subjectStats);
@@ -603,3 +631,4 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+                                                                                       
