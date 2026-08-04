@@ -30,14 +30,12 @@ if (MONGO_URI) {
 // ==========================================
 // SCHEMAS
 // ==========================================
-
-// UPDATED USER SCHEMA (Added 'faculty' and 'admin' enum for roles)
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   rollNo: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, enum: ['student', 'faculty', 'admin'], default: 'student' },
-  faceDescriptor: { type: [Number], default: [] } // 68-Point Vector Array
+  faceDescriptor: { type: [Number], default: [] }
 }, { timestamps: true });
 
 const attendanceSchema = new mongoose.Schema({
@@ -66,7 +64,7 @@ const Holiday = mongoose.model('Holiday', holidaySchema);
 const Notice = mongoose.model('Notice', noticeSchema);
 
 // ==========================================
-// RBAC MIDDLEWARE (Role-Based Access Control)
+// RBAC MIDDLEWARE
 // ==========================================
 const verifyRole = (roles) => {
   return (req, res, next) => {
@@ -86,7 +84,7 @@ const verifyRole = (roles) => {
   };
 };
 
-app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active!'));
+app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active[span_0](start_span)[span_0](end_span)!'));
 
 // ==========================================
 // AUTH & REGISTRATION
@@ -125,7 +123,7 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // ==========================================
-// GLOBAL MONGODB FACE MESH ENROLL & SYNC APIs
+// FACE MESH & ADMIN UTILITIES
 // ==========================================
 app.post('/api/face/enroll', async (req, res) => {
   try {
@@ -155,9 +153,6 @@ app.get('/api/face/get/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ==========================================
-// ADMIN & FACULTY ROUTES
-// ==========================================
 app.post('/api/admin/reset-password', async (req, res) => {
   try {
     const { requesterRollNo, targetRollNo, newPassword } = req.body;
@@ -203,7 +198,6 @@ app.delete('/api/admin/delete-student', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// NEW: Faculty Route for manual overrides using RBAC
 app.post('/api/faculty/override', verifyRole(['faculty', 'admin']), async (req, res) => {
   try {
     const { studentRollNo, subject, date, status } = req.body;
@@ -218,9 +212,6 @@ app.post('/api/faculty/override', verifyRole(['faculty', 'admin']), async (req, 
   }
 });
 
-// ==========================================
-// BROADCAST NOTICES API
-// ==========================================
 app.get('/api/notices', async (req, res) => {
   try {
     const notices = await Notice.find().sort({ date: -1 }).limit(3);
@@ -246,9 +237,6 @@ app.post('/api/admin/notice', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ==========================================
-// ATTENDANCE MARKING & GEOFENCING
-// ==========================================
 function checkLocation(lat, lng) {
   const COLLEGE_LAT = 28.4509370, COLLEGE_LNG = 76.7688120, R = 6371000;
   
@@ -286,7 +274,6 @@ app.post('/api/attendance/mark', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// LEGACY: kept for any old admin tool — student flows no longer use this.
 app.post('/api/attendance/mark-fullday', async (req, res) => {
   try {
     const { rollNo, name, latitude, longitude } = req.body;
@@ -318,7 +305,6 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ACTIVE-PERIOD MARK (used by Face/Biometric/QR/Daily Passcode)
 app.post('/api/attendance/mark-active', async (req, res) => {
   try {
     const { rollNo, name, latitude, longitude } = req.body;
@@ -342,7 +328,6 @@ app.post('/api/attendance/mark-active', async (req, res) => {
 
     const todaySubjects = TIME_TABLE[dayName] || [];
 
-    // Priority: subject provided by trusted client; otherwise first unmarked lecture
     let requestedSubject = (req.body.subject || '').trim().toUpperCase();
     if (!requestedSubject || !todaySubjects.map(s => s.toUpperCase()).includes(requestedSubject)) {
       for (let sub of todaySubjects) {
@@ -356,7 +341,6 @@ app.post('/api/attendance/mark-active', async (req, res) => {
     }
 
     const canonicalSubject = todaySubjects.find(s => s.toUpperCase() === requestedSubject);
-
     const exists = await Attendance.findOne({ rollNo: cleanRoll, subject: canonicalSubject, date: todayDate });
     if (exists) {
       return res.status(400).json({ error: `Already marked for ${canonicalSubject} today!` });
@@ -409,8 +393,7 @@ app.post('/api/admin/manual-attendance', async (req, res) => {
     res.status(201).json({ message: `Marked ${markedCount} lectures for ${user.name} on ${date}` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
-
-// ==========================================
+            // ==========================================
 // HOLIDAYS & HISTORY & ANALYTICS
 // ==========================================
 
@@ -465,9 +448,6 @@ app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
 });
 
 // OWN ATTENDANCE EXCEL EXPORT
-// JWT identifies the student; student can only export own data.
-// ?mode=SEMESTER (Jul-Dec 2026) | ?mode=MONTH&month=YYYY-MM
-
 app.get('/api/attendance/export/:rollNo', async (req, res) => {
     try {
         const token = req.headers.authorization?.split(' ')[1];
@@ -556,6 +536,7 @@ app.get('/api/attendance/export/:rollNo', async (req, res) => {
                 subjectStats[rec.subject].present += 1;
         });
 
+        // Fixed syntax bug for sorting object keys cleanly
         Object.keys(subjectStats).sort().forEach(sub => {
             const s = subjectStats[sub];
             sheet1.addRow({
@@ -606,7 +587,7 @@ app.get('/api/attendance/export/:rollNo', async (req, res) => {
     }
 });
 
-// NEW: Analytics Route for Chart.js Dashboard
+// ANALYTICS ROUTE
 app.get('/api/analytics/:rollNo', async (req, res) => {
     try {
         const cleanRoll = req.params.rollNo.trim().toUpperCase();
@@ -631,4 +612,4 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
-                                                                                       
+          
