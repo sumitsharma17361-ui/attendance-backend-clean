@@ -409,6 +409,15 @@
 
         .flex-buttons { display: flex; gap: 8px; }
         .flex-buttons .btn { margin: 0; flex: 1; }
+        
+        /* OTP Modal */
+        .otp-input {
+            text-align: center;
+            font-size: 24px;
+            letter-spacing: 8px;
+            font-weight: 700;
+            padding: 12px;
+        }
     </style>
 </head>
 <body>
@@ -419,6 +428,21 @@
         </div>
     </div>
 
+    <!-- OTP MODAL -->
+    <div id="otpModal" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <h3 style="font-size:14px; font-weight:800; margin-bottom:6px; color:var(--text-main);">📱 OTP Verification</h3>
+            <p style="font-size:11px; color:var(--text-muted); margin-bottom:12px; font-weight:600;">Enter 6-digit OTP sent to your registered phone</p>
+            <input type="text" id="otpInput" class="otp-input" placeholder="000000" maxlength="6" style="font-size:24px; text-align:center; letter-spacing:8px;">
+            <div style="display:flex; gap:8px; margin-top:12px;">
+                <button class="btn btn-outline" style="flex:1;" onclick="closeOTPModal()">Cancel</button>
+                <button class="btn btn-success" style="flex:1;" onclick="verifyOTP()">Verify OTP</button>
+            </div>
+            <button class="btn btn-outline" onclick="resendOTP()" style="margin-top:8px; padding:6px; font-size:10px;">Resend OTP</button>
+        </div>
+    </div>
+
+    <!-- STUDENT EXCEL MODAL -->
     <div id="studentExcelModal" class="modal-overlay" style="display: none;">
         <div class="modal-card">
             <h3 style="font-size:14px; font-weight:800; margin-bottom:6px; color:var(--text-main);">Download Student Excel Sheet</h3>
@@ -468,6 +492,7 @@
         <div id="auth-box" class="tab-content-active">
             <div id="register-fields" style="display: none;">
                 <input type="text" id="regName" placeholder="Full Student Name">
+                <input type="text" id="regPhone" placeholder="Phone Number (e.g. 9876543210)">
             </div>
             <input type="text" id="rollNo" placeholder="Roll Number (e.g. 24CSE48)">
             <div class="password-wrapper">
@@ -586,6 +611,12 @@
                     </button>
                 </div>
 
+                <!-- 🔥 Selfie Capture Button -->
+                <button class="btn btn-accent" onclick="openSelfieCamera()" style="margin-top:6px; padding:9px;">
+                    <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                    📸 Take Selfie & Mark Attendance
+                </button>
+
                 <div style="text-align:center; font-size:10px; color:var(--text-muted); margin: 12px 0 4px 0; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Live Timetable Period Tracker</div>
                 <div class="period-card" id="periodCardBox">
                     <div>
@@ -622,110 +653,134 @@
                     </div>
                 </div>
             </div>
-            <div id="adminTab" style="display:none;">
-    <div class="admin-nav">
-        <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">Excel</div>
-        <div class="admin-nav-item" onclick="switchAdminSubTab('subAttendance')">Entry</div>
-        <div class="admin-nav-item" onclick="switchAdminSubTab('subHoliday')">Holiday</div>
-        <div class="admin-nav-item" onclick="switchAdminSubTab('subQR')">QR</div>
-        <div class="admin-nav-item" onclick="switchAdminSubTab('subTools')">Tools</div>
-        <div class="admin-nav-item" onclick="switchAdminSubTab('subDirectory')">Directory</div>
-    </div>
+                        <div id="adminTab" style="display:none;">
+                <div class="admin-nav">
+                    <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">Excel</div>
+                    <div class="admin-nav-item" onclick="switchAdminSubTab('subAttendance')">Entry</div>
+                    <div class="admin-nav-item" onclick="switchAdminSubTab('subHoliday')">Holiday</div>
+                    <div class="admin-nav-item" onclick="switchAdminSubTab('subQR')">QR</div>
+                    <div class="admin-nav-item" onclick="switchAdminSubTab('subTools')">Tools</div>
+                    <div class="admin-nav-item" onclick="switchAdminSubTab('subDirectory')">Directory</div>
+                    <div class="admin-nav-item" onclick="switchAdminSubTab('subSecurity')">Security</div>
+                </div>
 
-    <div id="subReports" class="admin-box tab-content-active">
-        <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Export Excel Reports:</span>
-        <select id="exportSelection" style="padding:10px; margin-bottom:8px;">
-            <option value="ALL_SEMESTER">Full Semester (Jul-Dec 2026)</option>
-            <option value="6">July 2026</option>
-            <option value="7">August 2026</option>
-            <option value="8">September 2026</option>
-            <option value="9">October 2026</option>
-            <option value="10">November 2026</option>
-            <option value="11">December 2026</option>
-        </select>
-        <button class="btn btn-success" onclick="exportExcelGrid()" style="margin-top:0; padding:10px;">Download Excel Report</button>
-    </div>
+                <div id="subReports" class="admin-box tab-content-active">
+                    <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Export Excel Reports:</span>
+                    <select id="exportSelection" style="padding:10px; margin-bottom:8px;">
+                        <option value="ALL_SEMESTER">Full Semester (Jul-Dec 2026)</option>
+                        <option value="6">July 2026</option>
+                        <option value="7">August 2026</option>
+                        <option value="8">September 2026</option>
+                        <option value="9">October 2026</option>
+                        <option value="10">November 2026</option>
+                        <option value="11">December 2026</option>
+                    </select>
+                    <button class="btn btn-success" onclick="exportExcelGrid()" style="margin-top:0; padding:10px;">Download Excel Report</button>
+                </div>
 
-    <div id="subAttendance" class="admin-box" style="display:none;">
-        <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Manual Backdate Attendance:</span>
-        <input type="text" id="manualRoll" placeholder="Student Roll No (e.g. 24CSE14)">
-        <input type="date" id="manualDate">
-        <select id="manualStatus">
-            <option value="Present">Present</option>
-            <option value="Duty Leave">Duty Leave (DL)</option>
-        </select>
-        <button class="btn btn-primary" onclick="markManualAttendance()" style="margin-top:0; padding:10px;">Mark Attendance</button>
-    </div>
+                <div id="subAttendance" class="admin-box" style="display:none;">
+                    <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Manual Backdate Attendance:</span>
+                    <input type="text" id="manualRoll" placeholder="Student Roll No (e.g. 24CSE14)">
+                    <input type="date" id="manualDate">
+                    <select id="manualStatus">
+                        <option value="Present">Present</option>
+                        <option value="Duty Leave">Duty Leave (DL)</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="markManualAttendance()" style="margin-top:0; padding:10px;">Mark Attendance</button>
+                </div>
 
-    <div id="subHoliday" class="admin-box" style="display:none;">
-        <span style="font-size:11px; font-weight:700; color:var(--warning); display:block; margin-bottom:6px;">Declare Official Holiday:</span>
-        <input type="date" id="holidayDate">
-        <input type="text" id="holidayReason" placeholder="Reason (e.g. Diwali/Rainy Day)">
-        <button class="btn btn-warning" onclick="declareHoliday()" style="margin-top:0; padding:10px;">Mark Date as Holiday</button>
-    </div>
+                <div id="subHoliday" class="admin-box" style="display:none;">
+                    <span style="font-size:11px; font-weight:700; color:var(--warning); display:block; margin-bottom:6px;">Declare Official Holiday:</span>
+                    <input type="date" id="holidayDate">
+                    <input type="text" id="holidayReason" placeholder="Reason (e.g. Diwali/Rainy Day)">
+                    <button class="btn btn-warning" onclick="declareHoliday()" style="margin-top:0; padding:10px;">Mark Date as Holiday</button>
+                </div>
 
-    <div id="subQR" class="admin-box" style="display:none; text-align:center;">
-        <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Dynamic Rotating QR & Daily Master Secret:</span>
-        <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">Project this screen in class. Students enter Daily Master Secret to mark attendance.</p>
-        <div style="background:#f8fafc; padding:10px; border-radius:10px; margin-bottom:8px; border:1px solid var(--card-border);">
-            <span style="font-size:10px; font-weight:700; color:var(--text-muted);">DAILY MASTER SECRET / CLASS PASSCODE:</span>
-            <h2 id="liveClassPasscode" style="font-size:24px; font-weight:900; color:var(--primary); letter-spacing:4px;">9842</h2>
-        </div>
-        <div id="qrcode" style="display:flex; justify-content:center; margin:10px 0;"></div>
-        <button class="btn btn-outline" id="refreshQrBtn" onclick="generateDynamicQR()" style="padding:8px; font-size:11px;">
-            <svg id="refreshIcon" class="svg-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
-            Refresh Passcode & QR Code Now
-        </button>
-    </div>
+                <div id="subQR" class="admin-box" style="display:none; text-align:center;">
+                    <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Dynamic Rotating QR & Daily Master Secret:</span>
+                    <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">Project this screen in class. Students enter Daily Master Secret to mark attendance.</p>
+                    <div style="background:#f8fafc; padding:10px; border-radius:10px; margin-bottom:8px; border:1px solid var(--card-border);">
+                        <span style="font-size:10px; font-weight:700; color:var(--text-muted);">DAILY MASTER SECRET / CLASS PASSCODE:</span>
+                        <h2 id="liveClassPasscode" style="font-size:24px; font-weight:900; color:var(--primary); letter-spacing:4px;">9842</h2>
+                    </div>
+                    <div id="qrcode" style="display:flex; justify-content:center; margin:10px 0;"></div>
+                    <button class="btn btn-outline" id="refreshQrBtn" onclick="generateDynamicQR()" style="padding:8px; font-size:11px;">
+                        <svg id="refreshIcon" class="svg-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+                        Refresh Passcode & QR Code Now
+                    </button>
+                </div>
 
-    <div id="subTools" style="display:none;">
-        <div class="tool-sub-card">
-            <span class="tool-title" style="color:var(--primary);">Register New Student Manually:</span>
-            <input type="text" id="adminRegName" placeholder="Full Student Name">
-            <input type="text" id="adminRegRoll" placeholder="Roll Number (e.g. 24CSE14)">
-            <input type="text" id="adminRegPass" placeholder="Password (Default: 123456)">
-            <button class="btn btn-primary" onclick="adminRegisterStudent()" style="margin-top:0;">Register Student</button>
-        </div>
-        
-        <!-- 🔥 Reset Device Binding Tool -->
-        <div class="tool-sub-card" style="border-color:#93c5fd; background:#eff6ff;">
-            <span class="tool-title" style="color:#1d4ed8;">🔓 Reset Student Device Binding:</span>
-            <input type="text" id="resetDeviceRoll" placeholder="Student Roll No (e.g. 24CSE14)">
-            <button class="btn btn-primary" onclick="resetDeviceBinding()" style="margin-top:0;">Reset Device Binding</button>
-        </div>
+                <div id="subTools" style="display:none;">
+                    <div class="tool-sub-card">
+                        <span class="tool-title" style="color:var(--primary);">Register New Student Manually:</span>
+                        <input type="text" id="adminRegName" placeholder="Full Student Name">
+                        <input type="text" id="adminRegRoll" placeholder="Roll Number (e.g. 24CSE14)">
+                        <input type="text" id="adminRegPhone" placeholder="Phone Number (e.g. 9876543210)">
+                        <input type="text" id="adminRegPass" placeholder="Password (Default: 123456)">
+                        <button class="btn btn-primary" onclick="adminRegisterStudent()" style="margin-top:0;">Register Student</button>
+                    </div>
+                    
+                    <div class="tool-sub-card" style="border-color:#93c5fd; background:#eff6ff;">
+                        <span class="tool-title" style="color:#1d4ed8;">🔓 Reset Student Device Binding:</span>
+                        <input type="text" id="resetDeviceRoll" placeholder="Student Roll No (e.g. 24CSE14)">
+                        <button class="btn btn-primary" onclick="resetDeviceBinding()" style="margin-top:0;">Reset Device Binding</button>
+                    </div>
 
-        <!-- 🔥 Unblock Student (Reset Anomaly Flag) -->
-        <div class="tool-sub-card" style="border-color:#f59e0b; background:#fffbeb;">
-            <span class="tool-title" style="color:#d97706;">⚠️ Unblock Flagged Student:</span>
-            <input type="text" id="resetAnomalyRoll" placeholder="Student Roll No (e.g. 24CSE14)">
-            <button class="btn btn-warning" onclick="resetAnomalyFlag()" style="margin-top:0;">Unblock Student</button>
-        </div>
+                    <div class="tool-sub-card" style="border-color:#f59e0b; background:#fffbeb;">
+                        <span class="tool-title" style="color:#d97706;">⚠️ Unblock Flagged Student:</span>
+                        <input type="text" id="resetAnomalyRoll" placeholder="Student Roll No (e.g. 24CSE14)">
+                        <button class="btn btn-warning" onclick="resetAnomalyFlag()" style="margin-top:0;">Unblock Student</button>
+                    </div>
 
-        <div class="tool-sub-card">
-            <span class="tool-title" style="color:var(--text-main);">Broadcast Announcement Notice:</span>
-            <input type="text" id="noticeMsg" placeholder="Notice text (e.g. Mid-Sem Exams from Monday)">
-            <button class="btn btn-primary" onclick="postNotice()" style="margin-top:0; margin-bottom:6px;">Publish Notice</button>
-            <button class="btn btn-danger" onclick="clearNotice()" style="margin-top:0;">Clear Active Notice</button>
-        </div>
-        <div class="tool-sub-card">
-            <span class="tool-title" style="color:var(--primary);">Fix / Update Student Roll Number Format:</span>
-            <input type="text" id="oldRollFormat" placeholder="Old Roll No (e.g. 24-CSE-14)">
-            <input type="text" id="newRollFormat" placeholder="New Clean Roll No (e.g. 24CSE14)">
-            <button class="btn btn-primary" onclick="updateRollNumberFormat()" style="margin-top:0;">Update Roll Number</button>
-        </div>
-        <div class="tool-sub-card">
-            <span class="tool-title" style="color:var(--warning);">Reset Student Password:</span>
-            <input type="text" id="resetRoll" placeholder="Student Roll No (e.g. 24CSE14)">
-            <input type="text" id="resetPass" placeholder="New Password (Default: 123456)">
-            <button class="btn btn-warning" onclick="resetStudentPassword()" style="margin-top:0;">Reset Password</button>
-        </div>
-        <div class="tool-sub-card" style="border-color:#fecaca; background:#fef2f2;">
-            <span class="tool-title" style="color:#b91c1c;">Permanently Delete Student Account:</span>
-            <input type="text" id="deleteStudentRoll" placeholder="Roll No to Delete (e.g. 24-CSE-14)">
-            <button class="btn btn-danger" onclick="deleteEntireStudentAccount()" style="margin-top:0;">Delete Account Permanently</button>
-        </div>
-    </div>
-                    <!-- 🔥 UPDATED: Directory Tab - Shows All Registered Students -->
+                    <div class="tool-sub-card">
+                        <span class="tool-title" style="color:var(--text-main);">Broadcast Announcement Notice:</span>
+                        <input type="text" id="noticeMsg" placeholder="Notice text (e.g. Mid-Sem Exams from Monday)">
+                        <button class="btn btn-primary" onclick="postNotice()" style="margin-top:0; margin-bottom:6px;">Publish Notice</button>
+                        <button class="btn btn-danger" onclick="clearNotice()" style="margin-top:0;">Clear Active Notice</button>
+                    </div>
+                    <div class="tool-sub-card">
+                        <span class="tool-title" style="color:var(--primary);">Fix / Update Student Roll Number Format:</span>
+                        <input type="text" id="oldRollFormat" placeholder="Old Roll No (e.g. 24-CSE-14)">
+                        <input type="text" id="newRollFormat" placeholder="New Clean Roll No (e.g. 24CSE14)">
+                        <button class="btn btn-primary" onclick="updateRollNumberFormat()" style="margin-top:0;">Update Roll Number</button>
+                    </div>
+                    <div class="tool-sub-card">
+                        <span class="tool-title" style="color:var(--warning);">Reset Student Password:</span>
+                        <input type="text" id="resetRoll" placeholder="Student Roll No (e.g. 24CSE14)">
+                        <input type="text" id="resetPass" placeholder="New Password (Default: 123456)">
+                        <button class="btn btn-warning" onclick="resetStudentPassword()" style="margin-top:0;">Reset Password</button>
+                    </div>
+                    <div class="tool-sub-card" style="border-color:#fecaca; background:#fef2f2;">
+                        <span class="tool-title" style="color:#b91c1c;">Permanently Delete Student Account:</span>
+                        <input type="text" id="deleteStudentRoll" placeholder="Roll No to Delete (e.g. 24-CSE-14)">
+                        <button class="btn btn-danger" onclick="deleteEntireStudentAccount()" style="margin-top:0;">Delete Account Permanently</button>
+                    </div>
+                </div>
+
+                <!-- 🔥 NEW: Security Tab -->
+                <div id="subSecurity" style="display:none;">
+                    <div class="admin-box">
+                        <h4 style="font-size:12px; font-weight:800; color:var(--text-main); margin-bottom:8px;">🛡️ Suspicious Activity Logs</h4>
+                        <button class="btn btn-outline" onclick="fetchSuspiciousLogs()" style="margin-bottom:8px;">Refresh Logs</button>
+                        <div class="table-container">
+                            <table id="securityLogsTable">
+                                <thead><tr><th>Roll</th><th>Type</th><th>Details</th><th>Time</th></tr></thead>
+                                <tbody><tr><td colspan="4" style="text-align:center;">Click Refresh to load logs...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="admin-box" style="margin-top:10px;">
+                        <h4 style="font-size:12px; font-weight:800; color:var(--text-main); margin-bottom:8px;">⏰ Auto-Unblock Status</h4>
+                        <button class="btn btn-outline" onclick="fetchAutoUnblockStatus()" style="margin-bottom:8px;">Check Status</button>
+                        <div class="table-container">
+                            <table id="autoUnblockTable">
+                                <thead><tr><th>Roll</th><th>Name</th><th>Time Left</th><th>Auto-Unblock At</th></tr></thead>
+                                <tbody><tr><td colspan="4" style="text-align:center;">Click Check Status...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="subDirectory" style="display:none;">
                     <div style="display:flex; gap:8px; margin-bottom:8px;">
                         <button class="btn btn-outline" onclick="fetchAllStudents()" style="flex:1; margin:0; padding:8px; font-size:10px;">📋 All Students</button>
@@ -742,9 +797,8 @@
             </div>
         </div>
     </div>
-</div>
-
-<script>
+    </div>
+    <script>
     const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; 
     const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/";
     
@@ -758,6 +812,20 @@
         return deviceId;
     }
 
+    // 🔥 Device Fingerprint
+    function getDeviceFingerprint() {
+        return {
+            userAgent: navigator.userAgent || 'unknown',
+            screenWidth: screen.width || 0,
+            screenHeight: screen.height || 0,
+            colorDepth: screen.colorDepth || 0,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown',
+            language: navigator.language || 'unknown',
+            platform: navigator.platform || 'unknown',
+            hardwareConcurrency: navigator.hardwareConcurrency || 0
+        };
+    }
+
     let isRegistering = false, globalAllRecords = [], globalMyRecords = [], globalHolidays = [], groupedAdminRecords = {};
     let currentCamMode = 'ENROLL', videoStream = null, isModelsLoaded = false;
     let currentDailyPasscode = "9842";
@@ -765,6 +833,7 @@
     let toastTimeout = null;
     let activeCloudFaceDescriptor = null;
     let myChart = null;
+    let pendingLoginData = null; // 🔥 For OTP flow
 
     const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -791,6 +860,63 @@
         let clean = rawRoll.toUpperCase().replace(/[^A-Z0-9]/g, '');
         const strictRegex = /^\d{2}(CSE|AIDS)\d{2}$/;
         return { isValid: strictRegex.test(clean), cleanRoll: clean };
+    }
+
+    // ---------- OTP Functions ----------
+    function openOTPModal(rollNo) {
+        document.getElementById('otpModal').style.display = 'flex';
+        document.getElementById('otpInput').value = '';
+        document.getElementById('otpInput').focus();
+    }
+
+    function closeOTPModal() {
+        document.getElementById('otpModal').style.display = 'none';
+        pendingLoginData = null;
+    }
+
+    async function verifyOTP() {
+        const otp = document.getElementById('otpInput').value.trim();
+        if (otp.length !== 6) {
+            return showMsg('Please enter 6-digit OTP!', true);
+        }
+        
+        try {
+            const res = await fetch(`${API_BASE}/api/auth/verify-otp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rollNo: pendingLoginData?.rollNo, otp })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                closeOTPModal();
+                showMsg('✅ OTP Verified! Login successful.');
+                localStorage.setItem('user', JSON.stringify(pendingLoginData?.user));
+                loadDashboard();
+            } else {
+                showMsg(data.error || 'Invalid OTP!', true);
+            }
+        } catch(e) {
+            showMsg('Server error!', true);
+        }
+    }
+
+    async function resendOTP() {
+        if (!pendingLoginData) return showMsg('Please login first!', true);
+        try {
+            const res = await fetch(`${API_BASE}/api/auth/send-otp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rollNo: pendingLoginData.rollNo })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showMsg('📱 OTP resent! Check your phone.');
+            } else {
+                showMsg(data.error || 'Failed to resend OTP', true);
+            }
+        } catch(e) {
+            showMsg('Server error!', true);
+        }
     }
 
     const WEEKLY_SCHEDULE = {
@@ -842,7 +968,7 @@
             { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
         ]
     };
-    function updatePeriodTrackerWidget() {
+        function updatePeriodTrackerWidget() {
     const now = new Date();
     const dayOfWeek = now.getDay();
     const labelEl = document.getElementById('periodTimeSlotLabel');
@@ -918,6 +1044,34 @@ function openStudentQRScanner() {
     markSingleAttendance(activeSubjectSubjectCode);
 }
 
+// 🔥 Selfie Camera for Attendance
+async function openSelfieCamera() {
+    if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
+        return showMsg("No active lecture to mark!", true);
+    }
+    
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: 300, height: 300 } });
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        await video.play();
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = 300;
+        canvas.height = 300;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, 300, 300);
+        
+        const selfieData = canvas.toDataURL('image/jpeg');
+        stream.getTracks().forEach(t => t.stop());
+        
+        // Mark attendance with selfie
+        markSingleAttendanceWithSelfie(activeSubjectSubjectCode, selfieData);
+    } catch(err) {
+        showMsg('Camera access denied! Please allow camera.', true);
+    }
+}
+
 function openStudentExcelModal() {
     document.getElementById('studentExcelModal').style.display = 'flex';
     const rangeSelect = document.getElementById('studentExcelRange');
@@ -989,20 +1143,22 @@ function processStudentExcelDownload() {
 async function adminRegisterStudent() {
     const name = document.getElementById('adminRegName').value.trim();
     const rawRoll = document.getElementById('adminRegRoll').value.trim();
+    const phone = document.getElementById('adminRegPhone').value.trim();
     const password = document.getElementById('adminRegPass').value.trim() || '123456';
     const validation = sanitizeAndValidateRollNo(rawRoll);
-    if (!name || !validation.isValid) return showMsg('Valid Name and Roll No required (e.g. 24CSE14)!', true);
+    if (!name || !validation.isValid) return showMsg('Valid Name and Roll No required!', true);
     try {
         const res = await fetch(`${API_BASE}/api/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, rollNo: validation.cleanRoll, password })
+            body: JSON.stringify({ name, rollNo: validation.cleanRoll, password, phone })
         });
         const data = await res.json();
         if (res.ok) {
-            showMsg(`Student ${name} (${validation.cleanRoll}) Registered Successfully!`);
+            showMsg(`Student ${name} Registered Successfully!`);
             document.getElementById('adminRegName').value = '';
             document.getElementById('adminRegRoll').value = '';
+            document.getElementById('adminRegPhone').value = '';
             document.getElementById('adminRegPass').value = '';
             fetchAllStudents();
         } else {
@@ -1016,7 +1172,7 @@ async function updateRollNumberFormat() {
     const oldRoll = document.getElementById('oldRollFormat').value.trim();
     const rawNewRoll = document.getElementById('newRollFormat').value.trim();
     const validation = sanitizeAndValidateRollNo(rawNewRoll);
-    if (!oldRoll || !validation.isValid) return showMsg('Valid New Roll No required (e.g. 24CSE14)!', true);
+    if (!oldRoll || !validation.isValid) return showMsg('Valid New Roll No required!', true);
     try {
         const res = await fetch(`${API_BASE}/api/admin/update-rollno`, {
             method: 'POST',
@@ -1025,7 +1181,7 @@ async function updateRollNumberFormat() {
         });
         const data = await res.json();
         if (res.ok) {
-            showMsg(data.message || "Roll Number format updated successfully!");
+            showMsg(data.message || "Roll Number updated successfully!");
             document.getElementById('oldRollFormat').value = '';
             document.getElementById('newRollFormat').value = '';
         } else { showMsg(data.error || "Failed to update Roll Number", true); }
@@ -1036,7 +1192,7 @@ async function deleteEntireStudentAccount() {
     const user = JSON.parse(localStorage.getItem('user'));
     const targetRoll = document.getElementById('deleteStudentRoll').value.trim();
     if (!targetRoll) return showMsg('Enter Roll Number to delete!', true);
-    if (!confirm(`Are you sure you want to PERMANENTLY delete account and records for ${targetRoll}?`)) return;
+    if (!confirm(`Are you sure you want to PERMANENTLY delete account for ${targetRoll}?`)) return;
     try {
         const res = await fetch(`${API_BASE}/api/admin/delete-student`, {
             method: 'DELETE',
@@ -1045,142 +1201,99 @@ async function deleteEntireStudentAccount() {
         });
         const data = await res.json();
         globalAllRecords = globalAllRecords.filter(r => r.rollNo.toUpperCase() !== targetRoll.toUpperCase());
-        showMsg(data.message || `Account ${targetRoll} Deleted Successfully!`);
+        showMsg(data.message || `Account ${targetRoll} Deleted!`);
         document.getElementById('deleteStudentRoll').value = '';
         fetchAllStudents();
-    } catch(err) { showMsg("Account deleted from directory!", false); }
+    } catch(err) { showMsg("Account deleted!", false); }
 }
 
 async function resetDeviceBinding() {
     const user = JSON.parse(localStorage.getItem('user'));
     const targetRoll = document.getElementById('resetDeviceRoll').value.trim();
-    
     if (!targetRoll) return showMsg('Enter Student Roll Number!', true);
-    if (!confirm(`Are you sure you want to reset device binding for ${targetRoll}?`)) return;
-    
+    if (!confirm(`Reset device binding for ${targetRoll}?`)) return;
     try {
         const res = await fetch(`${API_BASE}/api/admin/reset-device`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                requesterRollNo: user.rollNo, 
-                targetRollNo: targetRoll 
-            })
+            body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo: targetRoll })
         });
         const data = await res.json();
-        if (res.ok) {
-            showMsg(data.message);
-            document.getElementById('resetDeviceRoll').value = '';
-        } else {
-            showMsg(data.error || 'Failed to reset device', true);
-        }
-    } catch(e) {
-        showMsg('Server error!', true);
-    }
+        if (res.ok) { showMsg(data.message); document.getElementById('resetDeviceRoll').value = ''; } 
+        else { showMsg(data.error || 'Failed to reset device', true); }
+    } catch(e) { showMsg('Server error!', true); }
 }
 
 async function resetAnomalyFlag() {
     const user = JSON.parse(localStorage.getItem('user'));
     const targetRoll = document.getElementById('resetAnomalyRoll').value.trim();
-    
     if (!targetRoll) return showMsg('Enter Student Roll Number!', true);
-    if (!confirm(`Are you sure you want to unblock ${targetRoll}? (Reset anomaly flag)`)) return;
-    
+    if (!confirm(`Unblock ${targetRoll}?`)) return;
     try {
         const res = await fetch(`${API_BASE}/api/admin/reset-anomaly`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                requesterRollNo: user.rollNo, 
-                targetRollNo: targetRoll 
-            })
+            body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo: targetRoll })
         });
         const data = await res.json();
-        if (res.ok) {
-            showMsg(data.message);
-            document.getElementById('resetAnomalyRoll').value = '';
-            fetchAllStudents();
-        } else {
-            showMsg(data.error || 'Failed to unblock student', true);
-        }
-    } catch(e) {
-        showMsg('Server error!', true);
-    }
+        if (res.ok) { showMsg(data.message); document.getElementById('resetAnomalyRoll').value = ''; fetchAllStudents(); } 
+        else { showMsg(data.error || 'Failed to unblock student', true); }
+    } catch(e) { showMsg('Server error!', true); }
 }
 
-// 🔥 NEW: Fetch All Registered Students
-async function fetchAllStudents() {
+// 🔥 Security Logs Functions
+async function fetchSuspiciousLogs() {
     const user = JSON.parse(localStorage.getItem('user'));
     try {
-        const res = await fetch(`${API_BASE}/api/admin/all-students/${user.rollNo}`);
+        const res = await fetch(`${API_BASE}/api/admin/suspicious-logs/${user.rollNo}`);
         const data = await res.json();
-        if (!res.ok) return showMsg(data.error || "Failed to load students", true);
+        if (!res.ok) return showMsg(data.error || 'Failed to load logs', true);
         
-        document.getElementById('directoryTitle').innerText = `All Registered Students (${data.length}):`;
-        
-        const tbody = document.querySelector('#allHistoryTable tbody');
+        const tbody = document.querySelector('#securityLogsTable tbody');
         if (!tbody) return;
         
         if (data.length === 0) {
-            return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No students registered yet</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No suspicious activity found ✅</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = data.map(log => `
+            <tr>
+                <td><b>${log.rollNo || 'N/A'}</b></td>
+                <td><span class="badge badge-flagged">${log.type || 'UNKNOWN'}</span></td>
+                <td style="font-size:10px;">${log.details || 'No details'}</td>
+                <td style="font-size:10px;">${new Date(log.createdAt).toLocaleString()}</td>
+            </tr>
+        `).join('');
+    } catch(e) { showMsg('Failed to load logs', true); }
+}
+
+async function fetchAutoUnblockStatus() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/auto-unblock-status/${user.rollNo}`);
+        const data = await res.json();
+        if (!res.ok) return showMsg(data.error || 'Failed to load status', true);
+        
+        const tbody = document.querySelector('#autoUnblockTable tbody');
+        if (!tbody) return;
+        
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No blocked students ✅</td></tr>';
+            return;
         }
         
         tbody.innerHTML = data.map(s => `
             <tr>
                 <td><b>${s.rollNo}</b></td>
                 <td>${s.name}</td>
-                <td><span class="badge ${s.anomalyFlag ? 'badge-flagged' : 'badge-present'}">${s.anomalyFlag ? '⚠️ Flagged' : '✅ Active'}</span></td>
-                <td>
-                    <button class="action-btn btn-view" onclick="showStudentAttendance('${s.rollNo}')">📊 View</button>
-                    <button class="action-btn btn-del" onclick="deleteEntireStudentAccount()" style="margin-left:4px;">🗑️</button>
-                </td>
+                <td><span class="badge ${s.timeLeftHours < 1 ? 'badge-present' : 'badge-flagged'}">${s.timeLeftHours.toFixed(1)} hours</span></td>
+                <td style="font-size:10px;">${s.willAutoUnblockAt}</td>
             </tr>
         `).join('');
-    } catch(e) {
-        showMsg("Failed to connect to backend", true);
-    }
-}
-
-// 🔥 Show specific student's attendance
-async function showStudentAttendance(rollNo) {
-    try {
-        const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
-        const data = await res.json();
-        if (!res.ok) return showMsg("Failed to load attendance", true);
-        
-        const total = data.length;
-        const present = data.filter(r => r.status === 'Present').length;
-        const pct = total > 0 ? Math.round((present/total)*100) : 0;
-        
-        const tbody = document.querySelector('#allHistoryTable tbody');
-        if (!tbody) return;
-        
-        if (data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No attendance records for ${rollNo}</td></tr>`;
-            return;
+    } catch(e) { showMsg('Failed to load status', true); }
         }
-        
-        document.getElementById('directoryTitle').innerText = `📊 ${rollNo}: ${present}/${total} present (${pct}%)`;
-        
-        tbody.innerHTML = data.slice(0, 30).map(r => `
-            <tr>
-                <td><b>${r.date}</b></td>
-                <td>${r.subject || 'N/A'}</td>
-                <td><span class="badge badge-present">${r.status}</span></td>
-                <td>${r.ipAddress || 'N/A'}</td>
-            </tr>
-        `).join('');
-        
-        tbody.innerHTML += `
-            <tr><td colspan="4" style="text-align:center; padding:8px;">
-                <button class="btn btn-outline" onclick="fetchAllStudents()" style="padding:4px 12px; width:auto; margin:0; font-size:10px;">⬅ Back</button>
-            </td></tr>
-        `;
-    } catch(e) {
-        showMsg("Failed to load attendance", true);
-    }
-    }
-    async function fetchNotices() {
+        async function fetchNotices() {
     if (localStorage.getItem("GLOBAL_NOTICE_CLEARED") === "true") {
         document.getElementById('noticeBanner').style.display = 'none';
         return;
@@ -1212,7 +1325,7 @@ async function postNotice() {
     localStorage.setItem("ACTIVE_BROADCAST_NOTICE", message);
     document.getElementById('noticeBanner').style.display = 'flex';
     document.getElementById('noticeText').innerText = `${message}`;
-    showMsg('Notice Updated & Published!');
+    showMsg('Notice Published!');
     document.getElementById('noticeMsg').value = '';
     try { await fetch(`${API_BASE}/api/admin/notice`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: user.rollNo, title: 'Announcement', message }) }); } catch (err) {}
 }
@@ -1223,7 +1336,7 @@ async function clearNotice() {
     localStorage.removeItem("ACTIVE_BROADCAST_NOTICE");
     document.getElementById('noticeBanner').style.display = 'none';
     document.getElementById('noticeText').innerText = '';
-    showMsg('Active Notice Cleared!');
+    showMsg('Notice Cleared!');
     try { await fetch(`${API_BASE}/api/admin/notice`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: user.rollNo, title: 'Announcement', message: "" }) }); } catch (err) {}
 }
 
@@ -1243,7 +1356,7 @@ function switchTab(tabId) {
 }
 
 function switchAdminSubTab(subId) {
-    const subTabs = ['subReports', 'subAttendance', 'subHoliday', 'subQR', 'subTools', 'subDirectory'];
+    const subTabs = ['subReports', 'subAttendance', 'subHoliday', 'subQR', 'subTools', 'subDirectory', 'subSecurity'];
     subTabs.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
@@ -1256,6 +1369,7 @@ function switchAdminSubTab(subId) {
     navItems.forEach((item, idx) => { item.classList.toggle('active', subTabs[idx] === subId); });
     if (subId === 'subQR') generateDynamicQR();
     if (subId === 'subDirectory') fetchAllStudents();
+    if (subId === 'subSecurity') { fetchSuspiciousLogs(); fetchAutoUnblockStatus(); }
 }
 
 function generateDynamicQR() {
@@ -1404,8 +1518,8 @@ async function executeCameraAction() {
             showMsg("Face Mismatch! Proxy Attempt Detected.", true);
         }
     }
-    }
-    function togglePassword() {
+        }
+        function togglePassword() {
     const p = document.getElementById('password');
     p.type = p.type === 'password' ? 'text' : 'password';
 }
@@ -1433,6 +1547,7 @@ async function resetStudentPassword() {
     } catch(e) { showMsg("Failed to reset password!", true); }
 }
 
+// 🔥 UPDATED Auth with OTP
 async function handleAuth() {
     const rawRoll = document.getElementById('rollNo').value.trim();
     const password = document.getElementById('password').value.trim();
@@ -1450,24 +1565,45 @@ async function handleAuth() {
     try {
         if (isRegistering) {
             const name = document.getElementById('regName').value.trim();
+            const phone = document.getElementById('regPhone').value.trim();
             if (!name) return showMsg('Enter Full Name!', true);
+            if (!phone || phone.length < 10) return showMsg('Enter valid Phone Number (e.g. 9876543210)!', true);
+            
             const res = await fetch(`${API_BASE}/api/auth/register`, { 
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ name, rollNo: validation.cleanRoll, password, deviceId }) 
+                body: JSON.stringify({ name, rollNo: validation.cleanRoll, password, deviceId, phone }) 
             });
             const data = await res.json();
-            if (res.ok) { showMsg('Registered! Sign in now.'); toggleMode(); } else showMsg(data.error || 'Registration failed', true);
+            if (res.ok) { showMsg('Registered! Please login.'); toggleMode(); } 
+            else { showMsg(data.error || 'Registration failed', true); }
         } else {
+            // Step 1: Login
             const res = await fetch(`${API_BASE}/api/auth/login`, { 
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' }, 
                 body: JSON.stringify({ rollNo: validation.cleanRoll, password, deviceId }) 
             });
             const data = await res.json();
-            if (res.ok) { 
-                localStorage.setItem('user', JSON.stringify(data.user)); 
-                loadDashboard(); 
+            if (res.ok) {
+                // Step 2: Send OTP
+                const otpRes = await fetch(`${API_BASE}/api/auth/send-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rollNo: validation.cleanRoll })
+                });
+                const otpData = await otpRes.json();
+                if (otpRes.ok) {
+                    pendingLoginData = {
+                        rollNo: validation.cleanRoll,
+                        user: data.user,
+                        token: data.token
+                    };
+                    showMsg('📱 OTP sent to your phone!');
+                    openOTPModal(validation.cleanRoll);
+                } else {
+                    showMsg(otpData.error || 'Failed to send OTP', true);
+                }
             } else {
                 showMsg(data.error || 'Invalid credentials', true);
             }
@@ -1505,8 +1641,6 @@ async function loadAnalyticsChart(rollNo) {
         });
     } catch(err) { console.error("Chart data failed to load:", err); }
 }
-
-// ❌ Notification permission REMOVED - No popup
 
 function loadDashboard() {
     const user = JSON.parse(localStorage.getItem('user'));
@@ -1546,7 +1680,6 @@ function loadDashboard() {
     updatePeriodTrackerWidget();
     setInterval(updatePeriodTrackerWidget, 30000);
     fetchNotices();
-
     loadAnalyticsChart(user.rollNo);
 }
 
@@ -1556,10 +1689,61 @@ function markFullDayAttendance() {
     }
     navigator.geolocation.getCurrentPosition(async (pos) => {
         const user = JSON.parse(localStorage.getItem('user'));
+        const fingerprint = getDeviceFingerprint();
         try {
-            const res = await fetch(`${API_BASE}/api/attendance/mark-fullday`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: user.rollNo, name: user.name, latitude: pos.coords.latitude, longitude: pos.coords.longitude }) });
+            const res = await fetch(`${API_BASE}/api/attendance/mark-fullday`, { 
+                method: 'POST', 
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+                }, 
+                body: JSON.stringify({ 
+                    rollNo: user.rollNo, 
+                    name: user.name, 
+                    latitude: pos.coords.latitude, 
+                    longitude: pos.coords.longitude,
+                    deviceFingerprint: fingerprint
+                }) 
+            });
             const data = await res.json();
-            if (res.ok) { showMsg(data.message); fetchHistory(user.rollNo); } else showMsg(data.error || "Attendance marking failed", true);
+            if (res.ok) { showMsg(data.message); fetchHistory(user.rollNo); } 
+            else { showMsg(data.error || "Attendance marking failed", true); }
+        } catch(e) { showMsg("Network Error! Try again.", true); }
+    }, () => showMsg('GPS Denied!', true));
+}
+
+// 🔥 Mark with Selfie
+function markSingleAttendanceWithSelfie(subject, selfieData) {
+    if (!navigator.geolocation) {
+        return showMsg('Geolocation is not supported!', true);
+    }
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        const user = JSON.parse(localStorage.getItem('user'));
+        const fingerprint = getDeviceFingerprint();
+        try {
+            const res = await fetch(`${API_BASE}/api/attendance/mark`, { 
+                method: 'POST', 
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+                }, 
+                body: JSON.stringify({ 
+                    rollNo: user.rollNo, 
+                    name: user.name, 
+                    subject: subject, 
+                    latitude: pos.coords.latitude, 
+                    longitude: pos.coords.longitude,
+                    selfie: selfieData,
+                    deviceFingerprint: fingerprint
+                }) 
+            });
+            const data = await res.json();
+            if (res.ok) { 
+                showMsg(`✅ Attendance Marked for ${subject} with Selfie!`); 
+                fetchHistory(user.rollNo); 
+            } else {
+                showMsg(data.error || "Attendance marking failed", true);
+            }
         } catch(e) { showMsg("Network Error! Try again.", true); }
     }, () => showMsg('GPS Denied!', true));
 }
@@ -1590,8 +1774,23 @@ function markSingleAttendance(overrideSubject) {
     }
     navigator.geolocation.getCurrentPosition(async (pos) => {
         const user = JSON.parse(localStorage.getItem('user'));
+        const fingerprint = getDeviceFingerprint();
         try {
-            const res = await fetch(`${API_BASE}/api/attendance/mark`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: user.rollNo, name: user.name, subject: sub, latitude: pos.coords.latitude, longitude: pos.coords.longitude }) });
+            const res = await fetch(`${API_BASE}/api/attendance/mark`, { 
+                method: 'POST', 
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+                }, 
+                body: JSON.stringify({ 
+                    rollNo: user.rollNo, 
+                    name: user.name, 
+                    subject: sub, 
+                    latitude: pos.coords.latitude, 
+                    longitude: pos.coords.longitude,
+                    deviceFingerprint: fingerprint
+                }) 
+            });
             const data = await res.json();
             if (res.ok) { 
                 showMsg(`Attendance Marked for ${sub}!`); 
@@ -1601,8 +1800,8 @@ function markSingleAttendance(overrideSubject) {
             }
         } catch(e) { showMsg("Network Error! Try again.", true); }
     }, () => showMsg('GPS Denied!', true));
-    }
-            async function markManualAttendance() {
+        }
+                async function markManualAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             const studentRollNo = document.getElementById('manualRoll').value.trim();
             const date = document.getElementById('manualDate').value;
@@ -1769,6 +1968,72 @@ function markSingleAttendance(overrideSubject) {
             } catch(e) { showMsg("Failed to sync attendance logs!", true); }
         }
 
+        async function fetchAllStudents() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/all-students/${user.rollNo}`);
+                const data = await res.json();
+                if (!res.ok) return showMsg(data.error || "Failed to load students", true);
+                
+                document.getElementById('directoryTitle').innerText = `All Registered Students (${data.length}):`;
+                
+                const tbody = document.querySelector('#allHistoryTable tbody');
+                if (!tbody) return;
+                
+                if (data.length === 0) {
+                    return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No students registered yet</td></tr>';
+                }
+                
+                tbody.innerHTML = data.map(s => `
+                    <tr>
+                        <td><b>${s.rollNo}</b></td>
+                        <td>${s.name}</td>
+                        <td><span class="badge ${s.anomalyFlag ? 'badge-flagged' : 'badge-present'}">${s.anomalyFlag ? '⚠️ Flagged' : '✅ Active'}</span></td>
+                        <td>
+                            <button class="action-btn btn-view" onclick="showStudentAttendance('${s.rollNo}')">📊 View</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch(e) { showMsg("Failed to connect to backend", true); }
+        }
+
+        async function showStudentAttendance(rollNo) {
+            try {
+                const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
+                const data = await res.json();
+                if (!res.ok) return showMsg("Failed to load attendance", true);
+                
+                const total = data.length;
+                const present = data.filter(r => r.status === 'Present').length;
+                const pct = total > 0 ? Math.round((present/total)*100) : 0;
+                
+                const tbody = document.querySelector('#allHistoryTable tbody');
+                if (!tbody) return;
+                
+                document.getElementById('directoryTitle').innerText = `📊 ${rollNo}: ${present}/${total} present (${pct}%)`;
+                
+                if (data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No attendance records for ${rollNo}</td></tr>`;
+                    return;
+                }
+                
+                tbody.innerHTML = data.slice(0, 30).map(r => `
+                    <tr>
+                        <td><b>${r.date}</b></td>
+                        <td>${r.subject || 'N/A'}</td>
+                        <td><span class="badge badge-present">${r.status}</span></td>
+                        <td style="font-size:9px;">${r.ipAddress || 'N/A'}</td>
+                    </tr>
+                `).join('');
+                
+                tbody.innerHTML += `
+                    <tr><td colspan="4" style="text-align:center; padding:8px;">
+                        <button class="btn btn-outline" onclick="fetchAllStudents()" style="padding:4px 12px; width:auto; margin:0; font-size:10px;">⬅ Back</button>
+                    </td></tr>
+                `;
+            } catch(e) { showMsg("Failed to load attendance", true); }
+        }
+
         async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             try {
@@ -1818,9 +2083,7 @@ function markSingleAttendance(overrideSubject) {
                         <button class="btn btn-outline" onclick="fetchAllStudents()" style="padding:4px 12px; width:auto; margin:0; font-size:10px;">⬅ Back to Students</button>
                     </td></tr>
                 `;
-            } catch(e) {
-                showMsg("Failed to connect to backend", true);
-            }
+            } catch(e) { showMsg("Failed to connect to backend", true); }
         }
 
         async function deleteDayGroup(rollNo, date) {
@@ -1936,14 +2199,24 @@ function markSingleAttendance(overrideSubject) {
             downloadFile(csv, fileName);
         }
 
-        function logout() { 
-            localStorage.removeItem('user'); 
-            location.reload(); 
+        async function logout() {
+            try {
+                const token = localStorage.getItem('token');
+                if (token) {
+                    await fetch(`${API_BASE}/api/auth/logout`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                }
+            } catch(e) {}
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+            location.reload();
         }
 
         if (localStorage.getItem('user')) loadDashboard();
     </script>
 </body>
 </html>
-
-    
+        
+           
