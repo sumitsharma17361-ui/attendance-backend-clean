@@ -7,7 +7,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
-    <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { 
@@ -39,7 +38,6 @@
             position: relative;
         }
 
-        /* FLOATING TOAST SYSTEM */
         #toast-container {
             position: fixed;
             top: 20px;
@@ -181,7 +179,7 @@
         .eye-icon { position: absolute; right: 12px; top: 38%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); transition: color 0.3s; }
         .eye-icon:hover { color: var(--primary); }
 
-        .btn { 
+                .btn { 
             width: 100%; 
             padding: 10px 14px; 
             border-radius: 10px; 
@@ -385,7 +383,6 @@
             to { transform: rotate(360deg); }
         }
 
-        /* MODAL STYLES FOR EXCEL DOWNLOAD */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -410,7 +407,6 @@
     </style>
 </head>
 <body>
-    <!-- FLOATING GLASS TOAST CONTAINER -->
     <div id="toast-container">
         <div id="toast" class="toast-card">
             <svg id="toast-icon" class="svg-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -418,19 +414,16 @@
         </div>
     </div>
 
-    <!-- STUDENT EXCEL MODAL -->
     <div id="studentExcelModal" class="modal-overlay" style="display: none;">
         <div class="modal-card">
             <h3 style="font-size:14px; font-weight:800; margin-bottom:6px; color:var(--text-main);">Download Student Excel Sheet</h3>
             <p style="font-size:11px; color:var(--text-muted); margin-bottom:12px; font-weight:600;">Select range for attendance export:</p>
-            
             <label style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Report Range</label>
             <select id="studentExcelRange" style="margin-top:4px;">
                 <option value="CURRENT_MONTH">Current Month</option>
                 <option value="SELECTED_MONTH">Selected Month</option>
                 <option value="FULL_SEMESTER">Full Semester (Jul-Dec 2026)</option>
             </select>
-
             <div id="selectedMonthWrapper" style="display:none; margin-top:4px;">
                 <label style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Select Month</label>
                 <select id="studentExcelMonth">
@@ -442,7 +435,6 @@
                     <option value="11">December 2026</option>
                 </select>
             </div>
-
             <div style="display:flex; gap:8px; margin-top:12px;">
                 <button class="btn btn-outline" style="flex:1;" onclick="closeStudentExcelModal()">Cancel</button>
                 <button class="btn btn-success" style="flex:1;" onclick="processStudentExcelDownload()">Download Sheet</button>
@@ -468,7 +460,6 @@
     </div>
 
     <div class="app-body">
-        <!-- AUTH -->
         <div id="auth-box" class="tab-content-active">
             <div id="register-fields" style="display: none;">
                 <input type="text" id="regName" placeholder="Full Student Name">
@@ -484,7 +475,6 @@
             <span style="color:var(--primary); cursor:pointer; font-size:12px; display:block; text-align:center; margin-top:12px; font-weight:600;" id="toggleLink" onclick="toggleMode()">New Student? Register Account</span>
         </div>
 
-        <!-- DASHBOARD -->
         <div id="dash-box" style="display: none;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                 <div>
@@ -497,7 +487,6 @@
                 <button class="btn btn-danger" style="width:auto; padding:5px 10px; margin:0; font-size:11px;" onclick="logout()">Logout</button>
             </div>
 
-            <!-- STUDENT DYNAMIC STATS CARD -->
             <div class="stats-grid" id="studentStatsGrid">
                 <div class="stat-card">
                     <div class="value" id="totalDaysCount">0</div>
@@ -509,7 +498,6 @@
                 </div>
             </div>
 
-            <!-- PURE SUPER ADMIN STATS CARD -->
             <div class="stats-grid" id="adminStatsGrid" style="display:none;">
                 <div class="stat-card">
                     <div class="value" id="adminTotalStudents">0</div>
@@ -521,19 +509,16 @@
                 </div>
             </div>
 
-            <!-- STUDENT ADVISOR CARD -->
             <div class="simulator-card" id="simulatorBox">
                 <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
                 <div><b>Attendance Advisor:</b> <span id="advisorText">Calculating criteria...</span></div>
             </div>
 
-            <!-- SUBJECT-WISE ATTENDANCE ANALYTICS CHART -->
             <div class="admin-box" id="analyticsBox" style="margin:12px 0; padding: 15px; background: #fff; border-radius: 14px; border: 1px solid var(--card-border);">
                 <h4 style="font-size:12px; font-weight:800; color:var(--text-main); margin-bottom:10px;">Academic Subject Breakdown</h4>
                 <canvas id="attendanceChart" width="400" height="200"></canvas>
             </div>
 
-            <!-- QUICK STUDENT PORTALS -->
             <div class="quick-portals-card">
                 <span style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Quick Portals</span>
                 <div class="portal-grid">
@@ -552,7 +537,6 @@
                 </div>
             </div>
 
-            <!-- AI FACE ID ENROLLMENT & SCANNER MODAL -->
             <div class="admin-box" id="faceEnrollBox" style="margin-bottom:12px;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div>
@@ -564,7 +548,6 @@
                         Enroll Face
                     </button>
                 </div>
-
                 <div id="cameraModal" style="display:none; margin-top:10px; text-align:center;">
                     <div class="webcam-box">
                         <video id="webcamVideo" autoplay playsinline muted></video>
@@ -581,7 +564,6 @@
                 <div class="tab-item" id="adminTabHeader" style="display:none;" onclick="switchTab('adminTab')">Admin Control</div>
             </div>
 
-            <!-- TAB 1: MARK ATTENDANCE -->
             <div id="markTab" class="tab-content-active">
                 <button class="btn btn-primary" onclick="openFullDayPasscodePrompt()" style="padding:11px;">
                     <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
@@ -622,7 +604,6 @@
                 <div style="margin-top:10px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                         <h4 style="font-size:11px; color:var(--text-muted); font-weight:700;">My Attendance Logs (Date-Wise):</h4>
-                        <!-- RESTORED STUDENT EXCEL BUTTON -->
                         <button class="btn btn-success" style="width:auto; padding:5px 10px; margin:0; font-size:10px;" onclick="openStudentExcelModal()">
                             <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                             Download Excel Sheet
@@ -635,9 +616,8 @@
                         </table>
                     </div>
                 </div>
-                            </div>
-                         <!-- ADMIN CONTROL TAB -->
-            <div id="adminTab" style="display:none;">
+            </div>
+                        <div id="adminTab" style="display:none;">
                 <div class="admin-nav">
                     <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">Excel</div>
                     <div class="admin-nav-item" onclick="switchAdminSubTab('subAttendance')">Entry</div>
@@ -701,28 +681,24 @@
                         <input type="text" id="adminRegPass" placeholder="Password (Default: 123456)">
                         <button class="btn btn-primary" onclick="adminRegisterStudent()" style="margin-top:0;">Register Student</button>
                     </div>
-
                     <div class="tool-sub-card">
                         <span class="tool-title" style="color:var(--text-main);">Broadcast Announcement Notice:</span>
                         <input type="text" id="noticeMsg" placeholder="Notice text (e.g. Mid-Sem Exams from Monday)">
                         <button class="btn btn-primary" onclick="postNotice()" style="margin-top:0; margin-bottom:6px;">Publish Notice</button>
                         <button class="btn btn-danger" onclick="clearNotice()" style="margin-top:0;">Clear Active Notice</button>
                     </div>
-
                     <div class="tool-sub-card">
                         <span class="tool-title" style="color:var(--primary);">Fix / Update Student Roll Number Format:</span>
                         <input type="text" id="oldRollFormat" placeholder="Old Roll No (e.g. 24-CSE-14)">
                         <input type="text" id="newRollFormat" placeholder="New Clean Roll No (e.g. 24CSE14)">
                         <button class="btn btn-primary" onclick="updateRollNumberFormat()" style="margin-top:0;">Update Roll Number</button>
                     </div>
-
                     <div class="tool-sub-card">
                         <span class="tool-title" style="color:var(--warning);">Reset Student Password:</span>
                         <input type="text" id="resetRoll" placeholder="Student Roll No (e.g. 24CSE14)">
                         <input type="text" id="resetPass" placeholder="New Password (Default: 123456)">
                         <button class="btn btn-warning" onclick="resetStudentPassword()" style="margin-top:0;">Reset Password</button>
                     </div>
-
                     <div class="tool-sub-card" style="border-color:#fecaca; background:#fef2f2;">
                         <span class="tool-title" style="color:#b91c1c;">Permanently Delete Student Account:</span>
                         <input type="text" id="deleteStudentRoll" placeholder="Roll No to Delete (e.g. 24-CSE-14)">
@@ -730,7 +706,6 @@
                     </div>
                 </div>
 
-                <!-- DIRECTORY TAB -->
                 <div id="subDirectory" style="display:none;">
                     <button class="btn btn-outline" onclick="fetchAllAttendance()" style="margin-bottom:8px;">Refresh Records Directory</button>
                     <h4 style="font-size:11px; color:var(--text-muted); margin-top:6px; font-weight:700;">Class Records Directory:</h4>
@@ -742,14 +717,24 @@
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
-    </div>
-    <script>
+</div>
+
+<script>
     const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; 
     const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/";
     
+    function getDeviceId() {
+        const KEY = 'BM_DEVICE_ID';
+        let deviceId = localStorage.getItem(KEY);
+        if (!deviceId) {
+            deviceId = 'DEV_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
+            localStorage.setItem(KEY, deviceId);
+        }
+        return deviceId;
+    }
+
     let isRegistering = false, globalAllRecords = [], globalMyRecords = [], globalHolidays = [], groupedAdminRecords = {};
     let currentCamMode = 'ENROLL', videoStream = null, isModelsLoaded = false;
     let currentDailyPasscode = "9842";
@@ -765,9 +750,7 @@
         const toast = document.getElementById('toast');
         const toastMsg = document.getElementById('toast-msg');
         const toastIcon = document.getElementById('toast-icon');
-
         if (!toast || !toastMsg) return;
-
         toastMsg.innerText = text;
         toastIcon.setAttribute("viewBox", "0 0 24 24");
         if (isError) {
@@ -776,11 +759,8 @@
             toastIcon.innerHTML = `<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>`;
         }
         toast.className = `toast-card ${isError ? 'toast-error' : 'toast-success'} show`;
-
         if (toastTimeout) clearTimeout(toastTimeout);
-        toastTimeout = setTimeout(() => {
-            toast.classList.remove('show');
-        }, 3500);
+        toastTimeout = setTimeout(() => { toast.classList.remove('show'); }, 3500);
     }
 
     function sanitizeAndValidateRollNo(rawRoll) {
@@ -789,210 +769,205 @@
         const strictRegex = /^\d{2}(CSE|AIDS)\d{2}$/;
         return { isValid: strictRegex.test(clean), cleanRoll: clean };
     }
-
     const WEEKLY_SCHEDULE = {
-        1: [
-            { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
-            { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
-            { start: "10:50", end: "11:35", subject: "DAA - Design & Analysis of Algorithm", period: "P3" },
-            { start: "11:35", end: "12:20", subject: "FLA - Formal Language & Automata", period: "P4" },
-            { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
-            { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
-            { start: "13:50", end: "14:35", subject: "CN - Computer Network", period: "P7" },
-            { start: "14:35", end: "15:20", subject: "LIB - Library", period: "P8" }
-        ],
-        2: [
-            { start: "09:20", end: "10:05", subject: "WT - Web Technology", period: "P1" },
-            { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
-            { start: "10:50", end: "11:35", subject: "Internet Lab (Ms. Geeta)", period: "P3" },
-            { start: "11:35", end: "12:20", subject: "FLA - Formal Language & Automata", period: "P4" },
-            { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
-            { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
-            { start: "13:50", end: "14:35", subject: "BDA - Big Data Analytics", period: "P7" },
-            { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
-        ],
-        3: [
-            { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
-            { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
-            { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
-            { start: "11:35", end: "12:20", subject: "Sports / Activity", period: "P4" },
-            { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
-            { start: "13:05", end: "13:50", subject: "WT - Web Technology", period: "P6" },
-            { start: "13:50", end: "15:20", subject: "CN LAB - Computer Network Lab", period: "P7-P8" }
-        ],
-        4: [
-            { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
-            { start: "10:05", end: "10:50", subject: "WT - Web Technology", period: "P2" },
-            { start: "10:50", end: "11:35", subject: "CN - Computer Network", period: "P3" },
-            { start: "11:35", end: "12:20", subject: "DAA - Design & Analysis of Algorithm", period: "P4" },
-            { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
-            { start: "13:05", end: "14:35", subject: "DAA LAB - Algorithm Lab", period: "P6-P7" },
-            { start: "14:35", end: "15:20", subject: "HRM - Human Resource Mgmt", period: "P8" }
-        ],
-        5: [
-            { start: "09:20", end: "10:05", subject: "DAA - Design & Analysis of Algorithm", period: "P1" },
-            { start: "10:05", end: "10:50", subject: "CN - Computer Network", period: "P2" },
-            { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
-            { start: "11:35", end: "12:20", subject: "BDA - Big Data Analytics", period: "P4" },
-            { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
-            { start: "13:05", end: "14:35", subject: "WT LAB - Web Technology Lab", period: "P6-P7" },
-            { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
-        ]
+    1: [
+        { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
+        { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
+        { start: "10:50", end: "11:35", subject: "DAA - Design & Analysis of Algorithm", period: "P3" },
+        { start: "11:35", end: "12:20", subject: "FLA - Formal Language & Automata", period: "P4" },
+        { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+        { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
+        { start: "13:50", end: "14:35", subject: "CN - Computer Network", period: "P7" },
+        { start: "14:35", end: "15:20", subject: "LIB - Library", period: "P8" }
+    ],
+    2: [
+        { start: "09:20", end: "10:05", subject: "WT - Web Technology", period: "P1" },
+        { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
+        { start: "10:50", end: "11:35", subject: "Internet Lab (Ms. Geeta)", period: "P3" },
+        { start: "11:35", end: "12:20", subject: "FLA - Formal Language & Automata", period: "P4" },
+        { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+        { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
+        { start: "13:50", end: "14:35", subject: "BDA - Big Data Analytics", period: "P7" },
+        { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
+    ],
+    3: [
+        { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
+        { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
+        { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
+        { start: "11:35", end: "12:20", subject: "Sports / Activity", period: "P4" },
+        { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+        { start: "13:05", end: "13:50", subject: "WT - Web Technology", period: "P6" },
+        { start: "13:50", end: "15:20", subject: "CN LAB - Computer Network Lab", period: "P7-P8" }
+    ],
+    4: [
+        { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
+        { start: "10:05", end: "10:50", subject: "WT - Web Technology", period: "P2" },
+        { start: "10:50", end: "11:35", subject: "CN - Computer Network", period: "P3" },
+        { start: "11:35", end: "12:20", subject: "DAA - Design & Analysis of Algorithm", period: "P4" },
+        { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+        { start: "13:05", end: "14:35", subject: "DAA LAB - Algorithm Lab", period: "P6-P7" },
+        { start: "14:35", end: "15:20", subject: "HRM - Human Resource Mgmt", period: "P8" }
+    ],
+    5: [
+        { start: "09:20", end: "10:05", subject: "DAA - Design & Analysis of Algorithm", period: "P1" },
+        { start: "10:05", end: "10:50", subject: "CN - Computer Network", period: "P2" },
+        { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
+        { start: "11:35", end: "12:20", subject: "BDA - Big Data Analytics", period: "P4" },
+        { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+        { start: "13:05", end: "14:35", subject: "WT LAB - Web Technology Lab", period: "P6-P7" },
+        { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
+    ]
+};
+
+function updatePeriodTrackerWidget() {
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const labelEl = document.getElementById('periodTimeSlotLabel');
+    const nameEl = document.getElementById('activePeriodName');
+    const btn = document.getElementById('markPeriodBtn');
+
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+        if(labelEl) labelEl.innerText = "WEEKEND STATUS:";
+        if(nameEl) nameEl.innerText = "College Closed (Weekend)";
+        if(btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
+        activeSubjectSubjectCode = "";
+        return;
+    }
+
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const daySchedule = WEEKLY_SCHEDULE[dayOfWeek] || [];
+    let foundSlot = null;
+
+    for (let slot of daySchedule) {
+        const sParts = slot.start.split(':');
+        const eParts = slot.end.split(':');
+        const startMins = parseInt(sParts[0]) * 60 + parseInt(sParts[1]);
+        const endMins = parseInt(eParts[0]) * 60 + parseInt(eParts[1]);
+
+        if (currentMinutes >= startMins && currentMinutes < endMins) {
+            foundSlot = slot;
+            break;
+        }
+    }
+
+    if (foundSlot) {
+        if (foundSlot.period === "LUNCH") {
+            if(labelEl) labelEl.innerText = "LUNCH BREAK (12:20 - 01:05 PM):";
+            if(nameEl) nameEl.innerText = "Lunch Time / Rest Hour";
+            if(btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
+            activeSubjectSubjectCode = "";
+        } else {
+            if(labelEl) labelEl.innerText = `ACTIVE PERIOD (${foundSlot.start} - ${foundSlot.end}):`;
+            if(nameEl) nameEl.innerText = foundSlot.subject;
+            if(btn) { btn.disabled = false; btn.style.opacity = "1"; }
+            activeSubjectSubjectCode = foundSlot.subject;
+        }
+    } else {
+        if(labelEl) labelEl.innerText = "CURRENT COLLEGE STATUS:";
+        if(nameEl) nameEl.innerText = "College Off Hours / No Active Class";
+        if(btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
+        activeSubjectSubjectCode = "";
+    }
+}
+
+function markActivePeriodAttendance() {
+    if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
+        return showMsg("Abhi koi active class nahi chal rahi!", true);
+    }
+    markSingleAttendance(activeSubjectSubjectCode);
+}
+
+function openFullDayPasscodePrompt() {
+    const enteredPasscode = prompt(`Enter Class Passcode / Daily Master Secret displayed by Teacher:`);
+    if (!enteredPasscode) return;
+    if (enteredPasscode.trim() === currentDailyPasscode) {
+        markFullDayAttendance();
+    } else {
+        showMsg("Invalid Class Passcode! Attendance Denied.", true);
+    }
+}
+
+function openStudentQRScanner() {
+    if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
+        return showMsg("QR Scan failed: Class time ke bahar mark nahi ho sakti!", true);
+    }
+    showMsg("QR Verified! Marking current lecture...");
+    markSingleAttendance(activeSubjectSubjectCode);
+}
+
+function openStudentExcelModal() {
+    document.getElementById('studentExcelModal').style.display = 'flex';
+    const rangeSelect = document.getElementById('studentExcelRange');
+    rangeSelect.onchange = function() {
+        document.getElementById('selectedMonthWrapper').style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none';
     };
+}
 
-    function updatePeriodTrackerWidget() {
-        const now = new Date();
-        const dayOfWeek = now.getDay();
-        const labelEl = document.getElementById('periodTimeSlotLabel');
-        const nameEl = document.getElementById('activePeriodName');
-        const btn = document.getElementById('markPeriodBtn');
+function closeStudentExcelModal() {
+    document.getElementById('studentExcelModal').style.display = 'none';
+}
 
-        if (dayOfWeek === 0 || dayOfWeek === 6) {
-            if(labelEl) labelEl.innerText = "WEEKEND STATUS:";
-            if(nameEl) nameEl.innerText = "College Closed (Weekend)";
-            if(btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
-            activeSubjectSubjectCode = "";
-            return;
-        }
+function processStudentExcelDownload() {
+    const range = document.getElementById('studentExcelRange').value;
+    const selectedMonth = parseInt(document.getElementById('studentExcelMonth').value);
 
-        const currentMinutes = now.getHours() * 60 + now.getMinutes();
-        const daySchedule = WEEKLY_SCHEDULE[dayOfWeek] || [];
-        let foundSlot = null;
-
-        for (let slot of daySchedule) {
-            const sParts = slot.start.split(':');
-            const eParts = slot.end.split(':');
-            const startMins = parseInt(sParts[0]) * 60 + parseInt(sParts[1]);
-            const endMins = parseInt(eParts[0]) * 60 + parseInt(eParts[1]);
-
-            if (currentMinutes >= startMins && currentMinutes < endMins) {
-                foundSlot = slot;
-                break;
-            }
-        }
-
-        if (foundSlot) {
-            if (foundSlot.period === "LUNCH") {
-                if(labelEl) labelEl.innerText = "LUNCH BREAK (12:20 - 01:05 PM):";
-                if(nameEl) nameEl.innerText = "Lunch Time / Rest Hour";
-                if(btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
-                activeSubjectSubjectCode = "";
-            } else {
-                if(labelEl) labelEl.innerText = `ACTIVE PERIOD (${foundSlot.start} - ${foundSlot.end}):`;
-                if(nameEl) nameEl.innerText = foundSlot.subject;
-                if(btn) { btn.disabled = false; btn.style.opacity = "1"; }
-                activeSubjectSubjectCode = foundSlot.subject;
-            }
-        } else {
-            if(labelEl) labelEl.innerText = "CURRENT COLLEGE STATUS:";
-            if(nameEl) nameEl.innerText = "College Off Hours / No Active Class";
-            if(btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
-            activeSubjectSubjectCode = "";
-        }
-    }
-
-    function markActivePeriodAttendance() {
-        if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
-            return showMsg("Abhi koi active class nahi chal rahi!", true);
-        }
-        markSingleAttendance(activeSubjectSubjectCode);
-    }
-
-    function openFullDayPasscodePrompt() {
-        const enteredPasscode = prompt(`Enter Class Passcode / Daily Master Secret displayed by Teacher:`);
-        if (!enteredPasscode) return;
-        if (enteredPasscode.trim() === currentDailyPasscode) {
-            markFullDayAttendance();
-        } else {
-            showMsg("Invalid Class Passcode! Attendance Denied.", true);
-        }
-    }
-
-    function openStudentQRScanner() {
-        if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
-            return showMsg("QR Scan failed: Class time ke bahar mark nahi ho sakti!", true);
-        }
-        showMsg("QR Verified! Marking current lecture...");
-        markSingleAttendance(activeSubjectSubjectCode);
-    }
-
-    /* STUDENT EXCEL DOWNLOAD MODAL HANDLERS */
-    function openStudentExcelModal() {
-        document.getElementById('studentExcelModal').style.display = 'flex';
-        const rangeSelect = document.getElementById('studentExcelRange');
-        rangeSelect.onchange = function() {
-            document.getElementById('selectedMonthWrapper').style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none';
-        };
-    }
-
-    function closeStudentExcelModal() {
-        document.getElementById('studentExcelModal').style.display = 'none';
-    }
-
-    function processStudentExcelDownload() {
-        const range = document.getElementById('studentExcelRange').value;
-        const selectedMonth = parseInt(document.getElementById('studentExcelMonth').value);
-
-        if (globalMyRecords.length === 0) {
-            closeStudentExcelModal();
-            return showMsg("Export karne ke liye koi attendance records nahi hain!", true);
-        }
-
-        const today = new Date();
-        let filteredRecords = [];
-
-        if (range === 'CURRENT_MONTH') {
-            const currentMonthIdx = today.getMonth();
-            const currentYear = today.getFullYear();
-            filteredRecords = globalMyRecords.filter(r => {
-                const parts = r.date.split('-');
-                return parseInt(parts[0]) === currentYear && (parseInt(parts[1])- 1) === currentMonthIdx;
-            });
-        } else if (range === 'SELECTED_MONTH') {
-            filteredRecords = globalMyRecords.filter(r => {
-                const parts = r.date.split('-');
-                return parseInt(parts[0]) === 2026 && (parseInt(parts[1]) - 1) === selectedMonth;
-            });
-        } else {
-            // FULL SEMESTER (Jul - Dec 2026)
-            filteredRecords = globalMyRecords.filter(r => {
-                const parts = r.date.split('-');
-                const m = parseInt(parts[1]) - 1;
-                return parseInt(parts[0]) === 2026 && m >= 6 && m <= 11;
-            });
-        }
-
-        if (filteredRecords.length === 0) {
-            closeStudentExcelModal();
-            return showMsg("Chune gaye time period ke liye koi records nahi mile!", true);
-        }
-
-        const grouped = {};
-        filteredRecords.forEach(r => { 
-            if (!grouped[r.date]) grouped[r.date] = 0; 
-            grouped[r.date]++; 
-        });
-
-        let csv = "Date,Day,Total Lectures Attended,Status\n";
-        Object.keys(grouped).sort().forEach(d => {
-            const parts = d.split('-');
-            const dayStr = DAY_NAMES[new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])).getDay()];
-            csv += `"${d}","${dayStr}","${grouped[d]} Lectures","Present"\n`;
-        });
-
-        const fileName = `Student_Attendance_Report_${range}.csv`;
-        downloadFile(csv, fileName);
+    if (globalMyRecords.length === 0) {
         closeStudentExcelModal();
-        showMsg("Attendance Report downloaded successfully!");
+        return showMsg("Export karne ke liye koi attendance records nahi hain!", true);
     }
-        async function adminRegisterStudent() {
+
+    const today = new Date();
+    let filteredRecords = [];
+
+    if (range === 'CURRENT_MONTH') {
+        const currentMonthIdx = today.getMonth();
+        const currentYear = today.getFullYear();
+        filteredRecords = globalMyRecords.filter(r => {
+            const parts = r.date.split('-');
+            return parseInt(parts[0]) === currentYear && (parseInt(parts[1])- 1) === currentMonthIdx;
+        });
+    } else if (range === 'SELECTED_MONTH') {
+        filteredRecords = globalMyRecords.filter(r => {
+            const parts = r.date.split('-');
+            return parseInt(parts[0]) === 2026 && (parseInt(parts[1]) - 1) === selectedMonth;
+        });
+    } else {
+        filteredRecords = globalMyRecords.filter(r => {
+            const parts = r.date.split('-');
+            const m = parseInt(parts[1]) - 1;
+            return parseInt(parts[0]) === 2026 && m >= 6 && m <= 11;
+        });
+    }
+
+    if (filteredRecords.length === 0) {
+        closeStudentExcelModal();
+        return showMsg("Chune gaye time period ke liye koi records nahi mile!", true);
+    }
+
+    const grouped = {};
+    filteredRecords.forEach(r => { 
+        if (!grouped[r.date]) grouped[r.date] = 0; 
+        grouped[r.date]++; 
+    });
+
+    let csv = "Date,Day,Total Lectures Attended,Status\n";
+    Object.keys(grouped).sort().forEach(d => {
+        const parts = d.split('-');
+        const dayStr = DAY_NAMES[new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])).getDay()];
+        csv += `"${d}","${dayStr}","${grouped[d]} Lectures","Present"\n`;
+    });
+
+    const fileName = `Student_Attendance_Report_${range}.csv`;
+    downloadFile(csv, fileName);
+    closeStudentExcelModal();
+    showMsg("Attendance Report downloaded successfully!");
+    }
+    async function adminRegisterStudent() {
     const name = document.getElementById('adminRegName').value.trim();
     const rawRoll = document.getElementById('adminRegRoll').value.trim();
     const password = document.getElementById('adminRegPass').value.trim() || '123456';
-
     const validation = sanitizeAndValidateRollNo(rawRoll);
     if (!name || !validation.isValid) return showMsg('Valid Name and Roll No required (e.g. 24CSE14)!', true);
-
     try {
         const res = await fetch(`${API_BASE}/api/auth/register`, {
             method: 'POST',
@@ -1008,19 +983,15 @@
         } else {
             showMsg(data.error || "Failed to register student", true);
         }
-    } catch(e) {
-        showMsg("Server Connection Error!", true);
-    }
+    } catch(e) { showMsg("Server Connection Error!", true); }
 }
 
 async function updateRollNumberFormat() {
     const user = JSON.parse(localStorage.getItem('user'));
     const oldRoll = document.getElementById('oldRollFormat').value.trim();
     const rawNewRoll = document.getElementById('newRollFormat').value.trim();
-
     const validation = sanitizeAndValidateRollNo(rawNewRoll);
     if (!oldRoll || !validation.isValid) return showMsg('Valid New Roll No required (e.g. 24CSE14)!', true);
-
     try {
         const res = await fetch(`${API_BASE}/api/admin/update-rollno`, {
             method: 'POST',
@@ -1032,21 +1003,15 @@ async function updateRollNumberFormat() {
             showMsg(data.message || "Roll Number format updated successfully!");
             document.getElementById('oldRollFormat').value = '';
             document.getElementById('newRollFormat').value = '';
-        } else {
-            showMsg(data.error || "Failed to update Roll Number", true);
-        }
-    } catch(e) {
-        showMsg("Server Connection Error!", true);
-    }
+        } else { showMsg(data.error || "Failed to update Roll Number", true); }
+    } catch(e) { showMsg("Server Connection Error!", true); }
 }
 
 async function deleteEntireStudentAccount() {
     const user = JSON.parse(localStorage.getItem('user'));
     const targetRoll = document.getElementById('deleteStudentRoll').value.trim();
-
     if (!targetRoll) return showMsg('Enter Roll Number to delete!', true);
     if (!confirm(`Are you sure you want to PERMANENTLY delete account and records for ${targetRoll}?`)) return;
-
     try {
         const res = await fetch(`${API_BASE}/api/admin/delete-student`, {
             method: 'DELETE',
@@ -1057,9 +1022,7 @@ async function deleteEntireStudentAccount() {
         globalAllRecords = globalAllRecords.filter(r => r.rollNo.toUpperCase() !== targetRoll.toUpperCase());
         showMsg(data.message || `Account ${targetRoll} Deleted Successfully!`);
         document.getElementById('deleteStudentRoll').value = '';
-    } catch(err) {
-        showMsg("Account deleted from directory!", false);
-    }
+    } catch(err) { showMsg("Account deleted from directory!", false); }
 }
 
 async function fetchNotices() {
@@ -1067,14 +1030,12 @@ async function fetchNotices() {
         document.getElementById('noticeBanner').style.display = 'none';
         return;
     }
-
     const activeNotice = localStorage.getItem("ACTIVE_BROADCAST_NOTICE");
     if (activeNotice && activeNotice.trim() !== "") {
         document.getElementById('noticeBanner').style.display = 'flex';
         document.getElementById('noticeText').innerText = `${activeNotice}`;
         return;
     }
-
     try {
         const res = await fetch(`${API_BASE}/api/notices`);
         const data = await res.json();
@@ -1085,30 +1046,20 @@ async function fetchNotices() {
         } else {
             document.getElementById('noticeBanner').style.display = 'none';
         }
-    } catch (err) {
-        document.getElementById('noticeBanner').style.display = 'none';
-    }
+    } catch (err) { document.getElementById('noticeBanner').style.display = 'none'; }
 }
 
 async function postNotice() {
     const user = JSON.parse(localStorage.getItem('user'));
     const message = document.getElementById('noticeMsg').value.trim();
     if (!message) return showMsg('Notice text required!', true);
-
     localStorage.removeItem("GLOBAL_NOTICE_CLEARED");
     localStorage.setItem("ACTIVE_BROADCAST_NOTICE", message);
     document.getElementById('noticeBanner').style.display = 'flex';
     document.getElementById('noticeText').innerText = `${message}`;
     showMsg('Notice Updated & Published!');
     document.getElementById('noticeMsg').value = '';
-
-    try {
-        await fetch(`${API_BASE}/api/admin/notice`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ requesterRollNo: user.rollNo, title: 'Announcement', message })
-        });
-    } catch (err) {}
+    try { await fetch(`${API_BASE}/api/admin/notice`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: user.rollNo, title: 'Announcement', message }) }); } catch (err) {}
 }
 
 async function clearNotice() {
@@ -1118,33 +1069,21 @@ async function clearNotice() {
     document.getElementById('noticeBanner').style.display = 'none';
     document.getElementById('noticeText').innerText = '';
     showMsg('Active Notice Cleared!');
-
-    try {
-        await fetch(`${API_BASE}/api/admin/notice`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ requesterRollNo: user.rollNo, title: 'Announcement', message: "" })
-        });
-    } catch (err) {}
+    try { await fetch(`${API_BASE}/api/admin/notice`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: user.rollNo, title: 'Announcement', message: "" }) }); } catch (err) {}
 }
 
 function switchTab(tabId) {
     const markTab = document.getElementById('markTab');
     const adminTab = document.getElementById('adminTab');
-
     markTab.style.display = tabId === 'markTab' ? 'block' : 'none';
     adminTab.style.display = tabId === 'adminTab' ? 'block' : 'none';
-
     markTab.classList.remove('tab-content-active');
     adminTab.classList.remove('tab-content-active');
-
     if (tabId === 'markTab') markTab.classList.add('tab-content-active');
     if (tabId === 'adminTab') adminTab.classList.add('tab-content-active');
-
     const tabs = document.querySelectorAll('.tab-bar .tab-item');
     tabs[0].classList.toggle('active', tabId === 'markTab');
     if(tabs[1]) tabs[1].classList.toggle('active', tabId === 'adminTab');
-
     if(tabId === 'adminTab') fetchAllAttendance();
 }
 
@@ -1158,12 +1097,8 @@ function switchAdminSubTab(subId) {
             if (id === subId) el.classList.add('tab-content-active');
         }
     });
-
     const navItems = document.querySelectorAll('.admin-nav-item');
-    navItems.forEach((item, idx) => {
-        item.classList.toggle('active', subTabs[idx] === subId);
-    });
-
+    navItems.forEach((item, idx) => { item.classList.toggle('active', subTabs[idx] === subId); });
     if (subId === 'subQR') generateDynamicQR();
     if (subId === 'subDirectory') fetchAllAttendance();
 }
@@ -1175,13 +1110,11 @@ function generateDynamicQR() {
         void refreshIcon.offsetWidth;
         refreshIcon.classList.add('spin-rotate');
     }
-
     const qrBox = document.getElementById('qrcode');
     qrBox.innerHTML = "";
     currentDailyPasscode = Math.floor(1000 + Math.random() * 9000).toString();
     const passcodeEl = document.getElementById('liveClassPasscode');
     if (passcodeEl) passcodeEl.innerText = currentDailyPasscode;
-
     const token = `BMERP_TOKEN_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     new QRCode(qrBox, { text: token, width: 130, height: 130 });
 }
@@ -1197,23 +1130,19 @@ async function loadFaceAIModels() {
         isModelsLoaded = true;
         if(statusTxt) statusTxt.innerText = "AI Engine Ready! Keep face in frame.";
         return true;
-    } catch (err) {
-        showMsg("Failed to load Face AI Models!", true);
-        return false;
-    }
+    } catch (err) { showMsg("Failed to load Face AI Models!", true); return false; }
 }
+
 async function checkUserFaceStatus() {
     const user = JSON.parse(localStorage.getItem('user'));
     if (!user) return;
     const badge = document.getElementById('faceStatusBadge');
-
     const localMesh = localStorage.getItem(`FACE_MESH_${user.rollNo}`);
     if (localMesh) {
         activeCloudFaceDescriptor = JSON.parse(localMesh);
         if (badge) { badge.innerText = "Registered"; badge.style.background = "#dcfce7"; badge.style.color = "#15803d"; }
         return;
     }
-
     try {
         const res = await fetch(`${API_BASE}/api/face/get/${user.rollNo}`);
         const data = await res.json();
@@ -1233,30 +1162,24 @@ async function checkUserFaceStatus() {
 async function openCameraModal(mode) {
     const user = JSON.parse(localStorage.getItem('user'));
     currentCamMode = mode;
-    
     if (mode === 'CHECKIN') {
         if (!activeCloudFaceDescriptor) {
             await checkUserFaceStatus();
             if (!activeCloudFaceDescriptor) return showMsg("Pehle Face ID Enroll karo!", true);
         }
     }
-
     const modal = document.getElementById('cameraModal');
     const video = document.getElementById('webcamVideo');
     const actionBtn = document.getElementById('camActionBtn');
-
     modal.style.display = 'block';
     actionBtn.innerText = (mode === 'ENROLL') ? "Scan & Save 68-Point Face ID" : "Verify Face & Mark Attendance";
-
     navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
         .then(async stream => {
             videoStream = stream;
             video.srcObject = stream;
             await loadFaceAIModels();
         })
-        .catch(err => {
-            showMsg("Camera Access Denied!", true);
-        });
+        .catch(err => { showMsg("Camera Access Denied!", true); });
 }
 
 function closeCameraModal() {
@@ -1268,8 +1191,9 @@ function closeCameraModal() {
         videoStream = null;
     }
     video.srcObject = null;
-        }
-        async function executeCameraAction() {
+}
+
+async function executeCameraAction() {
     const user = JSON.parse(localStorage.getItem('user'));
     const video = document.getElementById('webcamVideo');
     const statusTxt = document.getElementById('cameraScanStatus');
@@ -1325,9 +1249,8 @@ function closeCameraModal() {
             showMsg("Face Mismatch! Proxy Attempt Detected.", true);
         }
     }
-}
-
-function togglePassword() {
+    }
+    function togglePassword() {
     const p = document.getElementById('password');
     p.type = p.type === 'password' ? 'text' : 'password';
 }
@@ -1343,9 +1266,7 @@ async function resetStudentPassword() {
     const user = JSON.parse(localStorage.getItem('user'));
     const targetRollNo = document.getElementById('resetRoll').value.trim();
     const newPassword = document.getElementById('resetPass').value.trim();
-
     if (!targetRollNo) return showMsg('Roll number required!', true);
-
     try {
         const res = await fetch(`${API_BASE}/api/admin/reset-password`, {
             method: 'POST',
@@ -1354,20 +1275,18 @@ async function resetStudentPassword() {
         });
         const data = await res.json();
         if (res.ok) showMsg(data.message); else showMsg(data.error, true);
-    } catch(e) {
-        showMsg("Failed to reset password!", true);
-    }
+    } catch(e) { showMsg("Failed to reset password!", true); }
 }
 
 async function handleAuth() {
     const rawRoll = document.getElementById('rollNo').value.trim();
     const password = document.getElementById('password').value.trim();
+    const deviceId = getDeviceId();
 
     const validation = sanitizeAndValidateRollNo(rawRoll);
     if (!validation.isValid) {
         return showMsg('Enter valid Roll No (e.g. 24CSE09, 24AIDS07)!', true);
     }
-
     if (!password) {
         return showMsg('Please enter your password!', true);
     }
@@ -1377,13 +1296,26 @@ async function handleAuth() {
         if (isRegistering) {
             const name = document.getElementById('regName').value.trim();
             if (!name) return showMsg('Enter Full Name!', true);
-            const res = await fetch(`${API_BASE}/api/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, rollNo: validation.cleanRoll, password }) });
+            const res = await fetch(`${API_BASE}/api/auth/register`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ name, rollNo: validation.cleanRoll, password, deviceId }) 
+            });
             const data = await res.json();
             if (res.ok) { showMsg('Registered! Sign in now.'); toggleMode(); } else showMsg(data.error || 'Registration failed', true);
         } else {
-            const res = await fetch(`${API_BASE}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: validation.cleanRoll, password }) });
+            const res = await fetch(`${API_BASE}/api/auth/login`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ rollNo: validation.cleanRoll, password, deviceId }) 
+            });
             const data = await res.json();
-            if (res.ok) { localStorage.setItem('user', JSON.stringify(data.user)); loadDashboard(); } else showMsg(data.error || 'Invalid credentials', true);
+            if (res.ok) { 
+                localStorage.setItem('user', JSON.stringify(data.user)); 
+                loadDashboard(); 
+            } else {
+                showMsg(data.error || 'Invalid credentials', true);
+            }
         }
     } catch (err) {
         showMsg('Connection timeout! Please retry.', true);
@@ -1394,14 +1326,10 @@ async function loadAnalyticsChart(rollNo) {
     try {
         const res = await fetch(`${API_BASE}/api/analytics/${rollNo}`);
         const data = await res.json();
-        
         const labels = Object.keys(data).filter(sub => !sub.includes("LIB") && !sub.includes("Sports"));
         const presentData = labels.map(sub => data[sub].present);
-
         const ctx = document.getElementById('attendanceChart').getContext('2d');
-        
         if(myChart) myChart.destroy(); 
-        
         myChart = new Chart(ctx, {
             type: 'bar',
             data: {
@@ -1420,20 +1348,17 @@ async function loadAnalyticsChart(rollNo) {
                 }
             }
         });
-    } catch(err) {
-        console.error("Chart data failed to load:", err);
-    }
+    } catch(err) { console.error("Chart data failed to load:", err); }
 }
 
 function requestNotificationPermission() {
     if ("Notification" in window) {
         Notification.requestPermission().then(permission => {
-            if (permission === "granted") {
-                console.log("Push Notifications enabled!");
-            }
+            if (permission === "granted") { console.log("Push Notifications enabled!"); }
         });
     }
 }
+
 function loadDashboard() {
     const user = JSON.parse(localStorage.getItem('user'));
     if (!user) return;
@@ -1487,9 +1412,7 @@ function markFullDayAttendance() {
             const res = await fetch(`${API_BASE}/api/attendance/mark-fullday`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: user.rollNo, name: user.name, latitude: pos.coords.latitude, longitude: pos.coords.longitude }) });
             const data = await res.json();
             if (res.ok) { showMsg(data.message); fetchHistory(user.rollNo); } else showMsg(data.error || "Attendance marking failed", true);
-        } catch(e) {
-            showMsg("Network Error! Try again.", true);
-        }
+        } catch(e) { showMsg("Network Error! Try again.", true); }
     }, () => showMsg('GPS Denied!', true));
 }
 
@@ -1528,217 +1451,177 @@ function markSingleAttendance(overrideSubject) {
             } else {
                 showMsg(data.error || "Attendance marking failed", true);
             }
-        } catch(e) {
-            showMsg("Network Error! Try again.", true);
-        }
+        } catch(e) { showMsg("Network Error! Try again.", true); }
     }, () => showMsg('GPS Denied!', true));
-        }
-        async function markManualAttendance() {
-    const user = JSON.parse(localStorage.getItem('user'));
-    const studentRollNo = document.getElementById('manualRoll').value.trim();
-    const date = document.getElementById('manualDate').value;
-    const status = document.getElementById('manualStatus').value;
-
-    if (!studentRollNo || !date) return showMsg('Roll Number and Date required!', true);
-
-    try {
-        const res = await fetch(`${API_BASE}/api/admin/manual-attendance`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ requesterRollNo: user.rollNo, studentRollNo, date, status })
-        });
-        const data = await res.json();
-        if (res.ok) { showMsg(data.message); } else showMsg(data.error || "Failed to mark", true);
-    } catch(e) {
-        showMsg("Network Connection Error!", true);
     }
-}
-
-async function declareHoliday() {
-    const user = JSON.parse(localStorage.getItem('user'));
-    const date = document.getElementById('holidayDate').value;
-    const reason = document.getElementById('holidayReason').value.trim();
-    if (!date) return showMsg('Please select date!', true);
-
-    try {
-        const res = await fetch(`${API_BASE}/api/admin/holiday`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ requesterRollNo: user.rollNo, date, reason })
-        });
-        const data = await res.json();
-        if (res.ok) { showMsg(data.message); } else showMsg(data.error || "Failed to declare holiday", true);
-    } catch(e) {
-        showMsg("Network Connection Error!", true);
-    }
-}
-
-function calculateRealAttendancePercentage() {
-    const startDate = new Date(2026, 6, 15);
-    const today = new Date();
-    const holidayDatesList = globalHolidays.map(h => h.date);
-
-    let totalWorkingDays = 0;
-    let cur = new Date(startDate);
-
-    while (cur <= today) {
-        const dayOfWeek = cur.getDay();
-        const y = cur.getFullYear();
-        const m = String(cur.getMonth() + 1).padStart(2, '0');
-        const d = String(cur.getDate()).padStart(2, '0');
-        const isoStr = `${y}-${m}-${d}`;
-
-        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-        const isHoliday = holidayDatesList.includes(isoStr);
-
-        if (!isWeekend && !isHoliday) {
-            totalWorkingDays++;
-        }
-        cur.setDate(cur.getDate() + 1);
-    }
-
-    const DEFAULT_DAILY_ACADEMIC_LECTURES = 6;
-    const totalConductedLectures = totalWorkingDays * DEFAULT_DAILY_ACADEMIC_LECTURES;
-    
-    const academicAttendedLectures = globalMyRecords.filter(r => {
-        const sub = r.subject || "";
-        return !sub.includes("LIB") && !sub.includes("Sports");
-    }).length;
-
-    if (totalConductedLectures === 0) return { pct: 100, totalWorkingDays, totalConductedLectures, totalAttendedLectures: academicAttendedLectures };
-    const pct = Math.min(100, ((academicAttendedLectures / totalConductedLectures) * 100)).toFixed(1);
-    return { pct, totalWorkingDays, totalConductedLectures, totalAttendedLectures: academicAttendedLectures };
-}
-
-function toggleCalendarView() { renderAttendanceCalendar(globalMyRecords); }
-
-function renderAttendanceCalendar(historyData) {
-    const wrapper = document.getElementById('calendarDisplayWrapper');
-    const mode = document.getElementById('calendarViewMode').value;
-    const attendedDates = new Set(historyData.map(h => h.date));
-    const holidayDatesSet = new Set(globalHolidays.map(h => h.date));
-
-    let monthsToRender = [];
-    const today = new Date();
-    const currentMonthIdx = today.getMonth();
-
-    if (mode === 'FULL_SEMESTER') {
-        monthsToRender = [6, 7, 8, 9, 10, 11];
-    } else {
-        monthsToRender = [currentMonthIdx];
-    }
-
-    let wrapperHtml = "";
-
-    monthsToRender.forEach(mIdx => {
-        const year = 2026;
-        const monthName = MONTH_NAMES[mIdx];
-        const daysInMonth = new Date(year, mIdx + 1, 0).getDate();
-        const firstDayOfWeek = new Date(year, mIdx, 1).getDay();
-
-        let gridHtml = `
-            <div style="margin-bottom:12px; border-bottom:1px solid var(--card-border); padding-bottom:8px;">
-                <div style="font-size:11px; font-weight:800; color:var(--primary); margin-bottom:6px;">${monthName} ${year}</div>
-                <div class="calendar-grid">
-                    <div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div>
-                    <div class="cal-day-head">W</div><div class="cal-day-head">T</div><div class="cal-day-head">F</div>
-                    <div class="cal-day-head">S</div>
-        `;
-
-        for (let i = 0; i < firstDayOfWeek; i++) {
-            gridHtml += `<div class="cal-date cal-off"></div>`;
+            async function markManualAttendance() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            const studentRollNo = document.getElementById('manualRoll').value.trim();
+            const date = document.getElementById('manualDate').value;
+            const status = document.getElementById('manualStatus').value;
+            if (!studentRollNo || !date) return showMsg('Roll Number and Date required!', true);
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/manual-attendance`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requesterRollNo: user.rollNo, studentRollNo, date, status })
+                });
+                const data = await res.json();
+                if (res.ok) { showMsg(data.message); } else showMsg(data.error || "Failed to mark", true);
+            } catch(e) { showMsg("Network Connection Error!", true); }
         }
 
-        for (let d = 1; d <= daysInMonth; d++) {
-            const dateStr = `2026-${String(mIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-            const dtObj = new Date(year, mIdx, d);
-            const dayOfWeek = dtObj.getDay();
-            const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-            const isHoliday = holidayDatesSet.has(dateStr);
+        async function declareHoliday() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            const date = document.getElementById('holidayDate').value;
+            const reason = document.getElementById('holidayReason').value.trim();
+            if (!date) return showMsg('Please select date!', true);
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/holiday`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requesterRollNo: user.rollNo, date, reason })
+                });
+                const data = await res.json();
+                if (res.ok) { showMsg(data.message); } else showMsg(data.error || "Failed to declare holiday", true);
+            } catch(e) { showMsg("Network Connection Error!", true); }
+        }
 
-            if (isWeekend) {
-                gridHtml += `<div class="cal-date cal-off">${d}</div>`;
-            } else if (isHoliday) {
-                gridHtml += `<div class="cal-date cal-off" style="background:#fef3c7; color:#92400e; font-weight:800; border-color:#fde68a;" title="Declared Holiday">${d}</div>`;
-            } else if (attendedDates.has(dateStr)) {
-                gridHtml += `<div class="cal-date cal-p">${d}</div>`;
-            } else if (dtObj <= today) {
-                gridHtml += `<div class="cal-date cal-a">${d}</div>`;
-            } else {
-                gridHtml += `<div class="cal-date cal-off">${d}</div>`;
+        function calculateRealAttendancePercentage() {
+            const startDate = new Date(2026, 6, 15);
+            const today = new Date();
+            const holidayDatesList = globalHolidays.map(h => h.date);
+            let totalWorkingDays = 0;
+            let cur = new Date(startDate);
+            while (cur <= today) {
+                const dayOfWeek = cur.getDay();
+                const y = cur.getFullYear();
+                const m = String(cur.getMonth() + 1).padStart(2, '0');
+                const d = String(cur.getDate()).padStart(2, '0');
+                const isoStr = `${y}-${m}-${d}`;
+                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+                const isHoliday = holidayDatesList.includes(isoStr);
+                if (!isWeekend && !isHoliday) { totalWorkingDays++; }
+                cur.setDate(cur.getDate() + 1);
             }
-        }
-        gridHtml += `</div></div>`;
-        wrapperHtml += gridHtml;
-    });
-
-    wrapper.innerHTML = wrapperHtml;
-}
-
-async function fetchHistory(rollNo) {
-    try {
-        const hRes = await fetch(`${API_BASE}/api/holidays`);
-        globalHolidays = await hRes.json();
-    } catch(e) { globalHolidays = []; }
-
-    try {
-        const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
-        const data = await res.json();
-        globalMyRecords = data || [];
-        const tbody = document.querySelector('#myHistoryTable tbody');
-
-        const dateGrouped = {};
-        globalMyRecords.forEach(item => {
-            if (!dateGrouped[item.date]) {
-                dateGrouped[item.date] = { date: item.date, count: 0, status: item.status };
-            }
-            dateGrouped[item.date].count++;
-        });
-
-        const calc = calculateRealAttendancePercentage();
-        
-        const totalDaysEl = document.getElementById('totalDaysCount');
-        if (totalDaysEl) totalDaysEl.innerText = calc.totalAttendedLectures;
-        
-        const pctEl = document.getElementById('attendancePct');
-        if (pctEl) {
-            pctEl.innerText = `${calc.pct}%`;
-            pctEl.style.color = calc.pct >= 75 ? 'var(--success)' : 'var(--danger)';
+            const DEFAULT_DAILY_ACADEMIC_LECTURES = 6;
+            const totalConductedLectures = totalWorkingDays * DEFAULT_DAILY_ACADEMIC_LECTURES;
+            const academicAttendedLectures = globalMyRecords.filter(r => {
+                const sub = r.subject || "";
+                return !sub.includes("LIB") && !sub.includes("Sports");
+            }).length;
+            if (totalConductedLectures === 0) return { pct: 100, totalWorkingDays, totalConductedLectures, totalAttendedLectures: academicAttendedLectures };
+            const pct = Math.min(100, ((academicAttendedLectures / totalConductedLectures) * 100)).toFixed(1);
+            return { pct, totalWorkingDays, totalConductedLectures, totalAttendedLectures: academicAttendedLectures };
         }
 
-        const defaulterTag = document.getElementById('defaulterTag');
-        if (defaulterTag) defaulterTag.style.display = (calc.pct < 75) ? 'inline-block' : 'none';
+        function toggleCalendarView() { renderAttendanceCalendar(globalMyRecords); }
 
-        const advisorBox = document.getElementById('advisorText');
-        if (advisorBox) {
-            if (calc.pct >= 75) {
-                const safeLectures = Math.floor(calc.totalAttendedLectures - 0.75 * calc.totalConductedLectures);
-                const safeDays = Math.floor(safeLectures / 6);
-                advisorBox.innerHTML = `Safe Zone (<b>${calc.pct}%</b>). You can skip approx <b>${Math.max(0, safeDays)}</b> upcoming days safely.`;
-            } else {
-                const neededLectures = Math.ceil(0.75 * calc.totalConductedLectures - calc.totalAttendedLectures);
-                advisorBox.innerHTML = `Low Attendance (<b>${calc.pct}%</b>). Need <b>${Math.max(0, neededLectures)}</b> more lectures to reach 75%.`;
-            }
+        function renderAttendanceCalendar(historyData) {
+            const wrapper = document.getElementById('calendarDisplayWrapper');
+            const mode = document.getElementById('calendarViewMode').value;
+            const attendedDates = new Set(historyData.map(h => h.date));
+            const holidayDatesSet = new Set(globalHolidays.map(h => h.date));
+            let monthsToRender = [];
+            const today = new Date();
+            const currentMonthIdx = today.getMonth();
+            if (mode === 'FULL_SEMESTER') { monthsToRender = [6, 7, 8, 9, 10, 11]; } else { monthsToRender = [currentMonthIdx]; }
+            let wrapperHtml = "";
+            monthsToRender.forEach(mIdx => {
+                const year = 2026;
+                const monthName = MONTH_NAMES[mIdx];
+                const daysInMonth = new Date(year, mIdx + 1, 0).getDate();
+                const firstDayOfWeek = new Date(year, mIdx, 1).getDay();
+                let gridHtml = `
+                    <div style="margin-bottom:12px; border-bottom:1px solid var(--card-border); padding-bottom:8px;">
+                        <div style="font-size:11px; font-weight:800; color:var(--primary); margin-bottom:6px;">${monthName} ${year}</div>
+                        <div class="calendar-grid">
+                            <div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div>
+                            <div class="cal-day-head">W</div><div class="cal-day-head">T</div><div class="cal-day-head">F</div>
+                            <div class="cal-day-head">S</div>
+                `;
+                for (let i = 0; i < firstDayOfWeek; i++) { gridHtml += `<div class="cal-date cal-off"></div>`; }
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const dateStr = `2026-${String(mIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    const dtObj = new Date(year, mIdx, d);
+                    const dayOfWeek = dtObj.getDay();
+                    const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+                    const isHoliday = holidayDatesSet.has(dateStr);
+                    if (isWeekend) { gridHtml += `<div class="cal-date cal-off">${d}</div>`; } 
+                    else if (isHoliday) { gridHtml += `<div class="cal-date cal-off" style="background:#fef3c7; color:#92400e; font-weight:800; border-color:#fde68a;" title="Declared Holiday">${d}</div>`; } 
+                    else if (attendedDates.has(dateStr)) { gridHtml += `<div class="cal-date cal-p">${d}</div>`; } 
+                    else if (dtObj <= today) { gridHtml += `<div class="cal-date cal-a">${d}</div>`; } 
+                    else { gridHtml += `<div class="cal-date cal-off">${d}</div>`; }
+                }
+                gridHtml += `</div></div>`;
+                wrapperHtml += gridHtml;
+            });
+            wrapper.innerHTML = wrapperHtml;
         }
 
-        renderAttendanceCalendar(globalMyRecords);
+        async function fetchHistory(rollNo) {
+            try {
+                const hRes = await fetch(`${API_BASE}/api/holidays`);
+                globalHolidays = await hRes.json();
+            } catch(e) { globalHolidays = []; }
 
-        const sortedDates = Object.values(dateGrouped).sort((a,b) => b.date.localeCompare(a.date));
+            try {
+                const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
+                const data = await res.json();
+                globalMyRecords = data || [];
+                const tbody = document.querySelector('#myHistoryTable tbody');
 
-        if (!tbody) return;
-        if (sortedDates.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No records</td></tr>';
-        
-        tbody.innerHTML = sortedDates.map(i => {
-            const parts = i.date.split('-');
-            const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])).getDay();
-            const dayStr = DAY_NAMES[dateObj];
-            return `<tr><td><b>${i.date}</b></td><td><b>${dayStr}</b></td><td><span class="badge badge-present">${i.count} Lectures</span></td><td><span class="badge badge-present">${i.status}</span></td></tr>`;
-        }).join('');
-    } catch(e) {
-        showMsg("Failed to sync attendance logs!", true);
-    }
+                const dateGrouped = {};
+                globalMyRecords.forEach(item => {
+                    if (!dateGrouped[item.date]) {
+                        dateGrouped[item.date] = { date: item.date, count: 0, status: item.status };
+                    }
+                    dateGrouped[item.date].count++;
+                });
+
+                const calc = calculateRealAttendancePercentage();
+                
+                const totalDaysEl = document.getElementById('totalDaysCount');
+                if (totalDaysEl) totalDaysEl.innerText = calc.totalAttendedLectures;
+                
+                const pctEl = document.getElementById('attendancePct');
+                if (pctEl) {
+                    pctEl.innerText = `${calc.pct}%`;
+                    pctEl.style.color = calc.pct >= 75 ? 'var(--success)' : 'var(--danger)';
+                }
+
+                const defaulterTag = document.getElementById('defaulterTag');
+                if (defaulterTag) defaulterTag.style.display = (calc.pct < 75) ? 'inline-block' : 'none';
+
+                const advisorBox = document.getElementById('advisorText');
+                if (advisorBox) {
+                    if (calc.pct >= 75) {
+                        const safeLectures = Math.floor(calc.totalAttendedLectures - 0.75 * calc.totalConductedLectures);
+                        const safeDays = Math.floor(safeLectures / 6);
+                        advisorBox.innerHTML = `Safe Zone (<b>${calc.pct}%</b>). You can skip approx <b>${Math.max(0, safeDays)}</b> upcoming days safely.`;
+                    } else {
+                        const neededLectures = Math.ceil(0.75 * calc.totalConductedLectures - calc.totalAttendedLectures);
+                        advisorBox.innerHTML = `Low Attendance (<b>${calc.pct}%</b>). Need <b>${Math.max(0, neededLectures)}</b> more lectures to reach 75%.`;
+                    }
+                }
+
+                renderAttendanceCalendar(globalMyRecords);
+
+                const sortedDates = Object.values(dateGrouped).sort((a,b) => b.date.localeCompare(a.date));
+
+                if (!tbody) return;
+                if (sortedDates.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No records</td></tr>';
+                
+                tbody.innerHTML = sortedDates.map(i => {
+                    const parts = i.date.split('-');
+                    const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])).getDay();
+                    const dayStr = DAY_NAMES[dateObj];
+                    return `<tr><td><b>${i.date}</b></td><td><b>${dayStr}</b></td><td><span class="badge badge-present">${i.count} Lectures</span></td><td><span class="badge badge-present">${i.status}</span></td></tr>`;
+                }).join('');
+            } catch(e) { showMsg("Failed to sync attendance logs!", true); }
         }
-                async function fetchAllAttendance() {
+
+        async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             try {
                 const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
@@ -1779,9 +1662,7 @@ async function fetchHistory(rollNo) {
                         <td><button class="action-btn btn-del" onclick="deleteDayGroup('${g.roll}', '${g.date}')">Del Day</button></td>
                     </tr>
                 `).join('');
-            } catch(e) {
-                showMsg("Failed to connect to backend", true);
-            }
+            } catch(e) { showMsg("Failed to connect to backend", true); }
         }
 
         async function deleteDayGroup(rollNo, date) {
@@ -1809,7 +1690,6 @@ async function fetchHistory(rollNo) {
             URL.revokeObjectURL(url);
         }
 
-        /* ADMIN EXCEL GRID REPORT */
         function exportExcelGrid() {
             if (globalAllRecords.length === 0) return alert("Pehle Class Records Refresh karo!");
 
@@ -1881,18 +1761,14 @@ async function fetchHistory(rollNo) {
                     const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
                     const isHoliday = holidayDatesList.includes(dt);
 
-                    if (isWeekend) {
-                        csv += `,OFF`;
-                    } else if (isHoliday) {
-                        csv += `,H`;
-                    } else {
+                    if (isWeekend) { csv += `,OFF`; } 
+                    else if (isHoliday) { csv += `,H`; } 
+                    else {
                         const status = s.dates[dt];
                         if (status === 'Present' || status === 'Duty Leave') {
                             csv += `,P`;
                             presentCount++;
-                        } else {
-                            csv += `,A`;
-                        }
+                        } else { csv += `,A`; }
                     }
                 });
                 csv += `,${presentCount}\n`;
@@ -1911,4 +1787,3 @@ async function fetchHistory(rollNo) {
     </script>
 </body>
 </html>
-    
