@@ -79,7 +79,8 @@ const userSchema = new mongoose.Schema({
   lastKnownIP: { type: String, default: null },
   lastAttendanceTime: { type: Date, default: null },
   lastAttendanceLocation: { latitude: Number, longitude: Number },
-  anomalyFlag: { type: Boolean, default: false }
+  anomalyFlag: { type: Boolean, default: false },
+  anomalyDetectedAt: { type: Date, default: null } // 🔥 When flag was set
 }, { timestamps: true });
 
 const attendanceSchema = new mongoose.Schema({
@@ -176,6 +177,39 @@ function detectAnomaly(user, lat, lng, reqIP) {
   
   return { isAnomaly: false };
 }
+
+// 🔥 AUTO-RESET: Check and reset expired anomaly flags (24 hours)
+async function autoResetAnomalyFlags() {
+  try {
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    
+    const result = await User.updateMany(
+      { 
+        anomalyFlag: true,
+        anomalyDetectedAt: { $lt: oneDayAgo }
+      },
+      { 
+        $set: { 
+          anomalyFlag: false,
+          anomalyDetectedAt: null,
+          lastKnownIP: null,
+          lastAttendanceLocation: {}
+        }
+      }
+    );
+    
+    if (result.modifiedCount > 0) {
+      console.log(`🔄 Auto-unblocked ${result.modifiedCount} students (flag expired after 24 hours)`);
+    }
+  } catch (err) {
+    console.error('❌ Auto-reset failed:', err.message);
+  }
+}
+
+// Run auto-reset every hour
+setInterval(autoResetAnomalyFlags, 60 * 60 * 1000);
+// Also run on startup
+autoResetAnomalyFlags();
 
 // ---------- Routes ----------
 app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active & Secured!'));
@@ -330,7 +364,7 @@ app.post('/api/admin/reset-device', async (req, res) => {
   }
 });
 
-// Admin: Reset Anomaly Flag
+// Admin: Reset Anomaly Flag (Manual)
 app.post('/api/admin/reset-anomaly', async (req, res) => {
   try {
     const { requesterRollNo, targetRollNo } = req.body;
@@ -347,12 +381,13 @@ app.post('/api/admin/reset-anomaly', async (req, res) => {
     }
     
     user.anomalyFlag = false;
+    user.anomalyDetectedAt = null;
     user.lastKnownIP = null;
     user.lastAttendanceTime = null;
     user.lastAttendanceLocation = {};
     await user.save();
     
-    console.log(`✅ Anomaly flag reset for ${cleanRoll}`);
+    console.log(`✅ Anomaly flag manually reset for ${cleanRoll}`);
     
     res.json({ 
       message: `✅ Anomaly flag reset for ${cleanRoll}! They can now mark attendance.`
@@ -455,7 +490,7 @@ function checkLocation(lat, lng) {
   const distance = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 
   return { isInside: distance <= 50, distance: distance.toFixed(0) };
-        }
+}
 // ----- Attendance Marking (with Anti-Fake GPS Protection) -----
 app.post('/api/attendance/mark', async (req, res) => {
   try {
@@ -490,12 +525,13 @@ app.post('/api/attendance/mark', async (req, res) => {
     
     if (anomaly.isAnomaly) {
       user.anomalyFlag = true;
+      user.anomalyDetectedAt = new Date(); // 🔥 Store when flag was set
       await user.save();
       
       console.log(`🚨 ANOMALY DETECTED for ${cleanRoll}: ${anomaly.reason}`);
       
       return res.status(403).json({ 
-        error: '⛔ Attendance Blocked! Suspicious activity detected. Contact Admin.',
+        error: '⛔ Attendance Blocked! Suspicious activity detected. Will auto-unblock after 24 hours.',
         reason: anomaly.reason 
       });
     }
@@ -559,12 +595,13 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     
     if (anomaly.isAnomaly) {
       user.anomalyFlag = true;
+      user.anomalyDetectedAt = new Date();
       await user.save();
       
       console.log(`🚨 ANOMALY DETECTED for ${cleanRoll}: ${anomaly.reason}`);
       
       return res.status(403).json({ 
-        error: '⛔ Attendance Blocked! Suspicious activity detected. Contact Admin.',
+        error: '⛔ Attendance Blocked! Suspicious activity detected. Will auto-unblock after 24 hours.',
         reason: anomaly.reason 
       });
     }
@@ -694,7 +731,7 @@ app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
   }
 });
 
-// 🔥 FIX: GET All Registered Students (Even if no attendance)
+// 🔥 GET All Registered Students (Even if no attendance)
 app.get('/api/admin/all-students/:requesterRollNo', async (req, res) => {
   try {
     const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
@@ -706,7 +743,7 @@ app.get('/api/admin/all-students/:requesterRollNo', async (req, res) => {
     
     // Get all users with role 'student'
     const students = await User.find({ role: 'student' })
-      .select('name rollNo role anomalyFlag boundDeviceId createdAt')
+      .select('name rollNo role anomalyFlag anomalyDetectedAt boundDeviceId createdAt')
       .sort({ rollNo: 1 });
     
     res.json(students);
@@ -751,8 +788,37 @@ app.get('/api/admin/flagged-students/:requesterRollNo', async (req, res) => {
     if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) {
       return res.status(403).json({ error: 'Access Denied!' });
     }
-    const flaggedStudents = await User.find({ anomalyFlag: true }).select('name rollNo anomalyFlag lastKnownIP lastAttendanceTime');
+    const flaggedStudents = await User.find({ anomalyFlag: true }).select('name rollNo anomalyFlag anomalyDetectedAt lastKnownIP lastAttendanceTime');
     res.json(flaggedStudents);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 🔥 Admin: Get auto-unblock status
+app.get('/api/admin/auto-unblock-status/:requesterRollNo', async (req, res) => {
+  try {
+    if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) {
+      return res.status(403).json({ error: 'Access Denied!' });
+    }
+    
+    const flaggedStudents = await User.find({ anomalyFlag: true })
+      .select('name rollNo anomalyFlag anomalyDetectedAt');
+    
+    const status = flaggedStudents.map(s => {
+      const timeLeft = s.anomalyDetectedAt ? 
+        24 - ((Date.now() - new Date(s.anomalyDetectedAt).getTime()) / (60 * 60 * 1000)) : 0;
+      return {
+        rollNo: s.rollNo,
+        name: s.name,
+        timeLeftHours: Math.max(0, Math.round(timeLeft * 10) / 10),
+        willAutoUnblockAt: s.anomalyDetectedAt ? 
+          new Date(new Date(s.anomalyDetectedAt).getTime() + 24 * 60 * 60 * 1000).toLocaleString() : 
+          'N/A'
+      };
+    });
+    
+    res.json(status);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
