@@ -67,7 +67,7 @@ mongoose.connect(MONGO_URI)
     process.exit(1);
   });
 
-// ---------- Mongoose Schemas (Updated with Anti-Fake GPS Fields) ----------
+// ---------- Mongoose Schemas ----------
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   rollNo: { type: String, required: true, unique: true },
@@ -75,7 +75,7 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ['student', 'faculty', 'admin'], default: 'student' },
   faceDescriptor: { type: [Number], default: [] },
   boundDeviceId: { type: String, default: null },
-  // 🔥 ANTI-FAKE GPS FIELDS
+  // ANTI-FAKE GPS FIELDS
   lastKnownIP: { type: String, default: null },
   lastAttendanceTime: { type: Date, default: null },
   lastAttendanceLocation: { latitude: Number, longitude: Number },
@@ -89,7 +89,7 @@ const attendanceSchema = new mongoose.Schema({
   date: { type: String, required: true },
   status: { type: String, enum: ['Present', 'Absent', 'Duty Leave', 'Holiday'], default: 'Present' },
   location: { latitude: Number, longitude: Number },
-  ipAddress: { type: String, default: null } // 🔥 Store IP for audit
+  ipAddress: { type: String, default: null }
 }, { timestamps: true });
 
 const holidaySchema = new mongoose.Schema({
@@ -138,7 +138,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-// 🔥 ANTI-FAKE GPS: Anomaly Detection
+// ANTI-FAKE GPS: Anomaly Detection
 function detectAnomaly(user, lat, lng, reqIP) {
   const MIN_TIME_BETWEEN_ATTENDANCE = 10 * 60 * 1000; // 10 Minutes
   
@@ -163,7 +163,6 @@ function detectAnomaly(user, lat, lng, reqIP) {
       lat, lng
     );
     
-    // If location changed more than 5km within 10 minutes (impossible by foot)
     if (distance > 5000 && user.lastAttendanceTime) {
       const timeDiff = Date.now() - new Date(user.lastAttendanceTime).getTime();
       if (timeDiff < MIN_TIME_BETWEEN_ATTENDANCE) {
@@ -299,7 +298,7 @@ app.post('/api/admin/reset-password', async (req, res) => {
   }
 });
 
-// 🔥 Admin Reset Device Binding API
+// Admin Reset Device Binding API
 app.post('/api/admin/reset-device', async (req, res) => {
   try {
     const { requesterRollNo, targetRollNo } = req.body;
@@ -331,7 +330,7 @@ app.post('/api/admin/reset-device', async (req, res) => {
   }
 });
 
-// 🔥 Admin: Reset Anomaly Flag (if student wrongly flagged)
+// Admin: Reset Anomaly Flag
 app.post('/api/admin/reset-anomaly', async (req, res) => {
   try {
     const { requesterRollNo, targetRollNo } = req.body;
@@ -456,7 +455,7 @@ function checkLocation(lat, lng) {
   const distance = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 
   return { isInside: distance <= 50, distance: distance.toFixed(0) };
-}
+        }
 // ----- Attendance Marking (with Anti-Fake GPS Protection) -----
 app.post('/api/attendance/mark', async (req, res) => {
   try {
@@ -483,10 +482,10 @@ app.post('/api/attendance/mark', async (req, res) => {
       return res.status(404).json({ error: 'Student not found!' });
     }
 
-    // 🔥 ANTI-FAKE GPS: Get Client IP
+    // ANTI-FAKE GPS: Get Client IP
     const clientIP = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown';
     
-    // 🔥 ANTI-FAKE GPS: Anomaly Detection
+    // ANTI-FAKE GPS: Anomaly Detection
     const anomaly = detectAnomaly(user, latitude, longitude, clientIP);
     
     if (anomaly.isAnomaly) {
@@ -501,19 +500,16 @@ app.post('/api/attendance/mark', async (req, res) => {
       });
     }
 
-    // Check if already marked
     const exists = await Attendance.findOne({ rollNo: cleanRoll, subject, date: todayDate });
     if (exists) {
       return res.status(400).json({ error: `Already marked for ${subject} today!` });
     }
 
-    // 🔥 Update user's last known data
     user.lastKnownIP = clientIP;
     user.lastAttendanceTime = new Date();
     user.lastAttendanceLocation = { latitude, longitude };
     await user.save();
 
-    // Save attendance with IP
     await new Attendance({ 
       rollNo: cleanRoll, 
       studentName: name, 
@@ -557,10 +553,8 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
       return res.status(404).json({ error: 'Student not found!' });
     }
 
-    // 🔥 ANTI-FAKE GPS: Get Client IP
     const clientIP = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown';
     
-    // 🔥 ANTI-FAKE GPS: Anomaly Detection
     const anomaly = detectAnomaly(user, latitude, longitude, clientIP);
     
     if (anomaly.isAnomaly) {
@@ -594,7 +588,6 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
       }
     }
     
-    // Update user's last known data
     user.lastKnownIP = clientIP;
     user.lastAttendanceTime = new Date();
     user.lastAttendanceLocation = { latitude, longitude };
@@ -701,6 +694,27 @@ app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
   }
 });
 
+// 🔥 FIX: GET All Registered Students (Even if no attendance)
+app.get('/api/admin/all-students/:requesterRollNo', async (req, res) => {
+  try {
+    const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
+    
+    // Only Admin can access
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo)) {
+      return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    }
+    
+    // Get all users with role 'student'
+    const students = await User.find({ role: 'student' })
+      .select('name rollNo role anomalyFlag boundDeviceId createdAt')
+      .sort({ rollNo: 1 });
+    
+    res.json(students);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
   try {
     if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) {
@@ -731,7 +745,7 @@ app.get('/api/analytics/:rollNo', async (req, res) => {
   }
 });
 
-// 🔥 Admin: Get all flagged students (Anomaly detected)
+// Admin: Get all flagged students (Anomaly detected)
 app.get('/api/admin/flagged-students/:requesterRollNo', async (req, res) => {
   try {
     if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) {
