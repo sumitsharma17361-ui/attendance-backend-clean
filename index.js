@@ -10,19 +10,25 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// ---------- Environment Variables ----------
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
 const ADMIN_ROLL_NUMBERS = ['24CSE48'];
 
-// 1. API RATE LIMITING (Brute Force Protection)
+if (!MONGO_URI) {
+  console.error('❌ FATAL: MONGO_URI environment variable is not set!');
+  process.exit(1);
+}
+
+// ---------- Rate Limiting (Brute Force Protection) ----------
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 Minutes
-  max: 10, // Max 10 requests per window
+  max: 10,
   message: { error: 'Too many attempts from this IP, please try again after 15 minutes.' }
 });
 
 const apiLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 Minute
+  windowMs: 1 * 60 * 1000,
   max: 60,
   message: { error: 'Too many requests, please slow down.' }
 });
@@ -30,7 +36,7 @@ const apiLimiter = rateLimit({
 app.use('/api/auth/', authLimiter);
 app.use('/api/', apiLimiter);
 
-// 2. PAYLOAD VALIDATION SCHEMAS (Zod Integration)
+// ---------- Zod Validation Schemas ----------
 const registerSchema = z.object({
   name: z.string().min(2, "Name too short").max(50),
   rollNo: z.string().regex(/^\d{2}(CSE|AIDS)\d{2}$/, "Invalid Roll No format (e.g. 24CSE48)"),
@@ -44,6 +50,7 @@ const loginSchema = z.object({
   deviceId: z.string().optional()
 });
 
+// ---------- Timetable (for full‑day marking) ----------
 const TIME_TABLE = {
   Monday: ['BDA', 'ECO', 'DAA', 'FLA', 'HRM', 'CN', 'WT'],
   Tuesday: ['WT', 'ECO', 'Internet', 'FLA', 'HRM', 'BDA'],
@@ -52,27 +59,29 @@ const TIME_TABLE = {
   Friday: ['DAA', 'CN', 'FLA', 'BDA', 'WT LAB']
 };
 
-if (MONGO_URI) {
-  mongoose.connect(MONGO_URI)
-    .then(() => console.log('SUCCESS: MongoDB Connected!'))
-    .catch(err => console.log('DB ERROR:', err.message));
-}
+// ---------- MongoDB Connection ----------
+mongoose.connect(MONGO_URI)
+  .then(() => console.log('✅ MongoDB Connected Successfully!'))
+  .catch(err => {
+    console.error('❌ MongoDB Connection Error:', err.message);
+    process.exit(1);
+  });
 
-// SCHEMAS (Added Device Binding field)
+// ---------- Mongoose Schemas ----------
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   rollNo: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, enum: ['student', 'faculty', 'admin'], default: 'student' },
   faceDescriptor: { type: [Number], default: [] },
-  boundDeviceId: { type: String, default: null } // Device Binding Feature
+  boundDeviceId: { type: String, default: null }
 }, { timestamps: true });
 
 const attendanceSchema = new mongoose.Schema({
   rollNo: { type: String, required: true },
   studentName: { type: String, required: true },
   subject: { type: String, required: true },
-  date: { type: String, required: true }, 
+  date: { type: String, required: true },
   status: { type: String, enum: ['Present', 'Absent', 'Duty Leave', 'Holiday'], default: 'Present' },
   location: { latitude: Number, longitude: Number }
 }, { timestamps: true });
@@ -93,7 +102,7 @@ const Attendance = mongoose.model('Attendance', attendanceSchema);
 const Holiday = mongoose.model('Holiday', holidaySchema);
 const Notice = mongoose.model('Notice', noticeSchema);
 
-// RBAC MIDDLEWARE
+// ---------- RBAC Middleware ----------
 const verifyRole = (roles) => {
   return (req, res, next) => {
     const token = req.headers.authorization?.split(" ")[1];
@@ -112,9 +121,10 @@ const verifyRole = (roles) => {
   };
 };
 
+// ---------- Routes ----------
 app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active & Secured!'));
 
-// AUTH ROUTES WITH VALIDATION & DEVICE BINDING
+// ----- Auth (with Device Binding) -----
 app.post('/api/auth/register', async (req, res) => {
   try {
     const parseResult = registerSchema.safeParse(req.body);
@@ -139,7 +149,9 @@ app.post('/api/auth/register', async (req, res) => {
     }).save();
 
     res.status(201).json({ message: 'Registration successful!' });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/auth/login', async (req, res) => {
@@ -157,7 +169,7 @@ app.post('/api/auth/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ error: 'Invalid password!' });
 
-    // DEVICE BINDING CHECK
+    // Device Binding Check
     if (user.role === 'student') {
       if (!user.boundDeviceId && deviceId) {
         user.boundDeviceId = deviceId;
@@ -170,10 +182,12 @@ app.post('/api/auth/login', async (req, res) => {
     const role = ADMIN_ROLL_NUMBERS.includes(cleanRoll) ? 'admin' : user.role;
     const token = jwt.sign({ id: user._id, rollNo: user.rollNo, name: user.name, role }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ message: 'Login successful!', token, user: { name: user.name, rollNo: user.rollNo, role } });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// FACE MESH ENROLL & SYNC
+// ----- Face Mesh -----
 app.post('/api/face/enroll', async (req, res) => {
   try {
     const { rollNo, faceDescriptor } = req.body;
@@ -188,7 +202,9 @@ app.post('/api/face/enroll', async (req, res) => {
     );
     if (!updatedUser) return res.status(404).json({ error: 'Student Profile Not Found!' });
     res.json({ message: 'Face ID Enrolled & Synced Globally to MongoDB!' });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/face/get/:rollNo', async (req, res) => {
@@ -199,10 +215,12 @@ app.get('/api/face/get/:rollNo', async (req, res) => {
       return res.status(404).json({ enrolled: false, message: 'Face ID Not Enrolled' });
     }
     res.json({ enrolled: true, faceDescriptor: user.faceDescriptor });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// ADMIN & FACULTY ROUTES
+// ----- Admin / Faculty Routes -----
 app.post('/api/admin/reset-password', async (req, res) => {
   try {
     const { requesterRollNo, targetRollNo, newPassword } = req.body;
@@ -214,7 +232,9 @@ app.post('/api/admin/reset-password', async (req, res) => {
     const updated = await User.findOneAndUpdate({ rollNo: cleanRoll }, { password: hashedPassword });
     if (!updated) return res.status(404).json({ error: 'Student Roll No not found!' });
     res.json({ message: `Password reset successfully for ${cleanRoll}!` });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/admin/update-rollno', async (req, res) => {
@@ -230,7 +250,9 @@ app.post('/api/admin/update-rollno', async (req, res) => {
     await Attendance.updateMany({ rollNo: cleanOld }, { rollNo: cleanNew });
 
     res.json({ message: `Roll Number updated from ${cleanOld} to ${cleanNew}!` });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.delete('/api/admin/delete-student', async (req, res) => {
@@ -245,7 +267,9 @@ app.delete('/api/admin/delete-student', async (req, res) => {
     await Attendance.deleteMany({ rollNo: cleanTarget });
 
     res.json({ message: `Account and attendance records deleted for ${cleanTarget}!` });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/faculty/override', verifyRole(['faculty', 'admin']), async (req, res) => {
@@ -257,17 +281,19 @@ app.post('/api/faculty/override', verifyRole(['faculty', 'admin']), async (req, 
       { new: true, upsert: true }
     );
     res.json({ message: "Attendance updated successfully" });
-  } catch (err) { 
-      res.status(500).json({ error: err.message }); 
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
-// NOTICES
+// ----- Notices -----
 app.get('/api/notices', async (req, res) => {
   try {
     const notices = await Notice.find().sort({ date: -1 }).limit(3);
     res.json(notices);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/admin/notice', async (req, res) => {
@@ -285,10 +311,12 @@ app.post('/api/admin/notice', async (req, res) => {
     await Notice.deleteMany({});
     await new Notice({ title: title || 'Announcement', message }).save();
     res.status(201).json({ message: 'Broadcast Notice Published!' });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// GEOFENCING CHECK (Strict 50-meter Radius)
+// ----- Geofencing (50m radius) -----
 function checkLocation(lat, lng) {
   const COLLEGE_LAT = 28.4509370, COLLEGE_LNG = 76.7688120, R = 6371000;
   
@@ -301,9 +329,10 @@ function checkLocation(lat, lng) {
   const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(COLLEGE_LAT * (Math.PI / 180)) * Math.cos(lat * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
   const distance = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 
-  return { isInside: distance <= 50, distance: distance.toFixed(0) }; // Reduced boundary to 50 meters
+  return { isInside: distance <= 50, distance: distance.toFixed(0) };
 }
 
+// ----- Attendance Marking -----
 app.post('/api/attendance/mark', async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude } = req.body;
@@ -323,7 +352,9 @@ app.post('/api/attendance/mark', async (req, res) => {
 
     await new Attendance({ rollNo: cleanRoll, studentName: name, subject, date: todayDate, status: 'Present', location: { latitude, longitude } }).save();
     res.status(201).json({ message: `Attendance Marked for ${subject}!` });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/attendance/mark-fullday', async (req, res) => {
@@ -354,9 +385,12 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     }
     if (markedCount === 0) return res.status(400).json({ error: 'Full Day Attendance already marked!' });
     res.status(201).json({ message: `Full Day Marked (${markedCount} Lectures)!` });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
+// ----- Admin Manual Attendance -----
 app.post('/api/admin/manual-attendance', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNo, date, status } = req.body;
@@ -384,31 +418,40 @@ app.post('/api/admin/manual-attendance', async (req, res) => {
       }
     }
     res.status(201).json({ message: `Marked ${markedCount} lectures for ${user.name} on ${date}` });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// HOLIDAYS & HISTORY & ANALYTICS
+// ----- Holidays -----
 app.post('/api/admin/holiday', async (req, res) => {
   try {
     const { requesterRollNo, date, reason } = req.body;
     if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied!' });
     await Holiday.findOneAndUpdate({ date }, { date, reason: reason || 'College Holiday' }, { upsert: true, new: true });
     res.json({ message: `Holiday declared for ${date}` });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/holidays', async (req, res) => {
   try {
     const holidays = await Holiday.find();
     res.json(holidays);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
+// ----- History & Analytics -----
 app.get('/api/attendance/history/:rollNo', async (req, res) => {
   try {
     const history = await Attendance.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ date: -1 });
     res.json(history);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
@@ -416,7 +459,9 @@ app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
     if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied!' });
     const allRecords = await Attendance.find().sort({ rollNo: 1, date: -1 });
     res.json(allRecords);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
@@ -424,7 +469,9 @@ app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
     if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied!' });
     await Attendance.findByIdAndDelete(req.params.id);
     res.json({ message: 'Record deleted!' });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/analytics/:rollNo', async (req, res) => {
@@ -440,11 +487,21 @@ app.get('/api/analytics/:rollNo', async (req, res) => {
     });
 
     res.json(subjectStats);
-  } catch (err) { 
-      res.status(500).json({ error: err.message }); 
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
+// ---------- Global Error Handler (uncaught exceptions) ----------
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  process.exit(1);
+});
+
+// ---------- Start Server ----------
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-  
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
