@@ -161,6 +161,10 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: parseResult.error.errors[0].message });
     }
     const { rollNo, password, deviceId } = parseResult.data;
+    
+    // 🔥 DEBUG LOG - Check if deviceId is received
+    console.log(`📱 Login attempt for ${rollNo}, Device ID: ${deviceId || 'NOT PROVIDED'}`);
+    
     const cleanRoll = rollNo.trim().toUpperCase();
     
     const user = await User.findOne({ rollNo: cleanRoll });
@@ -174,7 +178,9 @@ app.post('/api/auth/login', async (req, res) => {
       if (!user.boundDeviceId && deviceId) {
         user.boundDeviceId = deviceId;
         await user.save();
+        console.log(`🔗 Device bound for ${cleanRoll}: ${deviceId}`);
       } else if (user.boundDeviceId && user.boundDeviceId !== deviceId) {
+        console.log(`🚫 Device mismatch for ${cleanRoll}! Bound: ${user.boundDeviceId}, Attempt: ${deviceId}`);
         return res.status(403).json({ error: 'Unauthorized Device! Account bound to another phone.' });
       }
     }
@@ -232,6 +238,40 @@ app.post('/api/admin/reset-password', async (req, res) => {
     const updated = await User.findOneAndUpdate({ rollNo: cleanRoll }, { password: hashedPassword });
     if (!updated) return res.status(404).json({ error: 'Student Roll No not found!' });
     res.json({ message: `Password reset successfully for ${cleanRoll}!` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 🔥 NEW: Admin Reset Device Binding API
+app.post('/api/admin/reset-device', async (req, res) => {
+  try {
+    const { requesterRollNo, targetRollNo } = req.body;
+    
+    // Sirf Admin hi kar sakta hai
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) {
+      return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    }
+    
+    const cleanRoll = targetRollNo.trim().toUpperCase();
+    const user = await User.findOne({ rollNo: cleanRoll });
+    
+    if (!user) {
+      return res.status(404).json({ error: `Student ${cleanRoll} not found!` });
+    }
+    
+    // Device binding reset
+    const oldDeviceId = user.boundDeviceId;
+    user.boundDeviceId = null;
+    await user.save();
+    
+    console.log(`🔓 Device binding reset for ${cleanRoll}! Old: ${oldDeviceId}, New: null`);
+    
+    res.json({ 
+      message: `✅ Device binding reset for ${cleanRoll}! Now they can login from any phone.`,
+      rollNo: cleanRoll,
+      previousDeviceId: oldDeviceId || 'None'
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -331,7 +371,6 @@ function checkLocation(lat, lng) {
 
   return { isInside: distance <= 50, distance: distance.toFixed(0) };
 }
-
 // ----- Attendance Marking -----
 app.post('/api/attendance/mark', async (req, res) => {
   try {
