@@ -551,8 +551,9 @@
                             <span>Results</span>
                         </div>
                     </div>
-    </div>
-                    <!-- AI FACE ID ENROLLMENT & SCANNER MODAL -->
+                </div>
+
+                <!-- AI FACE ID ENROLLMENT & SCANNER MODAL -->
                 <div class="admin-box" id="faceEnrollBox" style="margin-bottom:12px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
@@ -620,7 +621,7 @@
                     </div>
 
                     <div style="margin-top:10px;">
-                        <div style="display:flex; justify-style:space-between; align-items:center; margin-bottom:6px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                             <h4 style="font-size:11px; color:var(--text-muted); font-weight:700;">My Attendance Logs (Date-Wise):</h4>
                             <!-- RESTORED STUDENT EXCEL BUTTON -->
                             <button class="btn btn-success" style="width:auto; padding:5px 10px; margin:0; font-size:10px;" onclick="openStudentExcelModal()">
@@ -636,7 +637,7 @@
                         </div>
                     </div>
                 </div>
-                                <!-- ADMIN CONTROL TAB -->
+                 <!-- ADMIN CONTROL TAB -->
                 <div id="adminTab" style="display:none;">
                     <div class="admin-nav">
                         <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">Excel</div>
@@ -746,7 +747,8 @@
             </div>
         </div>
     </div>
-        <script>
+
+    <script>
         const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; 
         const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/";
         
@@ -890,7 +892,8 @@
                 activeSubjectSubjectCode = "";
             }
         }
-                    function markActivePeriodAttendance() {
+
+        function markActivePeriodAttendance() {
             if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
                 return showMsg("Abhi koi active class nahi chal rahi!", true);
             }
@@ -945,7 +948,7 @@
                 const currentYear = today.getFullYear();
                 filteredRecords = globalMyRecords.filter(r => {
                     const parts = r.date.split('-');
-                    return parseInt(parts[0]) === currentYear && (parseInt(parts[1]) - 1) === currentMonthIdx;
+                    return parseInt(parts[0]) === currentYear && (parseInt(parts[1])- 1) === currentMonthIdx;
                 });
             } else if (range === 'SELECTED_MONTH') {
                 filteredRecords = globalMyRecords.filter(r => {
@@ -1061,7 +1064,8 @@
                 showMsg("Account deleted from directory!", false);
             }
         }
-                    async function fetchNotices() {
+
+        async function fetchNotices() {
             if (localStorage.getItem("GLOBAL_NOTICE_CLEARED") === "true") {
                 document.getElementById('noticeBanner').style.display = 'none';
                 return;
@@ -1201,7 +1205,6 @@
                 return false;
             }
         }
-
         async function checkUserFaceStatus() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user) return;
@@ -1326,8 +1329,9 @@
                     showMsg("Face Mismatch! Proxy Attempt Detected.", true);
                 }
             }
-                        }
-                    function togglePassword() {
+        }
+
+        function togglePassword() {
             const p = document.getElementById('password');
             p.type = p.type === 'password' ? 'text' : 'password';
         }
@@ -1434,7 +1438,6 @@
                 });
             }
         }
-
         function loadDashboard() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user) return;
@@ -1739,9 +1742,7 @@
             } catch(e) {
                 showMsg("Failed to sync attendance logs!", true);
             }
-        }
-
-        async function fetchAllAttendance() {
+                      async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             try {
                 const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
@@ -1812,7 +1813,7 @@
             URL.revokeObjectURL(url);
         }
 
-        /* ADMIN EXCEL GRID REPORT (CLEAN HEADER - REMOVED FIXED HARDCODED SUB-HEADER) */
+        /* ADMIN EXCEL GRID REPORT */
         function exportExcelGrid() {
             if (globalAllRecords.length === 0) return alert("Pehle Class Records Refresh karo!");
 
@@ -1866,7 +1867,6 @@
 
             headerRow += `,Total Present Days\n`;
 
-            // CLEAN MASTER REPORT HEADER (REMOVED HARDCODED SUB-HEADER ROW 2)
             let csv = `BM Group Of Institutions - Master Attendance Grid Report (July-Dec 2026)\n`;
             csv += headerRow;
 
@@ -1914,4 +1914,4 @@
         if (localStorage.getItem('user')) loadDashboard();
     </script>
 </body>
-</html>
+</html>                                                                                             }
