@@ -681,11 +681,18 @@
                         <button class="btn btn-primary" onclick="adminRegisterStudent()" style="margin-top:0;">Register Student</button>
                     </div>
                     
-                    <!-- 🔥 NEW: Device Reset Tool - Admin ke liye -->
+                    <!-- 🔥 NEW: Reset Device Binding Tool -->
                     <div class="tool-sub-card" style="border-color:#93c5fd; background:#eff6ff;">
                         <span class="tool-title" style="color:#1d4ed8;">🔓 Reset Student Device Binding:</span>
                         <input type="text" id="resetDeviceRoll" placeholder="Student Roll No (e.g. 24CSE14)">
                         <button class="btn btn-primary" onclick="resetDeviceBinding()" style="margin-top:0;">Reset Device Binding</button>
+                    </div>
+
+                    <!-- 🔥 NEW: Unblock Student (Reset Anomaly Flag) -->
+                    <div class="tool-sub-card" style="border-color:#f59e0b; background:#fffbeb;">
+                        <span class="tool-title" style="color:#d97706;">⚠️ Unblock Flagged Student:</span>
+                        <input type="text" id="resetAnomalyRoll" placeholder="Student Roll No (e.g. 24CSE14)">
+                        <button class="btn btn-warning" onclick="resetAnomalyFlag()" style="margin-top:0;">Unblock Student</button>
                     </div>
 
                     <div class="tool-sub-card">
@@ -713,69 +720,24 @@
                     </div>
                 </div>
 
+                <!-- 🔥 UPDATED: Directory Tab - Now Shows All Registered Students -->
                 <div id="subDirectory" style="display:none;">
-                    <button class="btn btn-outline" onclick="fetchAllAttendance()" style="margin-bottom:8px;">Refresh Records Directory</button>
-                    <h4 style="font-size:11px; color:var(--text-muted); margin-top:6px; font-weight:700;">Class Records Directory:</h4>
+                    <div style="display:flex; gap:8px; margin-bottom:8px;">
+                        <button class="btn btn-outline" onclick="fetchAllStudents()" style="flex:1; margin:0; padding:8px;">📋 All Students</button>
+                        <button class="btn btn-outline" onclick="fetchAllAttendance()" style="flex:1; margin:0; padding:8px;">📊 Attendance Records</button>
+                    </div>
+                    <h4 style="font-size:11px; color:var(--text-muted); margin-top:6px; font-weight:700;" id="directoryTitle">All Registered Students:</h4>
                     <div class="table-container">
                         <table id="allHistoryTable">
-                            <thead><tr><th>Roll</th><th>Name</th><th>Date</th><th>Attended</th><th>Actions</th></tr></thead>
-                            <tbody><tr><td colspan="5" style="text-align:center;">Click refresh...</td></tr></tbody>
+                            <thead><tr><th>Roll</th><th>Name</th><th>Status</th><th>Actions</th></tr></thead>
+                            <tbody><tr><td colspan="4" style="text-align:center;">Click "All Students" to load...</td></tr></tbody>
                         </table>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-
-<script>
-    const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; 
-    const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/";
-    
-    function getDeviceId() {
-        const KEY = 'BM_DEVICE_ID';
-        let deviceId = localStorage.getItem(KEY);
-        if (!deviceId) {
-            deviceId = 'DEV_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
-            localStorage.setItem(KEY, deviceId);
-        }
-        return deviceId;
-    }
-
-    let isRegistering = false, globalAllRecords = [], globalMyRecords = [], globalHolidays = [], groupedAdminRecords = {};
-    let currentCamMode = 'ENROLL', videoStream = null, isModelsLoaded = false;
-    let currentDailyPasscode = "9842";
-    let activeSubjectSubjectCode = "";
-    let toastTimeout = null;
-    let activeCloudFaceDescriptor = null;
-    let myChart = null;
-
-    const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-
-    function showMsg(text, isError = false) {
-        const toast = document.getElementById('toast');
-        const toastMsg = document.getElementById('toast-msg');
-        const toastIcon = document.getElementById('toast-icon');
-        if (!toast || !toastMsg) return;
-        toastMsg.innerText = text;
-        toastIcon.setAttribute("viewBox", "0 0 24 24");
-        if (isError) {
-            toastIcon.innerHTML = `<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>`;
-        } else {
-            toastIcon.innerHTML = `<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>`;
-        }
-        toast.className = `toast-card ${isError ? 'toast-error' : 'toast-success'} show`;
-        if (toastTimeout) clearTimeout(toastTimeout);
-        toastTimeout = setTimeout(() => { toast.classList.remove('show'); }, 3500);
-    }
-
-    function sanitizeAndValidateRollNo(rawRoll) {
-        if (!rawRoll) return { isValid: false, cleanRoll: "" };
-        let clean = rawRoll.toUpperCase().replace(/[^A-Z0-9]/g, '');
-        const strictRegex = /^\d{2}(CSE|AIDS)\d{2}$/;
-        return { isValid: strictRegex.test(clean), cleanRoll: clean };
-    }
+    </div>
     const WEEKLY_SCHEDULE = {
     1: [
         { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
@@ -968,8 +930,8 @@ function processStudentExcelDownload() {
     downloadFile(csv, fileName);
     closeStudentExcelModal();
     showMsg("Attendance Report downloaded successfully!");
-    }
-    async function adminRegisterStudent() {
+}
+            async function adminRegisterStudent() {
     const name = document.getElementById('adminRegName').value.trim();
     const rawRoll = document.getElementById('adminRegRoll').value.trim();
     const password = document.getElementById('adminRegPass').value.trim() || '123456';
@@ -1029,10 +991,11 @@ async function deleteEntireStudentAccount() {
         globalAllRecords = globalAllRecords.filter(r => r.rollNo.toUpperCase() !== targetRoll.toUpperCase());
         showMsg(data.message || `Account ${targetRoll} Deleted Successfully!`);
         document.getElementById('deleteStudentRoll').value = '';
+        fetchAllStudents(); // Refresh list
     } catch(err) { showMsg("Account deleted from directory!", false); }
 }
 
-// 🔥 NEW: Reset Device Binding Function
+// 🔥 Reset Device Binding Function
 async function resetDeviceBinding() {
     const user = JSON.parse(localStorage.getItem('user'));
     const targetRoll = document.getElementById('resetDeviceRoll').value.trim();
@@ -1058,6 +1021,111 @@ async function resetDeviceBinding() {
         }
     } catch(e) {
         showMsg('Server error!', true);
+    }
+}
+
+// 🔥 Unblock Student (Reset Anomaly Flag)
+async function resetAnomalyFlag() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    const targetRoll = document.getElementById('resetAnomalyRoll').value.trim();
+    
+    if (!targetRoll) return showMsg('Enter Student Roll Number!', true);
+    if (!confirm(`Are you sure you want to unblock ${targetRoll}? (Reset anomaly flag)`)) return;
+    
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/reset-anomaly`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                requesterRollNo: user.rollNo, 
+                targetRollNo: targetRoll 
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showMsg(data.message);
+            document.getElementById('resetAnomalyRoll').value = '';
+        } else {
+            showMsg(data.error || 'Failed to unblock student', true);
+        }
+    } catch(e) {
+        showMsg('Server error!', true);
+    }
+}
+
+// 🔥 NEW: Fetch All Registered Students (Even if no attendance)
+async function fetchAllStudents() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/all-students/${user.rollNo}`);
+        const data = await res.json();
+        if (!res.ok) return showMsg(data.error || "Failed to load students", true);
+        
+        document.getElementById('directoryTitle').innerText = `All Registered Students (${data.length}):`;
+        
+        const tbody = document.querySelector('#allHistoryTable tbody');
+        if (!tbody) return;
+        
+        if (data.length === 0) {
+            return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No students registered yet</td></tr>';
+        }
+        
+        tbody.innerHTML = data.map(s => `
+            <tr>
+                <td><b>${s.rollNo}</b></td>
+                <td>${s.name}</td>
+                <td><span class="badge ${s.anomalyFlag ? 'defaulter-badge' : 'badge-present'}">${s.anomalyFlag ? '⚠️ Flagged' : '✅ Active'}</span></td>
+                <td>
+                    <button class="action-btn" style="background:#2563eb; color:white; padding:3px 8px;" onclick="showStudentAttendance('${s.rollNo}')">View</button>
+                </td>
+            </tr>
+        `).join('');
+    } catch(e) {
+        showMsg("Failed to connect to backend", true);
+    }
+}
+
+// 🔥 NEW: Show specific student's attendance
+async function showStudentAttendance(rollNo) {
+    try {
+        const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
+        const data = await res.json();
+        if (!res.ok) return showMsg("Failed to load attendance", true);
+        
+        const total = data.length;
+        const present = data.filter(r => r.status === 'Present').length;
+        const pct = total > 0 ? Math.round((present/total)*100) : 0;
+        
+        showMsg(`📊 ${rollNo}: ${present}/${total} lectures present (${pct}%)`);
+        
+        // Show in table
+        const tbody = document.querySelector('#allHistoryTable tbody');
+        if (!tbody) return;
+        
+        if (data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No attendance records for ${rollNo}</td></tr>`;
+            return;
+        }
+        
+        document.getElementById('directoryTitle').innerText = `Attendance for ${rollNo} (${data.length} records):`;
+        
+        tbody.innerHTML = data.slice(0, 20).map(r => `
+            <tr>
+                <td><b>${r.rollNo}</b></td>
+                <td>${r.subject || 'N/A'}</td>
+                <td>${r.date}</td>
+                <td><span class="badge badge-present">${r.status}</span></td>
+            </tr>
+        `).join('');
+        
+        // Add back button
+        tbody.innerHTML += `
+            <tr><td colspan="4" style="text-align:center; padding:8px;">
+                <button class="btn btn-outline" onclick="fetchAllStudents()" style="padding:4px 12px; width:auto; margin:0;">⬅ Back to All Students</button>
+            </td></tr>
+        `;
+    } catch(e) {
+        showMsg("Failed to load attendance", true);
     }
 }
 
@@ -1120,7 +1188,7 @@ function switchTab(tabId) {
     const tabs = document.querySelectorAll('.tab-bar .tab-item');
     tabs[0].classList.toggle('active', tabId === 'markTab');
     if(tabs[1]) tabs[1].classList.toggle('active', tabId === 'adminTab');
-    if(tabId === 'adminTab') fetchAllAttendance();
+    if(tabId === 'adminTab') fetchAllStudents();
 }
 
 function switchAdminSubTab(subId) {
@@ -1136,7 +1204,9 @@ function switchAdminSubTab(subId) {
     const navItems = document.querySelectorAll('.admin-nav-item');
     navItems.forEach((item, idx) => { item.classList.toggle('active', subTabs[idx] === subId); });
     if (subId === 'subQR') generateDynamicQR();
-    if (subId === 'subDirectory') fetchAllAttendance();
+    if (subId === 'subDirectory') {
+        fetchAllStudents(); // Default show all students
+    }
 }
 
 function generateDynamicQR() {
@@ -1285,8 +1355,8 @@ async function executeCameraAction() {
             showMsg("Face Mismatch! Proxy Attempt Detected.", true);
         }
     }
-    }
-    function togglePassword() {
+}
+            function togglePassword() {
     const p = document.getElementById('password');
     p.type = p.type === 'password' ? 'text' : 'password';
 }
@@ -1489,8 +1559,8 @@ function markSingleAttendance(overrideSubject) {
             }
         } catch(e) { showMsg("Network Error! Try again.", true); }
     }, () => showMsg('GPS Denied!', true));
-            }
-            async function markManualAttendance() {
+}
+                    async function markManualAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             const studentRollNo = document.getElementById('manualRoll').value.trim();
             const date = document.getElementById('manualDate').value;
@@ -1657,6 +1727,7 @@ function markSingleAttendance(overrideSubject) {
             } catch(e) { showMsg("Failed to sync attendance logs!", true); }
         }
 
+        // 🔥 UPDATED: Fetch All Attendance Records (Admin)
         async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             try {
@@ -1664,6 +1735,8 @@ function markSingleAttendance(overrideSubject) {
                 const data = await res.json();
                 if (!res.ok) return showMsg(data.error || "Failed to load directory", true);
                 globalAllRecords = data;
+
+                document.getElementById('directoryTitle').innerText = `Attendance Records (${data.length} entries):`;
 
                 groupedAdminRecords = {};
                 const uniqueStudents = new Set();
@@ -1698,7 +1771,16 @@ function markSingleAttendance(overrideSubject) {
                         <td><button class="action-btn btn-del" onclick="deleteDayGroup('${g.roll}', '${g.date}')">Del Day</button></td>
                     </tr>
                 `).join('');
-            } catch(e) { showMsg("Failed to connect to backend", true); }
+                
+                // Add back button
+                tbody.innerHTML += `
+                    <tr><td colspan="5" style="text-align:center; padding:8px;">
+                        <button class="btn btn-outline" onclick="fetchAllStudents()" style="padding:4px 12px; width:auto; margin:0;">⬅ Back to All Students</button>
+                    </td></tr>
+                `;
+            } catch(e) {
+                showMsg("Failed to connect to backend", true);
+            }
         }
 
         async function deleteDayGroup(rollNo, date) {
@@ -1822,6 +1904,5 @@ function markSingleAttendance(overrideSubject) {
         if (localStorage.getItem('user')) loadDashboard();
     </script>
 </body>
-</html>
-    
-    
+                </html>
+            
