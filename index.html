@@ -178,7 +178,8 @@
         .password-wrapper input { padding-right: 40px; }
         .eye-icon { position: absolute; right: 12px; top: 38%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); transition: color 0.3s; }
         .eye-icon:hover { color: var(--primary); }
-                .btn { 
+
+        .btn { 
             width: 100%; 
             padding: 10px 14px; 
             border-radius: 10px; 
@@ -220,6 +221,7 @@
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .badge-present { background: #dcfce7; color: #15803d; }
+        .badge-flagged { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
         .defaulter-badge { 
             display: inline-block; 
             background: #fef2f2; 
@@ -360,10 +362,11 @@
         }
         .action-btn:hover { opacity: 0.9; transform: translateY(-1px); }
         .btn-del { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        .btn-view { background: #eff6ff; color: #2563eb; border: 1px solid #dbeafe; }
 
-        .table-container { max-height: 220px; overflow-y: auto; border: 1px solid var(--card-border); border-radius: 10px; margin-top: 8px; background: #ffffff; }
+        .table-container { max-height: 300px; overflow-y: auto; border: 1px solid var(--card-border); border-radius: 10px; margin-top: 8px; background: #ffffff; }
         table { width: 100%; border-collapse: collapse; font-size: 11px; }
-        th { background: #f8fafc; color: var(--text-muted); padding: 8px; text-align: left; border-bottom: 1px solid var(--card-border); position: sticky; top: 0; font-weight: 700; }
+        th { background: #f8fafc; color: var(--text-muted); padding: 8px; text-align: left; border-bottom: 1px solid var(--card-border); position: sticky; top: 0; font-weight: 700; z-index: 2; }
         td { padding: 8px; border-bottom: 1px solid #f1f5f9; }
         
         .admin-box { background: #ffffff; padding: 12px; border-radius: 14px; border: 1px solid var(--card-border); animation: cardScaleUp 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
@@ -403,6 +406,9 @@
             border: 1px solid var(--card-border);
             animation: cardScaleUp 0.3s ease;
         }
+
+        .flex-buttons { display: flex; gap: 8px; }
+        .flex-buttons .btn { margin: 0; flex: 1; }
     </style>
 </head>
 <body>
@@ -616,115 +622,114 @@
                     </div>
                 </div>
             </div>
-                        <div id="adminTab" style="display:none;">
-                <div class="admin-nav">
-                    <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">Excel</div>
-                    <div class="admin-nav-item" onclick="switchAdminSubTab('subAttendance')">Entry</div>
-                    <div class="admin-nav-item" onclick="switchAdminSubTab('subHoliday')">Holiday</div>
-                    <div class="admin-nav-item" onclick="switchAdminSubTab('subQR')">QR</div>
-                    <div class="admin-nav-item" onclick="switchAdminSubTab('subTools')">Tools</div>
-                    <div class="admin-nav-item" onclick="switchAdminSubTab('subDirectory')">Directory</div>
-                </div>
+            <div id="adminTab" style="display:none;">
+    <div class="admin-nav">
+        <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">Excel</div>
+        <div class="admin-nav-item" onclick="switchAdminSubTab('subAttendance')">Entry</div>
+        <div class="admin-nav-item" onclick="switchAdminSubTab('subHoliday')">Holiday</div>
+        <div class="admin-nav-item" onclick="switchAdminSubTab('subQR')">QR</div>
+        <div class="admin-nav-item" onclick="switchAdminSubTab('subTools')">Tools</div>
+        <div class="admin-nav-item" onclick="switchAdminSubTab('subDirectory')">Directory</div>
+    </div>
 
-                <div id="subReports" class="admin-box tab-content-active">
-                    <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Export Excel Reports:</span>
-                    <select id="exportSelection" style="padding:10px; margin-bottom:8px;">
-                        <option value="ALL_SEMESTER">Full Semester (Jul-Dec 2026)</option>
-                        <option value="6">July 2026</option>
-                        <option value="7">August 2026</option>
-                        <option value="8">September 2026</option>
-                        <option value="9">October 2026</option>
-                        <option value="10">November 2026</option>
-                        <option value="11">December 2026</option>
-                    </select>
-                    <button class="btn btn-success" onclick="exportExcelGrid()" style="margin-top:0; padding:10px;">Download Excel Report</button>
-                </div>
+    <div id="subReports" class="admin-box tab-content-active">
+        <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Export Excel Reports:</span>
+        <select id="exportSelection" style="padding:10px; margin-bottom:8px;">
+            <option value="ALL_SEMESTER">Full Semester (Jul-Dec 2026)</option>
+            <option value="6">July 2026</option>
+            <option value="7">August 2026</option>
+            <option value="8">September 2026</option>
+            <option value="9">October 2026</option>
+            <option value="10">November 2026</option>
+            <option value="11">December 2026</option>
+        </select>
+        <button class="btn btn-success" onclick="exportExcelGrid()" style="margin-top:0; padding:10px;">Download Excel Report</button>
+    </div>
 
-                <div id="subAttendance" class="admin-box" style="display:none;">
-                    <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Manual Backdate Attendance:</span>
-                    <input type="text" id="manualRoll" placeholder="Student Roll No (e.g. 24CSE14)">
-                    <input type="date" id="manualDate">
-                    <select id="manualStatus">
-                        <option value="Present">Present</option>
-                        <option value="Duty Leave">Duty Leave (DL)</option>
-                    </select>
-                    <button class="btn btn-primary" onclick="markManualAttendance()" style="margin-top:0; padding:10px;">Mark Attendance</button>
-                </div>
+    <div id="subAttendance" class="admin-box" style="display:none;">
+        <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Manual Backdate Attendance:</span>
+        <input type="text" id="manualRoll" placeholder="Student Roll No (e.g. 24CSE14)">
+        <input type="date" id="manualDate">
+        <select id="manualStatus">
+            <option value="Present">Present</option>
+            <option value="Duty Leave">Duty Leave (DL)</option>
+        </select>
+        <button class="btn btn-primary" onclick="markManualAttendance()" style="margin-top:0; padding:10px;">Mark Attendance</button>
+    </div>
 
-                <div id="subHoliday" class="admin-box" style="display:none;">
-                    <span style="font-size:11px; font-weight:700; color:var(--warning); display:block; margin-bottom:6px;">Declare Official Holiday:</span>
-                    <input type="date" id="holidayDate">
-                    <input type="text" id="holidayReason" placeholder="Reason (e.g. Diwali/Rainy Day)">
-                    <button class="btn btn-warning" onclick="declareHoliday()" style="margin-top:0; padding:10px;">Mark Date as Holiday</button>
-                </div>
+    <div id="subHoliday" class="admin-box" style="display:none;">
+        <span style="font-size:11px; font-weight:700; color:var(--warning); display:block; margin-bottom:6px;">Declare Official Holiday:</span>
+        <input type="date" id="holidayDate">
+        <input type="text" id="holidayReason" placeholder="Reason (e.g. Diwali/Rainy Day)">
+        <button class="btn btn-warning" onclick="declareHoliday()" style="margin-top:0; padding:10px;">Mark Date as Holiday</button>
+    </div>
 
-                <div id="subQR" class="admin-box" style="display:none; text-align:center;">
-                    <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Dynamic Rotating QR & Daily Master Secret:</span>
-                    <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">Project this screen in class. Students enter Daily Master Secret to mark attendance.</p>
-                    <div style="background:#f8fafc; padding:10px; border-radius:10px; margin-bottom:8px; border:1px solid var(--card-border);">
-                        <span style="font-size:10px; font-weight:700; color:var(--text-muted);">DAILY MASTER SECRET / CLASS PASSCODE:</span>
-                        <h2 id="liveClassPasscode" style="font-size:24px; font-weight:900; color:var(--primary); letter-spacing:4px;">9842</h2>
-                    </div>
-                    <div id="qrcode" style="display:flex; justify-content:center; margin:10px 0;"></div>
-                    <button class="btn btn-outline" id="refreshQrBtn" onclick="generateDynamicQR()" style="padding:8px; font-size:11px;">
-                        <svg id="refreshIcon" class="svg-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
-                        Refresh Passcode & QR Code Now
-                    </button>
-                </div>
+    <div id="subQR" class="admin-box" style="display:none; text-align:center;">
+        <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Dynamic Rotating QR & Daily Master Secret:</span>
+        <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">Project this screen in class. Students enter Daily Master Secret to mark attendance.</p>
+        <div style="background:#f8fafc; padding:10px; border-radius:10px; margin-bottom:8px; border:1px solid var(--card-border);">
+            <span style="font-size:10px; font-weight:700; color:var(--text-muted);">DAILY MASTER SECRET / CLASS PASSCODE:</span>
+            <h2 id="liveClassPasscode" style="font-size:24px; font-weight:900; color:var(--primary); letter-spacing:4px;">9842</h2>
+        </div>
+        <div id="qrcode" style="display:flex; justify-content:center; margin:10px 0;"></div>
+        <button class="btn btn-outline" id="refreshQrBtn" onclick="generateDynamicQR()" style="padding:8px; font-size:11px;">
+            <svg id="refreshIcon" class="svg-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+            Refresh Passcode & QR Code Now
+        </button>
+    </div>
 
-                <div id="subTools" style="display:none;">
-                    <div class="tool-sub-card">
-                        <span class="tool-title" style="color:var(--primary);">Register New Student Manually:</span>
-                        <input type="text" id="adminRegName" placeholder="Full Student Name">
-                        <input type="text" id="adminRegRoll" placeholder="Roll Number (e.g. 24CSE14)">
-                        <input type="text" id="adminRegPass" placeholder="Password (Default: 123456)">
-                        <button class="btn btn-primary" onclick="adminRegisterStudent()" style="margin-top:0;">Register Student</button>
-                    </div>
-                    
-                    <!-- 🔥 NEW: Reset Device Binding Tool -->
-                    <div class="tool-sub-card" style="border-color:#93c5fd; background:#eff6ff;">
-                        <span class="tool-title" style="color:#1d4ed8;">🔓 Reset Student Device Binding:</span>
-                        <input type="text" id="resetDeviceRoll" placeholder="Student Roll No (e.g. 24CSE14)">
-                        <button class="btn btn-primary" onclick="resetDeviceBinding()" style="margin-top:0;">Reset Device Binding</button>
-                    </div>
+    <div id="subTools" style="display:none;">
+        <div class="tool-sub-card">
+            <span class="tool-title" style="color:var(--primary);">Register New Student Manually:</span>
+            <input type="text" id="adminRegName" placeholder="Full Student Name">
+            <input type="text" id="adminRegRoll" placeholder="Roll Number (e.g. 24CSE14)">
+            <input type="text" id="adminRegPass" placeholder="Password (Default: 123456)">
+            <button class="btn btn-primary" onclick="adminRegisterStudent()" style="margin-top:0;">Register Student</button>
+        </div>
+        
+        <!-- 🔥 Reset Device Binding Tool -->
+        <div class="tool-sub-card" style="border-color:#93c5fd; background:#eff6ff;">
+            <span class="tool-title" style="color:#1d4ed8;">🔓 Reset Student Device Binding:</span>
+            <input type="text" id="resetDeviceRoll" placeholder="Student Roll No (e.g. 24CSE14)">
+            <button class="btn btn-primary" onclick="resetDeviceBinding()" style="margin-top:0;">Reset Device Binding</button>
+        </div>
 
-                    <!-- 🔥 NEW: Unblock Student (Reset Anomaly Flag) -->
-                    <div class="tool-sub-card" style="border-color:#f59e0b; background:#fffbeb;">
-                        <span class="tool-title" style="color:#d97706;">⚠️ Unblock Flagged Student:</span>
-                        <input type="text" id="resetAnomalyRoll" placeholder="Student Roll No (e.g. 24CSE14)">
-                        <button class="btn btn-warning" onclick="resetAnomalyFlag()" style="margin-top:0;">Unblock Student</button>
-                    </div>
+        <!-- 🔥 Unblock Student (Reset Anomaly Flag) -->
+        <div class="tool-sub-card" style="border-color:#f59e0b; background:#fffbeb;">
+            <span class="tool-title" style="color:#d97706;">⚠️ Unblock Flagged Student:</span>
+            <input type="text" id="resetAnomalyRoll" placeholder="Student Roll No (e.g. 24CSE14)">
+            <button class="btn btn-warning" onclick="resetAnomalyFlag()" style="margin-top:0;">Unblock Student</button>
+        </div>
 
-                    <div class="tool-sub-card">
-                        <span class="tool-title" style="color:var(--text-main);">Broadcast Announcement Notice:</span>
-                        <input type="text" id="noticeMsg" placeholder="Notice text (e.g. Mid-Sem Exams from Monday)">
-                        <button class="btn btn-primary" onclick="postNotice()" style="margin-top:0; margin-bottom:6px;">Publish Notice</button>
-                        <button class="btn btn-danger" onclick="clearNotice()" style="margin-top:0;">Clear Active Notice</button>
-                    </div>
-                    <div class="tool-sub-card">
-                        <span class="tool-title" style="color:var(--primary);">Fix / Update Student Roll Number Format:</span>
-                        <input type="text" id="oldRollFormat" placeholder="Old Roll No (e.g. 24-CSE-14)">
-                        <input type="text" id="newRollFormat" placeholder="New Clean Roll No (e.g. 24CSE14)">
-                        <button class="btn btn-primary" onclick="updateRollNumberFormat()" style="margin-top:0;">Update Roll Number</button>
-                    </div>
-                    <div class="tool-sub-card">
-                        <span class="tool-title" style="color:var(--warning);">Reset Student Password:</span>
-                        <input type="text" id="resetRoll" placeholder="Student Roll No (e.g. 24CSE14)">
-                        <input type="text" id="resetPass" placeholder="New Password (Default: 123456)">
-                        <button class="btn btn-warning" onclick="resetStudentPassword()" style="margin-top:0;">Reset Password</button>
-                    </div>
-                    <div class="tool-sub-card" style="border-color:#fecaca; background:#fef2f2;">
-                        <span class="tool-title" style="color:#b91c1c;">Permanently Delete Student Account:</span>
-                        <input type="text" id="deleteStudentRoll" placeholder="Roll No to Delete (e.g. 24-CSE-14)">
-                        <button class="btn btn-danger" onclick="deleteEntireStudentAccount()" style="margin-top:0;">Delete Account Permanently</button>
-                    </div>
-                </div>
-
-                <!-- 🔥 UPDATED: Directory Tab - Now Shows All Registered Students -->
+        <div class="tool-sub-card">
+            <span class="tool-title" style="color:var(--text-main);">Broadcast Announcement Notice:</span>
+            <input type="text" id="noticeMsg" placeholder="Notice text (e.g. Mid-Sem Exams from Monday)">
+            <button class="btn btn-primary" onclick="postNotice()" style="margin-top:0; margin-bottom:6px;">Publish Notice</button>
+            <button class="btn btn-danger" onclick="clearNotice()" style="margin-top:0;">Clear Active Notice</button>
+        </div>
+        <div class="tool-sub-card">
+            <span class="tool-title" style="color:var(--primary);">Fix / Update Student Roll Number Format:</span>
+            <input type="text" id="oldRollFormat" placeholder="Old Roll No (e.g. 24-CSE-14)">
+            <input type="text" id="newRollFormat" placeholder="New Clean Roll No (e.g. 24CSE14)">
+            <button class="btn btn-primary" onclick="updateRollNumberFormat()" style="margin-top:0;">Update Roll Number</button>
+        </div>
+        <div class="tool-sub-card">
+            <span class="tool-title" style="color:var(--warning);">Reset Student Password:</span>
+            <input type="text" id="resetRoll" placeholder="Student Roll No (e.g. 24CSE14)">
+            <input type="text" id="resetPass" placeholder="New Password (Default: 123456)">
+            <button class="btn btn-warning" onclick="resetStudentPassword()" style="margin-top:0;">Reset Password</button>
+        </div>
+        <div class="tool-sub-card" style="border-color:#fecaca; background:#fef2f2;">
+            <span class="tool-title" style="color:#b91c1c;">Permanently Delete Student Account:</span>
+            <input type="text" id="deleteStudentRoll" placeholder="Roll No to Delete (e.g. 24-CSE-14)">
+            <button class="btn btn-danger" onclick="deleteEntireStudentAccount()" style="margin-top:0;">Delete Account Permanently</button>
+        </div>
+    </div>
+                    <!-- 🔥 UPDATED: Directory Tab - Shows All Registered Students -->
                 <div id="subDirectory" style="display:none;">
                     <div style="display:flex; gap:8px; margin-bottom:8px;">
-                        <button class="btn btn-outline" onclick="fetchAllStudents()" style="flex:1; margin:0; padding:8px;">📋 All Students</button>
-                        <button class="btn btn-outline" onclick="fetchAllAttendance()" style="flex:1; margin:0; padding:8px;">📊 Attendance Records</button>
+                        <button class="btn btn-outline" onclick="fetchAllStudents()" style="flex:1; margin:0; padding:8px; font-size:10px;">📋 All Students</button>
+                        <button class="btn btn-outline" onclick="fetchAllAttendance()" style="flex:1; margin:0; padding:8px; font-size:10px;">📊 Attendance Records</button>
                     </div>
                     <h4 style="font-size:11px; color:var(--text-muted); margin-top:6px; font-weight:700;" id="directoryTitle">All Registered Students:</h4>
                     <div class="table-container">
@@ -737,58 +742,107 @@
             </div>
         </div>
     </div>
-    </div>
-    const WEEKLY_SCHEDULE = {
-    1: [
-        { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
-        { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
-        { start: "10:50", end: "11:35", subject: "DAA - Design & Analysis of Algorithm", period: "P3" },
-        { start: "11:35", end: "12:20", subject: "FLA - Formal Language & Automata", period: "P4" },
-        { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
-        { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
-        { start: "13:50", end: "14:35", subject: "CN - Computer Network", period: "P7" },
-        { start: "14:35", end: "15:20", subject: "LIB - Library", period: "P8" }
-    ],
-    2: [
-        { start: "09:20", end: "10:05", subject: "WT - Web Technology", period: "P1" },
-        { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
-        { start: "10:50", end: "11:35", subject: "Internet Lab (Ms. Geeta)", period: "P3" },
-        { start: "11:35", end: "12:20", subject: "FLA - Formal Language & Automata", period: "P4" },
-        { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
-        { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
-        { start: "13:50", end: "14:35", subject: "BDA - Big Data Analytics", period: "P7" },
-        { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
-    ],
-    3: [
-        { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
-        { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
-        { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
-        { start: "11:35", end: "12:20", subject: "Sports / Activity", period: "P4" },
-        { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
-        { start: "13:05", end: "13:50", subject: "WT - Web Technology", period: "P6" },
-        { start: "13:50", end: "15:20", subject: "CN LAB - Computer Network Lab", period: "P7-P8" }
-    ],
-    4: [
-        { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
-        { start: "10:05", end: "10:50", subject: "WT - Web Technology", period: "P2" },
-        { start: "10:50", end: "11:35", subject: "CN - Computer Network", period: "P3" },
-        { start: "11:35", end: "12:20", subject: "DAA - Design & Analysis of Algorithm", period: "P4" },
-        { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
-        { start: "13:05", end: "14:35", subject: "DAA LAB - Algorithm Lab", period: "P6-P7" },
-        { start: "14:35", end: "15:20", subject: "HRM - Human Resource Mgmt", period: "P8" }
-    ],
-    5: [
-        { start: "09:20", end: "10:05", subject: "DAA - Design & Analysis of Algorithm", period: "P1" },
-        { start: "10:05", end: "10:50", subject: "CN - Computer Network", period: "P2" },
-        { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
-        { start: "11:35", end: "12:20", subject: "BDA - Big Data Analytics", period: "P4" },
-        { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
-        { start: "13:05", end: "14:35", subject: "WT LAB - Web Technology Lab", period: "P6-P7" },
-        { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
-    ]
-};
+</div>
 
-function updatePeriodTrackerWidget() {
+<script>
+    const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; 
+    const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/";
+    
+    function getDeviceId() {
+        const KEY = 'BM_DEVICE_ID';
+        let deviceId = localStorage.getItem(KEY);
+        if (!deviceId) {
+            deviceId = 'DEV_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
+            localStorage.setItem(KEY, deviceId);
+        }
+        return deviceId;
+    }
+
+    let isRegistering = false, globalAllRecords = [], globalMyRecords = [], globalHolidays = [], groupedAdminRecords = {};
+    let currentCamMode = 'ENROLL', videoStream = null, isModelsLoaded = false;
+    let currentDailyPasscode = "9842";
+    let activeSubjectSubjectCode = "";
+    let toastTimeout = null;
+    let activeCloudFaceDescriptor = null;
+    let myChart = null;
+
+    const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+    function showMsg(text, isError = false) {
+        const toast = document.getElementById('toast');
+        const toastMsg = document.getElementById('toast-msg');
+        const toastIcon = document.getElementById('toast-icon');
+        if (!toast || !toastMsg) return;
+        toastMsg.innerText = text;
+        toastIcon.setAttribute("viewBox", "0 0 24 24");
+        if (isError) {
+            toastIcon.innerHTML = `<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>`;
+        } else {
+            toastIcon.innerHTML = `<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>`;
+        }
+        toast.className = `toast-card ${isError ? 'toast-error' : 'toast-success'} show`;
+        if (toastTimeout) clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => { toast.classList.remove('show'); }, 3500);
+    }
+
+    function sanitizeAndValidateRollNo(rawRoll) {
+        if (!rawRoll) return { isValid: false, cleanRoll: "" };
+        let clean = rawRoll.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const strictRegex = /^\d{2}(CSE|AIDS)\d{2}$/;
+        return { isValid: strictRegex.test(clean), cleanRoll: clean };
+    }
+
+    const WEEKLY_SCHEDULE = {
+        1: [
+            { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
+            { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
+            { start: "10:50", end: "11:35", subject: "DAA - Design & Analysis of Algorithm", period: "P3" },
+            { start: "11:35", end: "12:20", subject: "FLA - Formal Language & Automata", period: "P4" },
+            { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+            { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
+            { start: "13:50", end: "14:35", subject: "CN - Computer Network", period: "P7" },
+            { start: "14:35", end: "15:20", subject: "LIB - Library", period: "P8" }
+        ],
+        2: [
+            { start: "09:20", end: "10:05", subject: "WT - Web Technology", period: "P1" },
+            { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
+            { start: "10:50", end: "11:35", subject: "Internet Lab (Ms. Geeta)", period: "P3" },
+            { start: "11:35", end: "12:20", subject: "FLA - Formal Language & Automata", period: "P4" },
+            { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+            { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
+            { start: "13:50", end: "14:35", subject: "BDA - Big Data Analytics", period: "P7" },
+            { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
+        ],
+        3: [
+            { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
+            { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
+            { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
+            { start: "11:35", end: "12:20", subject: "Sports / Activity", period: "P4" },
+            { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+            { start: "13:05", end: "13:50", subject: "WT - Web Technology", period: "P6" },
+            { start: "13:50", end: "15:20", subject: "CN LAB - Computer Network Lab", period: "P7-P8" }
+        ],
+        4: [
+            { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
+            { start: "10:05", end: "10:50", subject: "WT - Web Technology", period: "P2" },
+            { start: "10:50", end: "11:35", subject: "CN - Computer Network", period: "P3" },
+            { start: "11:35", end: "12:20", subject: "DAA - Design & Analysis of Algorithm", period: "P4" },
+            { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+            { start: "13:05", end: "14:35", subject: "DAA LAB - Algorithm Lab", period: "P6-P7" },
+            { start: "14:35", end: "15:20", subject: "HRM - Human Resource Mgmt", period: "P8" }
+        ],
+        5: [
+            { start: "09:20", end: "10:05", subject: "DAA - Design & Analysis of Algorithm", period: "P1" },
+            { start: "10:05", end: "10:50", subject: "CN - Computer Network", period: "P2" },
+            { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
+            { start: "11:35", end: "12:20", subject: "BDA - Big Data Analytics", period: "P4" },
+            { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+            { start: "13:05", end: "14:35", subject: "WT LAB - Web Technology Lab", period: "P6-P7" },
+            { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
+        ]
+    };
+    function updatePeriodTrackerWidget() {
     const now = new Date();
     const dayOfWeek = now.getDay();
     const labelEl = document.getElementById('periodTimeSlotLabel');
@@ -931,7 +985,8 @@ function processStudentExcelDownload() {
     closeStudentExcelModal();
     showMsg("Attendance Report downloaded successfully!");
 }
-            async function adminRegisterStudent() {
+
+async function adminRegisterStudent() {
     const name = document.getElementById('adminRegName').value.trim();
     const rawRoll = document.getElementById('adminRegRoll').value.trim();
     const password = document.getElementById('adminRegPass').value.trim() || '123456';
@@ -949,6 +1004,7 @@ function processStudentExcelDownload() {
             document.getElementById('adminRegName').value = '';
             document.getElementById('adminRegRoll').value = '';
             document.getElementById('adminRegPass').value = '';
+            fetchAllStudents();
         } else {
             showMsg(data.error || "Failed to register student", true);
         }
@@ -991,11 +1047,10 @@ async function deleteEntireStudentAccount() {
         globalAllRecords = globalAllRecords.filter(r => r.rollNo.toUpperCase() !== targetRoll.toUpperCase());
         showMsg(data.message || `Account ${targetRoll} Deleted Successfully!`);
         document.getElementById('deleteStudentRoll').value = '';
-        fetchAllStudents(); // Refresh list
+        fetchAllStudents();
     } catch(err) { showMsg("Account deleted from directory!", false); }
 }
 
-// 🔥 Reset Device Binding Function
 async function resetDeviceBinding() {
     const user = JSON.parse(localStorage.getItem('user'));
     const targetRoll = document.getElementById('resetDeviceRoll').value.trim();
@@ -1024,7 +1079,6 @@ async function resetDeviceBinding() {
     }
 }
 
-// 🔥 Unblock Student (Reset Anomaly Flag)
 async function resetAnomalyFlag() {
     const user = JSON.parse(localStorage.getItem('user'));
     const targetRoll = document.getElementById('resetAnomalyRoll').value.trim();
@@ -1045,6 +1099,7 @@ async function resetAnomalyFlag() {
         if (res.ok) {
             showMsg(data.message);
             document.getElementById('resetAnomalyRoll').value = '';
+            fetchAllStudents();
         } else {
             showMsg(data.error || 'Failed to unblock student', true);
         }
@@ -1053,7 +1108,7 @@ async function resetAnomalyFlag() {
     }
 }
 
-// 🔥 NEW: Fetch All Registered Students (Even if no attendance)
+// 🔥 NEW: Fetch All Registered Students
 async function fetchAllStudents() {
     const user = JSON.parse(localStorage.getItem('user'));
     try {
@@ -1074,9 +1129,10 @@ async function fetchAllStudents() {
             <tr>
                 <td><b>${s.rollNo}</b></td>
                 <td>${s.name}</td>
-                <td><span class="badge ${s.anomalyFlag ? 'defaulter-badge' : 'badge-present'}">${s.anomalyFlag ? '⚠️ Flagged' : '✅ Active'}</span></td>
+                <td><span class="badge ${s.anomalyFlag ? 'badge-flagged' : 'badge-present'}">${s.anomalyFlag ? '⚠️ Flagged' : '✅ Active'}</span></td>
                 <td>
-                    <button class="action-btn" style="background:#2563eb; color:white; padding:3px 8px;" onclick="showStudentAttendance('${s.rollNo}')">View</button>
+                    <button class="action-btn btn-view" onclick="showStudentAttendance('${s.rollNo}')">📊 View</button>
+                    <button class="action-btn btn-del" onclick="deleteEntireStudentAccount()" style="margin-left:4px;">🗑️</button>
                 </td>
             </tr>
         `).join('');
@@ -1085,7 +1141,7 @@ async function fetchAllStudents() {
     }
 }
 
-// 🔥 NEW: Show specific student's attendance
+// 🔥 Show specific student's attendance
 async function showStudentAttendance(rollNo) {
     try {
         const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
@@ -1096,9 +1152,6 @@ async function showStudentAttendance(rollNo) {
         const present = data.filter(r => r.status === 'Present').length;
         const pct = total > 0 ? Math.round((present/total)*100) : 0;
         
-        showMsg(`📊 ${rollNo}: ${present}/${total} lectures present (${pct}%)`);
-        
-        // Show in table
         const tbody = document.querySelector('#allHistoryTable tbody');
         if (!tbody) return;
         
@@ -1107,29 +1160,27 @@ async function showStudentAttendance(rollNo) {
             return;
         }
         
-        document.getElementById('directoryTitle').innerText = `Attendance for ${rollNo} (${data.length} records):`;
+        document.getElementById('directoryTitle').innerText = `📊 ${rollNo}: ${present}/${total} present (${pct}%)`;
         
-        tbody.innerHTML = data.slice(0, 20).map(r => `
+        tbody.innerHTML = data.slice(0, 30).map(r => `
             <tr>
-                <td><b>${r.rollNo}</b></td>
+                <td><b>${r.date}</b></td>
                 <td>${r.subject || 'N/A'}</td>
-                <td>${r.date}</td>
                 <td><span class="badge badge-present">${r.status}</span></td>
+                <td>${r.ipAddress || 'N/A'}</td>
             </tr>
         `).join('');
         
-        // Add back button
         tbody.innerHTML += `
             <tr><td colspan="4" style="text-align:center; padding:8px;">
-                <button class="btn btn-outline" onclick="fetchAllStudents()" style="padding:4px 12px; width:auto; margin:0;">⬅ Back to All Students</button>
+                <button class="btn btn-outline" onclick="fetchAllStudents()" style="padding:4px 12px; width:auto; margin:0; font-size:10px;">⬅ Back</button>
             </td></tr>
         `;
     } catch(e) {
         showMsg("Failed to load attendance", true);
     }
-}
-
-async function fetchNotices() {
+    }
+    async function fetchNotices() {
     if (localStorage.getItem("GLOBAL_NOTICE_CLEARED") === "true") {
         document.getElementById('noticeBanner').style.display = 'none';
         return;
@@ -1204,9 +1255,7 @@ function switchAdminSubTab(subId) {
     const navItems = document.querySelectorAll('.admin-nav-item');
     navItems.forEach((item, idx) => { item.classList.toggle('active', subTabs[idx] === subId); });
     if (subId === 'subQR') generateDynamicQR();
-    if (subId === 'subDirectory') {
-        fetchAllStudents(); // Default show all students
-    }
+    if (subId === 'subDirectory') fetchAllStudents();
 }
 
 function generateDynamicQR() {
@@ -1355,8 +1404,8 @@ async function executeCameraAction() {
             showMsg("Face Mismatch! Proxy Attempt Detected.", true);
         }
     }
-}
-            function togglePassword() {
+    }
+    function togglePassword() {
     const p = document.getElementById('password');
     p.type = p.type === 'password' ? 'text' : 'password';
 }
@@ -1457,13 +1506,7 @@ async function loadAnalyticsChart(rollNo) {
     } catch(err) { console.error("Chart data failed to load:", err); }
 }
 
-function requestNotificationPermission() {
-    if ("Notification" in window) {
-        Notification.requestPermission().then(permission => {
-            if (permission === "granted") { console.log("Push Notifications enabled!"); }
-        });
-    }
-}
+// ❌ Notification permission REMOVED - No popup
 
 function loadDashboard() {
     const user = JSON.parse(localStorage.getItem('user'));
@@ -1504,7 +1547,6 @@ function loadDashboard() {
     setInterval(updatePeriodTrackerWidget, 30000);
     fetchNotices();
 
-    requestNotificationPermission();
     loadAnalyticsChart(user.rollNo);
 }
 
@@ -1559,8 +1601,8 @@ function markSingleAttendance(overrideSubject) {
             }
         } catch(e) { showMsg("Network Error! Try again.", true); }
     }, () => showMsg('GPS Denied!', true));
-}
-                    async function markManualAttendance() {
+    }
+            async function markManualAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             const studentRollNo = document.getElementById('manualRoll').value.trim();
             const date = document.getElementById('manualDate').value;
@@ -1727,7 +1769,6 @@ function markSingleAttendance(overrideSubject) {
             } catch(e) { showMsg("Failed to sync attendance logs!", true); }
         }
 
-        // 🔥 UPDATED: Fetch All Attendance Records (Admin)
         async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             try {
@@ -1736,7 +1777,7 @@ function markSingleAttendance(overrideSubject) {
                 if (!res.ok) return showMsg(data.error || "Failed to load directory", true);
                 globalAllRecords = data;
 
-                document.getElementById('directoryTitle').innerText = `Attendance Records (${data.length} entries):`;
+                document.getElementById('directoryTitle').innerText = `📊 Attendance Records (${data.length} entries):`;
 
                 groupedAdminRecords = {};
                 const uniqueStudents = new Set();
@@ -1768,14 +1809,13 @@ function markSingleAttendance(overrideSubject) {
                         <td>${g.name}</td>
                         <td>${g.date}</td>
                         <td><span class="badge badge-present">${g.count} Lectures</span></td>
-                        <td><button class="action-btn btn-del" onclick="deleteDayGroup('${g.roll}', '${g.date}')">Del Day</button></td>
+                        <td><button class="action-btn btn-del" onclick="deleteDayGroup('${g.roll}', '${g.date}')">🗑️</button></td>
                     </tr>
                 `).join('');
                 
-                // Add back button
                 tbody.innerHTML += `
                     <tr><td colspan="5" style="text-align:center; padding:8px;">
-                        <button class="btn btn-outline" onclick="fetchAllStudents()" style="padding:4px 12px; width:auto; margin:0;">⬅ Back to All Students</button>
+                        <button class="btn btn-outline" onclick="fetchAllStudents()" style="padding:4px 12px; width:auto; margin:0; font-size:10px;">⬅ Back to Students</button>
                     </td></tr>
                 `;
             } catch(e) {
@@ -1904,5 +1944,6 @@ function markSingleAttendance(overrideSubject) {
         if (localStorage.getItem('user')) loadDashboard();
     </script>
 </body>
-                </html>
-            
+</html>
+
+    
