@@ -7,7 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
-    <!-- Chart.js CDN Added -->
+    <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { 
@@ -224,7 +224,7 @@
         }
         .badge-present { background: #dcfce7; color: #15803d; }
         .defaulter-badge { 
-                    display: inline-block; 
+            display: inline-block; 
             background: #fef2f2; 
             color: #991b1b; 
             font-size: 10px; 
@@ -429,8 +429,7 @@
                 <button class="btn btn-primary" id="authBtn" onclick="handleAuth()">Sign In</button>
                 <span style="color:var(--primary); cursor:pointer; font-size:12px; display:block; text-align:center; margin-top:12px; font-weight:600;" id="toggleLink" onclick="toggleMode()">New Student? Register Account</span>
             </div>
-
-            <!-- DASHBOARD -->
+                        <!-- DASHBOARD -->
             <div id="dash-box" style="display: none;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                     <div>
@@ -447,10 +446,10 @@
                 <div class="stats-grid" id="studentStatsGrid">
                     <div class="stat-card">
                         <div class="value" id="totalDaysCount">0</div>
-                        <div class="label">Lectures Attended</div>
+                        <div class="label">Academic Lectures</div>
                     </div>
                     <div class="stat-card">
-                                               <div class="value" id="attendancePct">0%</div>
+                        <div class="value" id="attendancePct">0%</div>
                         <div class="label">Attendance Status</div>
                     </div>
                 </div>
@@ -475,7 +474,7 @@
 
                 <!-- SUBJECT-WISE ATTENDANCE ANALYTICS CHART -->
                 <div class="admin-box" id="analyticsBox" style="margin:12px 0; padding: 15px; background: #fff; border-radius: 14px; border: 1px solid var(--card-border);">
-                    <h4 style="font-size:12px; font-weight:800; color:var(--text-main); margin-bottom:10px;">Subject-wise Attendance</h4>
+                    <h4 style="font-size:12px; font-weight:800; color:var(--text-main); margin-bottom:10px;">Academic Subject Breakdown</h4>
                     <canvas id="attendanceChart" width="400" height="200"></canvas>
                 </div>
 
@@ -533,24 +532,18 @@
                         Mark Full Day Attendance (via Class Passcode)
                     </button>
                     
+                    <!-- BIOMETRIC REMOVED TO PREVENT PROXY -->
                     <div class="action-buttons-grid">
                         <button class="btn btn-outline" onclick="openCameraModal('CHECKIN')">
                             <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                            Face Scan
-                        </button>
-                        <button class="btn btn-outline" onclick="triggerBiometricFingerprint()">
-                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 12v3"/><path d="M12 2a10 10 0 0 0-10 10c0 4.42 2.87 8.17 6.84 9.5"/><path d="M12 6a6 6 0 0 0-6 6c0 2.22 1.21 4.15 3 5.19"/></svg>
-                            Biometric
+                            Face Verification
                         </button>
                         <button class="btn btn-outline" onclick="openStudentQRScanner()">
                             <svg class="svg-icon" viewBox="0 0 24 24"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/></svg>
-                            Scan QR
-                        </button>
-                        <button class="btn btn-outline" onclick="exportStudentCSV()">
-                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                            Excel Sheet
+                            Scan Class QR
                         </button>
                     </div>
+
                     <div style="text-align:center; font-size:10px; color:var(--text-muted); margin: 12px 0 4px 0; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Live Timetable Period Tracker</div>
                     <div class="period-card" id="periodCardBox">
                         <div>
@@ -676,9 +669,8 @@
                     </div>
 
                     <!-- DIRECTORY TAB -->
-                        <div id="subDirectory" style="display:none;">
+                    <div id="subDirectory" style="display:none;">
                         <button class="btn btn-outline" onclick="fetchAllAttendance()" style="margin-bottom:8px;">Refresh Records Directory</button>
-                        
                         <h4 style="font-size:11px; color:var(--text-muted); margin-top:6px; font-weight:700;">Class Records Directory:</h4>
                         <div class="table-container">
                             <table id="allHistoryTable">
@@ -853,33 +845,13 @@
             }
         }
 
-        async function triggerBiometricFingerprint() {
-            if (!window.PublicKeyCredential) {
-                return showMsg("Device biometric API not supported!", true);
+        /* RESTRICTED QR SCANNER FIX: MARKS ONLY CURRENT ACTIVE LECTURE */
+        function openStudentQRScanner() {
+            if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
+                return showMsg("QR Scan failed: Class time ke bahar mark nahi ho sakti!", true);
             }
-
-            try {
-                showMsg("Place finger on phone sensor...");
-                const publicKeyCredentialCreationOptions = {
-                    challenge: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]),
-                    rp: { name: "BM Group ERP Portal" },
-                    user: { id: new Uint8Array([1, 2, 3, 4]), name: "student@bmerp.edu", displayName: "Student Biometric" },
-                    pubKeyCredParams: [{ alg: -7, type: "public-key" }],
-                    authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
-                    timeout: 60000
-                };
-
-                const credential = await navigator.credentials.create({ publicKey: publicKeyCredentialCreationOptions });
-
-                if (credential) {
-                    showMsg("Biometric Identity Verified!");
-                    setTimeout(markFullDayAttendance, 800);
-                } else {
-                    showMsg("Biometric Verification Failed!", true);
-                }
-            } catch (err) {
-                showMsg("Biometric Scanning Cancelled or Mismatch!", true);
-            }
+            showMsg("QR Verified! Marking current lecture...");
+            markSingleAttendance(activeSubjectSubjectCode);
         }
 
         async function adminRegisterStudent() {
@@ -902,7 +874,7 @@
                     document.getElementById('adminRegName').value = '';
                     document.getElementById('adminRegRoll').value = '';
                     document.getElementById('adminRegPass').value = '';
-                            } else {
+                } else {
                     showMsg(data.error || "Failed to register student", true);
                 }
             } catch(e) {
@@ -986,6 +958,7 @@
                 document.getElementById('noticeBanner').style.display = 'none';
             }
         }
+
         async function postNotice() {
             const user = JSON.parse(localStorage.getItem('user'));
             const message = document.getElementById('noticeMsg').value.trim();
@@ -1080,8 +1053,9 @@
 
             const token = `BMERP_TOKEN_${Date.now()}_${Math.random().toString(36).substring(7)}`;
             new QRCode(qrBox, { text: token, width: 130, height: 130 });
-            }
-                    async function loadFaceAIModels() {
+        }
+
+        async function loadFaceAIModels() {
             if (isModelsLoaded) return true;
             try {
                 const statusTxt = document.getElementById('cameraScanStatus');
@@ -1128,7 +1102,7 @@
 
         async function openCameraModal(mode) {
             const user = JSON.parse(localStorage.getItem('user'));
-                        currentCamMode = mode;
+            currentCamMode = mode;
             
             if (mode === 'CHECKIN') {
                 if (!activeCloudFaceDescriptor) {
@@ -1166,6 +1140,7 @@
             video.srcObject = null;
         }
 
+        /* RESTRICTED FACE VERIFICATION FIX: MARKS ONLY CURRENT ACTIVE LECTURE */
         async function executeCameraAction() {
             const user = JSON.parse(localStorage.getItem('user'));
             const video = document.getElementById('webcamVideo');
@@ -1211,16 +1186,19 @@
                     showMsg("Identity Verified: " + user.name);
                     setTimeout(() => {
                         closeCameraModal();
-                        markFullDayAttendance();
+                        if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
+                            showMsg("Face Verified, par abhi koi active lecture nahi hai!", true);
+                        } else {
+                            markSingleAttendance(activeSubjectSubjectCode);
+                        }
                     }, 1200);
                 } else {
                     statusTxt.innerText = "Face Mismatch! Identity Not Verified.";
                     showMsg("Face Mismatch! Proxy Attempt Detected.", true);
                 }
             }
-        }
-
-        function togglePassword() {
+                }
+                    function togglePassword() {
             const p = document.getElementById('password');
             p.type = p.type === 'password' ? 'text' : 'password';
         }
@@ -1231,8 +1209,6 @@
             document.getElementById('authBtn').innerText = isRegistering ? 'Register Account' : 'Sign In';
             document.getElementById('toggleLink').innerText = isRegistering ? 'Already registered? Sign In' : 'New Student? Register Account';
         }
-
-        function openStudentQRScanner() { markFullDayAttendance(); }
 
         async function resetStudentPassword() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -1285,14 +1261,14 @@
             }
         }
 
-        // FUNCTION 1: RENDER ANALYTICS GRAPH
+        /* FUNCTION 1: RENDER ANALYTICS GRAPH (EXCLUDES SPORTS/LIBRARY) */
         async function loadAnalyticsChart(rollNo) {
             try {
                 const res = await fetch(`${API_BASE}/api/analytics/${rollNo}`);
                 const data = await res.json();
                 
-                const labels = Object.keys(data); // e.g., ["Math", "Physics"]
-                const presentData = labels.map(sub => data[sub].present); // e.g., [10, 8]
+                const labels = Object.keys(data).filter(sub => !sub.includes("LIB") && !sub.includes("Sports"));
+                const presentData = labels.map(sub => data[sub].present);
 
                 const ctx = document.getElementById('attendanceChart').getContext('2d');
                 
@@ -1303,7 +1279,7 @@
                     data: {
                         labels: labels,
                         datasets: [{
-                            label: 'Lectures Attended',
+                            label: 'Academic Lectures Attended',
                             data: presentData,
                             backgroundColor: '#2563eb',
                             borderRadius: 5
@@ -1321,7 +1297,6 @@
             }
         }
 
-        // FUNCTION 2: ASK FOR PUSH NOTIFICATION PERMISSION
         function requestNotificationPermission() {
             if ("Notification" in window) {
                 Notification.requestPermission().then(permission => {
@@ -1353,7 +1328,8 @@
             document.getElementById('simulatorBox').style.display = 'flex';
             document.getElementById('faceEnrollBox').style.display = 'block';
             document.getElementById('studentTabHeader').style.display = 'block';
-                        if (isAdmin) {
+            
+            if (isAdmin) {
                 document.getElementById('adminTabHeader').style.display = 'block';
             } else {
                 document.getElementById('adminTabHeader').style.display = 'none';
@@ -1370,11 +1346,11 @@
             setInterval(updatePeriodTrackerWidget, 30000);
             fetchNotices();
 
-            // Trigger New Integrated Features
             requestNotificationPermission();
             loadAnalyticsChart(user.rollNo);
-            }
-                    function markFullDayAttendance() {
+        }
+
+        function markFullDayAttendance() {
             if (!navigator.geolocation) {
                 return showMsg('Geolocation is not supported!', true);
             }
@@ -1390,8 +1366,28 @@
             }, () => showMsg('GPS Denied!', true));
         }
 
+        /* DUAL LAB & SINGLE-ATTENDANCE VALIDATION FIX */
         function markSingleAttendance(overrideSubject) {
-            const sub = overrideSubject || "WT LAB";
+            const sub = overrideSubject || activeSubjectSubjectCode || "WT LAB";
+            if (!sub || sub.includes("Off Hours") || sub.includes("Lunch")) {
+                return showMsg("No active lecture to mark!", true);
+            }
+
+            const todayISO = new Date().toISOString().split('T')[0];
+            const isLab = sub.includes("LAB") || sub.includes("Lab");
+
+            const todayEntries = globalMyRecords.filter(r => r.date === todayISO && r.subject === sub);
+
+            if (isLab) {
+                if (todayEntries.length >= 1) {
+                    return showMsg(`Iss ${sub} ki block attendance pehle hi ek baar lag chuki hai!`, true);
+                }
+            } else {
+                if (todayEntries.length >= 1) {
+                    return showMsg(`Iss ${sub} ki attendance aaj pehle hi lag chuki hai!`, true);
+                }
+            }
+
             if (!navigator.geolocation) {
                 return showMsg('Geolocation is not supported!', true);
             }
@@ -1400,7 +1396,12 @@
                 try {
                     const res = await fetch(`${API_BASE}/api/attendance/mark`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: user.rollNo, name: user.name, subject: sub, latitude: pos.coords.latitude, longitude: pos.coords.longitude }) });
                     const data = await res.json();
-                    if (res.ok) { showMsg(data.message); fetchHistory(user.rollNo); } else showMsg(data.error || "Attendance marking failed", true);
+                    if (res.ok) { 
+                        showMsg(`Attendance Marked for ${sub}!`); 
+                        fetchHistory(user.rollNo); 
+                    } else {
+                        showMsg(data.error || "Attendance marking failed", true);
+                    }
                 } catch(e) {
                     showMsg("Network Error! Try again.", true);
                 }
@@ -1447,6 +1448,7 @@
             }
         }
 
+        /* SPORTS & LIBRARY EXCLUDED FROM MAIN ACADEMIC ATTENDANCE PERCENTAGE */
         function calculateRealAttendancePercentage() {
             const startDate = new Date(2026, 6, 15);
             const today = new Date();
@@ -1471,13 +1473,17 @@
                 cur.setDate(cur.getDate() + 1);
             }
 
-            const DEFAULT_DAILY_LECTURES = 6;
-            const totalConductedLectures = totalWorkingDays * DEFAULT_DAILY_LECTURES;
-            const totalAttendedLectures = globalMyRecords.length;
+            const DEFAULT_DAILY_ACADEMIC_LECTURES = 6;
+            const totalConductedLectures = totalWorkingDays * DEFAULT_DAILY_ACADEMIC_LECTURES;
+            
+            const academicAttendedLectures = globalMyRecords.filter(r => {
+                const sub = r.subject || "";
+                return !sub.includes("LIB") && !sub.includes("Sports");
+            }).length;
 
-            if (totalConductedLectures === 0) return { pct: 100, totalWorkingDays, totalConductedLectures, totalAttendedLectures };
-            const pct = Math.min(100, ((totalAttendedLectures / totalConductedLectures) * 100)).toFixed(1);
-            return { pct, totalWorkingDays, totalConductedLectures, totalAttendedLectures };
+            if (totalConductedLectures === 0) return { pct: 100, totalWorkingDays, totalConductedLectures, totalAttendedLectures: academicAttendedLectures };
+            const pct = Math.min(100, ((academicAttendedLectures / totalConductedLectures) * 100)).toFixed(1);
+            return { pct, totalWorkingDays, totalConductedLectures, totalAttendedLectures: academicAttendedLectures };
         }
 
         function toggleCalendarView() { renderAttendanceCalendar(globalMyRecords); }
@@ -1578,7 +1584,8 @@
 
                 const defaulterTag = document.getElementById('defaulterTag');
                 if (defaulterTag) defaulterTag.style.display = (calc.pct < 75) ? 'inline-block' : 'none';
-                            const advisorBox = document.getElementById('advisorText');
+
+                const advisorBox = document.getElementById('advisorText');
                 if (advisorBox) {
                     if (calc.pct >= 75) {
                         const safeLectures = Math.floor(calc.totalAttendedLectures - 0.75 * calc.totalConductedLectures);
@@ -1755,7 +1762,7 @@
             headerRow += `,Total Present Days\n`;
 
             let csv = `BM Group Of Institutions - Master Attendance Grid Report (July-Dec 2026)\n`;
-            csv += `Total Working Days: ${workingDaysCount} Days (6 Lectures/Day Default)\n\n`;
+            csv += `Total Working Days: ${workingDaysCount} Days (6 Academic Lectures/Day Default)\n\n`;
             csv += headerRow;
 
             const sortedStudents = Object.values(studentsMap).sort((a, b) => {
