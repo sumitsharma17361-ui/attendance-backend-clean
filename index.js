@@ -5,7 +5,6 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const { z } = require('zod');
-const twilio = require('twilio');
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -15,20 +14,10 @@ app.use(cors());
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
 const ADMIN_ROLL_NUMBERS = ['24CSE48'];
-const TWILIO_SID = process.env.TWILIO_SID;
-const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
-const TWILIO_PHONE = process.env.TWILIO_PHONE;
 
 if (!MONGO_URI) {
   console.error('❌ FATAL: MONGO_URI environment variable is not set!');
   process.exit(1);
-}
-
-// Initialize Twilio if credentials exist
-let twilioClient = null;
-if (TWILIO_SID && TWILIO_AUTH_TOKEN && TWILIO_PHONE) {
-  twilioClient = twilio(TWILIO_SID, TWILIO_AUTH_TOKEN);
-  console.log('✅ Twilio initialized for OTP');
 }
 
 // ---------- Rate Limiting ----------
@@ -62,11 +51,6 @@ const loginSchema = z.object({
   deviceId: z.string().optional()
 });
 
-const otpVerifySchema = z.object({
-  rollNo: z.string().min(1, "Roll No required"),
-  otp: z.string().length(6, "OTP must be 6 digits")
-});
-
 // ---------- Timetable with Time Slots ----------
 const CLASS_SLOTS = {
   'BDA - Big Data Analytics': { start: '09:20', end: '10:05' },
@@ -98,7 +82,6 @@ mongoose.connect(MONGO_URI)
   });
 
 // ---------- Mongoose Schemas ----------
-// User Schema with all new fields
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   rollNo: { type: String, required: true, unique: true },
@@ -107,14 +90,12 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ['student', 'faculty', 'admin'], default: 'student' },
   faceDescriptor: { type: [Number], default: [] },
   boundDeviceId: { type: String, default: null },
-  // Security fields
   lastKnownIP: { type: String, default: null },
   lastAttendanceTime: { type: Date, default: null },
   lastAttendanceLocation: { latitude: Number, longitude: Number },
   anomalyFlag: { type: Boolean, default: false },
   anomalyDetectedAt: { type: Date, default: null },
   activeSession: { type: String, default: null },
-  // Device Fingerprint
   deviceFingerprint: { type: Object, default: null }
 }, { timestamps: true });
 
@@ -126,7 +107,7 @@ const attendanceSchema = new mongoose.Schema({
   status: { type: String, enum: ['Present', 'Absent', 'Duty Leave', 'Holiday'], default: 'Present' },
   location: { latitude: Number, longitude: Number },
   ipAddress: { type: String, default: null },
-  selfie: { type: String, default: null }, // Base64 encoded selfie
+  selfie: { type: String, default: null },
   deviceFingerprint: { type: Object, default: null },
   isVerified: { type: Boolean, default: false }
 }, { timestamps: true });
@@ -142,14 +123,6 @@ const noticeSchema = new mongoose.Schema({
   date: { type: Date, default: Date.now }
 });
 
-// OTP Schema for 2FA
-const otpSchema = new mongoose.Schema({
-  rollNo: { type: String, required: true },
-  otp: { type: String, required: true },
-  expiresAt: { type: Date, required: true }
-}, { timestamps: true });
-
-// Suspicious Activity Logs
 const suspiciousLogSchema = new mongoose.Schema({
   rollNo: String,
   name: String,
@@ -161,7 +134,6 @@ const suspiciousLogSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-// Token Blacklist
 const blacklistSchema = new mongoose.Schema({
   token: { type: String, required: true },
   expiresAt: { type: Date, required: true }
@@ -171,7 +143,6 @@ const User = mongoose.model('User', userSchema);
 const Attendance = mongoose.model('Attendance', attendanceSchema);
 const Holiday = mongoose.model('Holiday', holidaySchema);
 const Notice = mongoose.model('Notice', noticeSchema);
-const OTP = mongoose.model('OTP', otpSchema);
 const SuspiciousLog = mongoose.model('SuspiciousLog', suspiciousLogSchema);
 const BlacklistToken = mongoose.model('BlacklistToken', blacklistSchema);
 
@@ -201,19 +172,14 @@ function checkLocation(lat, lng) {
   return { isInside: distance <= 50, distance: distance.toFixed(0) };
 }
 
-// Time Window Check
 function checkTimeWindow(subject, currentTime) {
-  // Clean subject name for lookup
   let cleanSubject = subject;
-  // Remove common prefixes/suffixes
   cleanSubject = cleanSubject.replace(/^[Pp]\d\s*-\s*/, '');
   cleanSubject = cleanSubject.replace(/^[Ll][Aa][Bb]\s*-\s*/, '');
   cleanSubject = cleanSubject.trim();
   
-  // Try exact match first
   let slot = CLASS_SLOTS[cleanSubject];
   
-  // Try partial match
   if (!slot) {
     for (let key of Object.keys(CLASS_SLOTS)) {
       if (cleanSubject.includes(key.replace(/ -.*/, '')) || key.includes(cleanSubject.replace(/ -.*/, ''))) {
@@ -231,7 +197,6 @@ function checkTimeWindow(subject, currentTime) {
   const startMinutes = parseInt(slot.start.split(':')[0]) * 60 + parseInt(slot.start.split(':')[1]);
   const endMinutes = parseInt(slot.end.split(':')[0]) * 60 + parseInt(slot.end.split(':')[1]);
   
-  // Allow 5 minutes before and after
   const buffer = 5;
   if (currentMinutes >= startMinutes - buffer && currentMinutes <= endMinutes + buffer) {
     return { allowed: true, message: 'Within class time' };
@@ -243,11 +208,9 @@ function checkTimeWindow(subject, currentTime) {
   };
 }
 
-// Anomaly Detection
 function detectAnomaly(user, lat, lng, reqIP, fingerprint) {
   const MIN_TIME_BETWEEN_ATTENDANCE = 10 * 60 * 1000;
   
-  // Check 1: Different IP
   if (user.lastKnownIP && user.lastKnownIP !== reqIP) {
     if (user.lastAttendanceTime) {
       const timeDiff = Date.now() - new Date(user.lastAttendanceTime).getTime();
@@ -261,7 +224,6 @@ function detectAnomaly(user, lat, lng, reqIP, fingerprint) {
     }
   }
   
-  // Check 2: Impossible travel
   if (user.lastAttendanceLocation && user.lastAttendanceLocation.latitude) {
     const distance = calculateDistance(
       user.lastAttendanceLocation.latitude, 
@@ -281,7 +243,6 @@ function detectAnomaly(user, lat, lng, reqIP, fingerprint) {
     }
   }
   
-  // Check 3: Device fingerprint change
   if (user.deviceFingerprint && fingerprint) {
     const oldFP = JSON.stringify(user.deviceFingerprint);
     const newFP = JSON.stringify(fingerprint);
@@ -300,7 +261,6 @@ function detectAnomaly(user, lat, lng, reqIP, fingerprint) {
   return { isAnomaly: false };
 }
 
-// Log suspicious activity
 async function logSuspiciousActivity(rollNo, name, type, details, location, ipAddress, fingerprint) {
   try {
     await SuspiciousLog.create({
@@ -318,7 +278,6 @@ async function logSuspiciousActivity(rollNo, name, type, details, location, ipAd
   }
 }
 
-// Auto-reset anomaly flags after 24 hours
 async function autoResetAnomalyFlags() {
   try {
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -374,7 +333,6 @@ const checkActiveSession = async (req, res, next) => {
   if (!token) return res.status(401).json({ error: "Access Denied" });
   
   try {
-    // Check if token is blacklisted
     const blacklisted = await BlacklistToken.findOne({ token });
     if (blacklisted) {
       return res.status(401).json({ error: "Session expired. Please login again." });
@@ -388,7 +346,7 @@ const checkActiveSession = async (req, res, next) => {
 // ---------- Routes ----------
 app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active & Secured!'));
 
-// ----- Auth Routes with OTP -----
+// ----- Auth Routes (OTP REMOVED) -----
 app.post('/api/auth/register', async (req, res) => {
   try {
     const parseResult = registerSchema.safeParse(req.body);
@@ -419,48 +377,7 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// Send OTP for login
-app.post('/api/auth/send-otp', async (req, res) => {
-  try {
-    const { rollNo } = req.body;
-    const cleanRoll = rollNo.trim().toUpperCase();
-    
-    const user = await User.findOne({ rollNo: cleanRoll });
-    if (!user) return res.status(404).json({ error: 'User not found!' });
-    
-    // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    // Save OTP
-    await OTP.findOneAndUpdate(
-      { rollNo: cleanRoll },
-      { otp, expiresAt: new Date(Date.now() + 5 * 60000) },
-      { upsert: true }
-    );
-    
-    // Send via Twilio if available
-    if (twilioClient && user.phone) {
-      try {
-        await twilioClient.messages.create({
-          body: `Your BM Group OTP: ${otp}. Valid for 5 minutes.`,
-          to: user.phone,
-          from: TWILIO_PHONE
-        });
-        console.log(`📱 OTP sent to ${user.phone}`);
-      } catch (err) {
-        console.error('SMS failed, OTP saved for testing:', err.message);
-      }
-    } else {
-      console.log(`📱 OTP for ${cleanRoll}: ${otp} (SMS not configured)`);
-    }
-    
-    res.json({ message: 'OTP sent successfully!', otp: otp }); // Remove otp in production
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Verify OTP and Login
+// 🔥 LOGIN - OTP REMOVED (Direct Login)
 app.post('/api/auth/login', async (req, res) => {
   try {
     const parseResult = loginSchema.safeParse(req.body);
@@ -469,6 +386,8 @@ app.post('/api/auth/login', async (req, res) => {
     }
     const { rollNo, password, deviceId } = parseResult.data;
     const cleanRoll = rollNo.trim().toUpperCase();
+    
+    console.log(`📱 Login attempt for ${cleanRoll}, Device ID: ${deviceId || 'NOT PROVIDED'}`);
     
     const user = await User.findOne({ rollNo: cleanRoll });
     if (!user) return res.status(400).json({ error: 'User not found!' });
@@ -481,7 +400,9 @@ app.post('/api/auth/login', async (req, res) => {
       if (!user.boundDeviceId && deviceId) {
         user.boundDeviceId = deviceId;
         await user.save();
+        console.log(`🔗 Device bound for ${cleanRoll}: ${deviceId}`);
       } else if (user.boundDeviceId && user.boundDeviceId !== deviceId) {
+        console.log(`🚫 Device mismatch for ${cleanRoll}! Bound: ${user.boundDeviceId}, Attempt: ${deviceId}`);
         return res.status(403).json({ error: 'Unauthorized Device! Account bound to another phone.' });
       }
     }
@@ -503,46 +424,14 @@ app.post('/api/auth/login', async (req, res) => {
     res.json({ 
       message: 'Login successful!', 
       token, 
-      user: { name: user.name, rollNo: user.rollNo, role },
-      requiresOTP: true // Frontend should verify OTP on next step
+      user: { name: user.name, rollNo: user.rollNo, role }
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Verify OTP
-app.post('/api/auth/verify-otp', async (req, res) => {
-  try {
-    const parseResult = otpVerifySchema.safeParse(req.body);
-    if (!parseResult.success) {
-      return res.status(400).json({ error: parseResult.error.errors[0].message });
-    }
-    
-    const { rollNo, otp } = parseResult.data;
-    const cleanRoll = rollNo.trim().toUpperCase();
-    
-    const record = await OTP.findOne({ rollNo: cleanRoll, otp });
-    
-    if (!record) {
-      return res.status(400).json({ error: 'Invalid OTP!' });
-    }
-    
-    if (record.expiresAt < new Date()) {
-      await OTP.deleteOne({ _id: record._id });
-      return res.status(400).json({ error: 'OTP expired! Please request a new one.' });
-    }
-    
-    // OTP verified - delete it
-    await OTP.deleteOne({ _id: record._id });
-    
-    res.json({ message: 'OTP verified successfully!' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Logout - Blacklist token
+// Logout
 app.post('/api/auth/logout', async (req, res) => {
   try {
     const token = req.headers.authorization?.split(" ")[1];
@@ -552,7 +441,6 @@ app.post('/api/auth/logout', async (req, res) => {
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
       });
       
-      // Clear active session
       const decoded = jwt.decode(token);
       if (decoded) {
         await User.findOneAndUpdate({ rollNo: decoded.rollNo }, { activeSession: null });
@@ -739,7 +627,7 @@ app.post('/api/admin/notice', async (req, res) => {
   }
 });
 
-// ----- Suspicious Activity Logs (Admin) -----
+// ----- Suspicious Activity Logs -----
 app.get('/api/admin/suspicious-logs/:requesterRollNo', async (req, res) => {
   try {
     if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) {
@@ -756,7 +644,6 @@ app.get('/api/admin/suspicious-logs/:requesterRollNo', async (req, res) => {
   }
 });
 
-// Get all students with anomaly flag
 app.get('/api/admin/flagged-students/:requesterRollNo', async (req, res) => {
   try {
     if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) {
@@ -770,7 +657,6 @@ app.get('/api/admin/flagged-students/:requesterRollNo', async (req, res) => {
   }
 });
 
-// Get auto-unblock status
 app.get('/api/admin/auto-unblock-status/:requesterRollNo', async (req, res) => {
   try {
     if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) {
@@ -799,7 +685,6 @@ app.get('/api/admin/auto-unblock-status/:requesterRollNo', async (req, res) => {
   }
 });
 
-// Get all students (Admin)
 app.get('/api/admin/all-students/:requesterRollNo', async (req, res) => {
   try {
     const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
@@ -816,32 +701,29 @@ app.get('/api/admin/all-students/:requesterRollNo', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-// ----- Attendance Marking with All Security Features -----
+
+// ----- Attendance Marking -----
 app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude, selfie, deviceFingerprint } = req.body;
     const today = new Date();
     const todayDate = today.toISOString().split('T')[0];
 
-    // 1. Weekend Check
     if (today.getDay() === 0 || today.getDay() === 6) {
       return res.status(400).json({ error: 'Weekend! College was OFF.' });
     }
 
-    // 2. Holiday Check
     const isHoliday = await Holiday.findOne({ date: todayDate });
     if (isHoliday) {
       return res.status(400).json({ error: `Holiday: ${isHoliday.reason}` });
     }
 
-    // 3. Geofencing Check (50m)
     const locCheck = checkLocation(latitude, longitude);
     if (!locCheck.isInside) {
       await logSuspiciousActivity(rollNo, name, 'FAKE_GPS', `Outside boundary (${locCheck.distance}m away)`, { latitude, longitude }, req.ip, deviceFingerprint);
       return res.status(400).json({ error: `Outside Classroom Boundary! (${locCheck.distance}m away)` });
     }
 
-    // 4. Time Window Check
     const timeCheck = checkTimeWindow(subject, today);
     if (!timeCheck.allowed) {
       await logSuspiciousActivity(rollNo, name, 'TIME_VIOLATION', timeCheck.message, { latitude, longitude }, req.ip, deviceFingerprint);
@@ -854,26 +736,19 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
       return res.status(404).json({ error: 'Student not found!' });
     }
 
-    // 5. Selfie Verification (if selfie provided)
     if (selfie) {
-      // Check if user has enrolled face
       if (!user.faceDescriptor || user.faceDescriptor.length === 0) {
         return res.status(400).json({ error: 'Please enroll face first! Go to Enroll Face.' });
       }
-      // TODO: Compare selfie with stored face descriptor
-      // For now, we'll trust the selfie is valid
     }
 
-    // 6. Device Fingerprint Check
     if (deviceFingerprint) {
       if (!user.deviceFingerprint) {
-        // First time - save fingerprint
         user.deviceFingerprint = deviceFingerprint;
         await user.save();
       }
     }
 
-    // 7. Anomaly Detection (IP, Location, Device)
     const clientIP = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown';
     const anomaly = detectAnomaly(user, latitude, longitude, clientIP, deviceFingerprint);
     
@@ -890,7 +765,6 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
       });
     }
 
-    // 8. Lab duplicate check
     const isLab = subject.includes("LAB") || subject.includes("Lab");
     const todayEntries = await Attendance.find({ rollNo: cleanRoll, subject, date: todayDate });
     
@@ -898,7 +772,6 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
       return res.status(400).json({ error: `Already marked for ${subject} today! (Lab - 1 lecture only)` });
     }
 
-    // 9. Save attendance
     await new Attendance({ 
       rollNo: cleanRoll, 
       studentName: name, 
@@ -912,7 +785,6 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
       isVerified: !!selfie
     }).save();
 
-    // 10. Update user tracking
     user.lastKnownIP = clientIP;
     user.lastAttendanceTime = new Date();
     user.lastAttendanceLocation = { latitude, longitude };
@@ -927,7 +799,6 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
   }
 });
 
-// ----- Full Day Attendance -----
 app.post('/api/attendance/mark-fullday', checkActiveSession, async (req, res) => {
   try {
     const { rollNo, name, latitude, longitude, selfie, deviceFingerprint } = req.body;
@@ -956,7 +827,6 @@ app.post('/api/attendance/mark-fullday', checkActiveSession, async (req, res) =>
 
     const clientIP = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown';
     
-    // Anomaly detection
     const anomaly = detectAnomaly(user, latitude, longitude, clientIP, deviceFingerprint);
     
     if (anomaly.isAnomaly) {
@@ -1007,7 +877,6 @@ app.post('/api/attendance/mark-fullday', checkActiveSession, async (req, res) =>
   }
 });
 
-// ----- Admin Manual Attendance -----
 app.post('/api/admin/manual-attendance', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNo, date, status } = req.body;
@@ -1053,7 +922,6 @@ app.post('/api/admin/manual-attendance', async (req, res) => {
   }
 });
 
-// ----- Holidays -----
 app.post('/api/admin/holiday', async (req, res) => {
   try {
     const { requesterRollNo, date, reason } = req.body;
@@ -1076,7 +944,6 @@ app.get('/api/holidays', async (req, res) => {
   }
 });
 
-// ----- History & Analytics -----
 app.get('/api/attendance/history/:rollNo', async (req, res) => {
   try {
     const history = await Attendance.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ date: -1 });
