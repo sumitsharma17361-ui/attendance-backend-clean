@@ -67,14 +67,19 @@ mongoose.connect(MONGO_URI)
     process.exit(1);
   });
 
-// ---------- Mongoose Schemas ----------
+// ---------- Mongoose Schemas (Updated with Anti-Fake GPS Fields) ----------
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   rollNo: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, enum: ['student', 'faculty', 'admin'], default: 'student' },
   faceDescriptor: { type: [Number], default: [] },
-  boundDeviceId: { type: String, default: null }
+  boundDeviceId: { type: String, default: null },
+  // 🔥 ANTI-FAKE GPS FIELDS
+  lastKnownIP: { type: String, default: null },
+  lastAttendanceTime: { type: Date, default: null },
+  lastAttendanceLocation: { latitude: Number, longitude: Number },
+  anomalyFlag: { type: Boolean, default: false }
 }, { timestamps: true });
 
 const attendanceSchema = new mongoose.Schema({
@@ -83,7 +88,8 @@ const attendanceSchema = new mongoose.Schema({
   subject: { type: String, required: true },
   date: { type: String, required: true },
   status: { type: String, enum: ['Present', 'Absent', 'Duty Leave', 'Holiday'], default: 'Present' },
-  location: { latitude: Number, longitude: Number }
+  location: { latitude: Number, longitude: Number },
+  ipAddress: { type: String, default: null } // 🔥 Store IP for audit
 }, { timestamps: true });
 
 const holidaySchema = new mongoose.Schema({
@@ -120,6 +126,57 @@ const verifyRole = (roles) => {
     }
   };
 };
+
+// ---------- Helper Functions ----------
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// 🔥 ANTI-FAKE GPS: Anomaly Detection
+function detectAnomaly(user, lat, lng, reqIP) {
+  const MIN_TIME_BETWEEN_ATTENDANCE = 10 * 60 * 1000; // 10 Minutes
+  
+  // Check 1: Different IP within short time
+  if (user.lastKnownIP && user.lastKnownIP !== reqIP) {
+    if (user.lastAttendanceTime) {
+      const timeDiff = Date.now() - new Date(user.lastAttendanceTime).getTime();
+      if (timeDiff < MIN_TIME_BETWEEN_ATTENDANCE) {
+        return { 
+          isAnomaly: true, 
+          reason: `🚨 IP changed from ${user.lastKnownIP} to ${reqIP} within ${Math.round(timeDiff/60000)} minutes!` 
+        };
+      }
+    }
+  }
+  
+  // Check 2: Impossible travel distance within short time
+  if (user.lastAttendanceLocation && user.lastAttendanceLocation.latitude) {
+    const distance = calculateDistance(
+      user.lastAttendanceLocation.latitude, 
+      user.lastAttendanceLocation.longitude,
+      lat, lng
+    );
+    
+    // If location changed more than 5km within 10 minutes (impossible by foot)
+    if (distance > 5000 && user.lastAttendanceTime) {
+      const timeDiff = Date.now() - new Date(user.lastAttendanceTime).getTime();
+      if (timeDiff < MIN_TIME_BETWEEN_ATTENDANCE) {
+        return { 
+          isAnomaly: true, 
+          reason: `🚨 Impossible travel: ${Math.round(distance)}m in ${Math.round(timeDiff/60000)} minutes!` 
+        };
+      }
+    }
+  }
+  
+  return { isAnomaly: false };
+}
 
 // ---------- Routes ----------
 app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active & Secured!'));
@@ -162,7 +219,6 @@ app.post('/api/auth/login', async (req, res) => {
     }
     const { rollNo, password, deviceId } = parseResult.data;
     
-    // 🔥 DEBUG LOG - Check if deviceId is received
     console.log(`📱 Login attempt for ${rollNo}, Device ID: ${deviceId || 'NOT PROVIDED'}`);
     
     const cleanRoll = rollNo.trim().toUpperCase();
@@ -226,7 +282,7 @@ app.get('/api/face/get/:rollNo', async (req, res) => {
   }
 });
 
-// ----- Admin / Faculty Routes -----
+// ----- Admin Routes -----
 app.post('/api/admin/reset-password', async (req, res) => {
   try {
     const { requesterRollNo, targetRollNo, newPassword } = req.body;
@@ -243,12 +299,11 @@ app.post('/api/admin/reset-password', async (req, res) => {
   }
 });
 
-// 🔥 NEW: Admin Reset Device Binding API
+// 🔥 Admin Reset Device Binding API
 app.post('/api/admin/reset-device', async (req, res) => {
   try {
     const { requesterRollNo, targetRollNo } = req.body;
     
-    // Sirf Admin hi kar sakta hai
     if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) {
       return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     }
@@ -260,7 +315,6 @@ app.post('/api/admin/reset-device', async (req, res) => {
       return res.status(404).json({ error: `Student ${cleanRoll} not found!` });
     }
     
-    // Device binding reset
     const oldDeviceId = user.boundDeviceId;
     user.boundDeviceId = null;
     await user.save();
@@ -271,6 +325,38 @@ app.post('/api/admin/reset-device', async (req, res) => {
       message: `✅ Device binding reset for ${cleanRoll}! Now they can login from any phone.`,
       rollNo: cleanRoll,
       previousDeviceId: oldDeviceId || 'None'
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 🔥 Admin: Reset Anomaly Flag (if student wrongly flagged)
+app.post('/api/admin/reset-anomaly', async (req, res) => {
+  try {
+    const { requesterRollNo, targetRollNo } = req.body;
+    
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) {
+      return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    }
+    
+    const cleanRoll = targetRollNo.trim().toUpperCase();
+    const user = await User.findOne({ rollNo: cleanRoll });
+    
+    if (!user) {
+      return res.status(404).json({ error: `Student ${cleanRoll} not found!` });
+    }
+    
+    user.anomalyFlag = false;
+    user.lastKnownIP = null;
+    user.lastAttendanceTime = null;
+    user.lastAttendanceLocation = {};
+    await user.save();
+    
+    console.log(`✅ Anomaly flag reset for ${cleanRoll}`);
+    
+    res.json({ 
+      message: `✅ Anomaly flag reset for ${cleanRoll}! They can now mark attendance.`
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -371,25 +457,73 @@ function checkLocation(lat, lng) {
 
   return { isInside: distance <= 50, distance: distance.toFixed(0) };
 }
-// ----- Attendance Marking -----
+// ----- Attendance Marking (with Anti-Fake GPS Protection) -----
 app.post('/api/attendance/mark', async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude } = req.body;
     const today = new Date(), todayDate = today.toISOString().split('T')[0];
 
-    if (today.getDay() === 0 || today.getDay() === 6) return res.status(400).json({ error: 'Weekend! College was OFF.' });
+    if (today.getDay() === 0 || today.getDay() === 6) {
+      return res.status(400).json({ error: 'Weekend! College was OFF.' });
+    }
 
     const isHoliday = await Holiday.findOne({ date: todayDate });
-    if (isHoliday) return res.status(400).json({ error: `Holiday: ${isHoliday.reason}` });
+    if (isHoliday) {
+      return res.status(400).json({ error: `Holiday: ${isHoliday.reason}` });
+    }
 
     const locCheck = checkLocation(latitude, longitude);
-    if (!locCheck.isInside) return res.status(400).json({ error: `Outside Classroom Boundary! (${locCheck.distance}m away)` });
+    if (!locCheck.isInside) {
+      return res.status(400).json({ error: `Outside Classroom Boundary! (${locCheck.distance}m away)` });
+    }
 
     const cleanRoll = rollNo.trim().toUpperCase();
-    const exists = await Attendance.findOne({ rollNo: cleanRoll, subject, date: todayDate });
-    if (exists) return res.status(400).json({ error: `Already marked for ${subject} today!` });
+    const user = await User.findOne({ rollNo: cleanRoll });
+    if (!user) {
+      return res.status(404).json({ error: 'Student not found!' });
+    }
 
-    await new Attendance({ rollNo: cleanRoll, studentName: name, subject, date: todayDate, status: 'Present', location: { latitude, longitude } }).save();
+    // 🔥 ANTI-FAKE GPS: Get Client IP
+    const clientIP = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown';
+    
+    // 🔥 ANTI-FAKE GPS: Anomaly Detection
+    const anomaly = detectAnomaly(user, latitude, longitude, clientIP);
+    
+    if (anomaly.isAnomaly) {
+      user.anomalyFlag = true;
+      await user.save();
+      
+      console.log(`🚨 ANOMALY DETECTED for ${cleanRoll}: ${anomaly.reason}`);
+      
+      return res.status(403).json({ 
+        error: '⛔ Attendance Blocked! Suspicious activity detected. Contact Admin.',
+        reason: anomaly.reason 
+      });
+    }
+
+    // Check if already marked
+    const exists = await Attendance.findOne({ rollNo: cleanRoll, subject, date: todayDate });
+    if (exists) {
+      return res.status(400).json({ error: `Already marked for ${subject} today!` });
+    }
+
+    // 🔥 Update user's last known data
+    user.lastKnownIP = clientIP;
+    user.lastAttendanceTime = new Date();
+    user.lastAttendanceLocation = { latitude, longitude };
+    await user.save();
+
+    // Save attendance with IP
+    await new Attendance({ 
+      rollNo: cleanRoll, 
+      studentName: name, 
+      subject, 
+      date: todayDate, 
+      status: 'Present', 
+      location: { latitude, longitude },
+      ipAddress: clientIP 
+    }).save();
+    
     res.status(201).json({ message: `Attendance Marked for ${subject}!` });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -403,26 +537,72 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayName = days[today.getDay()];
 
-    if (dayName === 'Sunday' || dayName === 'Saturday') return res.status(400).json({ error: 'Weekend! College was OFF.' });
+    if (dayName === 'Sunday' || dayName === 'Saturday') {
+      return res.status(400).json({ error: 'Weekend! College was OFF.' });
+    }
 
     const isHoliday = await Holiday.findOne({ date: todayDate });
-    if (isHoliday) return res.status(400).json({ error: `Holiday: ${isHoliday.reason}` });
+    if (isHoliday) {
+      return res.status(400).json({ error: `Holiday: ${isHoliday.reason}` });
+    }
 
     const locCheck = checkLocation(latitude, longitude);
-    if (!locCheck.isInside) return res.status(400).json({ error: `Outside Classroom Boundary! (${locCheck.distance}m away)` });
+    if (!locCheck.isInside) {
+      return res.status(400).json({ error: `Outside Classroom Boundary! (${locCheck.distance}m away)` });
+    }
 
     const cleanRoll = rollNo.trim().toUpperCase();
+    const user = await User.findOne({ rollNo: cleanRoll });
+    if (!user) {
+      return res.status(404).json({ error: 'Student not found!' });
+    }
+
+    // 🔥 ANTI-FAKE GPS: Get Client IP
+    const clientIP = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown';
+    
+    // 🔥 ANTI-FAKE GPS: Anomaly Detection
+    const anomaly = detectAnomaly(user, latitude, longitude, clientIP);
+    
+    if (anomaly.isAnomaly) {
+      user.anomalyFlag = true;
+      await user.save();
+      
+      console.log(`🚨 ANOMALY DETECTED for ${cleanRoll}: ${anomaly.reason}`);
+      
+      return res.status(403).json({ 
+        error: '⛔ Attendance Blocked! Suspicious activity detected. Contact Admin.',
+        reason: anomaly.reason 
+      });
+    }
+
     const todaySubjects = TIME_TABLE[dayName] || ['General Class'];
     let markedCount = 0;
 
     for (let sub of todaySubjects) {
       const exists = await Attendance.findOne({ rollNo: cleanRoll, subject: sub, date: todayDate });
       if (!exists) {
-        await new Attendance({ rollNo: cleanRoll, studentName: name, subject: sub, date: todayDate, status: 'Present', location: { latitude, longitude } }).save();
+        await new Attendance({ 
+          rollNo: cleanRoll, 
+          studentName: name, 
+          subject: sub, 
+          date: todayDate, 
+          status: 'Present', 
+          location: { latitude, longitude },
+          ipAddress: clientIP 
+        }).save();
         markedCount++;
       }
     }
-    if (markedCount === 0) return res.status(400).json({ error: 'Full Day Attendance already marked!' });
+    
+    // Update user's last known data
+    user.lastKnownIP = clientIP;
+    user.lastAttendanceTime = new Date();
+    user.lastAttendanceLocation = { latitude, longitude };
+    await user.save();
+
+    if (markedCount === 0) {
+      return res.status(400).json({ error: 'Full Day Attendance already marked!' });
+    }
     res.status(201).json({ message: `Full Day Marked (${markedCount} Lectures)!` });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -433,18 +613,24 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
 app.post('/api/admin/manual-attendance', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNo, date, status } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied!' });
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) {
+      return res.status(403).json({ error: 'Access Denied!' });
+    }
 
     const targetRoll = studentRollNo.trim().toUpperCase();
     const user = await User.findOne({ rollNo: targetRoll });
-    if (!user) return res.status(404).json({ error: `Roll No ${targetRoll} not registered!` });
+    if (!user) {
+      return res.status(404).json({ error: `Roll No ${targetRoll} not registered!` });
+    }
 
     const parts = date.split('-');
     const targetDateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayName = days[targetDateObj.getDay()];
 
-    if (dayName === 'Sunday' || dayName === 'Saturday') return res.status(400).json({ error: 'Target date is a Weekend!' });
+    if (dayName === 'Sunday' || dayName === 'Saturday') {
+      return res.status(400).json({ error: 'Target date is a Weekend!' });
+    }
 
     const targetSubjects = TIME_TABLE[dayName] || ['General Class'];
     let markedCount = 0;
@@ -452,7 +638,15 @@ app.post('/api/admin/manual-attendance', async (req, res) => {
     for (let sub of targetSubjects) {
       const exists = await Attendance.findOne({ rollNo: targetRoll, subject: sub, date });
       if (!exists) {
-        await new Attendance({ rollNo: targetRoll, studentName: user.name, subject: sub, date, status: status || 'Present', location: { latitude: 28.4509370, longitude: 76.7688120 } }).save();
+        await new Attendance({ 
+          rollNo: targetRoll, 
+          studentName: user.name, 
+          subject: sub, 
+          date, 
+          status: status || 'Present', 
+          location: { latitude: 28.4509370, longitude: 76.7688120 },
+          ipAddress: 'admin-manual'
+        }).save();
         markedCount++;
       }
     }
@@ -466,7 +660,9 @@ app.post('/api/admin/manual-attendance', async (req, res) => {
 app.post('/api/admin/holiday', async (req, res) => {
   try {
     const { requesterRollNo, date, reason } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied!' });
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) {
+      return res.status(403).json({ error: 'Access Denied!' });
+    }
     await Holiday.findOneAndUpdate({ date }, { date, reason: reason || 'College Holiday' }, { upsert: true, new: true });
     res.json({ message: `Holiday declared for ${date}` });
   } catch (err) {
@@ -495,7 +691,9 @@ app.get('/api/attendance/history/:rollNo', async (req, res) => {
 
 app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
   try {
-    if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied!' });
+    if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) {
+      return res.status(403).json({ error: 'Access Denied!' });
+    }
     const allRecords = await Attendance.find().sort({ rollNo: 1, date: -1 });
     res.json(allRecords);
   } catch (err) {
@@ -505,7 +703,9 @@ app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
 
 app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
   try {
-    if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied!' });
+    if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) {
+      return res.status(403).json({ error: 'Access Denied!' });
+    }
     await Attendance.findByIdAndDelete(req.params.id);
     res.json({ message: 'Record deleted!' });
   } catch (err) {
@@ -526,6 +726,19 @@ app.get('/api/analytics/:rollNo', async (req, res) => {
     });
 
     res.json(subjectStats);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 🔥 Admin: Get all flagged students (Anomaly detected)
+app.get('/api/admin/flagged-students/:requesterRollNo', async (req, res) => {
+  try {
+    if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) {
+      return res.status(403).json({ error: 'Access Denied!' });
+    }
+    const flaggedStudents = await User.find({ anomalyFlag: true }).select('name rollNo anomalyFlag lastKnownIP lastAttendanceTime');
+    res.json(flaggedStudents);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
