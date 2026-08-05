@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
+const { z } = require('zod');
 
 const app = express();
 app.use(express.json());
@@ -10,8 +12,37 @@ app.use(cors());
 
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
-
 const ADMIN_ROLL_NUMBERS = ['24CSE48'];
+
+// 1. API RATE LIMITING (Brute Force Protection)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 Minutes
+  max: 10, // Max 10 requests per window
+  message: { error: 'Too many attempts from this IP, please try again after 15 minutes.' }
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 Minute
+  max: 60,
+  message: { error: 'Too many requests, please slow down.' }
+});
+
+app.use('/api/auth/', authLimiter);
+app.use('/api/', apiLimiter);
+
+// 2. PAYLOAD VALIDATION SCHEMAS (Zod Integration)
+const registerSchema = z.object({
+  name: z.string().min(2, "Name too short").max(50),
+  rollNo: z.string().regex(/^\d{2}(CSE|AIDS)\d{2}$/, "Invalid Roll No format (e.g. 24CSE48)"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  deviceId: z.string().optional()
+});
+
+const loginSchema = z.object({
+  rollNo: z.string().min(1, "Roll No required"),
+  password: z.string().min(1, "Password required"),
+  deviceId: z.string().optional()
+});
 
 const TIME_TABLE = {
   Monday: ['BDA', 'ECO', 'DAA', 'FLA', 'HRM', 'CN', 'WT'],
@@ -27,17 +58,14 @@ if (MONGO_URI) {
     .catch(err => console.log('DB ERROR:', err.message));
 }
 
-// ==========================================
-// SCHEMAS
-// ==========================================
-
-// UPDATED USER SCHEMA (Added 'faculty' and 'admin' enum for roles)
+// SCHEMAS (Added Device Binding field)
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   rollNo: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, enum: ['student', 'faculty', 'admin'], default: 'student' },
-  faceDescriptor: { type: [Number], default: [] } // 68-Point Vector Array
+  faceDescriptor: { type: [Number], default: [] },
+  boundDeviceId: { type: String, default: null } // Device Binding Feature
 }, { timestamps: true });
 
 const attendanceSchema = new mongoose.Schema({
@@ -65,9 +93,7 @@ const Attendance = mongoose.model('Attendance', attendanceSchema);
 const Holiday = mongoose.model('Holiday', holidaySchema);
 const Notice = mongoose.model('Notice', noticeSchema);
 
-// ==========================================
-// RBAC MIDDLEWARE (Role-Based Access Control)
-// ==========================================
+// RBAC MIDDLEWARE
 const verifyRole = (roles) => {
   return (req, res, next) => {
     const token = req.headers.authorization?.split(" ")[1];
@@ -86,54 +112,75 @@ const verifyRole = (roles) => {
   };
 };
 
-app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active!'));
+app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active & Secured!'));
 
-// ==========================================
-// AUTH & REGISTRATION
-// ==========================================
+// AUTH ROUTES WITH VALIDATION & DEVICE BINDING
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { name, rollNo, password } = req.body;
-    if (!name || !rollNo || !password) return res.status(400).json({ error: 'All fields required!' });
-    
-    const cleanRoll = rollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    
-    if (!/^\d{2}(CSE|AIDS)\d{2}$/.test(cleanRoll)) return res.status(400).json({ error: 'Invalid Roll format! Only CSE and AIDS branches are allowed, ending with exactly 2 digits (e.g., 24CSE48, 24AIDS12).' });
+    const parseResult = registerSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ error: parseResult.error.errors[0].message });
+    }
+    const { name, rollNo, password, deviceId } = parseResult.data;
+    const cleanRoll = rollNo.trim().toUpperCase();
 
     let user = await User.findOne({ rollNo: cleanRoll });
     if (user) return res.status(400).json({ error: 'Roll number already registered!' });
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const role = ADMIN_ROLL_NUMBERS.includes(cleanRoll) ? 'admin' : 'student';
-    await new User({ name, rollNo: cleanRoll, password: hashedPassword, role }).save();
+    
+    await new User({ 
+      name, 
+      rollNo: cleanRoll, 
+      password: hashedPassword, 
+      role,
+      boundDeviceId: deviceId || null 
+    }).save();
+
     res.status(201).json({ message: 'Registration successful!' });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/api/auth/login', async (req, res) => {
   try {
-    const { rollNo, password } = req.body;
-    const cleanRoll = rollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const parseResult = loginSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ error: parseResult.error.errors[0].message });
+    }
+    const { rollNo, password, deviceId } = parseResult.data;
+    const cleanRoll = rollNo.trim().toUpperCase();
+    
     const user = await User.findOne({ rollNo: cleanRoll });
     if (!user) return res.status(400).json({ error: 'User not found!' });
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ error: 'Invalid password!' });
+
+    // DEVICE BINDING CHECK
+    if (user.role === 'student') {
+      if (!user.boundDeviceId && deviceId) {
+        user.boundDeviceId = deviceId;
+        await user.save();
+      } else if (user.boundDeviceId && user.boundDeviceId !== deviceId) {
+        return res.status(403).json({ error: 'Unauthorized Device! Account bound to another phone.' });
+      }
+    }
+
     const role = ADMIN_ROLL_NUMBERS.includes(cleanRoll) ? 'admin' : user.role;
     const token = jwt.sign({ id: user._id, rollNo: user.rollNo, name: user.name, role }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ message: 'Login successful!', token, user: { name: user.name, rollNo: user.rollNo, role } });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ==========================================
-// GLOBAL MONGODB FACE MESH ENROLL & SYNC APIs
-// ==========================================
+// FACE MESH ENROLL & SYNC
 app.post('/api/face/enroll', async (req, res) => {
   try {
     const { rollNo, faceDescriptor } = req.body;
     if (!rollNo || !faceDescriptor || faceDescriptor.length === 0) {
       return res.status(400).json({ error: 'Valid Roll No and Face Neural Mesh required!' });
     }
-    const cleanRoll = rollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const cleanRoll = rollNo.trim().toUpperCase();
     const updatedUser = await User.findOneAndUpdate(
       { rollNo: cleanRoll },
       { faceDescriptor },
@@ -146,7 +193,7 @@ app.post('/api/face/enroll', async (req, res) => {
 
 app.get('/api/face/get/:rollNo', async (req, res) => {
   try {
-    const cleanRoll = req.params.rollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const cleanRoll = req.params.rollNo.trim().toUpperCase();
     const user = await User.findOne({ rollNo: cleanRoll });
     if (!user || !user.faceDescriptor || user.faceDescriptor.length === 0) {
       return res.status(404).json({ enrolled: false, message: 'Face ID Not Enrolled' });
@@ -155,16 +202,14 @@ app.get('/api/face/get/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ==========================================
 // ADMIN & FACULTY ROUTES
-// ==========================================
 app.post('/api/admin/reset-password', async (req, res) => {
   try {
     const { requesterRollNo, targetRollNo, newPassword } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''))) {
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) {
       return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     }
-    const cleanRoll = targetRollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const cleanRoll = targetRollNo.trim().toUpperCase();
     const hashedPassword = await bcrypt.hash(newPassword || '123456', 10);
     const updated = await User.findOneAndUpdate({ rollNo: cleanRoll }, { password: hashedPassword });
     if (!updated) return res.status(404).json({ error: 'Student Roll No not found!' });
@@ -175,11 +220,11 @@ app.post('/api/admin/reset-password', async (req, res) => {
 app.post('/api/admin/update-rollno', async (req, res) => {
   try {
     const { requesterRollNo, oldRoll, newRoll } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''))) {
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) {
       return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     }
-    const cleanOld = oldRoll.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    const cleanNew = newRoll.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const cleanOld = oldRoll.trim().toUpperCase();
+    const cleanNew = newRoll.trim().toUpperCase();
 
     await User.findOneAndUpdate({ rollNo: cleanOld }, { rollNo: cleanNew });
     await Attendance.updateMany({ rollNo: cleanOld }, { rollNo: cleanNew });
@@ -191,10 +236,10 @@ app.post('/api/admin/update-rollno', async (req, res) => {
 app.delete('/api/admin/delete-student', async (req, res) => {
   try {
     const { requesterRollNo, targetRollNo } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''))) {
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) {
       return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     }
-    const cleanTarget = targetRollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const cleanTarget = targetRollNo.trim().toUpperCase();
 
     await User.findOneAndDelete({ rollNo: cleanTarget });
     await Attendance.deleteMany({ rollNo: cleanTarget });
@@ -203,7 +248,6 @@ app.delete('/api/admin/delete-student', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// NEW: Faculty Route for manual overrides using RBAC
 app.post('/api/faculty/override', verifyRole(['faculty', 'admin']), async (req, res) => {
   try {
     const { studentRollNo, subject, date, status } = req.body;
@@ -218,9 +262,7 @@ app.post('/api/faculty/override', verifyRole(['faculty', 'admin']), async (req, 
   }
 });
 
-// ==========================================
-// BROADCAST NOTICES API
-// ==========================================
+// NOTICES
 app.get('/api/notices', async (req, res) => {
   try {
     const notices = await Notice.find().sort({ date: -1 }).limit(3);
@@ -231,7 +273,7 @@ app.get('/api/notices', async (req, res) => {
 app.post('/api/admin/notice', async (req, res) => {
   try {
     const { requesterRollNo, title, message } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''))) {
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) {
       return res.status(403).json({ error: 'Access Denied!' });
     }
 
@@ -246,9 +288,7 @@ app.post('/api/admin/notice', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ==========================================
-// ATTENDANCE MARKING & GEOFENCING
-// ==========================================
+// GEOFENCING CHECK (Strict 50-meter Radius)
 function checkLocation(lat, lng) {
   const COLLEGE_LAT = 28.4509370, COLLEGE_LNG = 76.7688120, R = 6371000;
   
@@ -261,7 +301,7 @@ function checkLocation(lat, lng) {
   const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(COLLEGE_LAT * (Math.PI / 180)) * Math.cos(lat * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
   const distance = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 
-  return { isInside: distance <= 500, distance: distance.toFixed(0) };
+  return { isInside: distance <= 50, distance: distance.toFixed(0) }; // Reduced boundary to 50 meters
 }
 
 app.post('/api/attendance/mark', async (req, res) => {
@@ -277,7 +317,7 @@ app.post('/api/attendance/mark', async (req, res) => {
     const locCheck = checkLocation(latitude, longitude);
     if (!locCheck.isInside) return res.status(400).json({ error: `Outside Classroom Boundary! (${locCheck.distance}m away)` });
 
-    const cleanRoll = rollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const cleanRoll = rollNo.trim().toUpperCase();
     const exists = await Attendance.findOne({ rollNo: cleanRoll, subject, date: todayDate });
     if (exists) return res.status(400).json({ error: `Already marked for ${subject} today!` });
 
@@ -301,7 +341,7 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     const locCheck = checkLocation(latitude, longitude);
     if (!locCheck.isInside) return res.status(400).json({ error: `Outside Classroom Boundary! (${locCheck.distance}m away)` });
 
-    const cleanRoll = rollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const cleanRoll = rollNo.trim().toUpperCase();
     const todaySubjects = TIME_TABLE[dayName] || ['General Class'];
     let markedCount = 0;
 
@@ -320,9 +360,9 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
 app.post('/api/admin/manual-attendance', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNo, date, status } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''))) return res.status(403).json({ error: 'Access Denied!' });
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied!' });
 
-    const targetRoll = studentRollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const targetRoll = studentRollNo.trim().toUpperCase();
     const user = await User.findOne({ rollNo: targetRoll });
     if (!user) return res.status(404).json({ error: `Roll No ${targetRoll} not registered!` });
 
@@ -347,13 +387,11 @@ app.post('/api/admin/manual-attendance', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ==========================================
 // HOLIDAYS & HISTORY & ANALYTICS
-// ==========================================
 app.post('/api/admin/holiday', async (req, res) => {
   try {
     const { requesterRollNo, date, reason } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''))) return res.status(403).json({ error: 'Access Denied!' });
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied!' });
     await Holiday.findOneAndUpdate({ date }, { date, reason: reason || 'College Holiday' }, { upsert: true, new: true });
     res.json({ message: `Holiday declared for ${date}` });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -368,14 +406,14 @@ app.get('/api/holidays', async (req, res) => {
 
 app.get('/api/attendance/history/:rollNo', async (req, res) => {
   try {
-    const history = await Attendance.find({ rollNo: req.params.rollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, '') }).sort({ date: -1 });
+    const history = await Attendance.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ date: -1 });
     res.json(history);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
   try {
-    if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''))) return res.status(403).json({ error: 'Access Denied!' });
+    if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied!' });
     const allRecords = await Attendance.find().sort({ rollNo: 1, date: -1 });
     res.json(allRecords);
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -383,13 +421,12 @@ app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
 
 app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
   try {
-    if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''))) return res.status(403).json({ error: 'Access Denied!' });
+    if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied!' });
     await Attendance.findByIdAndDelete(req.params.id);
     res.json({ message: 'Record deleted!' });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// NEW: Analytics Route for Chart.js Dashboard
 app.get('/api/analytics/:rollNo', async (req, res) => {
   try {
     const cleanRoll = req.params.rollNo.trim().toUpperCase();
@@ -410,4 +447,4 @@ app.get('/api/analytics/:rollNo', async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-      
+  
