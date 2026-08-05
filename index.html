@@ -729,9 +729,7 @@
                             <input type="text" id="deleteStudentRoll" placeholder="Roll No to Delete (e.g. 24-CSE-14)">
                             <button class="btn btn-danger" onclick="deleteEntireStudentAccount()" style="margin-top:0;">Delete Account Permanently</button>
                         </div>
-                    </div>
-
-                    <!-- DIRECTORY TAB -->
+                   <!-- DIRECTORY TAB -->
                     <div id="subDirectory" style="display:none;">
                         <button class="btn btn-outline" onclick="fetchAllAttendance()" style="margin-bottom:8px;">Refresh Records Directory</button>
                         <h4 style="font-size:11px; color:var(--text-muted); margin-top:6px; font-weight:700;">Class Records Directory:</h4>
@@ -1015,7 +1013,6 @@
                 showMsg("Server Connection Error!", true);
             }
         }
-
         async function updateRollNumberFormat() {
             const user = JSON.parse(localStorage.getItem('user'));
             const oldRoll = document.getElementById('oldRollFormat').value.trim();
@@ -1272,7 +1269,6 @@
             }
             video.srcObject = null;
         }
-
         async function executeCameraAction() {
             const user = JSON.parse(localStorage.getItem('user'));
             const video = document.getElementById('webcamVideo');
@@ -1480,7 +1476,6 @@
             requestNotificationPermission();
             loadAnalyticsChart(user.rollNo);
         }
-
         function markFullDayAttendance() {
             if (!navigator.geolocation) {
                 return showMsg('Geolocation is not supported!', true);
@@ -1724,8 +1719,7 @@
                         const neededLectures = Math.ceil(0.75 * calc.totalConductedLectures - calc.totalAttendedLectures);
                         advisorBox.innerHTML = `Low Attendance (<b>${calc.pct}%</b>). Need <b>${Math.max(0, neededLectures)}</b> more lectures to reach 75%.`;
                     }
-                }
-
+        }
                 renderAttendanceCalendar(globalMyRecords);
 
                 const sortedDates = Object.values(dateGrouped).sort((a,b) => b.date.localeCompare(a.date));
@@ -1742,7 +1736,9 @@
             } catch(e) {
                 showMsg("Failed to sync attendance logs!", true);
             }
-                      async function fetchAllAttendance() {
+        }
+
+        async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             try {
                 const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
@@ -1914,4 +1910,4 @@
         if (localStorage.getItem('user')) loadDashboard();
     </script>
 </body>
-</html>                                                                                             }
+</html>
