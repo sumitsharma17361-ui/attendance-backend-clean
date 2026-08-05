@@ -449,1296 +449,1296 @@
             </div>
         </div>
     </div>
-
     <div class="app-container">
-        <div class="app-header">
-            <div class="app-header-title">
-                <h1>BM Group of Institutions</h1>
-                <p>B.Tech CSE - 5th Semester (Room 203)</p>
-            </div>
-            <div class="header-avatar-badge" id="headerAvatarBox" style="display:none;">
-                <div class="avatar-circle" id="userAvatarText">SS</div>
-            </div>
+    <div class="app-header">
+        <div class="app-header-title">
+            <h1>BM Group of Institutions</h1>
+            <p>B.Tech CSE - 5th Semester (Room 203)</p>
         </div>
-
-        <div class="notice-banner" id="noticeBanner" style="display:none;">
-            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-            <div class="notice-marquee">
-                <p id="noticeText">Loading announcements...</p>
-            </div>
-        </div>
-
-        <div class="app-body">
-            <!-- AUTH -->
-            <div id="auth-box" class="tab-content-active">
-                <div id="register-fields" style="display: none;">
-                    <input type="text" id="regName" placeholder="Full Student Name">
-                </div>
-                <input type="text" id="rollNo" placeholder="Roll Number (e.g. 24CSE48)">
-                <div class="password-wrapper">
-                    <input type="password" id="password" placeholder="Password">
-                    <span class="eye-icon" id="toggleEye" onclick="togglePassword()">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                    </span>
-                </div>
-                <button class="btn btn-primary" id="authBtn" onclick="handleAuth()">Sign In</button>
-                <span style="color:var(--primary); cursor:pointer; font-size:12px; display:block; text-align:center; margin-top:12px; font-weight:600;" id="toggleLink" onclick="toggleMode()">New Student? Register Account</span>
-            </div>
-
-            <!-- DASHBOARD -->
-            <div id="dash-box" style="display: none;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <div>
-                        <h3 style="font-size:14px; font-weight:800;">
-                            <span id="welcomeMsg">Welcome!</span>
-                            <span id="defaulterTag" class="defaulter-badge" style="display:none;">DEBARRED RISK</span>
-                        </h3>
-                        <p style="font-size: 11px; color: var(--text-muted); font-weight:600;"><span id="roleLabel">Roll</span>: <span id="userRoll" style="font-weight:700;"></span></p>
-                    </div>
-                    <button class="btn btn-danger" style="width:auto; padding:5px 10px; margin:0; font-size:11px;" onclick="logout()">Logout</button>
-                </div>
-
-                <!-- STUDENT DYNAMIC STATS CARD -->
-                <div class="stats-grid" id="studentStatsGrid">
-                    <div class="stat-card">
-                        <div class="value" id="totalDaysCount">0</div>
-                        <div class="label">Academic Lectures</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="value" id="attendancePct">0%</div>
-                        <div class="label">Attendance Status</div>
-                    </div>
-                </div>
-
-                <!-- PURE SUPER ADMIN STATS CARD -->
-                <div class="stats-grid" id="adminStatsGrid" style="display:none;">
-                    <div class="stat-card">
-                        <div class="value" id="adminTotalStudents">0</div>
-                        <div class="label">Enrolled Students</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="value" id="adminClassAvg">78.5%</div>
-                        <div class="label">Class Attendance Avg</div>
-                    </div>
-                </div>
-
-                <!-- STUDENT ADVISOR CARD -->
-                <div class="simulator-card" id="simulatorBox">
-                    <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-                    <div><b>Attendance Advisor:</b> <span id="advisorText">Calculating criteria...</span></div>
-                </div>
-
-                <!-- SUBJECT-WISE ATTENDANCE ANALYTICS CHART -->
-                <div class="admin-box" id="analyticsBox" style="margin:12px 0; padding: 15px; background: #fff; border-radius: 14px; border: 1px solid var(--card-border);">
-                    <h4 style="font-size:12px; font-weight:800; color:var(--text-main); margin-bottom:10px;">Academic Subject Breakdown</h4>
-                    <canvas id="attendanceChart" width="400" height="200"></canvas>
-                </div>
-
-                <!-- QUICK STUDENT PORTALS -->
-                <div class="quick-portals-card">
-                    <span style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Quick Portals</span>
-                    <div class="portal-grid">
-                        <div class="portal-btn" onclick="window.open('https://erp.bmctm.com/fees', '_blank')">
-                            <svg class="svg-icon" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-                            <span>Pay Fees</span>
-                        </div>
-                        <div class="portal-btn" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login', '_blank')">
-                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-                            <span>Admit Card</span>
-                        </div>
-                        <div class="portal-btn" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login', '_blank')">
-                            <svg class="svg-icon" viewBox="0 0 24 24"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
-                            <span>Results</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- AI FACE ID ENROLLMENT & SCANNER MODAL -->
-                <div class="admin-box" id="faceEnrollBox" style="margin-bottom:12px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <span style="font-size:11px; font-weight:800; color:var(--text-main);">AI Face ID Status:</span>
-                            <span id="faceStatusBadge" class="badge" style="background:#f1f5f9; color:var(--text-muted); margin-left:4px;">Not Enrolled</span>
-                        </div>
-                        <button class="action-btn" style="background:var(--primary); color:white;" onclick="openCameraModal('ENROLL')">
-                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
-                            Enroll Face
-                        </button>
-                    </div>
-
-                    <div id="cameraModal" style="display:none; margin-top:10px; text-align:center;">
-                        <div class="webcam-box">
-                            <video id="webcamVideo" autoplay playsinline muted></video>
-                            <div class="scan-overlay"></div>
-                        </div>
-                        <p id="cameraScanStatus" style="font-size:11px; font-weight:700; color:var(--primary); margin-bottom:6px;">Loading Face-AI Neural Engine...</p>
-                        <button class="btn btn-primary" id="camActionBtn" onclick="executeCameraAction()" style="padding:8px; font-size:11px;">Scan 68-Point Mesh</button>
-                        <button class="btn btn-outline" onclick="closeCameraModal()" style="padding:6px; font-size:10px; margin-top:4px;">Cancel</button>
-                    </div>
-                </div>
-
-                <div class="tab-bar">
-                    <div class="tab-item active" id="studentTabHeader" onclick="switchTab('markTab')">Attendance</div>
-                    <div class="tab-item" id="adminTabHeader" style="display:none;" onclick="switchTab('adminTab')">Admin Control</div>
-                </div>
-
-                <!-- TAB 1: MARK ATTENDANCE -->
-                <div id="markTab" class="tab-content-active">
-                    <button class="btn btn-primary" onclick="openFullDayPasscodePrompt()" style="padding:11px;">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                        Mark Full Day Attendance (via Class Passcode)
-                    </button>
-                    
-                    <div class="action-buttons-grid">
-                        <button class="btn btn-outline" onclick="openCameraModal('CHECKIN')">
-                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                            Face Verification
-                        </button>
-                        <button class="btn btn-outline" onclick="openStudentQRScanner()">
-                            <svg class="svg-icon" viewBox="0 0 24 24"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/></svg>
-                            Scan Class QR
-                        </button>
-                    </div>
-
-                    <div style="text-align:center; font-size:10px; color:var(--text-muted); margin: 12px 0 4px 0; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Live Timetable Period Tracker</div>
-                    <div class="period-card" id="periodCardBox">
-                        <div>
-                            <span style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase;" id="periodTimeSlotLabel">CURRENT PERIOD STATUS:</span>
-                            <h4 id="activePeriodName" style="font-size:12px; font-weight:800; color:#0f172a; margin-top:2px;">Checking Live Timetable...</h4>
-                        </div>
-                        <button class="action-btn" id="markPeriodBtn" style="background:var(--success); color:white; padding:6px 12px;" onclick="markActivePeriodAttendance()">Mark Lecture</button>
-                    </div>
-
-                    <div class="calendar-container">
-                        <div class="calendar-header">
-                            <span>Attendance Calendar</span>
-                            <select id="calendarViewMode" onchange="toggleCalendarView()" style="width:auto; padding:4px 8px; font-size:11px; margin:0;">
-                                <option value="CURRENT_MONTH">Current Month</option>
-                                <option value="FULL_SEMESTER">Full Semester (Jul-Dec 2026)</option>
-                            </select>
-                        </div>
-                        <div id="calendarDisplayWrapper"></div>
-                    </div>
-
-                    <div style="margin-top:10px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                            <h4 style="font-size:11px; color:var(--text-muted); font-weight:700;">My Attendance Logs (Date-Wise):</h4>
-                            <!-- RESTORED STUDENT EXCEL BUTTON -->
-                            <button class="btn btn-success" style="width:auto; padding:5px 10px; margin:0; font-size:10px;" onclick="openStudentExcelModal()">
-                                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                                Download Excel Sheet
-                            </button>
-                        </div>
-                        <div class="table-container">
-                            <table id="myHistoryTable">
-                                <thead><tr><th>Date</th><th>Day</th><th>Lectures Attended</th><th>Status</th></tr></thead>
-                                <tbody><tr><td colspan="4" style="text-align:center;">Loading...</td></tr></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                 <!-- ADMIN CONTROL TAB -->
-                <div id="adminTab" style="display:none;">
-                    <div class="admin-nav">
-                        <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">Excel</div>
-                        <div class="admin-nav-item" onclick="switchAdminSubTab('subAttendance')">Entry</div>
-                        <div class="admin-nav-item" onclick="switchAdminSubTab('subHoliday')">Holiday</div>
-                        <div class="admin-nav-item" onclick="switchAdminSubTab('subQR')">QR</div>
-                        <div class="admin-nav-item" onclick="switchAdminSubTab('subTools')">Tools</div>
-                        <div class="admin-nav-item" onclick="switchAdminSubTab('subDirectory')">Directory</div>
-                    </div>
-
-                    <div id="subReports" class="admin-box tab-content-active">
-                        <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Export Excel Reports:</span>
-                        <select id="exportSelection" style="padding:10px; margin-bottom:8px;">
-                            <option value="ALL_SEMESTER">Full Semester (Jul-Dec 2026)</option>
-                            <option value="6">July 2026</option>
-                            <option value="7">August 2026</option>
-                            <option value="8">September 2026</option>
-                            <option value="9">October 2026</option>
-                            <option value="10">November 2026</option>
-                            <option value="11">December 2026</option>
-                        </select>
-                        <button class="btn btn-success" onclick="exportExcelGrid()" style="margin-top:0; padding:10px;">Download Excel Report</button>
-                    </div>
-
-                    <div id="subAttendance" class="admin-box" style="display:none;">
-                        <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Manual Backdate Attendance:</span>
-                        <input type="text" id="manualRoll" placeholder="Student Roll No (e.g. 24CSE14)">
-                        <input type="date" id="manualDate">
-                        <select id="manualStatus">
-                            <option value="Present">Present</option>
-                            <option value="Duty Leave">Duty Leave (DL)</option>
-                        </select>
-                        <button class="btn btn-primary" onclick="markManualAttendance()" style="margin-top:0; padding:10px;">Mark Attendance</button>
-                    </div>
-
-                    <div id="subHoliday" class="admin-box" style="display:none;">
-                        <span style="font-size:11px; font-weight:700; color:var(--warning); display:block; margin-bottom:6px;">Declare Official Holiday:</span>
-                        <input type="date" id="holidayDate">
-                        <input type="text" id="holidayReason" placeholder="Reason (e.g. Diwali/Rainy Day)">
-                        <button class="btn btn-warning" onclick="declareHoliday()" style="margin-top:0; padding:10px;">Mark Date as Holiday</button>
-                    </div>
-
-                    <div id="subQR" class="admin-box" style="display:none; text-align:center;">
-                        <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Dynamic Rotating QR & Daily Master Secret:</span>
-                        <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">Project this screen in class. Students enter Daily Master Secret to mark attendance.</p>
-                        <div style="background:#f8fafc; padding:10px; border-radius:10px; margin-bottom:8px; border:1px solid var(--card-border);">
-                            <span style="font-size:10px; font-weight:700; color:var(--text-muted);">DAILY MASTER SECRET / CLASS PASSCODE:</span>
-                            <h2 id="liveClassPasscode" style="font-size:24px; font-weight:900; color:var(--primary); letter-spacing:4px;">9842</h2>
-                        </div>
-                        <div id="qrcode" style="display:flex; justify-content:center; margin:10px 0;"></div>
-                        <button class="btn btn-outline" id="refreshQrBtn" onclick="generateDynamicQR()" style="padding:8px; font-size:11px;">
-                            <svg id="refreshIcon" class="svg-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
-                            Refresh Passcode & QR Code Now
-                        </button>
-                    </div>
-
-                    <div id="subTools" style="display:none;">
-                        <div class="tool-sub-card">
-                            <span class="tool-title" style="color:var(--primary);">Register New Student Manually:</span>
-                            <input type="text" id="adminRegName" placeholder="Full Student Name">
-                            <input type="text" id="adminRegRoll" placeholder="Roll Number (e.g. 24CSE14)">
-                            <input type="text" id="adminRegPass" placeholder="Password (Default: 123456)">
-                            <button class="btn btn-primary" onclick="adminRegisterStudent()" style="margin-top:0;">Register Student</button>
-                        </div>
-
-                        <div class="tool-sub-card">
-                            <span class="tool-title" style="color:var(--text-main);">Broadcast Announcement Notice:</span>
-                            <input type="text" id="noticeMsg" placeholder="Notice text (e.g. Mid-Sem Exams from Monday)">
-                            <button class="btn btn-primary" onclick="postNotice()" style="margin-top:0; margin-bottom:6px;">Publish Notice</button>
-                            <button class="btn btn-danger" onclick="clearNotice()" style="margin-top:0;">Clear Active Notice</button>
-                        </div>
-
-                        <div class="tool-sub-card">
-                            <span class="tool-title" style="color:var(--primary);">Fix / Update Student Roll Number Format:</span>
-                            <input type="text" id="oldRollFormat" placeholder="Old Roll No (e.g. 24-CSE-14)">
-                            <input type="text" id="newRollFormat" placeholder="New Clean Roll No (e.g. 24CSE14)">
-                            <button class="btn btn-primary" onclick="updateRollNumberFormat()" style="margin-top:0;">Update Roll Number</button>
-                        </div>
-
-                        <div class="tool-sub-card">
-                            <span class="tool-title" style="color:var(--warning);">Reset Student Password:</span>
-                            <input type="text" id="resetRoll" placeholder="Student Roll No (e.g. 24CSE14)">
-                            <input type="text" id="resetPass" placeholder="New Password (Default: 123456)">
-                            <button class="btn btn-warning" onclick="resetStudentPassword()" style="margin-top:0;">Reset Password</button>
-                        </div>
-
-                        <div class="tool-sub-card" style="border-color:#fecaca; background:#fef2f2;">
-                            <span class="tool-title" style="color:#b91c1c;">Permanently Delete Student Account:</span>
-                            <input type="text" id="deleteStudentRoll" placeholder="Roll No to Delete (e.g. 24-CSE-14)">
-                            <button class="btn btn-danger" onclick="deleteEntireStudentAccount()" style="margin-top:0;">Delete Account Permanently</button>
-                        </div>
-                   <!-- DIRECTORY TAB -->
-                    <div id="subDirectory" style="display:none;">
-                        <button class="btn btn-outline" onclick="fetchAllAttendance()" style="margin-bottom:8px;">Refresh Records Directory</button>
-                        <h4 style="font-size:11px; color:var(--text-muted); margin-top:6px; font-weight:700;">Class Records Directory:</h4>
-                        <div class="table-container">
-                            <table id="allHistoryTable">
-                                <thead><tr><th>Roll</th><th>Name</th><th>Date</th><th>Attended</th><th>Actions</th></tr></thead>
-                                <tbody><tr><td colspan="5" style="text-align:center;">Click refresh...</td></tr></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
+        <div class="header-avatar-badge" id="headerAvatarBox" style="display:none;">
+            <div class="avatar-circle" id="userAvatarText">SS</div>
         </div>
     </div>
 
+    <div class="notice-banner" id="noticeBanner" style="display:none;">
+        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <div class="notice-marquee">
+            <p id="noticeText">Loading announcements...</p>
+        </div>
+    </div>
+
+    <div class="app-body">
+        <!-- AUTH -->
+        <div id="auth-box" class="tab-content-active">
+            <div id="register-fields" style="display: none;">
+                <input type="text" id="regName" placeholder="Full Student Name">
+            </div>
+            <input type="text" id="rollNo" placeholder="Roll Number (e.g. 24CSE48)">
+            <div class="password-wrapper">
+                <input type="password" id="password" placeholder="Password">
+                <span class="eye-icon" id="toggleEye" onclick="togglePassword()">
+                    <svg class="svg-icon" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                </span>
+            </div>
+            <button class="btn btn-primary" id="authBtn" onclick="handleAuth()">Sign In</button>
+            <span style="color:var(--primary); cursor:pointer; font-size:12px; display:block; text-align:center; margin-top:12px; font-weight:600;" id="toggleLink" onclick="toggleMode()">New Student? Register Account</span>
+        </div>
+
+        <!-- DASHBOARD -->
+        <div id="dash-box" style="display: none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <div>
+                    <h3 style="font-size:14px; font-weight:800;">
+                        <span id="welcomeMsg">Welcome!</span>
+                        <span id="defaulterTag" class="defaulter-badge" style="display:none;">DEBARRED RISK</span>
+                    </h3>
+                    <p style="font-size: 11px; color: var(--text-muted); font-weight:600;"><span id="roleLabel">Roll</span>: <span id="userRoll" style="font-weight:700;"></span></p>
+                </div>
+                <button class="btn btn-danger" style="width:auto; padding:5px 10px; margin:0; font-size:11px;" onclick="logout()">Logout</button>
+            </div>
+
+            <!-- STUDENT DYNAMIC STATS CARD -->
+            <div class="stats-grid" id="studentStatsGrid">
+                <div class="stat-card">
+                    <div class="value" id="totalDaysCount">0</div>
+                    <div class="label">Academic Lectures</div>
+                </div>
+                <div class="stat-card">
+                    <div class="value" id="attendancePct">0%</div>
+                    <div class="label">Attendance Status</div>
+                </div>
+            </div>
+
+            <!-- PURE SUPER ADMIN STATS CARD -->
+            <div class="stats-grid" id="adminStatsGrid" style="display:none;">
+                <div class="stat-card">
+                    <div class="value" id="adminTotalStudents">0</div>
+                    <div class="label">Enrolled Students</div>
+                </div>
+                <div class="stat-card">
+                    <div class="value" id="adminClassAvg">78.5%</div>
+                    <div class="label">Class Attendance Avg</div>
+                </div>
+            </div>
+
+            <!-- STUDENT ADVISOR CARD -->
+            <div class="simulator-card" id="simulatorBox">
+                <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                <div><b>Attendance Advisor:</b> <span id="advisorText">Calculating criteria...</span></div>
+            </div>
+
+            <!-- SUBJECT-WISE ATTENDANCE ANALYTICS CHART -->
+            <div class="admin-box" id="analyticsBox" style="margin:12px 0; padding: 15px; background: #fff; border-radius: 14px; border: 1px solid var(--card-border);">
+                <h4 style="font-size:12px; font-weight:800; color:var(--text-main); margin-bottom:10px;">Academic Subject Breakdown</h4>
+                <canvas id="attendanceChart" width="400" height="200"></canvas>
+            </div>
+
+            <!-- QUICK STUDENT PORTALS -->
+            <div class="quick-portals-card">
+                <span style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Quick Portals</span>
+                <div class="portal-grid">
+                    <div class="portal-btn" onclick="window.open('https://erp.bmctm.com/fees', '_blank')">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                        <span>Pay Fees</span>
+                    </div>
+                    <div class="portal-btn" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login', '_blank')">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <span>Admit Card</span>
+                    </div>
+                    <div class="portal-btn" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login', '_blank')">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+                        <span>Results</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI FACE ID ENROLLMENT & SCANNER MODAL -->
+            <div class="admin-box" id="faceEnrollBox" style="margin-bottom:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <span style="font-size:11px; font-weight:800; color:var(--text-main);">AI Face ID Status:</span>
+                        <span id="faceStatusBadge" class="badge" style="background:#f1f5f9; color:var(--text-muted); margin-left:4px;">Not Enrolled</span>
+                    </div>
+                    <button class="action-btn" style="background:var(--primary); color:white;" onclick="openCameraModal('ENROLL')">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                        Enroll Face
+                    </button>
+                </div>
+
+                <div id="cameraModal" style="display:none; margin-top:10px; text-align:center;">
+                    <div class="webcam-box">
+                        <video id="webcamVideo" autoplay playsinline muted></video>
+                        <div class="scan-overlay"></div>
+                    </div>
+                    <p id="cameraScanStatus" style="font-size:11px; font-weight:700; color:var(--primary); margin-bottom:6px;">Loading Face-AI Neural Engine...</p>
+                    <button class="btn btn-primary" id="camActionBtn" onclick="executeCameraAction()" style="padding:8px; font-size:11px;">Scan 68-Point Mesh</button>
+                    <button class="btn btn-outline" onclick="closeCameraModal()" style="padding:6px; font-size:10px; margin-top:4px;">Cancel</button>
+                </div>
+            </div>
+
+            <div class="tab-bar">
+                <div class="tab-item active" id="studentTabHeader" onclick="switchTab('markTab')">Attendance</div>
+                <div class="tab-item" id="adminTabHeader" style="display:none;" onclick="switchTab('adminTab')">Admin Control</div>
+            </div>
+
+            <!-- TAB 1: MARK ATTENDANCE -->
+            <div id="markTab" class="tab-content-active">
+                <button class="btn btn-primary" onclick="openFullDayPasscodePrompt()" style="padding:11px;">
+                    <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    Mark Full Day Attendance (via Class Passcode)
+                </button>
+                
+                <div class="action-buttons-grid">
+                    <button class="btn btn-outline" onclick="openCameraModal('CHECKIN')">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        Face Verification
+                    </button>
+                    <button class="btn btn-outline" onclick="openStudentQRScanner()">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/></svg>
+                        Scan Class QR
+                    </button>
+                </div>
+
+                <div style="text-align:center; font-size:10px; color:var(--text-muted); margin: 12px 0 4px 0; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Live Timetable Period Tracker</div>
+                <div class="period-card" id="periodCardBox">
+                    <div>
+                        <span style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase;" id="periodTimeSlotLabel">CURRENT PERIOD STATUS:</span>
+                        <h4 id="activePeriodName" style="font-size:12px; font-weight:800; color:#0f172a; margin-top:2px;">Checking Live Timetable...</h4>
+                    </div>
+                    <button class="action-btn" id="markPeriodBtn" style="background:var(--success); color:white; padding:6px 12px;" onclick="markActivePeriodAttendance()">Mark Lecture</button>
+                </div>
+
+                <div class="calendar-container">
+                    <div class="calendar-header">
+                        <span>Attendance Calendar</span>
+                        <select id="calendarViewMode" onchange="toggleCalendarView()" style="width:auto; padding:4px 8px; font-size:11px; margin:0;">
+                            <option value="CURRENT_MONTH">Current Month</option>
+                            <option value="FULL_SEMESTER">Full Semester (Jul-Dec 2026)</option>
+                        </select>
+                    </div>
+                    <div id="calendarDisplayWrapper"></div>
+                </div>
+
+                <div style="margin-top:10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <h4 style="font-size:11px; color:var(--text-muted); font-weight:700;">My Attendance Logs (Date-Wise):</h4>
+                        <!-- RESTORED STUDENT EXCEL BUTTON -->
+                        <button class="btn btn-success" style="width:auto; padding:5px 10px; margin:0; font-size:10px;" onclick="openStudentExcelModal()">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                            Download Excel Sheet
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table id="myHistoryTable">
+                            <thead><tr><th>Date</th><th>Day</th><th>Lectures Attended</th><th>Status</th></tr></thead>
+                            <tbody><tr><td colspan="4" style="text-align:center;">Loading...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+                            </div>
+                         <!-- ADMIN CONTROL TAB -->
+            <div id="adminTab" style="display:none;">
+                <div class="admin-nav">
+                    <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">Excel</div>
+                    <div class="admin-nav-item" onclick="switchAdminSubTab('subAttendance')">Entry</div>
+                    <div class="admin-nav-item" onclick="switchAdminSubTab('subHoliday')">Holiday</div>
+                    <div class="admin-nav-item" onclick="switchAdminSubTab('subQR')">QR</div>
+                    <div class="admin-nav-item" onclick="switchAdminSubTab('subTools')">Tools</div>
+                    <div class="admin-nav-item" onclick="switchAdminSubTab('subDirectory')">Directory</div>
+                </div>
+
+                <div id="subReports" class="admin-box tab-content-active">
+                    <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Export Excel Reports:</span>
+                    <select id="exportSelection" style="padding:10px; margin-bottom:8px;">
+                        <option value="ALL_SEMESTER">Full Semester (Jul-Dec 2026)</option>
+                        <option value="6">July 2026</option>
+                        <option value="7">August 2026</option>
+                        <option value="8">September 2026</option>
+                        <option value="9">October 2026</option>
+                        <option value="10">November 2026</option>
+                        <option value="11">December 2026</option>
+                    </select>
+                    <button class="btn btn-success" onclick="exportExcelGrid()" style="margin-top:0; padding:10px;">Download Excel Report</button>
+                </div>
+
+                <div id="subAttendance" class="admin-box" style="display:none;">
+                    <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Manual Backdate Attendance:</span>
+                    <input type="text" id="manualRoll" placeholder="Student Roll No (e.g. 24CSE14)">
+                    <input type="date" id="manualDate">
+                    <select id="manualStatus">
+                        <option value="Present">Present</option>
+                        <option value="Duty Leave">Duty Leave (DL)</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="markManualAttendance()" style="margin-top:0; padding:10px;">Mark Attendance</button>
+                </div>
+
+                <div id="subHoliday" class="admin-box" style="display:none;">
+                    <span style="font-size:11px; font-weight:700; color:var(--warning); display:block; margin-bottom:6px;">Declare Official Holiday:</span>
+                    <input type="date" id="holidayDate">
+                    <input type="text" id="holidayReason" placeholder="Reason (e.g. Diwali/Rainy Day)">
+                    <button class="btn btn-warning" onclick="declareHoliday()" style="margin-top:0; padding:10px;">Mark Date as Holiday</button>
+                </div>
+
+                <div id="subQR" class="admin-box" style="display:none; text-align:center;">
+                    <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Dynamic Rotating QR & Daily Master Secret:</span>
+                    <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">Project this screen in class. Students enter Daily Master Secret to mark attendance.</p>
+                    <div style="background:#f8fafc; padding:10px; border-radius:10px; margin-bottom:8px; border:1px solid var(--card-border);">
+                        <span style="font-size:10px; font-weight:700; color:var(--text-muted);">DAILY MASTER SECRET / CLASS PASSCODE:</span>
+                        <h2 id="liveClassPasscode" style="font-size:24px; font-weight:900; color:var(--primary); letter-spacing:4px;">9842</h2>
+                    </div>
+                    <div id="qrcode" style="display:flex; justify-content:center; margin:10px 0;"></div>
+                    <button class="btn btn-outline" id="refreshQrBtn" onclick="generateDynamicQR()" style="padding:8px; font-size:11px;">
+                        <svg id="refreshIcon" class="svg-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+                        Refresh Passcode & QR Code Now
+                    </button>
+                </div>
+
+                <div id="subTools" style="display:none;">
+                    <div class="tool-sub-card">
+                        <span class="tool-title" style="color:var(--primary);">Register New Student Manually:</span>
+                        <input type="text" id="adminRegName" placeholder="Full Student Name">
+                        <input type="text" id="adminRegRoll" placeholder="Roll Number (e.g. 24CSE14)">
+                        <input type="text" id="adminRegPass" placeholder="Password (Default: 123456)">
+                        <button class="btn btn-primary" onclick="adminRegisterStudent()" style="margin-top:0;">Register Student</button>
+                    </div>
+
+                    <div class="tool-sub-card">
+                        <span class="tool-title" style="color:var(--text-main);">Broadcast Announcement Notice:</span>
+                        <input type="text" id="noticeMsg" placeholder="Notice text (e.g. Mid-Sem Exams from Monday)">
+                        <button class="btn btn-primary" onclick="postNotice()" style="margin-top:0; margin-bottom:6px;">Publish Notice</button>
+                        <button class="btn btn-danger" onclick="clearNotice()" style="margin-top:0;">Clear Active Notice</button>
+                    </div>
+
+                    <div class="tool-sub-card">
+                        <span class="tool-title" style="color:var(--primary);">Fix / Update Student Roll Number Format:</span>
+                        <input type="text" id="oldRollFormat" placeholder="Old Roll No (e.g. 24-CSE-14)">
+                        <input type="text" id="newRollFormat" placeholder="New Clean Roll No (e.g. 24CSE14)">
+                        <button class="btn btn-primary" onclick="updateRollNumberFormat()" style="margin-top:0;">Update Roll Number</button>
+                    </div>
+
+                    <div class="tool-sub-card">
+                        <span class="tool-title" style="color:var(--warning);">Reset Student Password:</span>
+                        <input type="text" id="resetRoll" placeholder="Student Roll No (e.g. 24CSE14)">
+                        <input type="text" id="resetPass" placeholder="New Password (Default: 123456)">
+                        <button class="btn btn-warning" onclick="resetStudentPassword()" style="margin-top:0;">Reset Password</button>
+                    </div>
+
+                    <div class="tool-sub-card" style="border-color:#fecaca; background:#fef2f2;">
+                        <span class="tool-title" style="color:#b91c1c;">Permanently Delete Student Account:</span>
+                        <input type="text" id="deleteStudentRoll" placeholder="Roll No to Delete (e.g. 24-CSE-14)">
+                        <button class="btn btn-danger" onclick="deleteEntireStudentAccount()" style="margin-top:0;">Delete Account Permanently</button>
+                    </div>
+                </div>
+
+                <!-- DIRECTORY TAB -->
+                <div id="subDirectory" style="display:none;">
+                    <button class="btn btn-outline" onclick="fetchAllAttendance()" style="margin-bottom:8px;">Refresh Records Directory</button>
+                    <h4 style="font-size:11px; color:var(--text-muted); margin-top:6px; font-weight:700;">Class Records Directory:</h4>
+                    <div class="table-container">
+                        <table id="allHistoryTable">
+                            <thead><tr><th>Roll</th><th>Name</th><th>Date</th><th>Attended</th><th>Actions</th></tr></thead>
+                            <tbody><tr><td colspan="5" style="text-align:center;">Click refresh...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    </div>
     <script>
-        const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; 
-        const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/";
-        
-        let isRegistering = false, globalAllRecords = [], globalMyRecords = [], globalHolidays = [], groupedAdminRecords = {};
-        let currentCamMode = 'ENROLL', videoStream = null, isModelsLoaded = false;
-        let currentDailyPasscode = "9842";
-        let activeSubjectSubjectCode = "";
-        let toastTimeout = null;
-        let activeCloudFaceDescriptor = null;
-        let myChart = null;
+    const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; 
+    const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/";
+    
+    let isRegistering = false, globalAllRecords = [], globalMyRecords = [], globalHolidays = [], groupedAdminRecords = {};
+    let currentCamMode = 'ENROLL', videoStream = null, isModelsLoaded = false;
+    let currentDailyPasscode = "9842";
+    let activeSubjectSubjectCode = "";
+    let toastTimeout = null;
+    let activeCloudFaceDescriptor = null;
+    let myChart = null;
 
-        const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-        const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-        function showMsg(text, isError = false) {
-            const toast = document.getElementById('toast');
-            const toastMsg = document.getElementById('toast-msg');
-            const toastIcon = document.getElementById('toast-icon');
+    function showMsg(text, isError = false) {
+        const toast = document.getElementById('toast');
+        const toastMsg = document.getElementById('toast-msg');
+        const toastIcon = document.getElementById('toast-icon');
 
-            if (!toast || !toastMsg) return;
+        if (!toast || !toastMsg) return;
 
-            toastMsg.innerText = text;
-            toastIcon.setAttribute("viewBox", "0 0 24 24");
-            if (isError) {
-                toastIcon.innerHTML = `<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>`;
-            } else {
-                toastIcon.innerHTML = `<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>`;
+        toastMsg.innerText = text;
+        toastIcon.setAttribute("viewBox", "0 0 24 24");
+        if (isError) {
+            toastIcon.innerHTML = `<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>`;
+        } else {
+            toastIcon.innerHTML = `<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>`;
+        }
+        toast.className = `toast-card ${isError ? 'toast-error' : 'toast-success'} show`;
+
+        if (toastTimeout) clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3500);
+    }
+
+    function sanitizeAndValidateRollNo(rawRoll) {
+        if (!rawRoll) return { isValid: false, cleanRoll: "" };
+        let clean = rawRoll.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const strictRegex = /^\d{2}(CSE|AIDS)\d{2}$/;
+        return { isValid: strictRegex.test(clean), cleanRoll: clean };
+    }
+
+    const WEEKLY_SCHEDULE = {
+        1: [
+            { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
+            { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
+            { start: "10:50", end: "11:35", subject: "DAA - Design & Analysis of Algorithm", period: "P3" },
+            { start: "11:35", end: "12:20", subject: "FLA - Formal Language & Automata", period: "P4" },
+            { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+            { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
+            { start: "13:50", end: "14:35", subject: "CN - Computer Network", period: "P7" },
+            { start: "14:35", end: "15:20", subject: "LIB - Library", period: "P8" }
+        ],
+        2: [
+            { start: "09:20", end: "10:05", subject: "WT - Web Technology", period: "P1" },
+            { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
+            { start: "10:50", end: "11:35", subject: "Internet Lab (Ms. Geeta)", period: "P3" },
+            { start: "11:35", end: "12:20", subject: "FLA - Formal Language & Automata", period: "P4" },
+            { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+            { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
+            { start: "13:50", end: "14:35", subject: "BDA - Big Data Analytics", period: "P7" },
+            { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
+        ],
+        3: [
+            { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
+            { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
+            { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
+            { start: "11:35", end: "12:20", subject: "Sports / Activity", period: "P4" },
+            { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+            { start: "13:05", end: "13:50", subject: "WT - Web Technology", period: "P6" },
+            { start: "13:50", end: "15:20", subject: "CN LAB - Computer Network Lab", period: "P7-P8" }
+        ],
+        4: [
+            { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
+            { start: "10:05", end: "10:50", subject: "WT - Web Technology", period: "P2" },
+            { start: "10:50", end: "11:35", subject: "CN - Computer Network", period: "P3" },
+            { start: "11:35", end: "12:20", subject: "DAA - Design & Analysis of Algorithm", period: "P4" },
+            { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+            { start: "13:05", end: "14:35", subject: "DAA LAB - Algorithm Lab", period: "P6-P7" },
+            { start: "14:35", end: "15:20", subject: "HRM - Human Resource Mgmt", period: "P8" }
+        ],
+        5: [
+            { start: "09:20", end: "10:05", subject: "DAA - Design & Analysis of Algorithm", period: "P1" },
+            { start: "10:05", end: "10:50", subject: "CN - Computer Network", period: "P2" },
+            { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
+            { start: "11:35", end: "12:20", subject: "BDA - Big Data Analytics", period: "P4" },
+            { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+            { start: "13:05", end: "14:35", subject: "WT LAB - Web Technology Lab", period: "P6-P7" },
+            { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
+        ]
+    };
+
+    function updatePeriodTrackerWidget() {
+        const now = new Date();
+        const dayOfWeek = now.getDay();
+        const labelEl = document.getElementById('periodTimeSlotLabel');
+        const nameEl = document.getElementById('activePeriodName');
+        const btn = document.getElementById('markPeriodBtn');
+
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+            if(labelEl) labelEl.innerText = "WEEKEND STATUS:";
+            if(nameEl) nameEl.innerText = "College Closed (Weekend)";
+            if(btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
+            activeSubjectSubjectCode = "";
+            return;
+        }
+
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const daySchedule = WEEKLY_SCHEDULE[dayOfWeek] || [];
+        let foundSlot = null;
+
+        for (let slot of daySchedule) {
+            const sParts = slot.start.split(':');
+            const eParts = slot.end.split(':');
+            const startMins = parseInt(sParts[0]) * 60 + parseInt(sParts[1]);
+            const endMins = parseInt(eParts[0]) * 60 + parseInt(eParts[1]);
+
+            if (currentMinutes >= startMins && currentMinutes < endMins) {
+                foundSlot = slot;
+                break;
             }
-            toast.className = `toast-card ${isError ? 'toast-error' : 'toast-success'} show`;
-
-            if (toastTimeout) clearTimeout(toastTimeout);
-            toastTimeout = setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3500);
         }
 
-        function sanitizeAndValidateRollNo(rawRoll) {
-            if (!rawRoll) return { isValid: false, cleanRoll: "" };
-            let clean = rawRoll.toUpperCase().replace(/[^A-Z0-9]/g, '');
-            const strictRegex = /^\d{2}(CSE|AIDS)\d{2}$/;
-            return { isValid: strictRegex.test(clean), cleanRoll: clean };
+        if (foundSlot) {
+            if (foundSlot.period === "LUNCH") {
+                if(labelEl) labelEl.innerText = "LUNCH BREAK (12:20 - 01:05 PM):";
+                if(nameEl) nameEl.innerText = "Lunch Time / Rest Hour";
+                if(btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
+                activeSubjectSubjectCode = "";
+            } else {
+                if(labelEl) labelEl.innerText = `ACTIVE PERIOD (${foundSlot.start} - ${foundSlot.end}):`;
+                if(nameEl) nameEl.innerText = foundSlot.subject;
+                if(btn) { btn.disabled = false; btn.style.opacity = "1"; }
+                activeSubjectSubjectCode = foundSlot.subject;
+            }
+        } else {
+            if(labelEl) labelEl.innerText = "CURRENT COLLEGE STATUS:";
+            if(nameEl) nameEl.innerText = "College Off Hours / No Active Class";
+            if(btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
+            activeSubjectSubjectCode = "";
         }
+    }
 
-        const WEEKLY_SCHEDULE = {
-            1: [
-                { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
-                { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
-                { start: "10:50", end: "11:35", subject: "DAA - Design & Analysis of Algorithm", period: "P3" },
-                { start: "11:35", end: "12:20", subject: "FLA - Formal Language & Automata", period: "P4" },
-                { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
-                { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
-                { start: "13:50", end: "14:35", subject: "CN - Computer Network", period: "P7" },
-                { start: "14:35", end: "15:20", subject: "LIB - Library", period: "P8" }
-            ],
-            2: [
-                { start: "09:20", end: "10:05", subject: "WT - Web Technology", period: "P1" },
-                { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
-                { start: "10:50", end: "11:35", subject: "Internet Lab (Ms. Geeta)", period: "P3" },
-                { start: "11:35", end: "12:20", subject: "FLA - Formal Language & Automata", period: "P4" },
-                { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
-                { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
-                { start: "13:50", end: "14:35", subject: "BDA - Big Data Analytics", period: "P7" },
-                { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
-            ],
-            3: [
-                { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
-                { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
-                { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
-                { start: "11:35", end: "12:20", subject: "Sports / Activity", period: "P4" },
-                { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
-                { start: "13:05", end: "13:50", subject: "WT - Web Technology", period: "P6" },
-                { start: "13:50", end: "15:20", subject: "CN LAB - Computer Network Lab", period: "P7-P8" }
-            ],
-            4: [
-                { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
-                { start: "10:05", end: "10:50", subject: "WT - Web Technology", period: "P2" },
-                { start: "10:50", end: "11:35", subject: "CN - Computer Network", period: "P3" },
-                { start: "11:35", end: "12:20", subject: "DAA - Design & Analysis of Algorithm", period: "P4" },
-                { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
-                { start: "13:05", end: "14:35", subject: "DAA LAB - Algorithm Lab", period: "P6-P7" },
-                { start: "14:35", end: "15:20", subject: "HRM - Human Resource Mgmt", period: "P8" }
-            ],
-            5: [
-                { start: "09:20", end: "10:05", subject: "DAA - Design & Analysis of Algorithm", period: "P1" },
-                { start: "10:05", end: "10:50", subject: "CN - Computer Network", period: "P2" },
-                { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
-                { start: "11:35", end: "12:20", subject: "BDA - Big Data Analytics", period: "P4" },
-                { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
-                { start: "13:05", end: "14:35", subject: "WT LAB - Web Technology Lab", period: "P6-P7" },
-                { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
-            ]
+    function markActivePeriodAttendance() {
+        if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
+            return showMsg("Abhi koi active class nahi chal rahi!", true);
+        }
+        markSingleAttendance(activeSubjectSubjectCode);
+    }
+
+    function openFullDayPasscodePrompt() {
+        const enteredPasscode = prompt(`Enter Class Passcode / Daily Master Secret displayed by Teacher:`);
+        if (!enteredPasscode) return;
+        if (enteredPasscode.trim() === currentDailyPasscode) {
+            markFullDayAttendance();
+        } else {
+            showMsg("Invalid Class Passcode! Attendance Denied.", true);
+        }
+    }
+
+    function openStudentQRScanner() {
+        if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
+            return showMsg("QR Scan failed: Class time ke bahar mark nahi ho sakti!", true);
+        }
+        showMsg("QR Verified! Marking current lecture...");
+        markSingleAttendance(activeSubjectSubjectCode);
+    }
+
+    /* STUDENT EXCEL DOWNLOAD MODAL HANDLERS */
+    function openStudentExcelModal() {
+        document.getElementById('studentExcelModal').style.display = 'flex';
+        const rangeSelect = document.getElementById('studentExcelRange');
+        rangeSelect.onchange = function() {
+            document.getElementById('selectedMonthWrapper').style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none';
         };
+    }
 
-        function updatePeriodTrackerWidget() {
-            const now = new Date();
-            const dayOfWeek = now.getDay();
-            const labelEl = document.getElementById('periodTimeSlotLabel');
-            const nameEl = document.getElementById('activePeriodName');
-            const btn = document.getElementById('markPeriodBtn');
+    function closeStudentExcelModal() {
+        document.getElementById('studentExcelModal').style.display = 'none';
+    }
 
-            if (dayOfWeek === 0 || dayOfWeek === 6) {
-                if(labelEl) labelEl.innerText = "WEEKEND STATUS:";
-                if(nameEl) nameEl.innerText = "College Closed (Weekend)";
-                if(btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
-                activeSubjectSubjectCode = "";
-                return;
-            }
+    function processStudentExcelDownload() {
+        const range = document.getElementById('studentExcelRange').value;
+        const selectedMonth = parseInt(document.getElementById('studentExcelMonth').value);
 
-            const currentMinutes = now.getHours() * 60 + now.getMinutes();
-            const daySchedule = WEEKLY_SCHEDULE[dayOfWeek] || [];
-            let foundSlot = null;
-
-            for (let slot of daySchedule) {
-                const sParts = slot.start.split(':');
-                const eParts = slot.end.split(':');
-                const startMins = parseInt(sParts[0]) * 60 + parseInt(sParts[1]);
-                const endMins = parseInt(eParts[0]) * 60 + parseInt(eParts[1]);
-
-                if (currentMinutes >= startMins && currentMinutes < endMins) {
-                    foundSlot = slot;
-                    break;
-                }
-            }
-
-            if (foundSlot) {
-                if (foundSlot.period === "LUNCH") {
-                    if(labelEl) labelEl.innerText = "LUNCH BREAK (12:20 - 01:05 PM):";
-                    if(nameEl) nameEl.innerText = "Lunch Time / Rest Hour";
-                    if(btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
-                    activeSubjectSubjectCode = "";
-                } else {
-                    if(labelEl) labelEl.innerText = `ACTIVE PERIOD (${foundSlot.start} - ${foundSlot.end}):`;
-                    if(nameEl) nameEl.innerText = foundSlot.subject;
-                    if(btn) { btn.disabled = false; btn.style.opacity = "1"; }
-                    activeSubjectSubjectCode = foundSlot.subject;
-                }
-            } else {
-                if(labelEl) labelEl.innerText = "CURRENT COLLEGE STATUS:";
-                if(nameEl) nameEl.innerText = "College Off Hours / No Active Class";
-                if(btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
-                activeSubjectSubjectCode = "";
-            }
-        }
-
-        function markActivePeriodAttendance() {
-            if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
-                return showMsg("Abhi koi active class nahi chal rahi!", true);
-            }
-            markSingleAttendance(activeSubjectSubjectCode);
-        }
-
-        function openFullDayPasscodePrompt() {
-            const enteredPasscode = prompt(`Enter Class Passcode / Daily Master Secret displayed by Teacher:`);
-            if (!enteredPasscode) return;
-            if (enteredPasscode.trim() === currentDailyPasscode) {
-                markFullDayAttendance();
-            } else {
-                showMsg("Invalid Class Passcode! Attendance Denied.", true);
-            }
-        }
-
-        function openStudentQRScanner() {
-            if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
-                return showMsg("QR Scan failed: Class time ke bahar mark nahi ho sakti!", true);
-            }
-            showMsg("QR Verified! Marking current lecture...");
-            markSingleAttendance(activeSubjectSubjectCode);
-        }
-
-        /* STUDENT EXCEL DOWNLOAD MODAL HANDLERS */
-        function openStudentExcelModal() {
-            document.getElementById('studentExcelModal').style.display = 'flex';
-            const rangeSelect = document.getElementById('studentExcelRange');
-            rangeSelect.onchange = function() {
-                document.getElementById('selectedMonthWrapper').style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none';
-            };
-        }
-
-        function closeStudentExcelModal() {
-            document.getElementById('studentExcelModal').style.display = 'none';
-        }
-
-        function processStudentExcelDownload() {
-            const range = document.getElementById('studentExcelRange').value;
-            const selectedMonth = parseInt(document.getElementById('studentExcelMonth').value);
-
-            if (globalMyRecords.length === 0) {
-                closeStudentExcelModal();
-                return showMsg("Export karne ke liye koi attendance records nahi hain!", true);
-            }
-
-            const today = new Date();
-            let filteredRecords = [];
-
-            if (range === 'CURRENT_MONTH') {
-                const currentMonthIdx = today.getMonth();
-                const currentYear = today.getFullYear();
-                filteredRecords = globalMyRecords.filter(r => {
-                    const parts = r.date.split('-');
-                    return parseInt(parts[0]) === currentYear && (parseInt(parts[1])- 1) === currentMonthIdx;
-                });
-            } else if (range === 'SELECTED_MONTH') {
-                filteredRecords = globalMyRecords.filter(r => {
-                    const parts = r.date.split('-');
-                    return parseInt(parts[0]) === 2026 && (parseInt(parts[1]) - 1) === selectedMonth;
-                });
-            } else {
-                // FULL SEMESTER (Jul - Dec 2026)
-                filteredRecords = globalMyRecords.filter(r => {
-                    const parts = r.date.split('-');
-                    const m = parseInt(parts[1]) - 1;
-                    return parseInt(parts[0]) === 2026 && m >= 6 && m <= 11;
-                });
-            }
-
-            if (filteredRecords.length === 0) {
-                closeStudentExcelModal();
-                return showMsg("Chune gaye time period ke liye koi records nahi mile!", true);
-            }
-
-            const grouped = {};
-            filteredRecords.forEach(r => { 
-                if (!grouped[r.date]) grouped[r.date] = 0; 
-                grouped[r.date]++; 
-            });
-
-            let csv = "Date,Day,Total Lectures Attended,Status\n";
-            Object.keys(grouped).sort().forEach(d => {
-                const parts = d.split('-');
-                const dayStr = DAY_NAMES[new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])).getDay()];
-                csv += `"${d}","${dayStr}","${grouped[d]} Lectures","Present"\n`;
-            });
-
-            const fileName = `Student_Attendance_Report_${range}.csv`;
-            downloadFile(csv, fileName);
+        if (globalMyRecords.length === 0) {
             closeStudentExcelModal();
-            showMsg("Attendance Report downloaded successfully!");
+            return showMsg("Export karne ke liye koi attendance records nahi hain!", true);
         }
 
+        const today = new Date();
+        let filteredRecords = [];
+
+        if (range === 'CURRENT_MONTH') {
+            const currentMonthIdx = today.getMonth();
+            const currentYear = today.getFullYear();
+            filteredRecords = globalMyRecords.filter(r => {
+                const parts = r.date.split('-');
+                return parseInt(parts[0]) === currentYear && (parseInt(parts[1])- 1) === currentMonthIdx;
+            });
+        } else if (range === 'SELECTED_MONTH') {
+            filteredRecords = globalMyRecords.filter(r => {
+                const parts = r.date.split('-');
+                return parseInt(parts[0]) === 2026 && (parseInt(parts[1]) - 1) === selectedMonth;
+            });
+        } else {
+            // FULL SEMESTER (Jul - Dec 2026)
+            filteredRecords = globalMyRecords.filter(r => {
+                const parts = r.date.split('-');
+                const m = parseInt(parts[1]) - 1;
+                return parseInt(parts[0]) === 2026 && m >= 6 && m <= 11;
+            });
+        }
+
+        if (filteredRecords.length === 0) {
+            closeStudentExcelModal();
+            return showMsg("Chune gaye time period ke liye koi records nahi mile!", true);
+        }
+
+        const grouped = {};
+        filteredRecords.forEach(r => { 
+            if (!grouped[r.date]) grouped[r.date] = 0; 
+            grouped[r.date]++; 
+        });
+
+        let csv = "Date,Day,Total Lectures Attended,Status\n";
+        Object.keys(grouped).sort().forEach(d => {
+            const parts = d.split('-');
+            const dayStr = DAY_NAMES[new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])).getDay()];
+            csv += `"${d}","${dayStr}","${grouped[d]} Lectures","Present"\n`;
+        });
+
+        const fileName = `Student_Attendance_Report_${range}.csv`;
+        downloadFile(csv, fileName);
+        closeStudentExcelModal();
+        showMsg("Attendance Report downloaded successfully!");
+    }
         async function adminRegisterStudent() {
-            const name = document.getElementById('adminRegName').value.trim();
-            const rawRoll = document.getElementById('adminRegRoll').value.trim();
-            const password = document.getElementById('adminRegPass').value.trim() || '123456';
+    const name = document.getElementById('adminRegName').value.trim();
+    const rawRoll = document.getElementById('adminRegRoll').value.trim();
+    const password = document.getElementById('adminRegPass').value.trim() || '123456';
 
-            const validation = sanitizeAndValidateRollNo(rawRoll);
-            if (!name || !validation.isValid) return showMsg('Valid Name and Roll No required (e.g. 24CSE14)!', true);
+    const validation = sanitizeAndValidateRollNo(rawRoll);
+    if (!name || !validation.isValid) return showMsg('Valid Name and Roll No required (e.g. 24CSE14)!', true);
 
-            try {
-                const res = await fetch(`${API_BASE}/api/auth/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, rollNo: validation.cleanRoll, password })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    showMsg(`Student ${name} (${validation.cleanRoll}) Registered Successfully!`);
-                    document.getElementById('adminRegName').value = '';
-                    document.getElementById('adminRegRoll').value = '';
-                    document.getElementById('adminRegPass').value = '';
-                } else {
-                    showMsg(data.error || "Failed to register student", true);
-                }
-            } catch(e) {
-                showMsg("Server Connection Error!", true);
-            }
+    try {
+        const res = await fetch(`${API_BASE}/api/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, rollNo: validation.cleanRoll, password })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showMsg(`Student ${name} (${validation.cleanRoll}) Registered Successfully!`);
+            document.getElementById('adminRegName').value = '';
+            document.getElementById('adminRegRoll').value = '';
+            document.getElementById('adminRegPass').value = '';
+        } else {
+            showMsg(data.error || "Failed to register student", true);
         }
-        async function updateRollNumberFormat() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            const oldRoll = document.getElementById('oldRollFormat').value.trim();
-            const rawNewRoll = document.getElementById('newRollFormat').value.trim();
+    } catch(e) {
+        showMsg("Server Connection Error!", true);
+    }
+}
 
-            const validation = sanitizeAndValidateRollNo(rawNewRoll);
-            if (!oldRoll || !validation.isValid) return showMsg('Valid New Roll No required (e.g. 24CSE14)!', true);
+async function updateRollNumberFormat() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    const oldRoll = document.getElementById('oldRollFormat').value.trim();
+    const rawNewRoll = document.getElementById('newRollFormat').value.trim();
 
-            try {
-                const res = await fetch(`${API_BASE}/api/admin/update-rollno`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ requesterRollNo: user.rollNo, oldRoll, newRoll: validation.cleanRoll })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    showMsg(data.message || "Roll Number format updated successfully!");
-                    document.getElementById('oldRollFormat').value = '';
-                    document.getElementById('newRollFormat').value = '';
-                } else {
-                    showMsg(data.error || "Failed to update Roll Number", true);
-                }
-            } catch(e) {
-                showMsg("Server Connection Error!", true);
-            }
+    const validation = sanitizeAndValidateRollNo(rawNewRoll);
+    if (!oldRoll || !validation.isValid) return showMsg('Valid New Roll No required (e.g. 24CSE14)!', true);
+
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/update-rollno`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requesterRollNo: user.rollNo, oldRoll, newRoll: validation.cleanRoll })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showMsg(data.message || "Roll Number format updated successfully!");
+            document.getElementById('oldRollFormat').value = '';
+            document.getElementById('newRollFormat').value = '';
+        } else {
+            showMsg(data.error || "Failed to update Roll Number", true);
         }
+    } catch(e) {
+        showMsg("Server Connection Error!", true);
+    }
+}
 
-        async function deleteEntireStudentAccount() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            const targetRoll = document.getElementById('deleteStudentRoll').value.trim();
+async function deleteEntireStudentAccount() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    const targetRoll = document.getElementById('deleteStudentRoll').value.trim();
 
-            if (!targetRoll) return showMsg('Enter Roll Number to delete!', true);
-            if (!confirm(`Are you sure you want to PERMANENTLY delete account and records for ${targetRoll}?`)) return;
+    if (!targetRoll) return showMsg('Enter Roll Number to delete!', true);
+    if (!confirm(`Are you sure you want to PERMANENTLY delete account and records for ${targetRoll}?`)) return;
 
-            try {
-                const res = await fetch(`${API_BASE}/api/admin/delete-student`, {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo: targetRoll })
-                });
-                const data = await res.json();
-                globalAllRecords = globalAllRecords.filter(r => r.rollNo.toUpperCase() !== targetRoll.toUpperCase());
-                showMsg(data.message || `Account ${targetRoll} Deleted Successfully!`);
-                document.getElementById('deleteStudentRoll').value = '';
-            } catch(err) {
-                showMsg("Account deleted from directory!", false);
-            }
-        }
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/delete-student`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo: targetRoll })
+        });
+        const data = await res.json();
+        globalAllRecords = globalAllRecords.filter(r => r.rollNo.toUpperCase() !== targetRoll.toUpperCase());
+        showMsg(data.message || `Account ${targetRoll} Deleted Successfully!`);
+        document.getElementById('deleteStudentRoll').value = '';
+    } catch(err) {
+        showMsg("Account deleted from directory!", false);
+    }
+}
 
-        async function fetchNotices() {
-            if (localStorage.getItem("GLOBAL_NOTICE_CLEARED") === "true") {
-                document.getElementById('noticeBanner').style.display = 'none';
-                return;
-            }
+async function fetchNotices() {
+    if (localStorage.getItem("GLOBAL_NOTICE_CLEARED") === "true") {
+        document.getElementById('noticeBanner').style.display = 'none';
+        return;
+    }
 
-            const activeNotice = localStorage.getItem("ACTIVE_BROADCAST_NOTICE");
-            if (activeNotice && activeNotice.trim() !== "") {
-                document.getElementById('noticeBanner').style.display = 'flex';
-                document.getElementById('noticeText').innerText = `${activeNotice}`;
-                return;
-            }
+    const activeNotice = localStorage.getItem("ACTIVE_BROADCAST_NOTICE");
+    if (activeNotice && activeNotice.trim() !== "") {
+        document.getElementById('noticeBanner').style.display = 'flex';
+        document.getElementById('noticeText').innerText = `${activeNotice}`;
+        return;
+    }
 
-            try {
-                const res = await fetch(`${API_BASE}/api/notices`);
-                const data = await res.json();
-                if (data.length > 0 && localStorage.getItem("GLOBAL_NOTICE_CLEARED") !== "true") {
-                    const latestNotice = data[data.length - 1].message;
-                    document.getElementById('noticeBanner').style.display = 'flex';
-                    document.getElementById('noticeText').innerText = `${latestNotice}`;
-                } else {
-                    document.getElementById('noticeBanner').style.display = 'none';
-                }
-            } catch (err) {
-                document.getElementById('noticeBanner').style.display = 'none';
-            }
-        }
-
-        async function postNotice() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            const message = document.getElementById('noticeMsg').value.trim();
-            if (!message) return showMsg('Notice text required!', true);
-
-            localStorage.removeItem("GLOBAL_NOTICE_CLEARED");
-            localStorage.setItem("ACTIVE_BROADCAST_NOTICE", message);
+    try {
+        const res = await fetch(`${API_BASE}/api/notices`);
+        const data = await res.json();
+        if (data.length > 0 && localStorage.getItem("GLOBAL_NOTICE_CLEARED") !== "true") {
+            const latestNotice = data[data.length - 1].message;
             document.getElementById('noticeBanner').style.display = 'flex';
-            document.getElementById('noticeText').innerText = `${message}`;
-            showMsg('Notice Updated & Published!');
-            document.getElementById('noticeMsg').value = '';
-
-            try {
-                await fetch(`${API_BASE}/api/admin/notice`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ requesterRollNo: user.rollNo, title: 'Announcement', message })
-                });
-            } catch (err) {}
-        }
-
-        async function clearNotice() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            localStorage.setItem("GLOBAL_NOTICE_CLEARED", "true");
-            localStorage.removeItem("ACTIVE_BROADCAST_NOTICE");
+            document.getElementById('noticeText').innerText = `${latestNotice}`;
+        } else {
             document.getElementById('noticeBanner').style.display = 'none';
-            document.getElementById('noticeText').innerText = '';
-            showMsg('Active Notice Cleared!');
-
-            try {
-                await fetch(`${API_BASE}/api/admin/notice`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ requesterRollNo: user.rollNo, title: 'Announcement', message: "" })
-                });
-            } catch (err) {}
         }
+    } catch (err) {
+        document.getElementById('noticeBanner').style.display = 'none';
+    }
+}
 
-        function switchTab(tabId) {
-            const markTab = document.getElementById('markTab');
-            const adminTab = document.getElementById('adminTab');
+async function postNotice() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    const message = document.getElementById('noticeMsg').value.trim();
+    if (!message) return showMsg('Notice text required!', true);
 
-            markTab.style.display = tabId === 'markTab' ? 'block' : 'none';
-            adminTab.style.display = tabId === 'adminTab' ? 'block' : 'none';
+    localStorage.removeItem("GLOBAL_NOTICE_CLEARED");
+    localStorage.setItem("ACTIVE_BROADCAST_NOTICE", message);
+    document.getElementById('noticeBanner').style.display = 'flex';
+    document.getElementById('noticeText').innerText = `${message}`;
+    showMsg('Notice Updated & Published!');
+    document.getElementById('noticeMsg').value = '';
 
-            markTab.classList.remove('tab-content-active');
-            adminTab.classList.remove('tab-content-active');
+    try {
+        await fetch(`${API_BASE}/api/admin/notice`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requesterRollNo: user.rollNo, title: 'Announcement', message })
+        });
+    } catch (err) {}
+}
 
-            if (tabId === 'markTab') markTab.classList.add('tab-content-active');
-            if (tabId === 'adminTab') adminTab.classList.add('tab-content-active');
+async function clearNotice() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    localStorage.setItem("GLOBAL_NOTICE_CLEARED", "true");
+    localStorage.removeItem("ACTIVE_BROADCAST_NOTICE");
+    document.getElementById('noticeBanner').style.display = 'none';
+    document.getElementById('noticeText').innerText = '';
+    showMsg('Active Notice Cleared!');
 
-            const tabs = document.querySelectorAll('.tab-bar .tab-item');
-            tabs[0].classList.toggle('active', tabId === 'markTab');
-            if(tabs[1]) tabs[1].classList.toggle('active', tabId === 'adminTab');
+    try {
+        await fetch(`${API_BASE}/api/admin/notice`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requesterRollNo: user.rollNo, title: 'Announcement', message: "" })
+        });
+    } catch (err) {}
+}
 
-            if(tabId === 'adminTab') fetchAllAttendance();
+function switchTab(tabId) {
+    const markTab = document.getElementById('markTab');
+    const adminTab = document.getElementById('adminTab');
+
+    markTab.style.display = tabId === 'markTab' ? 'block' : 'none';
+    adminTab.style.display = tabId === 'adminTab' ? 'block' : 'none';
+
+    markTab.classList.remove('tab-content-active');
+    adminTab.classList.remove('tab-content-active');
+
+    if (tabId === 'markTab') markTab.classList.add('tab-content-active');
+    if (tabId === 'adminTab') adminTab.classList.add('tab-content-active');
+
+    const tabs = document.querySelectorAll('.tab-bar .tab-item');
+    tabs[0].classList.toggle('active', tabId === 'markTab');
+    if(tabs[1]) tabs[1].classList.toggle('active', tabId === 'adminTab');
+
+    if(tabId === 'adminTab') fetchAllAttendance();
+}
+
+function switchAdminSubTab(subId) {
+    const subTabs = ['subReports', 'subAttendance', 'subHoliday', 'subQR', 'subTools', 'subDirectory'];
+    subTabs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.style.display = (id === subId) ? 'block' : 'none';
+            el.classList.remove('tab-content-active');
+            if (id === subId) el.classList.add('tab-content-active');
         }
+    });
 
-        function switchAdminSubTab(subId) {
-            const subTabs = ['subReports', 'subAttendance', 'subHoliday', 'subQR', 'subTools', 'subDirectory'];
-            subTabs.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) {
-                    el.style.display = (id === subId) ? 'block' : 'none';
-                    el.classList.remove('tab-content-active');
-                    if (id === subId) el.classList.add('tab-content-active');
-                }
-            });
+    const navItems = document.querySelectorAll('.admin-nav-item');
+    navItems.forEach((item, idx) => {
+        item.classList.toggle('active', subTabs[idx] === subId);
+    });
 
-            const navItems = document.querySelectorAll('.admin-nav-item');
-            navItems.forEach((item, idx) => {
-                item.classList.toggle('active', subTabs[idx] === subId);
-            });
+    if (subId === 'subQR') generateDynamicQR();
+    if (subId === 'subDirectory') fetchAllAttendance();
+}
 
-            if (subId === 'subQR') generateDynamicQR();
-            if (subId === 'subDirectory') fetchAllAttendance();
+function generateDynamicQR() {
+    const refreshIcon = document.getElementById('refreshIcon');
+    if (refreshIcon) {
+        refreshIcon.classList.remove('spin-rotate');
+        void refreshIcon.offsetWidth;
+        refreshIcon.classList.add('spin-rotate');
+    }
+
+    const qrBox = document.getElementById('qrcode');
+    qrBox.innerHTML = "";
+    currentDailyPasscode = Math.floor(1000 + Math.random() * 9000).toString();
+    const passcodeEl = document.getElementById('liveClassPasscode');
+    if (passcodeEl) passcodeEl.innerText = currentDailyPasscode;
+
+    const token = `BMERP_TOKEN_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    new QRCode(qrBox, { text: token, width: 130, height: 130 });
+}
+
+async function loadFaceAIModels() {
+    if (isModelsLoaded) return true;
+    try {
+        const statusTxt = document.getElementById('cameraScanStatus');
+        if(statusTxt) statusTxt.innerText = "Loading 68-Point Mesh AI Neural Models...";
+        await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+        await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+        await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+        isModelsLoaded = true;
+        if(statusTxt) statusTxt.innerText = "AI Engine Ready! Keep face in frame.";
+        return true;
+    } catch (err) {
+        showMsg("Failed to load Face AI Models!", true);
+        return false;
+    }
+}
+async function checkUserFaceStatus() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) return;
+    const badge = document.getElementById('faceStatusBadge');
+
+    const localMesh = localStorage.getItem(`FACE_MESH_${user.rollNo}`);
+    if (localMesh) {
+        activeCloudFaceDescriptor = JSON.parse(localMesh);
+        if (badge) { badge.innerText = "Registered"; badge.style.background = "#dcfce7"; badge.style.color = "#15803d"; }
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_BASE}/api/face/get/${user.rollNo}`);
+        const data = await res.json();
+        if (res.ok && data.enrolled) {
+            activeCloudFaceDescriptor = data.faceDescriptor;
+            localStorage.setItem(`FACE_MESH_${user.rollNo}`, JSON.stringify(data.faceDescriptor));
+            if (badge) { badge.innerText = "Registered"; badge.style.background = "#dcfce7"; badge.style.color = "#15803d"; }
+        } else {
+            activeCloudFaceDescriptor = null;
+            if (badge) { badge.innerText = "Not Enrolled"; badge.style.background = "#f1f5f9"; badge.style.color = "var(--text-muted)"; }
         }
+    } catch (err) {
+        if (badge) { badge.innerText = "Not Enrolled"; badge.style.background = "#f1f5f9"; badge.style.color = "var(--text-muted)"; }
+    }
+}
 
-        function generateDynamicQR() {
-            const refreshIcon = document.getElementById('refreshIcon');
-            if (refreshIcon) {
-                refreshIcon.classList.remove('spin-rotate');
-                void refreshIcon.offsetWidth;
-                refreshIcon.classList.add('spin-rotate');
-            }
-
-            const qrBox = document.getElementById('qrcode');
-            qrBox.innerHTML = "";
-            currentDailyPasscode = Math.floor(1000 + Math.random() * 9000).toString();
-            const passcodeEl = document.getElementById('liveClassPasscode');
-            if (passcodeEl) passcodeEl.innerText = currentDailyPasscode;
-
-            const token = `BMERP_TOKEN_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-            new QRCode(qrBox, { text: token, width: 130, height: 130 });
+async function openCameraModal(mode) {
+    const user = JSON.parse(localStorage.getItem('user'));
+    currentCamMode = mode;
+    
+    if (mode === 'CHECKIN') {
+        if (!activeCloudFaceDescriptor) {
+            await checkUserFaceStatus();
+            if (!activeCloudFaceDescriptor) return showMsg("Pehle Face ID Enroll karo!", true);
         }
+    }
 
-        async function loadFaceAIModels() {
-            if (isModelsLoaded) return true;
-            try {
-                const statusTxt = document.getElementById('cameraScanStatus');
-                if(statusTxt) statusTxt.innerText = "Loading 68-Point Mesh AI Neural Models...";
-                await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
-                await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-                await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-                isModelsLoaded = true;
-                if(statusTxt) statusTxt.innerText = "AI Engine Ready! Keep face in frame.";
-                return true;
-            } catch (err) {
-                showMsg("Failed to load Face AI Models!", true);
-                return false;
-            }
-        }
-        async function checkUserFaceStatus() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (!user) return;
-            const badge = document.getElementById('faceStatusBadge');
+    const modal = document.getElementById('cameraModal');
+    const video = document.getElementById('webcamVideo');
+    const actionBtn = document.getElementById('camActionBtn');
 
-            const localMesh = localStorage.getItem(`FACE_MESH_${user.rollNo}`);
-            if (localMesh) {
-                activeCloudFaceDescriptor = JSON.parse(localMesh);
-                if (badge) { badge.innerText = "Registered"; badge.style.background = "#dcfce7"; badge.style.color = "#15803d"; }
-                return;
-            }
+    modal.style.display = 'block';
+    actionBtn.innerText = (mode === 'ENROLL') ? "Scan & Save 68-Point Face ID" : "Verify Face & Mark Attendance";
 
-            try {
-                const res = await fetch(`${API_BASE}/api/face/get/${user.rollNo}`);
-                const data = await res.json();
-                if (res.ok && data.enrolled) {
-                    activeCloudFaceDescriptor = data.faceDescriptor;
-                    localStorage.setItem(`FACE_MESH_${user.rollNo}`, JSON.stringify(data.faceDescriptor));
-                    if (badge) { badge.innerText = "Registered"; badge.style.background = "#dcfce7"; badge.style.color = "#15803d"; }
-                } else {
-                    activeCloudFaceDescriptor = null;
-                    if (badge) { badge.innerText = "Not Enrolled"; badge.style.background = "#f1f5f9"; badge.style.color = "var(--text-muted)"; }
-                }
-            } catch (err) {
-                if (badge) { badge.innerText = "Not Enrolled"; badge.style.background = "#f1f5f9"; badge.style.color = "var(--text-muted)"; }
-            }
-        }
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+        .then(async stream => {
+            videoStream = stream;
+            video.srcObject = stream;
+            await loadFaceAIModels();
+        })
+        .catch(err => {
+            showMsg("Camera Access Denied!", true);
+        });
+}
 
-        async function openCameraModal(mode) {
-            const user = JSON.parse(localStorage.getItem('user'));
-            currentCamMode = mode;
-            
-            if (mode === 'CHECKIN') {
-                if (!activeCloudFaceDescriptor) {
-                    await checkUserFaceStatus();
-                    if (!activeCloudFaceDescriptor) return showMsg("Pehle Face ID Enroll karo!", true);
-                }
-            }
-
-            const modal = document.getElementById('cameraModal');
-            const video = document.getElementById('webcamVideo');
-            const actionBtn = document.getElementById('camActionBtn');
-
-            modal.style.display = 'block';
-            actionBtn.innerText = (mode === 'ENROLL') ? "Scan & Save 68-Point Face ID" : "Verify Face & Mark Attendance";
-
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-                .then(async stream => {
-                    videoStream = stream;
-                    video.srcObject = stream;
-                    await loadFaceAIModels();
-                })
-                .catch(err => {
-                    showMsg("Camera Access Denied!", true);
-                });
-        }
-
-        function closeCameraModal() {
-            const modal = document.getElementById('cameraModal');
-            const video = document.getElementById('webcamVideo');
-            modal.style.display = 'none';
-            if (videoStream) {
-                videoStream.getTracks().forEach(track => track.stop());
-                videoStream = null;
-            }
-            video.srcObject = null;
+function closeCameraModal() {
+    const modal = document.getElementById('cameraModal');
+    const video = document.getElementById('webcamVideo');
+    modal.style.display = 'none';
+    if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+        videoStream = null;
+    }
+    video.srcObject = null;
         }
         async function executeCameraAction() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            const video = document.getElementById('webcamVideo');
-            const statusTxt = document.getElementById('cameraScanStatus');
+    const user = JSON.parse(localStorage.getItem('user'));
+    const video = document.getElementById('webcamVideo');
+    const statusTxt = document.getElementById('cameraScanStatus');
 
-            if (!videoStream || !isModelsLoaded) return showMsg("Camera/Models not ready!", true);
+    if (!videoStream || !isModelsLoaded) return showMsg("Camera/Models not ready!", true);
 
-            statusTxt.innerText = "Detecting 68 Facial Landmark Mesh Points...";
+    statusTxt.innerText = "Detecting 68 Facial Landmark Mesh Points...";
 
-            const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
+    const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
 
-            if (!detection) {
-                statusTxt.innerText = "No Face Detected! Look straight at camera.";
-                return showMsg("No Face Detected! Look straight at camera.", true);
-            }
+    if (!detection) {
+        statusTxt.innerText = "No Face Detected! Look straight at camera.";
+        return showMsg("No Face Detected! Look straight at camera.", true);
+    }
 
-            const currentDescriptor = Array.from(detection.descriptor);
+    const currentDescriptor = Array.from(detection.descriptor);
 
-            if (currentCamMode === 'ENROLL') {
-                localStorage.setItem(`FACE_MESH_${user.rollNo}`, JSON.stringify(currentDescriptor));
-                activeCloudFaceDescriptor = currentDescriptor;
+    if (currentCamMode === 'ENROLL') {
+        localStorage.setItem(`FACE_MESH_${user.rollNo}`, JSON.stringify(currentDescriptor));
+        activeCloudFaceDescriptor = currentDescriptor;
 
-                try {
-                    await fetch(`${API_BASE}/api/face/enroll`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ rollNo: user.rollNo, faceDescriptor: currentDescriptor })
-                    });
-                } catch(e) {}
-
-                checkUserFaceStatus();
-                showMsg("Face ID Enrolled & Synced Globally!");
-                statusTxt.innerText = "68 Landmarks Registered & Synced!";
-                setTimeout(closeCameraModal, 1200);
-            } else {
-                if (!activeCloudFaceDescriptor) return showMsg("Face profile missing! Enroll first.", true);
-
-                const savedDescriptor = new Float32Array(activeCloudFaceDescriptor);
-                const distance = faceapi.euclideanDistance(detection.descriptor, savedDescriptor);
-
-                if (distance < 0.50) {
-                    statusTxt.innerText = "Identity Verified: " + user.name + ` (Match Score: ${((1-distance)*100).toFixed(0)}%)`;
-                    showMsg("Identity Verified: " + user.name);
-                    setTimeout(() => {
-                        closeCameraModal();
-                        if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
-                            showMsg("Face Verified, par abhi koi active lecture nahi hai!", true);
-                        } else {
-                            markSingleAttendance(activeSubjectSubjectCode);
-                        }
-                    }, 1200);
-                } else {
-                    statusTxt.innerText = "Face Mismatch! Identity Not Verified.";
-                    showMsg("Face Mismatch! Proxy Attempt Detected.", true);
-                }
-            }
-        }
-
-        function togglePassword() {
-            const p = document.getElementById('password');
-            p.type = p.type === 'password' ? 'text' : 'password';
-        }
-
-        function toggleMode() {
-            isRegistering = !isRegistering;
-            document.getElementById('register-fields').style.display = isRegistering ? 'block' : 'none';
-            document.getElementById('authBtn').innerText = isRegistering ? 'Register Account' : 'Sign In';
-            document.getElementById('toggleLink').innerText = isRegistering ? 'Already registered? Sign In' : 'New Student? Register Account';
-        }
-
-        async function resetStudentPassword() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            const targetRollNo = document.getElementById('resetRoll').value.trim();
-            const newPassword = document.getElementById('resetPass').value.trim();
-
-            if (!targetRollNo) return showMsg('Roll number required!', true);
-
-            try {
-                const res = await fetch(`${API_BASE}/api/admin/reset-password`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo, newPassword })
-                });
-                const data = await res.json();
-                if (res.ok) showMsg(data.message); else showMsg(data.error, true);
-            } catch(e) {
-                showMsg("Failed to reset password!", true);
-            }
-        }
-
-        async function handleAuth() {
-            const rawRoll = document.getElementById('rollNo').value.trim();
-            const password = document.getElementById('password').value.trim();
-
-            const validation = sanitizeAndValidateRollNo(rawRoll);
-            if (!validation.isValid) {
-                return showMsg('Enter valid Roll No (e.g. 24CSE09, 24AIDS07)!', true);
-            }
-
-            if (!password) {
-                return showMsg('Please enter your password!', true);
-            }
-
-            showMsg('Connecting...');
-            try {
-                if (isRegistering) {
-                    const name = document.getElementById('regName').value.trim();
-                    if (!name) return showMsg('Enter Full Name!', true);
-                    const res = await fetch(`${API_BASE}/api/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, rollNo: validation.cleanRoll, password }) });
-                    const data = await res.json();
-                    if (res.ok) { showMsg('Registered! Sign in now.'); toggleMode(); } else showMsg(data.error || 'Registration failed', true);
-                } else {
-                    const res = await fetch(`${API_BASE}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: validation.cleanRoll, password }) });
-                    const data = await res.json();
-                    if (res.ok) { localStorage.setItem('user', JSON.stringify(data.user)); loadDashboard(); } else showMsg(data.error || 'Invalid credentials', true);
-                }
-            } catch (err) {
-                showMsg('Connection timeout! Please retry.', true);
-            }
-        }
-
-        async function loadAnalyticsChart(rollNo) {
-            try {
-                const res = await fetch(`${API_BASE}/api/analytics/${rollNo}`);
-                const data = await res.json();
-                
-                const labels = Object.keys(data).filter(sub => !sub.includes("LIB") && !sub.includes("Sports"));
-                const presentData = labels.map(sub => data[sub].present);
-
-                const ctx = document.getElementById('attendanceChart').getContext('2d');
-                
-                if(myChart) myChart.destroy(); 
-                
-                myChart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Academic Lectures Attended',
-                            data: presentData,
-                            backgroundColor: '#2563eb',
-                            borderRadius: 5
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        scales: {
-                            y: { beginAtZero: true, ticks: { stepSize: 1 } }
-                        }
-                    }
-                });
-            } catch(err) {
-                console.error("Chart data failed to load:", err);
-            }
-        }
-
-        function requestNotificationPermission() {
-            if ("Notification" in window) {
-                Notification.requestPermission().then(permission => {
-                    if (permission === "granted") {
-                        console.log("Push Notifications enabled!");
-                    }
-                });
-            }
-        }
-        function loadDashboard() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (!user) return;
-            document.getElementById('auth-box').style.display = 'none';
-            document.getElementById('dash-box').style.display = 'block';
-            document.getElementById('headerAvatarBox').style.display = 'flex';
-            document.getElementById('welcomeMsg').innerText = `Hello, ${user.name}!`;
-
-            const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 'ST';
-            document.getElementById('userAvatarText').innerText = initials;
-
-            const userRollClean = (user.rollNo || "").toUpperCase().replace(/[^A-Z0-9]/g, '');
-            const isAdmin = (user.role === 'admin' || userRollClean === '24CSE48' || userRollClean.includes('24CSE48'));
-
-            document.getElementById('roleLabel').innerText = "Roll";
-            document.getElementById('userRoll').innerText = user.rollNo;
-            document.getElementById('studentStatsGrid').style.display = 'grid';
-            document.getElementById('adminStatsGrid').style.display = 'none';
-            document.getElementById('simulatorBox').style.display = 'flex';
-            document.getElementById('faceEnrollBox').style.display = 'block';
-            document.getElementById('studentTabHeader').style.display = 'block';
-            
-            if (isAdmin) {
-                document.getElementById('adminTabHeader').style.display = 'block';
-            } else {
-                document.getElementById('adminTabHeader').style.display = 'none';
-            }
-
-            switchTab('markTab');
-            fetchHistory(user.rollNo);
-            
-            const todayISO = new Date().toISOString().split('T')[0];
-            document.getElementById('manualDate').value = todayISO;
-
-            checkUserFaceStatus();
-            updatePeriodTrackerWidget();
-            setInterval(updatePeriodTrackerWidget, 30000);
-            fetchNotices();
-
-            requestNotificationPermission();
-            loadAnalyticsChart(user.rollNo);
-        }
-        function markFullDayAttendance() {
-            if (!navigator.geolocation) {
-                return showMsg('Geolocation is not supported!', true);
-            }
-            navigator.geolocation.getCurrentPosition(async (pos) => {
-                const user = JSON.parse(localStorage.getItem('user'));
-                try {
-                    const res = await fetch(`${API_BASE}/api/attendance/mark-fullday`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: user.rollNo, name: user.name, latitude: pos.coords.latitude, longitude: pos.coords.longitude }) });
-                    const data = await res.json();
-                    if (res.ok) { showMsg(data.message); fetchHistory(user.rollNo); } else showMsg(data.error || "Attendance marking failed", true);
-                } catch(e) {
-                    showMsg("Network Error! Try again.", true);
-                }
-            }, () => showMsg('GPS Denied!', true));
-        }
-
-        function markSingleAttendance(overrideSubject) {
-            const sub = overrideSubject || activeSubjectSubjectCode || "WT LAB";
-            if (!sub || sub.includes("Off Hours") || sub.includes("Lunch")) {
-                return showMsg("No active lecture to mark!", true);
-            }
-
-            const todayISO = new Date().toISOString().split('T')[0];
-            const isLab = sub.includes("LAB") || sub.includes("Lab");
-
-            const todayEntries = globalMyRecords.filter(r => r.date === todayISO && r.subject === sub);
-
-            if (isLab) {
-                if (todayEntries.length >= 1) {
-                    return showMsg(`Iss ${sub} ki block attendance pehle hi ek baar lag chuki hai!`, true);
-                }
-            } else {
-                if (todayEntries.length >= 1) {
-                    return showMsg(`Iss ${sub} ki attendance aaj pehle hi lag chuki hai!`, true);
-                }
-            }
-
-            if (!navigator.geolocation) {
-                return showMsg('Geolocation is not supported!', true);
-            }
-            navigator.geolocation.getCurrentPosition(async (pos) => {
-                const user = JSON.parse(localStorage.getItem('user'));
-                try {
-                    const res = await fetch(`${API_BASE}/api/attendance/mark`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: user.rollNo, name: user.name, subject: sub, latitude: pos.coords.latitude, longitude: pos.coords.longitude }) });
-                    const data = await res.json();
-                    if (res.ok) { 
-                        showMsg(`Attendance Marked for ${sub}!`); 
-                        fetchHistory(user.rollNo); 
-                    } else {
-                        showMsg(data.error || "Attendance marking failed", true);
-                    }
-                } catch(e) {
-                    showMsg("Network Error! Try again.", true);
-                }
-            }, () => showMsg('GPS Denied!', true));
-        }
-
-        async function markManualAttendance() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            const studentRollNo = document.getElementById('manualRoll').value.trim();
-            const date = document.getElementById('manualDate').value;
-            const status = document.getElementById('manualStatus').value;
-
-            if (!studentRollNo || !date) return showMsg('Roll Number and Date required!', true);
-
-            try {
-                const res = await fetch(`${API_BASE}/api/admin/manual-attendance`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ requesterRollNo: user.rollNo, studentRollNo, date, status })
-                });
-                const data = await res.json();
-                if (res.ok) { showMsg(data.message); } else showMsg(data.error || "Failed to mark", true);
-            } catch(e) {
-                showMsg("Network Connection Error!", true);
-            }
-        }
-
-        async function declareHoliday() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            const date = document.getElementById('holidayDate').value;
-            const reason = document.getElementById('holidayReason').value.trim();
-            if (!date) return showMsg('Please select date!', true);
-
-            try {
-                const res = await fetch(`${API_BASE}/api/admin/holiday`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ requesterRollNo: user.rollNo, date, reason })
-                });
-                const data = await res.json();
-                if (res.ok) { showMsg(data.message); } else showMsg(data.error || "Failed to declare holiday", true);
-            } catch(e) {
-                showMsg("Network Connection Error!", true);
-            }
-        }
-
-        function calculateRealAttendancePercentage() {
-            const startDate = new Date(2026, 6, 15);
-            const today = new Date();
-            const holidayDatesList = globalHolidays.map(h => h.date);
-
-            let totalWorkingDays = 0;
-            let cur = new Date(startDate);
-
-            while (cur <= today) {
-                const dayOfWeek = cur.getDay();
-                const y = cur.getFullYear();
-                const m = String(cur.getMonth() + 1).padStart(2, '0');
-                const d = String(cur.getDate()).padStart(2, '0');
-                const isoStr = `${y}-${m}-${d}`;
-
-                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-                const isHoliday = holidayDatesList.includes(isoStr);
-
-                if (!isWeekend && !isHoliday) {
-                    totalWorkingDays++;
-                }
-                cur.setDate(cur.getDate() + 1);
-            }
-
-            const DEFAULT_DAILY_ACADEMIC_LECTURES = 6;
-            const totalConductedLectures = totalWorkingDays * DEFAULT_DAILY_ACADEMIC_LECTURES;
-            
-            const academicAttendedLectures = globalMyRecords.filter(r => {
-                const sub = r.subject || "";
-                return !sub.includes("LIB") && !sub.includes("Sports");
-            }).length;
-
-            if (totalConductedLectures === 0) return { pct: 100, totalWorkingDays, totalConductedLectures, totalAttendedLectures: academicAttendedLectures };
-            const pct = Math.min(100, ((academicAttendedLectures / totalConductedLectures) * 100)).toFixed(1);
-            return { pct, totalWorkingDays, totalConductedLectures, totalAttendedLectures: academicAttendedLectures };
-        }
-
-        function toggleCalendarView() { renderAttendanceCalendar(globalMyRecords); }
-
-        function renderAttendanceCalendar(historyData) {
-            const wrapper = document.getElementById('calendarDisplayWrapper');
-            const mode = document.getElementById('calendarViewMode').value;
-            const attendedDates = new Set(historyData.map(h => h.date));
-            const holidayDatesSet = new Set(globalHolidays.map(h => h.date));
-
-            let monthsToRender = [];
-            const today = new Date();
-            const currentMonthIdx = today.getMonth();
-
-            if (mode === 'FULL_SEMESTER') {
-                monthsToRender = [6, 7, 8, 9, 10, 11];
-            } else {
-                monthsToRender = [currentMonthIdx];
-            }
-
-            let wrapperHtml = "";
-
-            monthsToRender.forEach(mIdx => {
-                const year = 2026;
-                const monthName = MONTH_NAMES[mIdx];
-                const daysInMonth = new Date(year, mIdx + 1, 0).getDate();
-                const firstDayOfWeek = new Date(year, mIdx, 1).getDay();
-
-                let gridHtml = `
-                    <div style="margin-bottom:12px; border-bottom:1px solid var(--card-border); padding-bottom:8px;">
-                        <div style="font-size:11px; font-weight:800; color:var(--primary); margin-bottom:6px;">${monthName} ${year}</div>
-                        <div class="calendar-grid">
-                            <div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div>
-                            <div class="cal-day-head">W</div><div class="cal-day-head">T</div><div class="cal-day-head">F</div>
-                            <div class="cal-day-head">S</div>
-                `;
-
-                for (let i = 0; i < firstDayOfWeek; i++) {
-                    gridHtml += `<div class="cal-date cal-off"></div>`;
-                }
-
-                for (let d = 1; d <= daysInMonth; d++) {
-                    const dateStr = `2026-${String(mIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                    const dtObj = new Date(year, mIdx, d);
-                    const dayOfWeek = dtObj.getDay();
-                    const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-                    const isHoliday = holidayDatesSet.has(dateStr);
-
-                    if (isWeekend) {
-                        gridHtml += `<div class="cal-date cal-off">${d}</div>`;
-                    } else if (isHoliday) {
-                        gridHtml += `<div class="cal-date cal-off" style="background:#fef3c7; color:#92400e; font-weight:800; border-color:#fde68a;" title="Declared Holiday">${d}</div>`;
-                    } else if (attendedDates.has(dateStr)) {
-                        gridHtml += `<div class="cal-date cal-p">${d}</div>`;
-                    } else if (dtObj <= today) {
-                        gridHtml += `<div class="cal-date cal-a">${d}</div>`;
-                    } else {
-                        gridHtml += `<div class="cal-date cal-off">${d}</div>`;
-                    }
-                }
-                gridHtml += `</div></div>`;
-                wrapperHtml += gridHtml;
+        try {
+            await fetch(`${API_BASE}/api/face/enroll`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rollNo: user.rollNo, faceDescriptor: currentDescriptor })
             });
+        } catch(e) {}
 
-            wrapper.innerHTML = wrapperHtml;
-        }
+        checkUserFaceStatus();
+        showMsg("Face ID Enrolled & Synced Globally!");
+        statusTxt.innerText = "68 Landmarks Registered & Synced!";
+        setTimeout(closeCameraModal, 1200);
+    } else {
+        if (!activeCloudFaceDescriptor) return showMsg("Face profile missing! Enroll first.", true);
 
-        async function fetchHistory(rollNo) {
-            try {
-                const hRes = await fetch(`${API_BASE}/api/holidays`);
-                globalHolidays = await hRes.json();
-            } catch(e) { globalHolidays = []; }
+        const savedDescriptor = new Float32Array(activeCloudFaceDescriptor);
+        const distance = faceapi.euclideanDistance(detection.descriptor, savedDescriptor);
 
-            try {
-                const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
-                const data = await res.json();
-                globalMyRecords = data || [];
-                const tbody = document.querySelector('#myHistoryTable tbody');
-
-                const dateGrouped = {};
-                globalMyRecords.forEach(item => {
-                    if (!dateGrouped[item.date]) {
-                        dateGrouped[item.date] = { date: item.date, count: 0, status: item.status };
-                    }
-                    dateGrouped[item.date].count++;
-                });
-
-                const calc = calculateRealAttendancePercentage();
-                
-                const totalDaysEl = document.getElementById('totalDaysCount');
-                if (totalDaysEl) totalDaysEl.innerText = calc.totalAttendedLectures;
-                
-                const pctEl = document.getElementById('attendancePct');
-                if (pctEl) {
-                    pctEl.innerText = `${calc.pct}%`;
-                    pctEl.style.color = calc.pct >= 75 ? 'var(--success)' : 'var(--danger)';
+        if (distance < 0.50) {
+            statusTxt.innerText = "Identity Verified: " + user.name + ` (Match Score: ${((1-distance)*100).toFixed(0)}%)`;
+            showMsg("Identity Verified: " + user.name);
+            setTimeout(() => {
+                closeCameraModal();
+                if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
+                    showMsg("Face Verified, par abhi koi active lecture nahi hai!", true);
+                } else {
+                    markSingleAttendance(activeSubjectSubjectCode);
                 }
-
-                const defaulterTag = document.getElementById('defaulterTag');
-                if (defaulterTag) defaulterTag.style.display = (calc.pct < 75) ? 'inline-block' : 'none';
-
-                const advisorBox = document.getElementById('advisorText');
-                if (advisorBox) {
-                    if (calc.pct >= 75) {
-                        const safeLectures = Math.floor(calc.totalAttendedLectures - 0.75 * calc.totalConductedLectures);
-                        const safeDays = Math.floor(safeLectures / 6);
-                        advisorBox.innerHTML = `Safe Zone (<b>${calc.pct}%</b>). You can skip approx <b>${Math.max(0, safeDays)}</b> upcoming days safely.`;
-                    } else {
-                        const neededLectures = Math.ceil(0.75 * calc.totalConductedLectures - calc.totalAttendedLectures);
-                        advisorBox.innerHTML = `Low Attendance (<b>${calc.pct}%</b>). Need <b>${Math.max(0, neededLectures)}</b> more lectures to reach 75%.`;
-                    }
+            }, 1200);
+        } else {
+            statusTxt.innerText = "Face Mismatch! Identity Not Verified.";
+            showMsg("Face Mismatch! Proxy Attempt Detected.", true);
         }
-                renderAttendanceCalendar(globalMyRecords);
+    }
+}
 
-                const sortedDates = Object.values(dateGrouped).sort((a,b) => b.date.localeCompare(a.date));
+function togglePassword() {
+    const p = document.getElementById('password');
+    p.type = p.type === 'password' ? 'text' : 'password';
+}
 
-                if (!tbody) return;
-                if (sortedDates.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No records</td></tr>';
-                
-                tbody.innerHTML = sortedDates.map(i => {
-                    const parts = i.date.split('-');
-                    const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])).getDay();
-                    const dayStr = DAY_NAMES[dateObj];
-                    return `<tr><td><b>${i.date}</b></td><td><b>${dayStr}</b></td><td><span class="badge badge-present">${i.count} Lectures</span></td><td><span class="badge badge-present">${i.status}</span></td></tr>`;
-                }).join('');
-            } catch(e) {
-                showMsg("Failed to sync attendance logs!", true);
+function toggleMode() {
+    isRegistering = !isRegistering;
+    document.getElementById('register-fields').style.display = isRegistering ? 'block' : 'none';
+    document.getElementById('authBtn').innerText = isRegistering ? 'Register Account' : 'Sign In';
+    document.getElementById('toggleLink').innerText = isRegistering ? 'Already registered? Sign In' : 'New Student? Register Account';
+}
+
+async function resetStudentPassword() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    const targetRollNo = document.getElementById('resetRoll').value.trim();
+    const newPassword = document.getElementById('resetPass').value.trim();
+
+    if (!targetRollNo) return showMsg('Roll number required!', true);
+
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/reset-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo, newPassword })
+        });
+        const data = await res.json();
+        if (res.ok) showMsg(data.message); else showMsg(data.error, true);
+    } catch(e) {
+        showMsg("Failed to reset password!", true);
+    }
+}
+
+async function handleAuth() {
+    const rawRoll = document.getElementById('rollNo').value.trim();
+    const password = document.getElementById('password').value.trim();
+
+    const validation = sanitizeAndValidateRollNo(rawRoll);
+    if (!validation.isValid) {
+        return showMsg('Enter valid Roll No (e.g. 24CSE09, 24AIDS07)!', true);
+    }
+
+    if (!password) {
+        return showMsg('Please enter your password!', true);
+    }
+
+    showMsg('Connecting...');
+    try {
+        if (isRegistering) {
+            const name = document.getElementById('regName').value.trim();
+            if (!name) return showMsg('Enter Full Name!', true);
+            const res = await fetch(`${API_BASE}/api/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, rollNo: validation.cleanRoll, password }) });
+            const data = await res.json();
+            if (res.ok) { showMsg('Registered! Sign in now.'); toggleMode(); } else showMsg(data.error || 'Registration failed', true);
+        } else {
+            const res = await fetch(`${API_BASE}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: validation.cleanRoll, password }) });
+            const data = await res.json();
+            if (res.ok) { localStorage.setItem('user', JSON.stringify(data.user)); loadDashboard(); } else showMsg(data.error || 'Invalid credentials', true);
+        }
+    } catch (err) {
+        showMsg('Connection timeout! Please retry.', true);
+    }
+}
+
+async function loadAnalyticsChart(rollNo) {
+    try {
+        const res = await fetch(`${API_BASE}/api/analytics/${rollNo}`);
+        const data = await res.json();
+        
+        const labels = Object.keys(data).filter(sub => !sub.includes("LIB") && !sub.includes("Sports"));
+        const presentData = labels.map(sub => data[sub].present);
+
+        const ctx = document.getElementById('attendanceChart').getContext('2d');
+        
+        if(myChart) myChart.destroy(); 
+        
+        myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Academic Lectures Attended',
+                    data: presentData,
+                    backgroundColor: '#2563eb',
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                }
+            }
+        });
+    } catch(err) {
+        console.error("Chart data failed to load:", err);
+    }
+}
+
+function requestNotificationPermission() {
+    if ("Notification" in window) {
+        Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+                console.log("Push Notifications enabled!");
+            }
+        });
+    }
+}
+function loadDashboard() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) return;
+    document.getElementById('auth-box').style.display = 'none';
+    document.getElementById('dash-box').style.display = 'block';
+    document.getElementById('headerAvatarBox').style.display = 'flex';
+    document.getElementById('welcomeMsg').innerText = `Hello, ${user.name}!`;
+
+    const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 'ST';
+    document.getElementById('userAvatarText').innerText = initials;
+
+    const userRollClean = (user.rollNo || "").toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const isAdmin = (user.role === 'admin' || userRollClean === '24CSE48' || userRollClean.includes('24CSE48'));
+
+    document.getElementById('roleLabel').innerText = "Roll";
+    document.getElementById('userRoll').innerText = user.rollNo;
+    document.getElementById('studentStatsGrid').style.display = 'grid';
+    document.getElementById('adminStatsGrid').style.display = 'none';
+    document.getElementById('simulatorBox').style.display = 'flex';
+    document.getElementById('faceEnrollBox').style.display = 'block';
+    document.getElementById('studentTabHeader').style.display = 'block';
+    
+    if (isAdmin) {
+        document.getElementById('adminTabHeader').style.display = 'block';
+    } else {
+        document.getElementById('adminTabHeader').style.display = 'none';
+    }
+
+    switchTab('markTab');
+    fetchHistory(user.rollNo);
+    
+    const todayISO = new Date().toISOString().split('T')[0];
+    document.getElementById('manualDate').value = todayISO;
+
+    checkUserFaceStatus();
+    updatePeriodTrackerWidget();
+    setInterval(updatePeriodTrackerWidget, 30000);
+    fetchNotices();
+
+    requestNotificationPermission();
+    loadAnalyticsChart(user.rollNo);
+}
+
+function markFullDayAttendance() {
+    if (!navigator.geolocation) {
+        return showMsg('Geolocation is not supported!', true);
+    }
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        const user = JSON.parse(localStorage.getItem('user'));
+        try {
+            const res = await fetch(`${API_BASE}/api/attendance/mark-fullday`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: user.rollNo, name: user.name, latitude: pos.coords.latitude, longitude: pos.coords.longitude }) });
+            const data = await res.json();
+            if (res.ok) { showMsg(data.message); fetchHistory(user.rollNo); } else showMsg(data.error || "Attendance marking failed", true);
+        } catch(e) {
+            showMsg("Network Error! Try again.", true);
+        }
+    }, () => showMsg('GPS Denied!', true));
+}
+
+function markSingleAttendance(overrideSubject) {
+    const sub = overrideSubject || activeSubjectSubjectCode || "WT LAB";
+    if (!sub || sub.includes("Off Hours") || sub.includes("Lunch")) {
+        return showMsg("No active lecture to mark!", true);
+    }
+
+    const todayISO = new Date().toISOString().split('T')[0];
+    const isLab = sub.includes("LAB") || sub.includes("Lab");
+
+    const todayEntries = globalMyRecords.filter(r => r.date === todayISO && r.subject === sub);
+
+    if (isLab) {
+        if (todayEntries.length >= 1) {
+            return showMsg(`Iss ${sub} ki block attendance pehle hi ek baar lag chuki hai!`, true);
+        }
+    } else {
+        if (todayEntries.length >= 1) {
+            return showMsg(`Iss ${sub} ki attendance aaj pehle hi lag chuki hai!`, true);
+        }
+    }
+
+    if (!navigator.geolocation) {
+        return showMsg('Geolocation is not supported!', true);
+    }
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        const user = JSON.parse(localStorage.getItem('user'));
+        try {
+            const res = await fetch(`${API_BASE}/api/attendance/mark`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: user.rollNo, name: user.name, subject: sub, latitude: pos.coords.latitude, longitude: pos.coords.longitude }) });
+            const data = await res.json();
+            if (res.ok) { 
+                showMsg(`Attendance Marked for ${sub}!`); 
+                fetchHistory(user.rollNo); 
+            } else {
+                showMsg(data.error || "Attendance marking failed", true);
+            }
+        } catch(e) {
+            showMsg("Network Error! Try again.", true);
+        }
+    }, () => showMsg('GPS Denied!', true));
+        }
+        async function markManualAttendance() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    const studentRollNo = document.getElementById('manualRoll').value.trim();
+    const date = document.getElementById('manualDate').value;
+    const status = document.getElementById('manualStatus').value;
+
+    if (!studentRollNo || !date) return showMsg('Roll Number and Date required!', true);
+
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/manual-attendance`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requesterRollNo: user.rollNo, studentRollNo, date, status })
+        });
+        const data = await res.json();
+        if (res.ok) { showMsg(data.message); } else showMsg(data.error || "Failed to mark", true);
+    } catch(e) {
+        showMsg("Network Connection Error!", true);
+    }
+}
+
+async function declareHoliday() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    const date = document.getElementById('holidayDate').value;
+    const reason = document.getElementById('holidayReason').value.trim();
+    if (!date) return showMsg('Please select date!', true);
+
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/holiday`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requesterRollNo: user.rollNo, date, reason })
+        });
+        const data = await res.json();
+        if (res.ok) { showMsg(data.message); } else showMsg(data.error || "Failed to declare holiday", true);
+    } catch(e) {
+        showMsg("Network Connection Error!", true);
+    }
+}
+
+function calculateRealAttendancePercentage() {
+    const startDate = new Date(2026, 6, 15);
+    const today = new Date();
+    const holidayDatesList = globalHolidays.map(h => h.date);
+
+    let totalWorkingDays = 0;
+    let cur = new Date(startDate);
+
+    while (cur <= today) {
+        const dayOfWeek = cur.getDay();
+        const y = cur.getFullYear();
+        const m = String(cur.getMonth() + 1).padStart(2, '0');
+        const d = String(cur.getDate()).padStart(2, '0');
+        const isoStr = `${y}-${m}-${d}`;
+
+        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+        const isHoliday = holidayDatesList.includes(isoStr);
+
+        if (!isWeekend && !isHoliday) {
+            totalWorkingDays++;
+        }
+        cur.setDate(cur.getDate() + 1);
+    }
+
+    const DEFAULT_DAILY_ACADEMIC_LECTURES = 6;
+    const totalConductedLectures = totalWorkingDays * DEFAULT_DAILY_ACADEMIC_LECTURES;
+    
+    const academicAttendedLectures = globalMyRecords.filter(r => {
+        const sub = r.subject || "";
+        return !sub.includes("LIB") && !sub.includes("Sports");
+    }).length;
+
+    if (totalConductedLectures === 0) return { pct: 100, totalWorkingDays, totalConductedLectures, totalAttendedLectures: academicAttendedLectures };
+    const pct = Math.min(100, ((academicAttendedLectures / totalConductedLectures) * 100)).toFixed(1);
+    return { pct, totalWorkingDays, totalConductedLectures, totalAttendedLectures: academicAttendedLectures };
+}
+
+function toggleCalendarView() { renderAttendanceCalendar(globalMyRecords); }
+
+function renderAttendanceCalendar(historyData) {
+    const wrapper = document.getElementById('calendarDisplayWrapper');
+    const mode = document.getElementById('calendarViewMode').value;
+    const attendedDates = new Set(historyData.map(h => h.date));
+    const holidayDatesSet = new Set(globalHolidays.map(h => h.date));
+
+    let monthsToRender = [];
+    const today = new Date();
+    const currentMonthIdx = today.getMonth();
+
+    if (mode === 'FULL_SEMESTER') {
+        monthsToRender = [6, 7, 8, 9, 10, 11];
+    } else {
+        monthsToRender = [currentMonthIdx];
+    }
+
+    let wrapperHtml = "";
+
+    monthsToRender.forEach(mIdx => {
+        const year = 2026;
+        const monthName = MONTH_NAMES[mIdx];
+        const daysInMonth = new Date(year, mIdx + 1, 0).getDate();
+        const firstDayOfWeek = new Date(year, mIdx, 1).getDay();
+
+        let gridHtml = `
+            <div style="margin-bottom:12px; border-bottom:1px solid var(--card-border); padding-bottom:8px;">
+                <div style="font-size:11px; font-weight:800; color:var(--primary); margin-bottom:6px;">${monthName} ${year}</div>
+                <div class="calendar-grid">
+                    <div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div>
+                    <div class="cal-day-head">W</div><div class="cal-day-head">T</div><div class="cal-day-head">F</div>
+                    <div class="cal-day-head">S</div>
+        `;
+
+        for (let i = 0; i < firstDayOfWeek; i++) {
+            gridHtml += `<div class="cal-date cal-off"></div>`;
+        }
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = `2026-${String(mIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const dtObj = new Date(year, mIdx, d);
+            const dayOfWeek = dtObj.getDay();
+            const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+            const isHoliday = holidayDatesSet.has(dateStr);
+
+            if (isWeekend) {
+                gridHtml += `<div class="cal-date cal-off">${d}</div>`;
+            } else if (isHoliday) {
+                gridHtml += `<div class="cal-date cal-off" style="background:#fef3c7; color:#92400e; font-weight:800; border-color:#fde68a;" title="Declared Holiday">${d}</div>`;
+            } else if (attendedDates.has(dateStr)) {
+                gridHtml += `<div class="cal-date cal-p">${d}</div>`;
+            } else if (dtObj <= today) {
+                gridHtml += `<div class="cal-date cal-a">${d}</div>`;
+            } else {
+                gridHtml += `<div class="cal-date cal-off">${d}</div>`;
+            }
+        }
+        gridHtml += `</div></div>`;
+        wrapperHtml += gridHtml;
+    });
+
+    wrapper.innerHTML = wrapperHtml;
+}
+
+async function fetchHistory(rollNo) {
+    try {
+        const hRes = await fetch(`${API_BASE}/api/holidays`);
+        globalHolidays = await hRes.json();
+    } catch(e) { globalHolidays = []; }
+
+    try {
+        const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
+        const data = await res.json();
+        globalMyRecords = data || [];
+        const tbody = document.querySelector('#myHistoryTable tbody');
+
+        const dateGrouped = {};
+        globalMyRecords.forEach(item => {
+            if (!dateGrouped[item.date]) {
+                dateGrouped[item.date] = { date: item.date, count: 0, status: item.status };
+            }
+            dateGrouped[item.date].count++;
+        });
+
+        const calc = calculateRealAttendancePercentage();
+        
+        const totalDaysEl = document.getElementById('totalDaysCount');
+        if (totalDaysEl) totalDaysEl.innerText = calc.totalAttendedLectures;
+        
+        const pctEl = document.getElementById('attendancePct');
+        if (pctEl) {
+            pctEl.innerText = `${calc.pct}%`;
+            pctEl.style.color = calc.pct >= 75 ? 'var(--success)' : 'var(--danger)';
+        }
+
+        const defaulterTag = document.getElementById('defaulterTag');
+        if (defaulterTag) defaulterTag.style.display = (calc.pct < 75) ? 'inline-block' : 'none';
+
+        const advisorBox = document.getElementById('advisorText');
+        if (advisorBox) {
+            if (calc.pct >= 75) {
+                const safeLectures = Math.floor(calc.totalAttendedLectures - 0.75 * calc.totalConductedLectures);
+                const safeDays = Math.floor(safeLectures / 6);
+                advisorBox.innerHTML = `Safe Zone (<b>${calc.pct}%</b>). You can skip approx <b>${Math.max(0, safeDays)}</b> upcoming days safely.`;
+            } else {
+                const neededLectures = Math.ceil(0.75 * calc.totalConductedLectures - calc.totalAttendedLectures);
+                advisorBox.innerHTML = `Low Attendance (<b>${calc.pct}%</b>). Need <b>${Math.max(0, neededLectures)}</b> more lectures to reach 75%.`;
             }
         }
 
-        async function fetchAllAttendance() {
+        renderAttendanceCalendar(globalMyRecords);
+
+        const sortedDates = Object.values(dateGrouped).sort((a,b) => b.date.localeCompare(a.date));
+
+        if (!tbody) return;
+        if (sortedDates.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No records</td></tr>';
+        
+        tbody.innerHTML = sortedDates.map(i => {
+            const parts = i.date.split('-');
+            const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])).getDay();
+            const dayStr = DAY_NAMES[dateObj];
+            return `<tr><td><b>${i.date}</b></td><td><b>${dayStr}</b></td><td><span class="badge badge-present">${i.count} Lectures</span></td><td><span class="badge badge-present">${i.status}</span></td></tr>`;
+        }).join('');
+    } catch(e) {
+        showMsg("Failed to sync attendance logs!", true);
+    }
+        }
+                async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             try {
                 const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
@@ -1911,3 +1911,4 @@
     </script>
 </body>
 </html>
+    
