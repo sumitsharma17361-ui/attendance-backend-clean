@@ -384,6 +384,29 @@
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
+
+        /* MODAL STYLES FOR EXCEL DOWNLOAD */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .modal-card {
+            background: #ffffff;
+            width: 100%;
+            max-width: 360px;
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--card-border);
+            animation: cardScaleUp 0.3s ease;
+        }
     </style>
 </head>
 <body>
@@ -392,6 +415,38 @@
         <div id="toast" class="toast-card">
             <svg id="toast-icon" class="svg-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
             <span id="toast-msg">System Active</span>
+        </div>
+    </div>
+
+    <!-- STUDENT EXCEL MODAL -->
+    <div id="studentExcelModal" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <h3 style="font-size:14px; font-weight:800; margin-bottom:6px; color:var(--text-main);">Download Student Excel Sheet</h3>
+            <p style="font-size:11px; color:var(--text-muted); margin-bottom:12px; font-weight:600;">Select range for attendance export:</p>
+            
+            <label style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Report Range</label>
+            <select id="studentExcelRange" style="margin-top:4px;">
+                <option value="CURRENT_MONTH">Current Month</option>
+                <option value="SELECTED_MONTH">Selected Month</option>
+                <option value="FULL_SEMESTER">Full Semester (Jul-Dec 2026)</option>
+            </select>
+
+            <div id="selectedMonthWrapper" style="display:none; margin-top:4px;">
+                <label style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Select Month</label>
+                <select id="studentExcelMonth">
+                    <option value="6">July 2026</option>
+                    <option value="7">August 2026</option>
+                    <option value="8">September 2026</option>
+                    <option value="9">October 2026</option>
+                    <option value="10">November 2026</option>
+                    <option value="11">December 2026</option>
+                </select>
+            </div>
+
+            <div style="display:flex; gap:8px; margin-top:12px;">
+                <button class="btn btn-outline" style="flex:1;" onclick="closeStudentExcelModal()">Cancel</button>
+                <button class="btn btn-success" style="flex:1;" onclick="processStudentExcelDownload()">Download Sheet</button>
+            </div>
         </div>
     </div>
 
@@ -429,7 +484,8 @@
                 <button class="btn btn-primary" id="authBtn" onclick="handleAuth()">Sign In</button>
                 <span style="color:var(--primary); cursor:pointer; font-size:12px; display:block; text-align:center; margin-top:12px; font-weight:600;" id="toggleLink" onclick="toggleMode()">New Student? Register Account</span>
             </div>
-                        <!-- DASHBOARD -->
+
+            <!-- DASHBOARD -->
             <div id="dash-box" style="display: none;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                     <div>
@@ -495,8 +551,8 @@
                             <span>Results</span>
                         </div>
                     </div>
-                </div>
-                                <!-- AI FACE ID ENROLLMENT & SCANNER MODAL -->
+    </div>
+                    <!-- AI FACE ID ENROLLMENT & SCANNER MODAL -->
                 <div class="admin-box" id="faceEnrollBox" style="margin-bottom:12px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
@@ -532,7 +588,6 @@
                         Mark Full Day Attendance (via Class Passcode)
                     </button>
                     
-                    <!-- BIOMETRIC REMOVED TO PREVENT PROXY -->
                     <div class="action-buttons-grid">
                         <button class="btn btn-outline" onclick="openCameraModal('CHECKIN')">
                             <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -565,7 +620,14 @@
                     </div>
 
                     <div style="margin-top:10px;">
-                        <h4 style="font-size:11px; color:var(--text-muted); font-weight:700;">My Attendance Logs (Date-Wise):</h4>
+                        <div style="display:flex; justify-style:space-between; align-items:center; margin-bottom:6px;">
+                            <h4 style="font-size:11px; color:var(--text-muted); font-weight:700;">My Attendance Logs (Date-Wise):</h4>
+                            <!-- RESTORED STUDENT EXCEL BUTTON -->
+                            <button class="btn btn-success" style="width:auto; padding:5px 10px; margin:0; font-size:10px;" onclick="openStudentExcelModal()">
+                                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                                Download Excel Sheet
+                            </button>
+                        </div>
                         <div class="table-container">
                             <table id="myHistoryTable">
                                 <thead><tr><th>Date</th><th>Day</th><th>Lectures Attended</th><th>Status</th></tr></thead>
@@ -845,13 +907,82 @@
             }
         }
 
-        /* RESTRICTED QR SCANNER FIX: MARKS ONLY CURRENT ACTIVE LECTURE */
         function openStudentQRScanner() {
             if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
                 return showMsg("QR Scan failed: Class time ke bahar mark nahi ho sakti!", true);
             }
             showMsg("QR Verified! Marking current lecture...");
             markSingleAttendance(activeSubjectSubjectCode);
+        }
+
+        /* STUDENT EXCEL DOWNLOAD MODAL HANDLERS */
+        function openStudentExcelModal() {
+            document.getElementById('studentExcelModal').style.display = 'flex';
+            const rangeSelect = document.getElementById('studentExcelRange');
+            rangeSelect.onchange = function() {
+                document.getElementById('selectedMonthWrapper').style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none';
+            };
+        }
+
+        function closeStudentExcelModal() {
+            document.getElementById('studentExcelModal').style.display = 'none';
+        }
+
+        function processStudentExcelDownload() {
+            const range = document.getElementById('studentExcelRange').value;
+            const selectedMonth = parseInt(document.getElementById('studentExcelMonth').value);
+
+            if (globalMyRecords.length === 0) {
+                closeStudentExcelModal();
+                return showMsg("Export karne ke liye koi attendance records nahi hain!", true);
+            }
+
+            const today = new Date();
+            let filteredRecords = [];
+
+            if (range === 'CURRENT_MONTH') {
+                const currentMonthIdx = today.getMonth();
+                const currentYear = today.getFullYear();
+                filteredRecords = globalMyRecords.filter(r => {
+                    const parts = r.date.split('-');
+                    return parseInt(parts[0]) === currentYear && (parseInt(parts[1]) - 1) === currentMonthIdx;
+                });
+            } else if (range === 'SELECTED_MONTH') {
+                filteredRecords = globalMyRecords.filter(r => {
+                    const parts = r.date.split('-');
+                    return parseInt(parts[0]) === 2026 && (parseInt(parts[1]) - 1) === selectedMonth;
+                });
+            } else {
+                // FULL SEMESTER (Jul - Dec 2026)
+                filteredRecords = globalMyRecords.filter(r => {
+                    const parts = r.date.split('-');
+                    const m = parseInt(parts[1]) - 1;
+                    return parseInt(parts[0]) === 2026 && m >= 6 && m <= 11;
+                });
+            }
+
+            if (filteredRecords.length === 0) {
+                closeStudentExcelModal();
+                return showMsg("Chune gaye time period ke liye koi records nahi mile!", true);
+            }
+
+            const grouped = {};
+            filteredRecords.forEach(r => { 
+                if (!grouped[r.date]) grouped[r.date] = 0; 
+                grouped[r.date]++; 
+            });
+
+            let csv = "Date,Day,Total Lectures Attended,Status\n";
+            Object.keys(grouped).sort().forEach(d => {
+                const parts = d.split('-');
+                const dayStr = DAY_NAMES[new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])).getDay()];
+                csv += `"${d}","${dayStr}","${grouped[d]} Lectures","Present"\n`;
+            });
+
+            const fileName = `Student_Attendance_Report_${range}.csv`;
+            downloadFile(csv, fileName);
+            closeStudentExcelModal();
+            showMsg("Attendance Report downloaded successfully!");
         }
 
         async function adminRegisterStudent() {
@@ -930,8 +1061,7 @@
                 showMsg("Account deleted from directory!", false);
             }
         }
-
-        async function fetchNotices() {
+                    async function fetchNotices() {
             if (localStorage.getItem("GLOBAL_NOTICE_CLEARED") === "true") {
                 document.getElementById('noticeBanner').style.display = 'none';
                 return;
@@ -1140,7 +1270,6 @@
             video.srcObject = null;
         }
 
-        /* RESTRICTED FACE VERIFICATION FIX: MARKS ONLY CURRENT ACTIVE LECTURE */
         async function executeCameraAction() {
             const user = JSON.parse(localStorage.getItem('user'));
             const video = document.getElementById('webcamVideo');
@@ -1197,7 +1326,7 @@
                     showMsg("Face Mismatch! Proxy Attempt Detected.", true);
                 }
             }
-                }
+                        }
                     function togglePassword() {
             const p = document.getElementById('password');
             p.type = p.type === 'password' ? 'text' : 'password';
@@ -1261,7 +1390,6 @@
             }
         }
 
-        /* FUNCTION 1: RENDER ANALYTICS GRAPH (EXCLUDES SPORTS/LIBRARY) */
         async function loadAnalyticsChart(rollNo) {
             try {
                 const res = await fetch(`${API_BASE}/api/analytics/${rollNo}`);
@@ -1366,7 +1494,6 @@
             }, () => showMsg('GPS Denied!', true));
         }
 
-        /* DUAL LAB & SINGLE-ATTENDANCE VALIDATION FIX */
         function markSingleAttendance(overrideSubject) {
             const sub = overrideSubject || activeSubjectSubjectCode || "WT LAB";
             if (!sub || sub.includes("Off Hours") || sub.includes("Lunch")) {
@@ -1448,7 +1575,6 @@
             }
         }
 
-        /* SPORTS & LIBRARY EXCLUDED FROM MAIN ACADEMIC ATTENDANCE PERCENTAGE */
         function calculateRealAttendancePercentage() {
             const startDate = new Date(2026, 6, 15);
             const today = new Date();
@@ -1686,20 +1812,7 @@
             URL.revokeObjectURL(url);
         }
 
-        function exportStudentCSV() {
-            if (globalMyRecords.length === 0) return alert("No records!");
-            const grouped = {};
-            globalMyRecords.forEach(r => { if (!grouped[r.date]) grouped[r.date] = 0; grouped[r.date]++; });
-
-            let csv = "Date,Day,Total Lectures Attended,Status\n";
-            Object.keys(grouped).forEach(d => {
-                const parts = d.split('-');
-                const dayStr = DAY_NAMES[new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])).getDay()];
-                csv += `"${d}","${dayStr}","${grouped[d]} Lectures","Present"\n`;
-            });
-            downloadFile(csv, `My_Attendance_Report.csv`);
-        }
-
+        /* ADMIN EXCEL GRID REPORT (CLEAN HEADER - REMOVED FIXED HARDCODED SUB-HEADER) */
         function exportExcelGrid() {
             if (globalAllRecords.length === 0) return alert("Pehle Class Records Refresh karo!");
 
@@ -1741,7 +1854,6 @@
                 }
             }
 
-            let workingDaysCount = 0;
             let headerRow = `Student Roll No,Student Name`;
 
             targetDates.forEach(dt => {
@@ -1749,20 +1861,13 @@
                 const dtObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
                 const dayOfWeek = dtObj.getDay();
                 const dayName = DAY_NAMES[dayOfWeek];
-                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-                const isHoliday = holidayDatesList.includes(dt);
-
                 headerRow += `,${parts[2]}-${MONTH_NAMES[parseInt(parts[1]) - 1].substring(0,3)} (${dayName})`;
-
-                if (!isWeekend && !isHoliday) {
-                    workingDaysCount++;
-                }
             });
 
             headerRow += `,Total Present Days\n`;
 
+            // CLEAN MASTER REPORT HEADER (REMOVED HARDCODED SUB-HEADER ROW 2)
             let csv = `BM Group Of Institutions - Master Attendance Grid Report (July-Dec 2026)\n`;
-            csv += `Total Working Days: ${workingDaysCount} Days (6 Academic Lectures/Day Default)\n\n`;
             csv += headerRow;
 
             const sortedStudents = Object.values(studentsMap).sort((a, b) => {
