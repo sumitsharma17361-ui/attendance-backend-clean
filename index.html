@@ -178,7 +178,6 @@
         .password-wrapper input { padding-right: 40px; }
         .eye-icon { position: absolute; right: 12px; top: 38%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); transition: color 0.3s; }
         .eye-icon:hover { color: var(--primary); }
-
                 .btn { 
             width: 100%; 
             padding: 10px 14px; 
@@ -681,6 +680,14 @@
                         <input type="text" id="adminRegPass" placeholder="Password (Default: 123456)">
                         <button class="btn btn-primary" onclick="adminRegisterStudent()" style="margin-top:0;">Register Student</button>
                     </div>
+                    
+                    <!-- 🔥 NEW: Device Reset Tool - Admin ke liye -->
+                    <div class="tool-sub-card" style="border-color:#93c5fd; background:#eff6ff;">
+                        <span class="tool-title" style="color:#1d4ed8;">🔓 Reset Student Device Binding:</span>
+                        <input type="text" id="resetDeviceRoll" placeholder="Student Roll No (e.g. 24CSE14)">
+                        <button class="btn btn-primary" onclick="resetDeviceBinding()" style="margin-top:0;">Reset Device Binding</button>
+                    </div>
+
                     <div class="tool-sub-card">
                         <span class="tool-title" style="color:var(--text-main);">Broadcast Announcement Notice:</span>
                         <input type="text" id="noticeMsg" placeholder="Notice text (e.g. Mid-Sem Exams from Monday)">
@@ -1023,6 +1030,35 @@ async function deleteEntireStudentAccount() {
         showMsg(data.message || `Account ${targetRoll} Deleted Successfully!`);
         document.getElementById('deleteStudentRoll').value = '';
     } catch(err) { showMsg("Account deleted from directory!", false); }
+}
+
+// 🔥 NEW: Reset Device Binding Function
+async function resetDeviceBinding() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    const targetRoll = document.getElementById('resetDeviceRoll').value.trim();
+    
+    if (!targetRoll) return showMsg('Enter Student Roll Number!', true);
+    if (!confirm(`Are you sure you want to reset device binding for ${targetRoll}?`)) return;
+    
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/reset-device`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                requesterRollNo: user.rollNo, 
+                targetRollNo: targetRoll 
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showMsg(data.message);
+            document.getElementById('resetDeviceRoll').value = '';
+        } else {
+            showMsg(data.error || 'Failed to reset device', true);
+        }
+    } catch(e) {
+        showMsg('Server error!', true);
+    }
 }
 
 async function fetchNotices() {
@@ -1453,7 +1489,7 @@ function markSingleAttendance(overrideSubject) {
             }
         } catch(e) { showMsg("Network Error! Try again.", true); }
     }, () => showMsg('GPS Denied!', true));
-    }
+            }
             async function markManualAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             const studentRollNo = document.getElementById('manualRoll').value.trim();
@@ -1787,3 +1823,5 @@ function markSingleAttendance(overrideSubject) {
     </script>
 </body>
 </html>
+    
+    
