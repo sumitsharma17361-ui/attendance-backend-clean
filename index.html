@@ -409,15 +409,6 @@
 
         .flex-buttons { display: flex; gap: 8px; }
         .flex-buttons .btn { margin: 0; flex: 1; }
-        
-        /* OTP Modal */
-        .otp-input {
-            text-align: center;
-            font-size: 24px;
-            letter-spacing: 8px;
-            font-weight: 700;
-            padding: 12px;
-        }
     </style>
 </head>
 <body>
@@ -428,21 +419,6 @@
         </div>
     </div>
 
-    <!-- OTP MODAL -->
-    <div id="otpModal" class="modal-overlay" style="display: none;">
-        <div class="modal-card">
-            <h3 style="font-size:14px; font-weight:800; margin-bottom:6px; color:var(--text-main);">📱 OTP Verification</h3>
-            <p style="font-size:11px; color:var(--text-muted); margin-bottom:12px; font-weight:600;">Enter 6-digit OTP sent to your registered phone</p>
-            <input type="text" id="otpInput" class="otp-input" placeholder="000000" maxlength="6" style="font-size:24px; text-align:center; letter-spacing:8px;">
-            <div style="display:flex; gap:8px; margin-top:12px;">
-                <button class="btn btn-outline" style="flex:1;" onclick="closeOTPModal()">Cancel</button>
-                <button class="btn btn-success" style="flex:1;" onclick="verifyOTP()">Verify OTP</button>
-            </div>
-            <button class="btn btn-outline" onclick="resendOTP()" style="margin-top:8px; padding:6px; font-size:10px;">Resend OTP</button>
-        </div>
-    </div>
-
-    <!-- STUDENT EXCEL MODAL -->
     <div id="studentExcelModal" class="modal-overlay" style="display: none;">
         <div class="modal-card">
             <h3 style="font-size:14px; font-weight:800; margin-bottom:6px; color:var(--text-main);">Download Student Excel Sheet</h3>
@@ -757,7 +733,7 @@
                     </div>
                 </div>
 
-                <!-- 🔥 NEW: Security Tab -->
+                <!-- 🔥 Security Tab -->
                 <div id="subSecurity" style="display:none;">
                     <div class="admin-box">
                         <h4 style="font-size:12px; font-weight:800; color:var(--text-main); margin-bottom:8px;">🛡️ Suspicious Activity Logs</h4>
@@ -833,7 +809,6 @@
     let toastTimeout = null;
     let activeCloudFaceDescriptor = null;
     let myChart = null;
-    let pendingLoginData = null; // 🔥 For OTP flow
 
     const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -860,63 +835,6 @@
         let clean = rawRoll.toUpperCase().replace(/[^A-Z0-9]/g, '');
         const strictRegex = /^\d{2}(CSE|AIDS)\d{2}$/;
         return { isValid: strictRegex.test(clean), cleanRoll: clean };
-    }
-
-    // ---------- OTP Functions ----------
-    function openOTPModal(rollNo) {
-        document.getElementById('otpModal').style.display = 'flex';
-        document.getElementById('otpInput').value = '';
-        document.getElementById('otpInput').focus();
-    }
-
-    function closeOTPModal() {
-        document.getElementById('otpModal').style.display = 'none';
-        pendingLoginData = null;
-    }
-
-    async function verifyOTP() {
-        const otp = document.getElementById('otpInput').value.trim();
-        if (otp.length !== 6) {
-            return showMsg('Please enter 6-digit OTP!', true);
-        }
-        
-        try {
-            const res = await fetch(`${API_BASE}/api/auth/verify-otp`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rollNo: pendingLoginData?.rollNo, otp })
-            });
-            const data = await res.json();
-            if (res.ok) {
-                closeOTPModal();
-                showMsg('✅ OTP Verified! Login successful.');
-                localStorage.setItem('user', JSON.stringify(pendingLoginData?.user));
-                loadDashboard();
-            } else {
-                showMsg(data.error || 'Invalid OTP!', true);
-            }
-        } catch(e) {
-            showMsg('Server error!', true);
-        }
-    }
-
-    async function resendOTP() {
-        if (!pendingLoginData) return showMsg('Please login first!', true);
-        try {
-            const res = await fetch(`${API_BASE}/api/auth/send-otp`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rollNo: pendingLoginData.rollNo })
-            });
-            const data = await res.json();
-            if (res.ok) {
-                showMsg('📱 OTP resent! Check your phone.');
-            } else {
-                showMsg(data.error || 'Failed to resend OTP', true);
-            }
-        } catch(e) {
-            showMsg('Server error!', true);
-        }
     }
 
     const WEEKLY_SCHEDULE = {
@@ -1065,7 +983,6 @@ async function openSelfieCamera() {
         const selfieData = canvas.toDataURL('image/jpeg');
         stream.getTracks().forEach(t => t.stop());
         
-        // Mark attendance with selfie
         markSingleAttendanceWithSelfie(activeSubjectSubjectCode, selfieData);
     } catch(err) {
         showMsg('Camera access denied! Please allow camera.', true);
@@ -1547,7 +1464,7 @@ async function resetStudentPassword() {
     } catch(e) { showMsg("Failed to reset password!", true); }
 }
 
-// 🔥 UPDATED Auth with OTP
+// 🔥 UPDATED Auth - OTP REMOVED (Direct Login)
 async function handleAuth() {
     const rawRoll = document.getElementById('rollNo').value.trim();
     const password = document.getElementById('password').value.trim();
@@ -1578,32 +1495,17 @@ async function handleAuth() {
             if (res.ok) { showMsg('Registered! Please login.'); toggleMode(); } 
             else { showMsg(data.error || 'Registration failed', true); }
         } else {
-            // Step 1: Login
+            // 🔥 DIRECT LOGIN - No OTP
             const res = await fetch(`${API_BASE}/api/auth/login`, { 
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' }, 
                 body: JSON.stringify({ rollNo: validation.cleanRoll, password, deviceId }) 
             });
             const data = await res.json();
-            if (res.ok) {
-                // Step 2: Send OTP
-                const otpRes = await fetch(`${API_BASE}/api/auth/send-otp`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ rollNo: validation.cleanRoll })
-                });
-                const otpData = await otpRes.json();
-                if (otpRes.ok) {
-                    pendingLoginData = {
-                        rollNo: validation.cleanRoll,
-                        user: data.user,
-                        token: data.token
-                    };
-                    showMsg('📱 OTP sent to your phone!');
-                    openOTPModal(validation.cleanRoll);
-                } else {
-                    showMsg(otpData.error || 'Failed to send OTP', true);
-                }
+            if (res.ok) { 
+                localStorage.setItem('user', JSON.stringify(data.user));
+                localStorage.setItem('token', data.token);
+                loadDashboard(); 
             } else {
                 showMsg(data.error || 'Invalid credentials', true);
             }
@@ -1712,7 +1614,6 @@ function markFullDayAttendance() {
     }, () => showMsg('GPS Denied!', true));
 }
 
-// 🔥 Mark with Selfie
 function markSingleAttendanceWithSelfie(subject, selfieData) {
     if (!navigator.geolocation) {
         return showMsg('Geolocation is not supported!', true);
@@ -2218,5 +2119,6 @@ function markSingleAttendance(overrideSubject) {
     </script>
 </body>
 </html>
+
         
-           
+        
