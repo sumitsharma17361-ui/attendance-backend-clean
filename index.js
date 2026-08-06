@@ -6,6 +6,10 @@ const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const { z } = require('zod');
 
+// 🔥 FIX: Set Server Timezone to IST
+process.env.TZ = 'Asia/Kolkata';
+console.log(`🕐 Server Timezone set to: ${process.env.TZ}`);
+
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(cors());
@@ -41,8 +45,7 @@ const registerSchema = z.object({
   name: z.string().min(2, "Name too short").max(50),
   rollNo: z.string().regex(/^\d{2}(CSE|AIDS)\d{2}$/, "Invalid Roll No format"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  deviceId: z.string().optional(),
-  phone: z.string().optional()
+  deviceId: z.string().optional()
 });
 
 const loginSchema = z.object({
@@ -51,20 +54,7 @@ const loginSchema = z.object({
   deviceId: z.string().optional()
 });
 
-// ---------- Timetable with Time Slots ----------
-const CLASS_SLOTS = {
-  'BDA - Big Data Analytics': { start: '09:20', end: '10:05' },
-  'ECO - Economics for Engineers': { start: '10:05', end: '10:50' },
-  'DAA - Design & Analysis of Algorithm': { start: '10:50', end: '11:35' },
-  'FLA - Formal Language & Automata': { start: '11:35', end: '12:20' },
-  'HRM - Human Resource Mgmt': { start: '13:05', end: '13:50' },
-  'CN - Computer Network': { start: '13:50', end: '14:35' },
-  'WT - Web Technology': { start: '09:20', end: '10:05' },
-  'CN LAB - Computer Network Lab': { start: '13:50', end: '15:20' },
-  'DAA LAB - Algorithm Lab': { start: '13:05', end: '14:35' },
-  'WT LAB - Web Technology Lab': { start: '13:05', end: '14:35' }
-};
-
+// ---------- Timetable (for full‑day marking) ----------
 const TIME_TABLE = {
   Monday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'DAA - Design & Analysis of Algorithm', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'CN - Computer Network', 'LIB - Library'],
   Tuesday: ['WT - Web Technology', 'ECO - Economics for Engineers', 'Internet Lab (Ms. Geeta)', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'BDA - Big Data Analytics'],
@@ -172,41 +162,8 @@ function checkLocation(lat, lng) {
   return { isInside: distance <= 50, distance: distance.toFixed(0) };
 }
 
-function checkTimeWindow(subject, currentTime) {
-  let cleanSubject = subject;
-  cleanSubject = cleanSubject.replace(/^[Pp]\d\s*-\s*/, '');
-  cleanSubject = cleanSubject.replace(/^[Ll][Aa][Bb]\s*-\s*/, '');
-  cleanSubject = cleanSubject.trim();
-  
-  let slot = CLASS_SLOTS[cleanSubject];
-  
-  if (!slot) {
-    for (let key of Object.keys(CLASS_SLOTS)) {
-      if (cleanSubject.includes(key.replace(/ -.*/, '')) || key.includes(cleanSubject.replace(/ -.*/, ''))) {
-        slot = CLASS_SLOTS[key];
-        break;
-      }
-    }
-  }
-  
-  if (!slot) {
-    return { allowed: true, message: 'No time restriction for this subject' };
-  }
-  
-  const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
-  const startMinutes = parseInt(slot.start.split(':')[0]) * 60 + parseInt(slot.start.split(':')[1]);
-  const endMinutes = parseInt(slot.end.split(':')[0]) * 60 + parseInt(slot.end.split(':')[1]);
-  
-  const buffer = 5;
-  if (currentMinutes >= startMinutes - buffer && currentMinutes <= endMinutes + buffer) {
-    return { allowed: true, message: 'Within class time' };
-  }
-  
-  return { 
-    allowed: false, 
-    message: `⏰ Attendance only allowed between ${slot.start} and ${slot.end} (${buffer}min buffer)`
-  };
-}
+// 🔥 TIME WINDOW RESTRICTION REMOVED
+// No time check function needed anymore
 
 function detectAnomaly(user, lat, lng, reqIP, fingerprint) {
   const MIN_TIME_BETWEEN_ATTENDANCE = 10 * 60 * 1000;
@@ -346,14 +303,14 @@ const checkActiveSession = async (req, res, next) => {
 // ---------- Routes ----------
 app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active & Secured!'));
 
-// ----- Auth Routes (OTP REMOVED) -----
+// ----- Auth Routes -----
 app.post('/api/auth/register', async (req, res) => {
   try {
     const parseResult = registerSchema.safeParse(req.body);
     if (!parseResult.success) {
       return res.status(400).json({ error: parseResult.error.errors[0].message });
     }
-    const { name, rollNo, password, deviceId, phone } = parseResult.data;
+    const { name, rollNo, password, deviceId } = parseResult.data;
     const cleanRoll = rollNo.trim().toUpperCase();
 
     let user = await User.findOne({ rollNo: cleanRoll });
@@ -367,8 +324,7 @@ app.post('/api/auth/register', async (req, res) => {
       rollNo: cleanRoll, 
       password: hashedPassword, 
       role,
-      boundDeviceId: deviceId || null,
-      phone: phone || null
+      boundDeviceId: deviceId || null
     }).save();
 
     res.status(201).json({ message: 'Registration successful! Please login.' });
@@ -377,7 +333,7 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// 🔥 LOGIN - OTP REMOVED (Direct Login)
+// 🔥 LOGIN - Direct Login (No OTP)
 app.post('/api/auth/login', async (req, res) => {
   try {
     const parseResult = loginSchema.safeParse(req.body);
@@ -451,6 +407,7 @@ app.post('/api/auth/logout', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 // ----- Face Mesh -----
 app.post('/api/face/enroll', async (req, res) => {
   try {
@@ -596,37 +553,6 @@ app.post('/api/faculty/override', verifyRole(['faculty', 'admin']), async (req, 
     res.status(500).json({ error: err.message });
   }
 });
-
-// ----- Notices -----
-app.get('/api/notices', async (req, res) => {
-  try {
-    const notices = await Notice.find().sort({ date: -1 }).limit(3);
-    res.json(notices);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/api/admin/notice', async (req, res) => {
-  try {
-    const { requesterRollNo, title, message } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) {
-      return res.status(403).json({ error: 'Access Denied!' });
-    }
-
-    if (!message || message.trim() === "") {
-      await Notice.deleteMany({});
-      return res.json({ message: 'All Active Notices Cleared Permanently!' });
-    }
-
-    await Notice.deleteMany({});
-    await new Notice({ title: title || 'Announcement', message }).save();
-    res.status(201).json({ message: 'Broadcast Notice Published!' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // ----- Suspicious Activity Logs -----
 app.get('/api/admin/suspicious-logs/:requesterRollNo', async (req, res) => {
   try {
@@ -702,33 +628,32 @@ app.get('/api/admin/all-students/:requesterRollNo', async (req, res) => {
   }
 });
 
-// ----- Attendance Marking -----
+// ----- Attendance Marking (Time Restriction REMOVED) -----
 app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude, selfie, deviceFingerprint } = req.body;
     const today = new Date();
     const todayDate = today.toISOString().split('T')[0];
 
+    // 1. Weekend Check
     if (today.getDay() === 0 || today.getDay() === 6) {
       return res.status(400).json({ error: 'Weekend! College was OFF.' });
     }
 
+    // 2. Holiday Check
     const isHoliday = await Holiday.findOne({ date: todayDate });
     if (isHoliday) {
       return res.status(400).json({ error: `Holiday: ${isHoliday.reason}` });
     }
 
+    // 3. Geofencing Check (50m)
     const locCheck = checkLocation(latitude, longitude);
     if (!locCheck.isInside) {
       await logSuspiciousActivity(rollNo, name, 'FAKE_GPS', `Outside boundary (${locCheck.distance}m away)`, { latitude, longitude }, req.ip, deviceFingerprint);
       return res.status(400).json({ error: `Outside Classroom Boundary! (${locCheck.distance}m away)` });
     }
 
-    const timeCheck = checkTimeWindow(subject, today);
-    if (!timeCheck.allowed) {
-      await logSuspiciousActivity(rollNo, name, 'TIME_VIOLATION', timeCheck.message, { latitude, longitude }, req.ip, deviceFingerprint);
-      return res.status(400).json({ error: timeCheck.message });
-    }
+    // 🔥 TIME WINDOW CHECK REMOVED - No time restriction anymore
 
     const cleanRoll = rollNo.trim().toUpperCase();
     const user = await User.findOne({ rollNo: cleanRoll });
@@ -736,12 +661,14 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
       return res.status(404).json({ error: 'Student not found!' });
     }
 
+    // 4. Selfie Verification (if selfie provided)
     if (selfie) {
       if (!user.faceDescriptor || user.faceDescriptor.length === 0) {
         return res.status(400).json({ error: 'Please enroll face first! Go to Enroll Face.' });
       }
     }
 
+    // 5. Device Fingerprint Check
     if (deviceFingerprint) {
       if (!user.deviceFingerprint) {
         user.deviceFingerprint = deviceFingerprint;
@@ -749,6 +676,7 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
       }
     }
 
+    // 6. Anomaly Detection (IP, Location, Device)
     const clientIP = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown';
     const anomaly = detectAnomaly(user, latitude, longitude, clientIP, deviceFingerprint);
     
@@ -765,6 +693,7 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
       });
     }
 
+    // 7. Lab duplicate check
     const isLab = subject.includes("LAB") || subject.includes("Lab");
     const todayEntries = await Attendance.find({ rollNo: cleanRoll, subject, date: todayDate });
     
@@ -772,6 +701,7 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
       return res.status(400).json({ error: `Already marked for ${subject} today! (Lab - 1 lecture only)` });
     }
 
+    // 8. Save attendance
     await new Attendance({ 
       rollNo: cleanRoll, 
       studentName: name, 
@@ -785,6 +715,7 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
       isVerified: !!selfie
     }).save();
 
+    // 9. Update user tracking
     user.lastKnownIP = clientIP;
     user.lastAttendanceTime = new Date();
     user.lastAttendanceLocation = { latitude, longitude };
@@ -799,6 +730,7 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
   }
 });
 
+// ----- Full Day Attendance -----
 app.post('/api/attendance/mark-fullday', checkActiveSession, async (req, res) => {
   try {
     const { rollNo, name, latitude, longitude, selfie, deviceFingerprint } = req.body;
@@ -827,6 +759,7 @@ app.post('/api/attendance/mark-fullday', checkActiveSession, async (req, res) =>
 
     const clientIP = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown';
     
+    // Anomaly detection
     const anomaly = detectAnomaly(user, latitude, longitude, clientIP, deviceFingerprint);
     
     if (anomaly.isAnomaly) {
@@ -877,6 +810,7 @@ app.post('/api/attendance/mark-fullday', checkActiveSession, async (req, res) =>
   }
 });
 
+// ----- Admin Manual Attendance -----
 app.post('/api/admin/manual-attendance', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNo, date, status } = req.body;
@@ -922,6 +856,7 @@ app.post('/api/admin/manual-attendance', async (req, res) => {
   }
 });
 
+// ----- Holidays -----
 app.post('/api/admin/holiday', async (req, res) => {
   try {
     const { requesterRollNo, date, reason } = req.body;
@@ -944,6 +879,7 @@ app.get('/api/holidays', async (req, res) => {
   }
 });
 
+// ----- History & Analytics -----
 app.get('/api/attendance/history/:rollNo', async (req, res) => {
   try {
     const history = await Attendance.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ date: -1 });
@@ -1008,3 +944,6 @@ process.on('uncaughtException', (err) => {
 // ---------- Start Server ----------
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+
+
