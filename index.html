@@ -178,8 +178,7 @@
         .password-wrapper input { padding-right: 40px; }
         .eye-icon { position: absolute; right: 12px; top: 38%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); transition: color 0.3s; }
         .eye-icon:hover { color: var(--primary); }
-
-        .btn { 
+                .btn { 
             width: 100%; 
             padding: 10px 14px; 
             border-radius: 10px; 
@@ -468,7 +467,6 @@
         <div id="auth-box" class="tab-content-active">
             <div id="register-fields" style="display: none;">
                 <input type="text" id="regName" placeholder="Full Student Name">
-                <input type="text" id="regPhone" placeholder="Phone Number (e.g. 9876543210)">
             </div>
             <input type="text" id="rollNo" placeholder="Roll Number (e.g. 24CSE48)">
             <div class="password-wrapper">
@@ -587,7 +585,7 @@
                     </button>
                 </div>
 
-                <!-- 🔥 Selfie Capture Button -->
+                <!-- Selfie Capture Button -->
                 <button class="btn btn-accent" onclick="openSelfieCamera()" style="margin-top:6px; padding:9px;">
                     <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
                     📸 Take Selfie & Mark Attendance
@@ -629,69 +627,67 @@
                     </div>
                 </div>
             </div>
-                        <div id="adminTab" style="display:none;">
-                <div class="admin-nav">
-                    <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">Excel</div>
-                    <div class="admin-nav-item" onclick="switchAdminSubTab('subAttendance')">Entry</div>
-                    <div class="admin-nav-item" onclick="switchAdminSubTab('subHoliday')">Holiday</div>
-                    <div class="admin-nav-item" onclick="switchAdminSubTab('subQR')">QR</div>
-                    <div class="admin-nav-item" onclick="switchAdminSubTab('subTools')">Tools</div>
-                    <div class="admin-nav-item" onclick="switchAdminSubTab('subDirectory')">Directory</div>
-                    <div class="admin-nav-item" onclick="switchAdminSubTab('subSecurity')">Security</div>
-                </div>
+            <div id="adminTab" style="display:none;">
+    <div class="admin-nav">
+        <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">Excel</div>
+        <div class="admin-nav-item" onclick="switchAdminSubTab('subAttendance')">Entry</div>
+        <div class="admin-nav-item" onclick="switchAdminSubTab('subHoliday')">Holiday</div>
+        <div class="admin-nav-item" onclick="switchAdminSubTab('subQR')">QR</div>
+        <div class="admin-nav-item" onclick="switchAdminSubTab('subTools')">Tools</div>
+        <div class="admin-nav-item" onclick="switchAdminSubTab('subDirectory')">Directory</div>
+        <div class="admin-nav-item" onclick="switchAdminSubTab('subSecurity')">Security</div>
+    </div>
 
-                <div id="subReports" class="admin-box tab-content-active">
-                    <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Export Excel Reports:</span>
-                    <select id="exportSelection" style="padding:10px; margin-bottom:8px;">
-                        <option value="ALL_SEMESTER">Full Semester (Jul-Dec 2026)</option>
-                        <option value="6">July 2026</option>
-                        <option value="7">August 2026</option>
-                        <option value="8">September 2026</option>
-                        <option value="9">October 2026</option>
-                        <option value="10">November 2026</option>
-                        <option value="11">December 2026</option>
-                    </select>
-                    <button class="btn btn-success" onclick="exportExcelGrid()" style="margin-top:0; padding:10px;">Download Excel Report</button>
-                </div>
+    <div id="subReports" class="admin-box tab-content-active">
+        <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Export Excel Reports:</span>
+        <select id="exportSelection" style="padding:10px; margin-bottom:8px;">
+            <option value="ALL_SEMESTER">Full Semester (Jul-Dec 2026)</option>
+            <option value="6">July 2026</option>
+            <option value="7">August 2026</option>
+            <option value="8">September 2026</option>
+            <option value="9">October 2026</option>
+            <option value="10">November 2026</option>
+            <option value="11">December 2026</option>
+        </select>
+        <button class="btn btn-success" onclick="exportExcelGrid()" style="margin-top:0; padding:10px;">Download Excel Report</button>
+    </div>
 
-                <div id="subAttendance" class="admin-box" style="display:none;">
-                    <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Manual Backdate Attendance:</span>
-                    <input type="text" id="manualRoll" placeholder="Student Roll No (e.g. 24CSE14)">
-                    <input type="date" id="manualDate">
-                    <select id="manualStatus">
-                        <option value="Present">Present</option>
-                        <option value="Duty Leave">Duty Leave (DL)</option>
-                    </select>
-                    <button class="btn btn-primary" onclick="markManualAttendance()" style="margin-top:0; padding:10px;">Mark Attendance</button>
-                </div>
+    <div id="subAttendance" class="admin-box" style="display:none;">
+        <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Manual Backdate Attendance:</span>
+        <input type="text" id="manualRoll" placeholder="Student Roll No (e.g. 24CSE14)">
+        <input type="date" id="manualDate">
+        <select id="manualStatus">
+            <option value="Present">Present</option>
+            <option value="Duty Leave">Duty Leave (DL)</option>
+        </select>
+        <button class="btn btn-primary" onclick="markManualAttendance()" style="margin-top:0; padding:10px;">Mark Attendance</button>
+    </div>
 
-                <div id="subHoliday" class="admin-box" style="display:none;">
-                    <span style="font-size:11px; font-weight:700; color:var(--warning); display:block; margin-bottom:6px;">Declare Official Holiday:</span>
-                    <input type="date" id="holidayDate">
-                    <input type="text" id="holidayReason" placeholder="Reason (e.g. Diwali/Rainy Day)">
-                    <button class="btn btn-warning" onclick="declareHoliday()" style="margin-top:0; padding:10px;">Mark Date as Holiday</button>
-                </div>
+    <div id="subHoliday" class="admin-box" style="display:none;">
+        <span style="font-size:11px; font-weight:700; color:var(--warning); display:block; margin-bottom:6px;">Declare Official Holiday:</span>
+        <input type="date" id="holidayDate">
+        <input type="text" id="holidayReason" placeholder="Reason (e.g. Diwali/Rainy Day)">
+        <button class="btn btn-warning" onclick="declareHoliday()" style="margin-top:0; padding:10px;">Mark Date as Holiday</button>
+    </div>
 
-                <div id="subQR" class="admin-box" style="display:none; text-align:center;">
-                    <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Dynamic Rotating QR & Daily Master Secret:</span>
-                    <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">Project this screen in class. Students enter Daily Master Secret to mark attendance.</p>
-                    <div style="background:#f8fafc; padding:10px; border-radius:10px; margin-bottom:8px; border:1px solid var(--card-border);">
-                        <span style="font-size:10px; font-weight:700; color:var(--text-muted);">DAILY MASTER SECRET / CLASS PASSCODE:</span>
-                        <h2 id="liveClassPasscode" style="font-size:24px; font-weight:900; color:var(--primary); letter-spacing:4px;">9842</h2>
-                    </div>
-                    <div id="qrcode" style="display:flex; justify-content:center; margin:10px 0;"></div>
-                    <button class="btn btn-outline" id="refreshQrBtn" onclick="generateDynamicQR()" style="padding:8px; font-size:11px;">
-                        <svg id="refreshIcon" class="svg-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
-                        Refresh Passcode & QR Code Now
-                    </button>
-                </div>
-
-                <div id="subTools" style="display:none;">
+    <div id="subQR" class="admin-box" style="display:none; text-align:center;">
+        <span style="font-size:11px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Dynamic Rotating QR & Daily Master Secret:</span>
+        <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">Project this screen in class. Students enter Daily Master Secret to mark attendance.</p>
+        <div style="background:#f8fafc; padding:10px; border-radius:10px; margin-bottom:8px; border:1px solid var(--card-border);">
+            <span style="font-size:10px; font-weight:700; color:var(--text-muted);">DAILY MASTER SECRET / CLASS PASSCODE:</span>
+            <h2 id="liveClassPasscode" style="font-size:24px; font-weight:900; color:var(--primary); letter-spacing:4px;">9842</h2>
+        </div>
+        <div id="qrcode" style="display:flex; justify-content:center; margin:10px 0;"></div>
+        <button class="btn btn-outline" id="refreshQrBtn" onclick="generateDynamicQR()" style="padding:8px; font-size:11px;">
+            <svg id="refreshIcon" class="svg-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+            Refresh Passcode & QR Code Now
+        </button>
+    </div>
+                    <div id="subTools" style="display:none;">
                     <div class="tool-sub-card">
                         <span class="tool-title" style="color:var(--primary);">Register New Student Manually:</span>
                         <input type="text" id="adminRegName" placeholder="Full Student Name">
                         <input type="text" id="adminRegRoll" placeholder="Roll Number (e.g. 24CSE14)">
-                        <input type="text" id="adminRegPhone" placeholder="Phone Number (e.g. 9876543210)">
                         <input type="text" id="adminRegPass" placeholder="Password (Default: 123456)">
                         <button class="btn btn-primary" onclick="adminRegisterStudent()" style="margin-top:0;">Register Student</button>
                     </div>
@@ -733,7 +729,7 @@
                     </div>
                 </div>
 
-                <!-- 🔥 Security Tab -->
+                <!-- Security Tab -->
                 <div id="subSecurity" style="display:none;">
                     <div class="admin-box">
                         <h4 style="font-size:12px; font-weight:800; color:var(--text-main); margin-bottom:8px;">🛡️ Suspicious Activity Logs</h4>
@@ -788,7 +784,6 @@
         return deviceId;
     }
 
-    // 🔥 Device Fingerprint
     function getDeviceFingerprint() {
         return {
             userAgent: navigator.userAgent || 'unknown',
@@ -962,7 +957,6 @@ function openStudentQRScanner() {
     markSingleAttendance(activeSubjectSubjectCode);
 }
 
-// 🔥 Selfie Camera for Attendance
 async function openSelfieCamera() {
     if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
         return showMsg("No active lecture to mark!", true);
@@ -1060,7 +1054,6 @@ function processStudentExcelDownload() {
 async function adminRegisterStudent() {
     const name = document.getElementById('adminRegName').value.trim();
     const rawRoll = document.getElementById('adminRegRoll').value.trim();
-    const phone = document.getElementById('adminRegPhone').value.trim();
     const password = document.getElementById('adminRegPass').value.trim() || '123456';
     const validation = sanitizeAndValidateRollNo(rawRoll);
     if (!name || !validation.isValid) return showMsg('Valid Name and Roll No required!', true);
@@ -1068,14 +1061,13 @@ async function adminRegisterStudent() {
         const res = await fetch(`${API_BASE}/api/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, rollNo: validation.cleanRoll, password, phone })
+            body: JSON.stringify({ name, rollNo: validation.cleanRoll, password })
         });
         const data = await res.json();
         if (res.ok) {
             showMsg(`Student ${name} Registered Successfully!`);
             document.getElementById('adminRegName').value = '';
             document.getElementById('adminRegRoll').value = '';
-            document.getElementById('adminRegPhone').value = '';
             document.getElementById('adminRegPass').value = '';
             fetchAllStudents();
         } else {
@@ -1158,7 +1150,6 @@ async function resetAnomalyFlag() {
     } catch(e) { showMsg('Server error!', true); }
 }
 
-// 🔥 Security Logs Functions
 async function fetchSuspiciousLogs() {
     const user = JSON.parse(localStorage.getItem('user'));
     try {
@@ -1464,7 +1455,7 @@ async function resetStudentPassword() {
     } catch(e) { showMsg("Failed to reset password!", true); }
 }
 
-// 🔥 UPDATED Auth - OTP REMOVED (Direct Login)
+// 🔥 UPDATED Auth - Phone Number REMOVED
 async function handleAuth() {
     const rawRoll = document.getElementById('rollNo').value.trim();
     const password = document.getElementById('password').value.trim();
@@ -1482,20 +1473,17 @@ async function handleAuth() {
     try {
         if (isRegistering) {
             const name = document.getElementById('regName').value.trim();
-            const phone = document.getElementById('regPhone').value.trim();
             if (!name) return showMsg('Enter Full Name!', true);
-            if (!phone || phone.length < 10) return showMsg('Enter valid Phone Number (e.g. 9876543210)!', true);
             
             const res = await fetch(`${API_BASE}/api/auth/register`, { 
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ name, rollNo: validation.cleanRoll, password, deviceId, phone }) 
+                body: JSON.stringify({ name, rollNo: validation.cleanRoll, password, deviceId }) 
             });
             const data = await res.json();
             if (res.ok) { showMsg('Registered! Please login.'); toggleMode(); } 
             else { showMsg(data.error || 'Registration failed', true); }
         } else {
-            // 🔥 DIRECT LOGIN - No OTP
             const res = await fetch(`${API_BASE}/api/auth/login`, { 
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' }, 
@@ -2119,6 +2107,4 @@ function markSingleAttendance(overrideSubject) {
     </script>
 </body>
 </html>
-
-        
         
