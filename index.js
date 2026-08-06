@@ -37,8 +37,17 @@ const apiLimiter = rateLimit({
   message: { error: 'Too many requests, please slow down.' }
 });
 
+// 🔥 NEW: Security Log Rate Limiter - Max 5 attempts per hour
+const securityLogLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 Hour
+  max: 5, // Only 5 attempts per hour
+  message: { error: 'Too many suspicious attempts! You have been blocked for 1 hour. Contact Admin.' }
+});
+
 app.use('/api/auth/', authLimiter);
 app.use('/api/', apiLimiter);
+app.use('/api/attendance/mark', securityLogLimiter);
+app.use('/api/attendance/mark-fullday', securityLogLimiter);
 
 // ---------- Zod Validation Schemas ----------
 const registerSchema = z.object({
@@ -86,7 +95,9 @@ const userSchema = new mongoose.Schema({
   anomalyFlag: { type: Boolean, default: false },
   anomalyDetectedAt: { type: Date, default: null },
   activeSession: { type: String, default: null },
-  deviceFingerprint: { type: Object, default: null }
+  deviceFingerprint: { type: Object, default: null },
+  failedAttempts: { type: Number, default: 0 },
+  blockUntil: { type: Date, default: null }
 }, { timestamps: true });
 
 const attendanceSchema = new mongoose.Schema({
@@ -116,7 +127,7 @@ const noticeSchema = new mongoose.Schema({
 const suspiciousLogSchema = new mongoose.Schema({
   rollNo: String,
   name: String,
-  type: { type: String, enum: ['FAKE_GPS', 'IP_MISMATCH', 'PROXY', 'MULTIPLE_DEVICES', 'TIME_VIOLATION', 'SELFIE_MISMATCH'] },
+  type: { type: String, enum: ['FAKE_GPS', 'IP_MISMATCH', 'PROXY', 'MULTIPLE_DEVICES', 'TIME_VIOLATION', 'SELFIE_MISMATCH', 'BLOCKED'] },
   details: String,
   location: { latitude: Number, longitude: Number },
   ipAddress: String,
@@ -129,12 +140,21 @@ const blacklistSchema = new mongoose.Schema({
   expiresAt: { type: Date, required: true }
 });
 
+// 🔥 QR Code Schema - Store active QR tokens
+const qrCodeSchema = new mongoose.Schema({
+  token: { type: String, required: true, unique: true },
+  passcode: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now },
+  expiresAt: { type: Date, required: true }
+});
+
 const User = mongoose.model('User', userSchema);
 const Attendance = mongoose.model('Attendance', attendanceSchema);
 const Holiday = mongoose.model('Holiday', holidaySchema);
 const Notice = mongoose.model('Notice', noticeSchema);
 const SuspiciousLog = mongoose.model('SuspiciousLog', suspiciousLogSchema);
 const BlacklistToken = mongoose.model('BlacklistToken', blacklistSchema);
+const QRCode = mongoose.model('QRCode', qrCodeSchema);
 
 // ---------- Helper Functions ----------
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -162,8 +182,60 @@ function checkLocation(lat, lng) {
   return { isInside: distance <= 50, distance: distance.toFixed(0) };
 }
 
-// 🔥 TIME WINDOW RESTRICTION REMOVED
-// No time check function needed anymore
+// 🔥 Check if student is blocked
+async function checkStudentBlocked(rollNo) {
+  const user = await User.findOne({ rollNo });
+  if (!user) return { blocked: false };
+  
+  if (user.blockUntil && user.blockUntil > new Date()) {
+    return { 
+      blocked: true, 
+      message: `⛔ You have been blocked until ${user.blockUntil.toLocaleString()} due to multiple suspicious attempts. Contact Admin.`,
+      blockUntil: user.blockUntil
+    };
+  }
+  
+  if (user.blockUntil && user.blockUntil <= new Date()) {
+    user.failedAttempts = 0;
+    user.blockUntil = null;
+    await user.save();
+  }
+  
+  return { blocked: false };
+}
+
+async function logSuspiciousActivity(rollNo, name, type, details, location, ipAddress, fingerprint) {
+  try {
+    await SuspiciousLog.create({
+      rollNo,
+      name,
+      type,
+      details,
+      location,
+      ipAddress,
+      deviceFingerprint: fingerprint
+    });
+    console.log(`🔴 Suspicious activity logged: ${type} for ${rollNo}`);
+  } catch (err) {
+    console.error('Failed to log suspicious activity:', err);
+  }
+}
+
+// 🔥 Increment failed attempts and block if needed
+async function incrementFailedAttempts(rollNo, name, reason, location, ipAddress, fingerprint) {
+  const user = await User.findOne({ rollNo });
+  if (!user) return;
+  
+  user.failedAttempts = (user.failedAttempts || 0) + 1;
+  
+  if (user.failedAttempts >= 5) {
+    user.blockUntil = new Date(Date.now() + 60 * 60 * 1000);
+    await logSuspiciousActivity(rollNo, name, 'BLOCKED', `Blocked for 1 hour due to 5 failed attempts. Reason: ${reason}`, location, ipAddress, fingerprint);
+    console.log(`🚫 Student ${rollNo} blocked for 1 hour due to 5 failed attempts`);
+  }
+  
+  await user.save();
+}
 
 function detectAnomaly(user, lat, lng, reqIP, fingerprint) {
   const MIN_TIME_BETWEEN_ATTENDANCE = 10 * 60 * 1000;
@@ -218,23 +290,6 @@ function detectAnomaly(user, lat, lng, reqIP, fingerprint) {
   return { isAnomaly: false };
 }
 
-async function logSuspiciousActivity(rollNo, name, type, details, location, ipAddress, fingerprint) {
-  try {
-    await SuspiciousLog.create({
-      rollNo,
-      name,
-      type,
-      details,
-      location,
-      ipAddress,
-      deviceFingerprint: fingerprint
-    });
-    console.log(`🔴 Suspicious activity logged: ${type} for ${rollNo}`);
-  } catch (err) {
-    console.error('Failed to log suspicious activity:', err);
-  }
-}
-
 async function autoResetAnomalyFlags() {
   try {
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -284,7 +339,6 @@ const verifyRole = (roles) => {
   };
 };
 
-// ---------- Session Management Middleware ----------
 const checkActiveSession = async (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) return res.status(401).json({ error: "Access Denied" });
@@ -333,7 +387,6 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// 🔥 LOGIN - Direct Login (No OTP)
 app.post('/api/auth/login', async (req, res) => {
   try {
     const parseResult = loginSchema.safeParse(req.body);
@@ -351,7 +404,9 @@ app.post('/api/auth/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ error: 'Invalid password!' });
 
-    // Device Binding Check
+    user.failedAttempts = 0;
+    user.blockUntil = null;
+
     if (user.role === 'student') {
       if (!user.boundDeviceId && deviceId) {
         user.boundDeviceId = deviceId;
@@ -363,7 +418,6 @@ app.post('/api/auth/login', async (req, res) => {
       }
     }
 
-    // Session Management - Force logout old session
     if (user.activeSession) {
       await BlacklistToken.create({
         token: user.activeSession,
@@ -387,7 +441,6 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Logout
 app.post('/api/auth/logout', async (req, res) => {
   try {
     const token = req.headers.authorization?.split(" ")[1];
@@ -407,7 +460,6 @@ app.post('/api/auth/logout', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 // ----- Face Mesh -----
 app.post('/api/face/enroll', async (req, res) => {
   try {
@@ -497,6 +549,8 @@ app.post('/api/admin/reset-anomaly', async (req, res) => {
     user.lastKnownIP = null;
     user.lastAttendanceTime = null;
     user.lastAttendanceLocation = {};
+    user.failedAttempts = 0;
+    user.blockUntil = null;
     await user.save();
     
     res.json({ message: `✅ Anomaly flag reset for ${cleanRoll}!` });
@@ -553,6 +607,100 @@ app.post('/api/faculty/override', verifyRole(['faculty', 'admin']), async (req, 
     res.status(500).json({ error: err.message });
   }
 });
+
+// ----- QR Code Routes (Fixed) -----
+// 🔥 Generate QR Code - Admin
+app.post('/api/admin/generate-qr', async (req, res) => {
+  try {
+    const { requesterRollNo } = req.body;
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) {
+      return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    }
+    
+    const passcode = Math.floor(1000 + Math.random() * 9000).toString();
+    const token = `BMERP_QR_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // Valid for 5 minutes
+    
+    // Delete old QR codes
+    await QRCode.deleteMany({});
+    
+    // Save new QR code
+    await QRCode.create({ token, passcode, expiresAt });
+    
+    console.log(`✅ QR Code generated with passcode: ${passcode}`);
+    
+    res.json({ 
+      message: 'QR Code generated successfully!',
+      passcode,
+      token,
+      expiresAt
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 🔥 Verify QR Code/Passcode - Student
+app.post('/api/auth/verify-qr', async (req, res) => {
+  try {
+    const { passcode } = req.body;
+    if (!passcode) {
+      return res.status(400).json({ error: 'Passcode required!' });
+    }
+    
+    const qrRecord = await QRCode.findOne({ passcode });
+    
+    if (!qrRecord) {
+      return res.status(400).json({ error: 'Invalid passcode!' });
+    }
+    
+    if (qrRecord.expiresAt < new Date()) {
+      await QRCode.deleteOne({ _id: qrRecord._id });
+      return res.status(400).json({ error: 'QR Code expired! Please refresh.' });
+    }
+    
+    // Delete used QR code (one-time use)
+    await QRCode.deleteOne({ _id: qrRecord._id });
+    
+    res.json({ 
+      message: 'QR Code verified! You can mark attendance now.',
+      verified: true
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ----- Notices -----
+app.get('/api/notices', async (req, res) => {
+  try {
+    const notices = await Notice.find().sort({ date: -1 }).limit(3);
+    res.json(notices);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/notice', async (req, res) => {
+  try {
+    const { requesterRollNo, title, message } = req.body;
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) {
+      return res.status(403).json({ error: 'Access Denied!' });
+    }
+
+    if (!message || message.trim() === "") {
+      await Notice.deleteMany({});
+      return res.json({ message: 'All Active Notices Cleared Permanently!' });
+    }
+
+    await Notice.deleteMany({});
+    await new Notice({ title: title || 'Announcement', message }).save();
+    res.status(201).json({ message: 'Broadcast Notice Published!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ----- Suspicious Activity Logs -----
 app.get('/api/admin/suspicious-logs/:requesterRollNo', async (req, res) => {
   try {
@@ -562,7 +710,7 @@ app.get('/api/admin/suspicious-logs/:requesterRollNo', async (req, res) => {
     
     const logs = await SuspiciousLog.find()
       .sort({ createdAt: -1 })
-      .limit(100);
+      .limit(200);
     
     res.json(logs);
   } catch (err) {
@@ -619,7 +767,7 @@ app.get('/api/admin/all-students/:requesterRollNo', async (req, res) => {
     }
     
     const students = await User.find({ role: 'student' })
-      .select('name rollNo role anomalyFlag anomalyDetectedAt boundDeviceId phone createdAt deviceFingerprint')
+      .select('name rollNo role anomalyFlag anomalyDetectedAt boundDeviceId phone createdAt deviceFingerprint failedAttempts blockUntil')
       .sort({ rollNo: 1 });
     
     res.json(students);
@@ -627,11 +775,10 @@ app.get('/api/admin/all-students/:requesterRollNo', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
-// ----- Attendance Marking (Time Restriction REMOVED) -----
+// ----- Attendance Marking with Security -----
 app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
   try {
-    const { rollNo, name, subject, latitude, longitude, selfie, deviceFingerprint } = req.body;
+    const { rollNo, name, subject, latitude, longitude, selfie, deviceFingerprint, qrVerified } = req.body;
     const today = new Date();
     const todayDate = today.toISOString().split('T')[0];
 
@@ -646,29 +793,35 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
       return res.status(400).json({ error: `Holiday: ${isHoliday.reason}` });
     }
 
-    // 3. Geofencing Check (50m)
+    const cleanRoll = rollNo.trim().toUpperCase();
+    
+    // 3. Check if student is blocked
+    const blockCheck = await checkStudentBlocked(cleanRoll);
+    if (blockCheck.blocked) {
+      return res.status(403).json({ error: blockCheck.message });
+    }
+
+    // 4. Geofencing Check (50m)
     const locCheck = checkLocation(latitude, longitude);
     if (!locCheck.isInside) {
+      await incrementFailedAttempts(cleanRoll, name, `Outside boundary (${locCheck.distance}m away)`, { latitude, longitude }, req.ip, deviceFingerprint);
       await logSuspiciousActivity(rollNo, name, 'FAKE_GPS', `Outside boundary (${locCheck.distance}m away)`, { latitude, longitude }, req.ip, deviceFingerprint);
       return res.status(400).json({ error: `Outside Classroom Boundary! (${locCheck.distance}m away)` });
     }
 
-    // 🔥 TIME WINDOW CHECK REMOVED - No time restriction anymore
-
-    const cleanRoll = rollNo.trim().toUpperCase();
     const user = await User.findOne({ rollNo: cleanRoll });
     if (!user) {
       return res.status(404).json({ error: 'Student not found!' });
     }
 
-    // 4. Selfie Verification (if selfie provided)
+    // 5. Selfie Verification
     if (selfie) {
       if (!user.faceDescriptor || user.faceDescriptor.length === 0) {
         return res.status(400).json({ error: 'Please enroll face first! Go to Enroll Face.' });
       }
     }
 
-    // 5. Device Fingerprint Check
+    // 6. Device Fingerprint Check
     if (deviceFingerprint) {
       if (!user.deviceFingerprint) {
         user.deviceFingerprint = deviceFingerprint;
@@ -676,11 +829,17 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
       }
     }
 
-    // 6. Anomaly Detection (IP, Location, Device)
+    // 7. QR Verification - If marking via QR, must be verified
+    if (subject === 'QR_ATTENDANCE' && !qrVerified) {
+      return res.status(400).json({ error: 'QR Code not verified! Please scan QR code first.' });
+    }
+
+    // 8. Anomaly Detection
     const clientIP = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown';
     const anomaly = detectAnomaly(user, latitude, longitude, clientIP, deviceFingerprint);
     
     if (anomaly.isAnomaly) {
+      await incrementFailedAttempts(cleanRoll, name, anomaly.reason, { latitude, longitude }, clientIP, deviceFingerprint);
       user.anomalyFlag = true;
       user.anomalyDetectedAt = new Date();
       await user.save();
@@ -693,7 +852,7 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
       });
     }
 
-    // 7. Lab duplicate check
+    // 9. Lab duplicate check
     const isLab = subject.includes("LAB") || subject.includes("Lab");
     const todayEntries = await Attendance.find({ rollNo: cleanRoll, subject, date: todayDate });
     
@@ -701,11 +860,15 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
       return res.status(400).json({ error: `Already marked for ${subject} today! (Lab - 1 lecture only)` });
     }
 
-    // 8. Save attendance
+    // Reset failed attempts on successful attendance
+    user.failedAttempts = 0;
+    user.blockUntil = null;
+
+    // 10. Save attendance
     await new Attendance({ 
       rollNo: cleanRoll, 
       studentName: name, 
-      subject, 
+      subject: subject === 'QR_ATTENDANCE' ? 'QR Scan Attendance' : subject, 
       date: todayDate, 
       status: 'Present', 
       location: { latitude, longitude },
@@ -715,7 +878,7 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
       isVerified: !!selfie
     }).save();
 
-    // 9. Update user tracking
+    // 11. Update user tracking
     user.lastKnownIP = clientIP;
     user.lastAttendanceTime = new Date();
     user.lastAttendanceLocation = { latitude, longitude };
@@ -724,7 +887,7 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
     }
     await user.save();
     
-    res.status(201).json({ message: `✅ Attendance Marked for ${subject}!`, verified: !!selfie });
+    res.status(201).json({ message: `✅ Attendance Marked successfully!`, verified: !!selfie });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -748,21 +911,28 @@ app.post('/api/attendance/mark-fullday', checkActiveSession, async (req, res) =>
       return res.status(400).json({ error: `Holiday: ${isHoliday.reason}` });
     }
 
+    const cleanRoll = rollNo.trim().toUpperCase();
+    
+    const blockCheck = await checkStudentBlocked(cleanRoll);
+    if (blockCheck.blocked) {
+      return res.status(403).json({ error: blockCheck.message });
+    }
+
     const locCheck = checkLocation(latitude, longitude);
     if (!locCheck.isInside) {
+      await incrementFailedAttempts(cleanRoll, name, `Outside boundary (${locCheck.distance}m away)`, { latitude, longitude }, req.ip, deviceFingerprint);
       return res.status(400).json({ error: `Outside Classroom Boundary! (${locCheck.distance}m away)` });
     }
 
-    const cleanRoll = rollNo.trim().toUpperCase();
     const user = await User.findOne({ rollNo: cleanRoll });
     if (!user) return res.status(404).json({ error: 'Student not found!' });
 
     const clientIP = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown';
     
-    // Anomaly detection
     const anomaly = detectAnomaly(user, latitude, longitude, clientIP, deviceFingerprint);
     
     if (anomaly.isAnomaly) {
+      await incrementFailedAttempts(cleanRoll, name, anomaly.reason, { latitude, longitude }, clientIP, deviceFingerprint);
       user.anomalyFlag = true;
       user.anomalyDetectedAt = new Date();
       await user.save();
@@ -799,6 +969,8 @@ app.post('/api/attendance/mark-fullday', checkActiveSession, async (req, res) =>
     user.lastKnownIP = clientIP;
     user.lastAttendanceTime = new Date();
     user.lastAttendanceLocation = { latitude, longitude };
+    user.failedAttempts = 0;
+    user.blockUntil = null;
     await user.save();
 
     if (markedCount === 0) {
@@ -944,6 +1116,3 @@ process.on('uncaughtException', (err) => {
 // ---------- Start Server ----------
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
-
-
-
