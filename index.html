@@ -1838,7 +1838,7 @@ function markSingleAttendance(overrideSubject) {
         } catch(e) { showMsg("Network Error!", true); }
     }, () => showMsg('GPS Denied!', true));
         }
-                async function markManualAttendance() {
+                        async function markManualAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             const studentRollNo = document.getElementById('manualRoll').value.trim();
             const date = document.getElementById('manualDate').value;
