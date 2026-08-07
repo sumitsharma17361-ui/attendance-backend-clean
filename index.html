@@ -18,15 +18,15 @@
             --warning: #d97706; 
             --card-bg: #ffffff;
             --card-border: #e2e8f0;
-            --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
-            --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+            --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
             --text-main: #0f172a; 
             --text-muted: #64748b; 
             --radius: 12px;
         }
 
-        * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 0; }
+        * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding: 0; }
         
         body { 
             background: var(--bg-body);
@@ -1297,7 +1297,7 @@ async function fetchAutoUnblockStatus() {
             </tr>
         `).join('');
     } catch(e) { showMsg('Failed', true); }
-                }
+        }
         async function fetchNotices() {
     if (localStorage.getItem("GLOBAL_NOTICE_CLEARED") === "true") {
         document.getElementById('noticeBanner').style.display = 'none';
@@ -1619,14 +1619,19 @@ async function handleAuth() {
     }
 }
 
+// 🔥 FIXED: Chart shows all subjects with data
 async function loadAnalyticsChart(rollNo) {
     try {
         const res = await fetch(`${API_BASE}/api/analytics/${rollNo}`);
         const data = await res.json();
-        const labels = Object.keys(data).filter(sub => !sub.includes("LIB") && !sub.includes("Sports"));
+        
+        // Extract labels and data from the response
+        const labels = Object.keys(data);
         const presentData = labels.map(sub => data[sub].present);
+        
         const ctx = document.getElementById('attendanceChart').getContext('2d');
         if(myChart) myChart.destroy(); 
+        
         myChart = new Chart(ctx, {
             type: 'bar',
             data: {
@@ -1648,7 +1653,17 @@ async function loadAnalyticsChart(rollNo) {
                 }
             }
         });
-    } catch(err) { console.error("Chart failed:", err); }
+    } catch(err) { 
+        console.error("Chart failed:", err);
+        // Show fallback
+        const ctx = document.getElementById('attendanceChart').getContext('2d');
+        if(myChart) myChart.destroy();
+        myChart = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: ['No Data'], datasets: [{ data: [0], backgroundColor: '#e2e8f0' }] },
+            options: { plugins: { legend: { display: false } } }
+        });
+    }
 }
 
 function loadDashboard() {
@@ -1778,8 +1793,15 @@ function markSingleAttendance(overrideSubject) {
 
     const todayEntries = globalMyRecords.filter(r => r.date === todayISO && r.subject === sub);
 
+    // Lab: only 1 lecture per day
     if (isLab && todayEntries.length >= 1) {
         return showMsg(`Already marked for ${sub} today! (Lab - 1 only)`, true);
+    }
+
+    // For theory subjects, allow multiple? Actually for theory, we allow only one per subject per day as well.
+    // But if the same subject has theory and lab, they are different subjects, so they can both be marked.
+    if (!isLab && todayEntries.length >= 1) {
+        return showMsg(`Already marked for ${sub} today!`, true);
     }
 
     if (!navigator.geolocation) {
@@ -2078,7 +2100,7 @@ function markSingleAttendance(overrideSubject) {
             }
         }
 
-        // 🔥 FIXED: Attendance Records - Unique Students with date grouping
+        // 🔥 FIXED: Attendance Records - Group by Student+Date
         async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             try {
@@ -2089,7 +2111,7 @@ function markSingleAttendance(overrideSubject) {
 
                 document.getElementById('directoryTitle').innerHTML = `📊 Attendance Records (${data.length} entries) <button class="btn btn-outline btn-sm" onclick="fetchAllStudents()" style="padding:2px 8px; font-size:8px; width:auto;">⬅ Back</button>`;
 
-                // Group by student and date
+                // Group by rollNo + date
                 const grouped = {};
                 data.forEach(r => {
                     const key = `${r.rollNo}_${r.date}`;
