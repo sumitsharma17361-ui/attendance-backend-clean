@@ -179,8 +179,7 @@
         .password-wrapper input { padding-right: 36px; }
         .eye-icon { position: absolute; right: 10px; top: 38%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); transition: color 0.3s; }
         .eye-icon:hover { color: var(--primary); }
-
-        .btn { 
+                .btn { 
             width: 100%; 
             padding: 9px 12px; 
             border-radius: 8px; 
@@ -641,7 +640,7 @@
                     </div>
                 </div>
             </div>
-            <div id="adminTab" style="display:none;">
+           <div id="adminTab" style="display:none;">
     <div class="admin-nav">
         <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">Excel</div>
         <div class="admin-nav-item" onclick="switchAdminSubTab('subAttendance')">Entry</div>
@@ -697,7 +696,7 @@
             Refresh
         </button>
     </div>
-    <div id="subTools" style="display:none;">
+       <div id="subTools" style="display:none;">
     <div class="tool-sub-card">
         <span class="tool-title" style="color:var(--primary);">➕ Register New Student</span>
         <input type="text" id="adminRegName" placeholder="Full Student Name" style="font-size:10px; padding:7px;">
@@ -746,8 +745,8 @@
         <input type="text" id="deleteStudentRoll" placeholder="Roll No to Delete" style="font-size:10px; padding:7px;">
         <button class="btn btn-danger btn-sm" onclick="deleteEntireStudentAccount()" style="padding:7px; margin:0;">Delete Permanently</button>
     </div>
-    </div>
-                    <div id="subSecurity" style="display:none;">
+       </div>
+                             <div id="subSecurity" style="display:none;">
                     <div class="admin-box">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                             <span class="sub-section-title" style="margin:0;">🛡️ Suspicious Activity Logs</span>
@@ -1067,7 +1066,6 @@ function closeStudentExcelModal() {
     document.getElementById('studentExcelModal').style.display = 'none';
 }
 
-// 🔥 FIXED: Excel Date Format - DD-MM-YYYY
 function processStudentExcelDownload() {
     const range = document.getElementById('studentExcelRange').value;
     const selectedMonth = parseInt(document.getElementById('studentExcelMonth').value);
@@ -1123,9 +1121,8 @@ function processStudentExcelDownload() {
     downloadFile(csv, fileName);
     closeStudentExcelModal();
     showMsg("Report downloaded!");
-}
-
-async function adminRegisterStudent() {
+        }
+        async function adminRegisterStudent() {
     const name = document.getElementById('adminRegName').value.trim();
     const rawRoll = document.getElementById('adminRegRoll').value.trim();
     const password = document.getElementById('adminRegPass').value.trim() || '123456';
@@ -1253,7 +1250,6 @@ async function fetchSuspiciousLogs() {
     } catch(e) { showMsg('Failed to load logs', true); }
 }
 
-// 🔥 NEW: Clear All Suspicious Logs
 async function clearAllSuspiciousLogs() {
     const user = JSON.parse(localStorage.getItem('user'));
     if (!confirm('Delete all suspicious activity logs?')) return;
@@ -1451,9 +1447,8 @@ async function checkUserFaceStatus() {
     } catch (err) {
         if (badge) { badge.innerText = "Not Enrolled"; badge.style.background = "#f1f5f9"; badge.style.color = "var(--text-muted)"; }
     }
-}
-
-async function openCameraModal(mode) {
+    }
+        async function openCameraModal(mode) {
     const user = JSON.parse(localStorage.getItem('user'));
     currentCamMode = mode;
     if (mode === 'CHECKIN') {
@@ -1543,8 +1538,9 @@ async function executeCameraAction() {
             showMsg("Face Mismatch!", true);
         }
     }
-        }
-        function togglePassword() {
+}
+
+function togglePassword() {
     const p = document.getElementById('password');
     p.type = p.type === 'password' ? 'text' : 'password';
 }
@@ -1570,9 +1566,8 @@ async function resetStudentPassword() {
         const data = await res.json();
         if (res.ok) showMsg(data.message); else showMsg(data.error, true);
     } catch(e) { showMsg("Failed!", true); }
-}
-
-async function handleAuth() {
+        }
+        async function handleAuth() {
     const rawRoll = document.getElementById('rollNo').value.trim();
     const password = document.getElementById('password').value.trim();
     const deviceId = getDeviceId();
@@ -1619,18 +1614,36 @@ async function handleAuth() {
     }
 }
 
-// 🔥 FIXED: Chart shows all subjects with data
+// 🔥 FIXED: Chart shows ALL 11 subjects (predefined)
 async function loadAnalyticsChart(rollNo) {
     try {
         const res = await fetch(`${API_BASE}/api/analytics/${rollNo}`);
         const data = await res.json();
         
-        // Extract labels and data from the response
-        const labels = Object.keys(data);
-        const presentData = labels.map(sub => data[sub].present);
+        // All 11 subjects predefined
+        const allSubjects = [
+            'BDA - Big Data Analytics', 'ECO - Economics for Engineers',
+            'DAA - Design & Analysis of Algorithm', 'FLA - Formal Language & Automata',
+            'HRM - Human Resource Mgmt', 'CN - Computer Network',
+            'WT - Web Technology', 'CN LAB - Computer Network Lab',
+            'DAA LAB - Algorithm Lab', 'WT LAB - Web Technology Lab',
+            'Internet Lab (Ms. Geeta)'
+        ];
+        
+        const shortNames = {
+            'BDA - Big Data Analytics':'BDA', 'ECO - Economics for Engineers':'ECO',
+            'DAA - Design & Analysis of Algorithm':'DAA', 'FLA - Formal Language & Automata':'FLA',
+            'HRM - Human Resource Mgmt':'HRM', 'CN - Computer Network':'CN',
+            'WT - Web Technology':'WT', 'CN LAB - Computer Network Lab':'CN LAB',
+            'DAA LAB - Algorithm Lab':'DAA LAB', 'WT LAB - Web Technology Lab':'WT LAB',
+            'Internet Lab (Ms. Geeta)':'Internet'
+        };
+        
+        const labels = allSubjects.map(sub => shortNames[sub] || sub);
+        const presentData = allSubjects.map(sub => (data[sub] && data[sub].present) ? data[sub].present : 0);
         
         const ctx = document.getElementById('attendanceChart').getContext('2d');
-        if(myChart) myChart.destroy(); 
+        if(myChart) myChart.destroy();
         
         myChart = new Chart(ctx, {
             type: 'bar',
@@ -1653,14 +1666,16 @@ async function loadAnalyticsChart(rollNo) {
                 }
             }
         });
-    } catch(err) { 
+    } catch(err) {
         console.error("Chart failed:", err);
-        // Show fallback
         const ctx = document.getElementById('attendanceChart').getContext('2d');
         if(myChart) myChart.destroy();
         myChart = new Chart(ctx, {
             type: 'bar',
-            data: { labels: ['No Data'], datasets: [{ data: [0], backgroundColor: '#e2e8f0' }] },
+            data: { 
+                labels: ['BDA','ECO','DAA','FLA','HRM','CN','WT','CN LAB','DAA LAB','WT LAB','Internet'],
+                datasets: [{ data: [0,0,0,0,0,0,0,0,0,0,0], backgroundColor: '#e2e8f0' }]
+            },
             options: { plugins: { legend: { display: false } } }
         });
     }
@@ -1705,9 +1720,8 @@ function loadDashboard() {
     setInterval(updatePeriodTrackerWidget, 30000);
     fetchNotices();
     loadAnalyticsChart(user.rollNo);
-}
-
-function markFullDayAttendance() {
+                        }
+        function markFullDayAttendance() {
     if (!qrVerified) {
         return showMsg('Verify QR/Passcode first!', true);
     }
@@ -1798,8 +1812,7 @@ function markSingleAttendance(overrideSubject) {
         return showMsg(`Already marked for ${sub} today! (Lab - 1 only)`, true);
     }
 
-    // For theory subjects, allow multiple? Actually for theory, we allow only one per subject per day as well.
-    // But if the same subject has theory and lab, they are different subjects, so they can both be marked.
+    // Theory: only 1 lecture per subject per day
     if (!isLab && todayEntries.length >= 1) {
         return showMsg(`Already marked for ${sub} today!`, true);
     }
@@ -1837,214 +1850,213 @@ function markSingleAttendance(overrideSubject) {
             }
         } catch(e) { showMsg("Network Error!", true); }
     }, () => showMsg('GPS Denied!', true));
-        }
-                        async function markManualAttendance() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            const studentRollNo = document.getElementById('manualRoll').value.trim();
-            const date = document.getElementById('manualDate').value;
-            const status = document.getElementById('manualStatus').value;
-            if (!studentRollNo || !date) return showMsg('Roll and Date required!', true);
-            try {
-                const res = await fetch(`${API_BASE}/api/admin/manual-attendance`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ requesterRollNo: user.rollNo, studentRollNo, date, status })
-                });
-                const data = await res.json();
-                if (res.ok) { showMsg(data.message); } else showMsg(data.error || "Failed", true);
-            } catch(e) { showMsg("Network Error!", true); }
-        }
+}
 
-        async function declareHoliday() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            const date = document.getElementById('holidayDate').value;
-            const reason = document.getElementById('holidayReason').value.trim();
-            if (!date) return showMsg('Select date!', true);
-            try {
-                const res = await fetch(`${API_BASE}/api/admin/holiday`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ requesterRollNo: user.rollNo, date, reason })
-                });
-                const data = await res.json();
-                if (res.ok) { showMsg(data.message); } else showMsg(data.error || "Failed", true);
-            } catch(e) { showMsg("Network Error!", true); }
-        }
+async function markManualAttendance() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    const studentRollNo = document.getElementById('manualRoll').value.trim();
+    const date = document.getElementById('manualDate').value;
+    const status = document.getElementById('manualStatus').value;
+    if (!studentRollNo || !date) return showMsg('Roll and Date required!', true);
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/manual-attendance`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requesterRollNo: user.rollNo, studentRollNo, date, status })
+        });
+        const data = await res.json();
+        if (res.ok) { showMsg(data.message); } else showMsg(data.error || "Failed", true);
+    } catch(e) { showMsg("Network Error!", true); }
+}
 
+async function declareHoliday() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    const date = document.getElementById('holidayDate').value;
+    const reason = document.getElementById('holidayReason').value.trim();
+    if (!date) return showMsg('Select date!', true);
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/holiday`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requesterRollNo: user.rollNo, date, reason })
+        });
+        const data = await res.json();
+        if (res.ok) { showMsg(data.message); } else showMsg(data.error || "Failed", true);
+    } catch(e) { showMsg("Network Error!", true); }
+                             }
         function calculateRealAttendancePercentage() {
-            const startDate = new Date(2026, 6, 15);
-            const today = new Date();
-            const holidayDatesList = globalHolidays.map(h => h.date);
-            let totalWorkingDays = 0;
-            let cur = new Date(startDate);
-            while (cur <= today) {
-                const dayOfWeek = cur.getDay();
-                const y = cur.getFullYear();
-                const m = String(cur.getMonth() + 1).padStart(2, '0');
-                const d = String(cur.getDate()).padStart(2, '0');
-                const isoStr = `${y}-${m}-${d}`;
-                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-                const isHoliday = holidayDatesList.includes(isoStr);
-                if (!isWeekend && !isHoliday) { totalWorkingDays++; }
-                cur.setDate(cur.getDate() + 1);
+    const startDate = new Date(2026, 6, 15);
+    const today = new Date();
+    const holidayDatesList = globalHolidays.map(h => h.date);
+    let totalWorkingDays = 0;
+    let cur = new Date(startDate);
+    while (cur <= today) {
+        const dayOfWeek = cur.getDay();
+        const y = cur.getFullYear();
+        const m = String(cur.getMonth() + 1).padStart(2, '0');
+        const d = String(cur.getDate()).padStart(2, '0');
+        const isoStr = `${y}-${m}-${d}`;
+        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+        const isHoliday = holidayDatesList.includes(isoStr);
+        if (!isWeekend && !isHoliday) { totalWorkingDays++; }
+        cur.setDate(cur.getDate() + 1);
+    }
+    const DEFAULT_DAILY_ACADEMIC_LECTURES = 6;
+    const totalConductedLectures = totalWorkingDays * DEFAULT_DAILY_ACADEMIC_LECTURES;
+    const academicAttendedLectures = globalMyRecords.filter(r => {
+        const sub = r.subject || "";
+        return !sub.includes("LIB") && !sub.includes("Sports");
+    }).length;
+    if (totalConductedLectures === 0) return { pct: 100, totalWorkingDays, totalConductedLectures, totalAttendedLectures: academicAttendedLectures };
+    const pct = Math.min(100, ((academicAttendedLectures / totalConductedLectures) * 100)).toFixed(1);
+    return { pct, totalWorkingDays, totalConductedLectures, totalAttendedLectures: academicAttendedLectures };
+}
+
+function toggleCalendarView() { renderAttendanceCalendar(globalMyRecords); }
+
+function renderAttendanceCalendar(historyData) {
+    const wrapper = document.getElementById('calendarDisplayWrapper');
+    const mode = document.getElementById('calendarViewMode').value;
+    const attendedDates = new Set(historyData.map(h => h.date));
+    const holidayDatesSet = new Set(globalHolidays.map(h => h.date));
+    let monthsToRender = [];
+    const today = new Date();
+    const currentMonthIdx = today.getMonth();
+    if (mode === 'FULL_SEMESTER') { monthsToRender = [6, 7, 8, 9, 10, 11]; } else { monthsToRender = [currentMonthIdx]; }
+    let wrapperHtml = "";
+    monthsToRender.forEach(mIdx => {
+        const year = 2026;
+        const monthName = MONTH_NAMES[mIdx];
+        const daysInMonth = new Date(year, mIdx + 1, 0).getDate();
+        const firstDayOfWeek = new Date(year, mIdx, 1).getDay();
+        let gridHtml = `
+            <div style="margin-bottom:8px; border-bottom:1px solid var(--card-border); padding-bottom:6px;">
+                <div style="font-size:10px; font-weight:800; color:var(--primary); margin-bottom:4px;">${monthName} ${year}</div>
+                <div class="calendar-grid">
+                    <div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div>
+                    <div class="cal-day-head">W</div><div class="cal-day-head">T</div><div class="cal-day-head">F</div>
+                    <div class="cal-day-head">S</div>
+        `;
+        for (let i = 0; i < firstDayOfWeek; i++) { gridHtml += `<div class="cal-date cal-off"></div>`; }
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = `2026-${String(mIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const dtObj = new Date(year, mIdx, d);
+            const dayOfWeek = dtObj.getDay();
+            const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+            const isHoliday = holidayDatesSet.has(dateStr);
+            if (isWeekend) { gridHtml += `<div class="cal-date cal-off">${d}</div>`; } 
+            else if (isHoliday) { gridHtml += `<div class="cal-date cal-off" style="background:#fef3c7; color:#92400e; font-weight:800; border-color:#fde68a;">${d}</div>`; } 
+            else if (attendedDates.has(dateStr)) { gridHtml += `<div class="cal-date cal-p">${d}</div>`; } 
+            else if (dtObj <= today) { gridHtml += `<div class="cal-date cal-a">${d}</div>`; } 
+            else { gridHtml += `<div class="cal-date cal-off">${d}</div>`; }
+        }
+        gridHtml += `</div></div>`;
+        wrapperHtml += gridHtml;
+    });
+    wrapper.innerHTML = wrapperHtml;
+}
+
+async function fetchHistory(rollNo) {
+    try {
+        const hRes = await fetch(`${API_BASE}/api/holidays`);
+        globalHolidays = await hRes.json();
+    } catch(e) { globalHolidays = []; }
+
+    try {
+        const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
+        const data = await res.json();
+        globalMyRecords = data || [];
+        const tbody = document.querySelector('#myHistoryTable tbody');
+
+        const dateGrouped = {};
+        globalMyRecords.forEach(item => {
+            if (!dateGrouped[item.date]) {
+                dateGrouped[item.date] = { date: item.date, count: 0, status: item.status };
             }
-            const DEFAULT_DAILY_ACADEMIC_LECTURES = 6;
-            const totalConductedLectures = totalWorkingDays * DEFAULT_DAILY_ACADEMIC_LECTURES;
-            const academicAttendedLectures = globalMyRecords.filter(r => {
-                const sub = r.subject || "";
-                return !sub.includes("LIB") && !sub.includes("Sports");
-            }).length;
-            if (totalConductedLectures === 0) return { pct: 100, totalWorkingDays, totalConductedLectures, totalAttendedLectures: academicAttendedLectures };
-            const pct = Math.min(100, ((academicAttendedLectures / totalConductedLectures) * 100)).toFixed(1);
-            return { pct, totalWorkingDays, totalConductedLectures, totalAttendedLectures: academicAttendedLectures };
+            dateGrouped[item.date].count++;
+        });
+
+        const calc = calculateRealAttendancePercentage();
+        
+        const totalDaysEl = document.getElementById('totalDaysCount');
+        if (totalDaysEl) totalDaysEl.innerText = calc.totalAttendedLectures;
+        
+        const pctEl = document.getElementById('attendancePct');
+        if (pctEl) {
+            pctEl.innerText = `${calc.pct}%`;
+            pctEl.style.color = calc.pct >= 75 ? 'var(--success)' : 'var(--danger)';
         }
 
-        function toggleCalendarView() { renderAttendanceCalendar(globalMyRecords); }
+        const defaulterTag = document.getElementById('defaulterTag');
+        if (defaulterTag) defaulterTag.style.display = (calc.pct < 75) ? 'inline-block' : 'none';
 
-        function renderAttendanceCalendar(historyData) {
-            const wrapper = document.getElementById('calendarDisplayWrapper');
-            const mode = document.getElementById('calendarViewMode').value;
-            const attendedDates = new Set(historyData.map(h => h.date));
-            const holidayDatesSet = new Set(globalHolidays.map(h => h.date));
-            let monthsToRender = [];
-            const today = new Date();
-            const currentMonthIdx = today.getMonth();
-            if (mode === 'FULL_SEMESTER') { monthsToRender = [6, 7, 8, 9, 10, 11]; } else { monthsToRender = [currentMonthIdx]; }
-            let wrapperHtml = "";
-            monthsToRender.forEach(mIdx => {
-                const year = 2026;
-                const monthName = MONTH_NAMES[mIdx];
-                const daysInMonth = new Date(year, mIdx + 1, 0).getDate();
-                const firstDayOfWeek = new Date(year, mIdx, 1).getDay();
-                let gridHtml = `
-                    <div style="margin-bottom:8px; border-bottom:1px solid var(--card-border); padding-bottom:6px;">
-                        <div style="font-size:10px; font-weight:800; color:var(--primary); margin-bottom:4px;">${monthName} ${year}</div>
-                        <div class="calendar-grid">
-                            <div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div>
-                            <div class="cal-day-head">W</div><div class="cal-day-head">T</div><div class="cal-day-head">F</div>
-                            <div class="cal-day-head">S</div>
-                `;
-                for (let i = 0; i < firstDayOfWeek; i++) { gridHtml += `<div class="cal-date cal-off"></div>`; }
-                for (let d = 1; d <= daysInMonth; d++) {
-                    const dateStr = `2026-${String(mIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                    const dtObj = new Date(year, mIdx, d);
-                    const dayOfWeek = dtObj.getDay();
-                    const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-                    const isHoliday = holidayDatesSet.has(dateStr);
-                    if (isWeekend) { gridHtml += `<div class="cal-date cal-off">${d}</div>`; } 
-                    else if (isHoliday) { gridHtml += `<div class="cal-date cal-off" style="background:#fef3c7; color:#92400e; font-weight:800; border-color:#fde68a;">${d}</div>`; } 
-                    else if (attendedDates.has(dateStr)) { gridHtml += `<div class="cal-date cal-p">${d}</div>`; } 
-                    else if (dtObj <= today) { gridHtml += `<div class="cal-date cal-a">${d}</div>`; } 
-                    else { gridHtml += `<div class="cal-date cal-off">${d}</div>`; }
-                }
-                gridHtml += `</div></div>`;
-                wrapperHtml += gridHtml;
-            });
-            wrapper.innerHTML = wrapperHtml;
-        }
-
-        async function fetchHistory(rollNo) {
-            try {
-                const hRes = await fetch(`${API_BASE}/api/holidays`);
-                globalHolidays = await hRes.json();
-            } catch(e) { globalHolidays = []; }
-
-            try {
-                const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
-                const data = await res.json();
-                globalMyRecords = data || [];
-                const tbody = document.querySelector('#myHistoryTable tbody');
-
-                const dateGrouped = {};
-                globalMyRecords.forEach(item => {
-                    if (!dateGrouped[item.date]) {
-                        dateGrouped[item.date] = { date: item.date, count: 0, status: item.status };
-                    }
-                    dateGrouped[item.date].count++;
-                });
-
-                const calc = calculateRealAttendancePercentage();
-                
-                const totalDaysEl = document.getElementById('totalDaysCount');
-                if (totalDaysEl) totalDaysEl.innerText = calc.totalAttendedLectures;
-                
-                const pctEl = document.getElementById('attendancePct');
-                if (pctEl) {
-                    pctEl.innerText = `${calc.pct}%`;
-                    pctEl.style.color = calc.pct >= 75 ? 'var(--success)' : 'var(--danger)';
-                }
-
-                const defaulterTag = document.getElementById('defaulterTag');
-                if (defaulterTag) defaulterTag.style.display = (calc.pct < 75) ? 'inline-block' : 'none';
-
-                const advisorBox = document.getElementById('advisorText');
-                if (advisorBox) {
-                    if (calc.pct >= 75) {
-                        const safeLectures = Math.floor(calc.totalAttendedLectures - 0.75 * calc.totalConductedLectures);
-                        const safeDays = Math.floor(safeLectures / 6);
-                        advisorBox.innerHTML = `Safe Zone (<b>${calc.pct}%</b>). Skip approx <b>${Math.max(0, safeDays)}</b> days safely.`;
-                    } else {
-                        const neededLectures = Math.ceil(0.75 * calc.totalConductedLectures - calc.totalAttendedLectures);
-                        advisorBox.innerHTML = `Low Attendance (<b>${calc.pct}%</b>). Need <b>${Math.max(0, neededLectures)}</b> more lectures.`;
-                    }
-                }
-
-                renderAttendanceCalendar(globalMyRecords);
-
-                const sortedDates = Object.values(dateGrouped).sort((a,b) => b.date.localeCompare(a.date));
-
-                if (!tbody) return;
-                if (sortedDates.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px;">No records</td></tr>';
-                
-                tbody.innerHTML = sortedDates.map(i => {
-                    const parts = i.date.split('-');
-                    const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])).getDay();
-                    const dayStr = DAY_NAMES[dateObj];
-                    return `<tr><td><b>${i.date}</b></td><td><b>${dayStr}</b></td><td><span class="badge badge-present">${i.count} Lectures</span></td><td><span class="badge badge-present">${i.status}</span></td></tr>`;
-                }).join('');
-            } catch(e) { showMsg("Failed to sync logs!", true); }
-        }
-
-        // 🔥 FIXED: All Students - Unique Students Only
-        async function fetchAllStudents() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            try {
-                const res = await fetch(`${API_BASE}/api/admin/all-students/${user.rollNo}`);
-                const data = await res.json();
-                if (!res.ok) return showMsg(data.error || "Failed", true);
-                
-                allStudentsData = data;
-                
-                document.getElementById('directoryTitle').innerHTML = `All Registered Students <span class="student-count-badge">${data.length}</span>`;
-                
-                const tbody = document.querySelector('#allHistoryTable tbody');
-                if (!tbody) return;
-                
-                if (data.length === 0) {
-                    return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px;">No students registered</td></tr>';
-                }
-                
-                tbody.innerHTML = data.map(s => `
-                    <tr>
-                        <td><b>${s.rollNo}</b></td>
-                        <td>${s.name}</td>
-                        <td><span class="badge ${s.anomalyFlag ? 'badge-flagged' : 'badge-active'}">${s.anomalyFlag ? '⚠️ Flagged' : '✅ Active'}</span></td>
-                        <td>
-                            <button class="action-btn btn-view btn-sm" onclick="showStudentAttendance('${s.rollNo}')" style="padding:2px 6px; font-size:8px;">
-                                <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                            </button>
-                            <button class="action-btn btn-del btn-sm" onclick="deleteStudentAccount('${s.rollNo}')" style="padding:2px 6px; font-size:8px; margin-left:2px;">
-                                <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-                            </button>
-                        </td>
-                    </tr>
-                `).join('');
-            } catch(e) {
-                showMsg("Failed to connect to backend", true);
+        const advisorBox = document.getElementById('advisorText');
+        if (advisorBox) {
+            if (calc.pct >= 75) {
+                const safeLectures = Math.floor(calc.totalAttendedLectures - 0.75 * calc.totalConductedLectures);
+                const safeDays = Math.floor(safeLectures / 6);
+                advisorBox.innerHTML = `Safe Zone (<b>${calc.pct}%</b>). Skip approx <b>${Math.max(0, safeDays)}</b> days safely.`;
+            } else {
+                const neededLectures = Math.ceil(0.75 * calc.totalConductedLectures - calc.totalAttendedLectures);
+                advisorBox.innerHTML = `Low Attendance (<b>${calc.pct}%</b>). Need <b>${Math.max(0, neededLectures)}</b> more lectures.`;
             }
         }
 
-        // 🔥 NEW: Delete student from directory
+        renderAttendanceCalendar(globalMyRecords);
+
+        const sortedDates = Object.values(dateGrouped).sort((a,b) => b.date.localeCompare(a.date));
+
+        if (!tbody) return;
+        if (sortedDates.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px;">No records</td></tr>';
+        
+        tbody.innerHTML = sortedDates.map(i => {
+            const parts = i.date.split('-');
+            const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])).getDay();
+            const dayStr = DAY_NAMES[dateObj];
+            return `<tr><td><b>${i.date}</b></td><td><b>${dayStr}</b></td><td><span class="badge badge-present">${i.count} Lectures</span></td><td><span class="badge badge-present">${i.status}</span></td></tr>`;
+        }).join('');
+    } catch(e) { showMsg("Failed to sync logs!", true); }
+}
+
+// 🔥 FIXED: All Students - Unique Students Only
+async function fetchAllStudents() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/all-students/${user.rollNo}`);
+        const data = await res.json();
+        if (!res.ok) return showMsg(data.error || "Failed", true);
+        
+        allStudentsData = data;
+        
+        document.getElementById('directoryTitle').innerHTML = `All Registered Students <span class="student-count-badge">${data.length}</span>`;
+        
+        const tbody = document.querySelector('#allHistoryTable tbody');
+        if (!tbody) return;
+        
+        if (data.length === 0) {
+            return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px;">No students registered</td></tr>';
+        }
+        
+        tbody.innerHTML = data.map(s => `
+            <tr>
+                <td><b>${s.rollNo}</b></td>
+                <td>${s.name}</td>
+                <td><span class="badge ${s.anomalyFlag ? 'badge-flagged' : 'badge-active'}">${s.anomalyFlag ? '⚠️ Flagged' : '✅ Active'}</span></td>
+                <td>
+                    <button class="action-btn btn-view btn-sm" onclick="showStudentAttendance('${s.rollNo}')" style="padding:2px 6px; font-size:8px;">
+                        <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                    <button class="action-btn btn-del btn-sm" onclick="deleteStudentAccount('${s.rollNo}')" style="padding:2px 6px; font-size:8px; margin-left:2px;">
+                        <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    } catch(e) {
+        showMsg("Failed to connect to backend", true);
+    }
+        }
+                // 🔥 NEW: Delete student from directory
         async function deleteStudentAccount(rollNo) {
             if (!confirm(`Delete account for ${rollNo} permanently?`)) return;
             const user = JSON.parse(localStorage.getItem('user'));
@@ -2100,7 +2112,7 @@ function markSingleAttendance(overrideSubject) {
             }
         }
 
-        // 🔥 FIXED: Attendance Records - Group by Student+Date
+        // 🔥 FIXED: Attendance Records - Group by Student+Date with Delete Day Button (SVG)
         async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             try {
@@ -2111,32 +2123,68 @@ function markSingleAttendance(overrideSubject) {
 
                 document.getElementById('directoryTitle').innerHTML = `📊 Attendance Records (${data.length} entries) <button class="btn btn-outline btn-sm" onclick="fetchAllStudents()" style="padding:2px 8px; font-size:8px; width:auto;">⬅ Back</button>`;
 
-                // Group by rollNo + date
+                // Group by rollNo + date and store IDs
                 const grouped = {};
                 data.forEach(r => {
                     const key = `${r.rollNo}_${r.date}`;
                     if (!grouped[key]) {
-                        grouped[key] = { rollNo: r.rollNo, name: r.studentName, date: r.date, count: 0 };
+                        grouped[key] = { rollNo: r.rollNo, name: r.studentName, date: r.date, count: 0, ids: [] };
                     }
                     grouped[key].count++;
+                    grouped[key].ids.push(r._id);
                 });
+
+                // Store for deletion
+                groupedAdminRecords = grouped;
 
                 const sortedArray = Object.values(grouped).sort((a, b) => a.rollNo.localeCompare(b.rollNo));
 
                 const tbody = document.querySelector('#allHistoryTable tbody');
                 if (!tbody) return;
-                if (sortedArray.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px;">No records</td></tr>';
+                if (sortedArray.length === 0) return tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:12px;">No records</td></tr>';
                 
+                // 🔥 ADDED: Actions column with delete day button (SVG icon)
                 tbody.innerHTML = sortedArray.map(g => `
                     <tr>
                         <td><b>${g.rollNo}</b></td>
                         <td>${g.name}</td>
                         <td>${g.date}</td>
                         <td><span class="badge badge-present">${g.count} Lectures</span></td>
+                        <td>
+                            <button class="action-btn btn-del btn-sm" onclick="deleteDayGroup('${g.rollNo}', '${g.date}')" style="padding:2px 6px; font-size:8px;" title="Delete all lectures for this day">
+                                <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                            </button>
+                        </td>
                     </tr>
                 `).join('');
             } catch(e) {
                 showMsg("Failed to connect to backend", true);
+            }
+        }
+
+        // 🔥 NEW: Delete all attendance records for a student on a specific date
+        async function deleteDayGroup(rollNo, date) {
+            const user = JSON.parse(localStorage.getItem('user'));
+            const key = `${rollNo}_${date}`;
+            const group = groupedAdminRecords[key];
+            if (!group) {
+                showMsg('No records found!', true);
+                return;
+            }
+            if (!confirm(`Delete ${group.count} lectures for ${rollNo} on ${date}?`)) return;
+
+            let deletedCount = 0;
+            for (let id of group.ids) {
+                try {
+                    const res = await fetch(`${API_BASE}/api/attendance/delete/${id}/${user.rollNo}`, { method: 'DELETE' });
+                    if (res.ok) deletedCount++;
+                } catch(e) { /* ignore */ }
+            }
+            if (deletedCount > 0) {
+                showMsg(`✅ ${deletedCount} records deleted for ${rollNo} on ${date}`);
+                fetchAllAttendance(); // Refresh view
+            } else {
+                showMsg('Failed to delete records', true);
             }
         }
 
