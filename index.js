@@ -47,7 +47,7 @@ const loginSchema = z.object({
   deviceId: z.string().optional()
 });
 
-// ---------- Timetable (with holiday/weekend checks) ----------
+// ---------- Timetable ----------
 const TIME_TABLE = {
   Monday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'DAA - Design & Analysis of Algorithm', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'CN - Computer Network', 'WT - Web Technology'],
   Tuesday: ['WT - Web Technology', 'ECO - Economics for Engineers', 'Internet Lab (Ms. Geeta)', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'BDA - Big Data Analytics'],
@@ -143,14 +143,13 @@ const SuspiciousLog = mongoose.model('SuspiciousLog', suspiciousLogSchema);
 const BlacklistToken = mongoose.model('BlacklistToken', blacklistSchema);
 const QRCode = mongoose.model('QRCode', qrCodeSchema);
 
-// ---------- 🔥 NEW: Check if date is holiday or weekend ----------
+// ---------- Helper: Check if date is holiday or weekend ----------
 async function checkDateStatus(dateStr) {
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const parts = dateStr.split('-');
   const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
   const dayName = days[dateObj.getDay()];
   
-  // Check if weekend
   if (dayName === 'Saturday' || dayName === 'Sunday') {
     return { 
       isBlocked: true, 
@@ -160,7 +159,6 @@ async function checkDateStatus(dateStr) {
     };
   }
   
-  // Check if holiday
   const holiday = await Holiday.findOne({ date: dateStr });
   if (holiday) {
     return { 
@@ -173,6 +171,23 @@ async function checkDateStatus(dateStr) {
   }
   
   return { isBlocked: false, dayName };
+}
+
+// ---------- Helper: Get Working Days ----------
+async function getWorkingDays(startDate, endDate) {
+  let workingDays = 0;
+  let current = new Date(startDate);
+  const end = new Date(endDate);
+  
+  while (current <= end) {
+    const dateStr = current.toISOString().split('T')[0];
+    const status = await checkDateStatus(dateStr);
+    if (!status.isBlocked) {
+      workingDays++;
+    }
+    current.setDate(current.getDate() + 1);
+  }
+  return workingDays;
 }
 
 // ---------- Helper Functions ----------
@@ -296,8 +311,7 @@ const checkActiveSession = async (req, res, next) => {
 
 // ---------- Routes ----------
 app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active & Secured!'));
-
-// ----- Auth Routes (same as before) -----
+// ----- Auth Routes -----
 app.post('/api/auth/register', async (req, res) => {
   try {
     const parseResult = registerSchema.safeParse(req.body);
@@ -354,6 +368,7 @@ app.post('/api/auth/logout', async (req, res) => {
     res.json({ message: 'Logged out successfully!' });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
+
 // ----- Face Mesh -----
 app.post('/api/face/enroll', async (req, res) => {
   try {
@@ -510,8 +525,7 @@ app.post('/api/auth/verify-qr', async (req, res) => {
     res.json({ message: 'QR verified!', verified: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
-
-// ----- Notices (Enhanced) -----
+// ----- Notices -----
 app.get('/api/notices', async (req, res) => {
   try {
     const notices = await Notice.find().sort({ date: -1 }).limit(10);
@@ -532,13 +546,12 @@ app.post('/api/admin/notice', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- 🔥 NEW: Holiday Routes (with check) -----
+// ----- Holiday Routes -----
 app.post('/api/admin/holiday', async (req, res) => {
   try {
     const { requesterRollNo, date, reason } = req.body;
     if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     
-    // Check if date is weekend
     const parts = date.split('-');
     const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -559,7 +572,6 @@ app.get('/api/holidays', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// 🔥 NEW: Check date status (holiday/weekend)
 app.get('/api/date-status/:date', async (req, res) => {
   try {
     const status = await checkDateStatus(req.params.date);
@@ -613,20 +625,31 @@ app.get('/api/admin/all-students/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// 🔥 NEW: Dashboard Stats
+// 🔥 FIXED: Dashboard Stats - Counts UNIQUE students, not lectures
 app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
   try {
     if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const totalStudents = await User.countDocuments({ role: 'student' });
     const today = new Date().toISOString().split('T')[0];
-    const todayPresent = await Attendance.countDocuments({ date: today, status: 'Present' });
-    const todayAbsent = await Attendance.countDocuments({ date: today, status: 'Absent' });
+    
+    // Count UNIQUE students present today (not lectures)
+    const todayPresentStudents = await Attendance.distinct('rollNo', { date: today, status: 'Present' });
+    const todayPresent = todayPresentStudents.length;
+    
+    // Count UNIQUE students absent today (those who have no present record today)
+    const allStudents = await User.find({ role: 'student' }).select('rollNo');
+    const allRollNos = allStudents.map(s => s.rollNo);
+    const presentRollNos = new Set(todayPresentStudents);
+    const absentRollNos = allRollNos.filter(r => !presentRollNos.has(r));
+    const todayAbsent = absentRollNos.length;
+    
     const totalAttendance = await Attendance.countDocuments();
     const presentCount = await Attendance.countDocuments({ status: 'Present' });
     const overallPct = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : 0;
     res.json({ totalStudents, todayPresent, todayAbsent, overallAttendance: totalAttendance, overallPct });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
+
 // ----- 🔥 UPDATED: Attendance Marking with Holiday/Weekend Check -----
 app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
   try {
@@ -634,14 +657,10 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
     const today = new Date();
     const todayDate = today.toISOString().split('T')[0];
     
-    // 🔥 Check if today is weekend or holiday
     const dateStatus = await checkDateStatus(todayDate);
     if (dateStatus.isBlocked) {
       return res.status(400).json({ error: dateStatus.message });
     }
-    
-    const isHoliday = await Holiday.findOne({ date: todayDate });
-    if (isHoliday) return res.status(400).json({ error: `🎉 Holiday: ${isHoliday.reason}` });
     
     const cleanRoll = rollNo.trim().toUpperCase();
     const blockCheck = await checkStudentBlocked(cleanRoll);
@@ -686,7 +705,6 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
     res.status(201).json({ message: `✅ Attendance Marked for ${subject}!`, verified: !!selfie });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
-
 // ----- 🔥 UPDATED: Full Day Attendance with Holiday/Weekend Check -----
 app.post('/api/attendance/mark-fullday', checkActiveSession, async (req, res) => {
   try {
@@ -694,7 +712,6 @@ app.post('/api/attendance/mark-fullday', checkActiveSession, async (req, res) =>
     const today = new Date();
     const todayDate = today.toISOString().split('T')[0];
     
-    // 🔥 Check if today is weekend or holiday
     const dateStatus = await checkDateStatus(todayDate);
     if (dateStatus.isBlocked) {
       return res.status(400).json({ error: dateStatus.message });
@@ -755,7 +772,6 @@ app.post('/api/admin/manual-attendance', async (req, res) => {
     const { requesterRollNo, studentRollNo, date, status } = req.body;
     if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     
-    // 🔥 Check if date is weekend or holiday
     const dateStatus = await checkDateStatus(date);
     if (dateStatus.isBlocked) {
       return res.status(400).json({ error: `Cannot mark attendance on ${dateStatus.type}: ${dateStatus.message}` });
@@ -793,7 +809,6 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
     const { requesterRollNo, studentRollNo, date, subjects, status } = req.body;
     if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     
-    // 🔥 Check if date is weekend or holiday
     const dateStatus = await checkDateStatus(date);
     if (dateStatus.isBlocked) {
       return res.status(400).json({ error: `Cannot mark attendance on ${dateStatus.type}: ${dateStatus.message}` });
@@ -891,6 +906,51 @@ app.get('/api/export/google-sheets/:requesterRollNo', async (req, res) => {
     });
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename=attendance_export.csv');
+    res.send(csv);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// 🔥 NEW: Export with Working Days Info
+app.get('/api/export/working-days/:requesterRollNo', async (req, res) => {
+  try {
+    if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    
+    // Get working days for current month
+    const today = new Date();
+    const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const currentMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    const currentMonthWorkingDays = await getWorkingDays(currentMonthStart, currentMonthEnd);
+    
+    // Get working days for full semester
+    const semesterStart = new Date(2026, 6, 15);
+    const semesterEnd = new Date(2026, 11, 31);
+    const semesterWorkingDays = await getWorkingDays(semesterStart, semesterEnd);
+    
+    // Get attendance records
+    const records = await Attendance.find().sort({ rollNo: 1, date: -1 });
+    
+    let csv = 'BM Group - Working Days Report\n';
+    csv += `Current Month (${MONTH_NAMES[today.getMonth()]} ${today.getFullYear()}): ${currentMonthWorkingDays} working days\n`;
+    csv += `Full Semester (Jul-Dec 2026): ${semesterWorkingDays} working days\n\n`;
+    csv += 'Roll No,Student Name,Total Lectures,Present,Attendance %\n';
+    
+    const studentMap = {};
+    records.forEach(r => {
+      if (!studentMap[r.rollNo]) {
+        studentMap[r.rollNo] = { name: r.studentName, total: 0, present: 0 };
+      }
+      studentMap[r.rollNo].total += 1;
+      if (r.status === 'Present') studentMap[r.rollNo].present += 1;
+    });
+    
+    Object.keys(studentMap).forEach(roll => {
+      const s = studentMap[roll];
+      const pct = s.total > 0 ? Math.round((s.present / s.total) * 100) : 0;
+      csv += `${roll},${s.name},${s.total},${s.present},${pct}%\n`;
+    });
+    
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=working_days_report.csv');
     res.send(csv);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
