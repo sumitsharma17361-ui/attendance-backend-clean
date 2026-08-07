@@ -47,7 +47,7 @@ const loginSchema = z.object({
   deviceId: z.string().optional()
 });
 
-// ---------- Timetable ----------
+// ---------- Timetable (with holiday/weekend checks) ----------
 const TIME_TABLE = {
   Monday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'DAA - Design & Analysis of Algorithm', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'CN - Computer Network', 'WT - Web Technology'],
   Tuesday: ['WT - Web Technology', 'ECO - Economics for Engineers', 'Internet Lab (Ms. Geeta)', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'BDA - Big Data Analytics'],
@@ -142,6 +142,38 @@ const Notice = mongoose.model('Notice', noticeSchema);
 const SuspiciousLog = mongoose.model('SuspiciousLog', suspiciousLogSchema);
 const BlacklistToken = mongoose.model('BlacklistToken', blacklistSchema);
 const QRCode = mongoose.model('QRCode', qrCodeSchema);
+
+// ---------- 🔥 NEW: Check if date is holiday or weekend ----------
+async function checkDateStatus(dateStr) {
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const parts = dateStr.split('-');
+  const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  const dayName = days[dateObj.getDay()];
+  
+  // Check if weekend
+  if (dayName === 'Saturday' || dayName === 'Sunday') {
+    return { 
+      isBlocked: true, 
+      type: 'WEEKEND',
+      message: `📅 ${dayName}: College Closed (Weekend)`,
+      dayName 
+    };
+  }
+  
+  // Check if holiday
+  const holiday = await Holiday.findOne({ date: dateStr });
+  if (holiday) {
+    return { 
+      isBlocked: true, 
+      type: 'HOLIDAY',
+      message: `🎉 Holiday: ${holiday.reason}`,
+      dayName,
+      holiday: holiday.reason
+    };
+  }
+  
+  return { isBlocked: false, dayName };
+}
 
 // ---------- Helper Functions ----------
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -265,7 +297,7 @@ const checkActiveSession = async (req, res, next) => {
 // ---------- Routes ----------
 app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active & Secured!'));
 
-// ----- Auth Routes -----
+// ----- Auth Routes (same as before) -----
 app.post('/api/auth/register', async (req, res) => {
   try {
     const parseResult = registerSchema.safeParse(req.body);
@@ -500,6 +532,41 @@ app.post('/api/admin/notice', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ----- 🔥 NEW: Holiday Routes (with check) -----
+app.post('/api/admin/holiday', async (req, res) => {
+  try {
+    const { requesterRollNo, date, reason } = req.body;
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    
+    // Check if date is weekend
+    const parts = date.split('-');
+    const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayName = days[dateObj.getDay()];
+    if (dayName === 'Saturday' || dayName === 'Sunday') {
+      return res.status(400).json({ error: 'Cannot declare holiday on weekend (Saturday/Sunday)!' });
+    }
+    
+    await Holiday.findOneAndUpdate({ date }, { date, reason: reason || 'College Holiday' }, { upsert: true, new: true });
+    res.json({ message: `✅ Holiday declared for ${date}: ${reason || 'College Holiday'}` });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/holidays', async (req, res) => {
+  try {
+    const holidays = await Holiday.find();
+    res.json(holidays);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// 🔥 NEW: Check date status (holiday/weekend)
+app.get('/api/date-status/:date', async (req, res) => {
+  try {
+    const status = await checkDateStatus(req.params.date);
+    res.json(status);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ----- Suspicious Activity Logs -----
 app.get('/api/admin/suspicious-logs/:requesterRollNo', async (req, res) => {
   try {
@@ -545,28 +612,53 @@ app.get('/api/admin/all-students/:requesterRollNo', async (req, res) => {
     res.json(students);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
-// ----- Attendance Marking -----
+
+// 🔥 NEW: Dashboard Stats
+app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
+  try {
+    if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const totalStudents = await User.countDocuments({ role: 'student' });
+    const today = new Date().toISOString().split('T')[0];
+    const todayPresent = await Attendance.countDocuments({ date: today, status: 'Present' });
+    const todayAbsent = await Attendance.countDocuments({ date: today, status: 'Absent' });
+    const totalAttendance = await Attendance.countDocuments();
+    const presentCount = await Attendance.countDocuments({ status: 'Present' });
+    const overallPct = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : 0;
+    res.json({ totalStudents, todayPresent, todayAbsent, overallAttendance: totalAttendance, overallPct });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+// ----- 🔥 UPDATED: Attendance Marking with Holiday/Weekend Check -----
 app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude, selfie, deviceFingerprint } = req.body;
     const today = new Date();
     const todayDate = today.toISOString().split('T')[0];
-    if (today.getDay() === 0 || today.getDay() === 6) return res.status(400).json({ error: 'Weekend! College was OFF.' });
+    
+    // 🔥 Check if today is weekend or holiday
+    const dateStatus = await checkDateStatus(todayDate);
+    if (dateStatus.isBlocked) {
+      return res.status(400).json({ error: dateStatus.message });
+    }
+    
     const isHoliday = await Holiday.findOne({ date: todayDate });
-    if (isHoliday) return res.status(400).json({ error: `Holiday: ${isHoliday.reason}` });
+    if (isHoliday) return res.status(400).json({ error: `🎉 Holiday: ${isHoliday.reason}` });
+    
     const cleanRoll = rollNo.trim().toUpperCase();
     const blockCheck = await checkStudentBlocked(cleanRoll);
     if (blockCheck.blocked) return res.status(403).json({ error: blockCheck.message });
+    
     const locCheck = checkLocation(latitude, longitude);
     if (!locCheck.isInside) {
       await incrementFailedAttempts(cleanRoll, name, `Outside boundary (${locCheck.distance}m)`, { latitude, longitude }, req.ip, deviceFingerprint);
       await logSuspiciousActivity(rollNo, name, 'FAKE_GPS', `Outside boundary (${locCheck.distance}m)`, { latitude, longitude }, req.ip, deviceFingerprint);
       return res.status(400).json({ error: `Outside Classroom Boundary! (${locCheck.distance}m away)` });
     }
+    
     const user = await User.findOne({ rollNo: cleanRoll });
     if (!user) return res.status(404).json({ error: 'Student not found!' });
     if (selfie && (!user.faceDescriptor || user.faceDescriptor.length === 0)) return res.status(400).json({ error: 'Enroll face first!' });
     if (deviceFingerprint && !user.deviceFingerprint) { user.deviceFingerprint = deviceFingerprint; await user.save(); }
+    
     const clientIP = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown';
     const anomaly = detectAnomaly(user, latitude, longitude, clientIP, deviceFingerprint);
     if (anomaly.isAnomaly) {
@@ -577,9 +669,11 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
       await logSuspiciousActivity(cleanRoll, name, anomaly.type, anomaly.reason, { latitude, longitude }, clientIP, deviceFingerprint);
       return res.status(403).json({ error: '⛔ Attendance Blocked! Suspicious activity detected. Auto-unblock after 24 hours.', reason: anomaly.reason });
     }
+    
     const isLab = subject.includes("LAB") || subject.includes("Lab");
     const todayEntries = await Attendance.find({ rollNo: cleanRoll, subject, date: todayDate });
     if (isLab && todayEntries.length >= 1) return res.status(400).json({ error: `Already marked for ${subject} today! (Lab - 1 lecture only)` });
+    
     user.failedAttempts = 0;
     user.blockUntil = null;
     await new Attendance({ rollNo: cleanRoll, studentName: name, subject, date: todayDate, status: 'Present', location: { latitude, longitude }, ipAddress: clientIP, selfie: selfie || null, deviceFingerprint: deviceFingerprint || null, isVerified: !!selfie }).save();
@@ -588,30 +682,37 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
     user.lastAttendanceLocation = { latitude, longitude };
     if (deviceFingerprint) user.deviceFingerprint = deviceFingerprint;
     await user.save();
+    
     res.status(201).json({ message: `✅ Attendance Marked for ${subject}!`, verified: !!selfie });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ----- 🔥 UPDATED: Full Day Attendance with Holiday/Weekend Check -----
 app.post('/api/attendance/mark-fullday', checkActiveSession, async (req, res) => {
   try {
     const { rollNo, name, latitude, longitude, selfie, deviceFingerprint } = req.body;
     const today = new Date();
     const todayDate = today.toISOString().split('T')[0];
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const dayName = days[today.getDay()];
-    if (dayName === 'Sunday' || dayName === 'Saturday') return res.status(400).json({ error: 'Weekend! College was OFF.' });
-    const isHoliday = await Holiday.findOne({ date: todayDate });
-    if (isHoliday) return res.status(400).json({ error: `Holiday: ${isHoliday.reason}` });
+    
+    // 🔥 Check if today is weekend or holiday
+    const dateStatus = await checkDateStatus(todayDate);
+    if (dateStatus.isBlocked) {
+      return res.status(400).json({ error: dateStatus.message });
+    }
+    
     const cleanRoll = rollNo.trim().toUpperCase();
     const blockCheck = await checkStudentBlocked(cleanRoll);
     if (blockCheck.blocked) return res.status(403).json({ error: blockCheck.message });
+    
     const locCheck = checkLocation(latitude, longitude);
     if (!locCheck.isInside) {
       await incrementFailedAttempts(cleanRoll, name, `Outside boundary (${locCheck.distance}m)`, { latitude, longitude }, req.ip, deviceFingerprint);
       return res.status(400).json({ error: `Outside Classroom Boundary! (${locCheck.distance}m away)` });
     }
+    
     const user = await User.findOne({ rollNo: cleanRoll });
     if (!user) return res.status(404).json({ error: 'Student not found!' });
+    
     const clientIP = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown';
     const anomaly = detectAnomaly(user, latitude, longitude, clientIP, deviceFingerprint);
     if (anomaly.isAnomaly) {
@@ -622,8 +723,12 @@ app.post('/api/attendance/mark-fullday', checkActiveSession, async (req, res) =>
       await logSuspiciousActivity(cleanRoll, name, anomaly.type, anomaly.reason, { latitude, longitude }, clientIP, deviceFingerprint);
       return res.status(403).json({ error: '⛔ Attendance Blocked! Suspicious activity detected. Auto-unblock after 24 hours.', reason: anomaly.reason });
     }
+    
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayName = days[today.getDay()];
     const todaySubjects = TIME_TABLE[dayName] || ['General Class'];
     let markedCount = 0;
+    
     for (let sub of todaySubjects) {
       const exists = await Attendance.findOne({ rollNo: cleanRoll, subject: sub, date: todayDate });
       if (!exists) {
@@ -631,32 +736,46 @@ app.post('/api/attendance/mark-fullday', checkActiveSession, async (req, res) =>
         markedCount++;
       }
     }
+    
     user.lastKnownIP = clientIP;
     user.lastAttendanceTime = new Date();
     user.lastAttendanceLocation = { latitude, longitude };
     user.failedAttempts = 0;
     user.blockUntil = null;
     await user.save();
+    
     if (markedCount === 0) return res.status(400).json({ error: 'Full Day already marked!' });
     res.status(201).json({ message: `✅ Full Day Marked (${markedCount} Lectures)!` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Admin Manual Attendance (Single - Backward Compatible) -----
+// ----- 🔥 UPDATED: Admin Manual Attendance with Holiday/Weekend Check -----
 app.post('/api/admin/manual-attendance', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNo, date, status } = req.body;
     if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    
+    // 🔥 Check if date is weekend or holiday
+    const dateStatus = await checkDateStatus(date);
+    if (dateStatus.isBlocked) {
+      return res.status(400).json({ error: `Cannot mark attendance on ${dateStatus.type}: ${dateStatus.message}` });
+    }
+    
     const targetRoll = studentRollNo.trim().toUpperCase();
     const user = await User.findOne({ rollNo: targetRoll });
     if (!user) return res.status(404).json({ error: `Roll No ${targetRoll} not registered!` });
+    
     const parts = date.split('-');
     const targetDateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayName = days[targetDateObj.getDay()];
-    if (dayName === 'Sunday' || dayName === 'Saturday') return res.status(400).json({ error: 'Target date is a Weekend!' });
+    if (dayName === 'Sunday' || dayName === 'Saturday') {
+      return res.status(400).json({ error: 'Target date is a Weekend!' });
+    }
+    
     const targetSubjects = TIME_TABLE[dayName] || ['General Class'];
     let markedCount = 0;
+    
     for (let sub of targetSubjects) {
       const exists = await Attendance.findOne({ rollNo: targetRoll, subject: sub, date });
       if (!exists) {
@@ -668,16 +787,22 @@ app.post('/api/admin/manual-attendance', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- 🔥 NEW: Admin Manual Attendance with Subject Selection (Bulk) -----
+// ----- 🔥 UPDATED: Admin Manual Bulk Attendance with Holiday/Weekend Check -----
 app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNo, date, subjects, status } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) {
-      return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    
+    // 🔥 Check if date is weekend or holiday
+    const dateStatus = await checkDateStatus(date);
+    if (dateStatus.isBlocked) {
+      return res.status(400).json({ error: `Cannot mark attendance on ${dateStatus.type}: ${dateStatus.message}` });
     }
+    
     const targetRoll = studentRollNo.trim().toUpperCase();
     const user = await User.findOne({ rollNo: targetRoll });
     if (!user) return res.status(404).json({ error: `Roll No ${targetRoll} not registered!` });
+    
     const parts = date.split('-');
     const targetDateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -685,9 +810,11 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
     if (dayName === 'Sunday' || dayName === 'Saturday') {
       return res.status(400).json({ error: 'Target date is a Weekend!' });
     }
+    
     let markedCount = 0;
     const markedSubjects = [];
     const alreadyMarked = [];
+    
     for (let sub of subjects) {
       const exists = await Attendance.findOne({ rollNo: targetRoll, subject: sub, date });
       if (!exists) {
@@ -698,26 +825,10 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
         alreadyMarked.push(sub);
       }
     }
+    
     let message = `✅ Marked ${markedCount} lectures for ${user.name} on ${date}`;
     if (alreadyMarked.length > 0) message += `. Already marked: ${alreadyMarked.join(', ')}`;
     res.status(201).json({ message, markedSubjects, alreadyMarked, total: markedCount });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// ----- Holidays -----
-app.post('/api/admin/holiday', async (req, res) => {
-  try {
-    const { requesterRollNo, date, reason } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
-    await Holiday.findOneAndUpdate({ date }, { date, reason: reason || 'College Holiday' }, { upsert: true, new: true });
-    res.json({ message: `Holiday declared for ${date}` });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.get('/api/holidays', async (req, res) => {
-  try {
-    const holidays = await Holiday.find();
-    res.json(holidays);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -769,22 +880,7 @@ app.get('/api/analytics/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- 🔥 NEW: Dashboard Stats -----
-app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
-  try {
-    if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
-    const totalStudents = await User.countDocuments({ role: 'student' });
-    const today = new Date().toISOString().split('T')[0];
-    const todayPresent = await Attendance.countDocuments({ date: today, status: 'Present' });
-    const todayAbsent = await Attendance.countDocuments({ date: today, status: 'Absent' });
-    const totalAttendance = await Attendance.countDocuments();
-    const presentCount = await Attendance.countDocuments({ status: 'Present' });
-    const overallPct = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : 0;
-    res.json({ totalStudents, todayPresent, todayAbsent, overallAttendance: totalAttendance, overallPct });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// ----- 🔥 NEW: Export to Google Sheets (CSV) -----
+// ----- Export -----
 app.get('/api/export/google-sheets/:requesterRollNo', async (req, res) => {
   try {
     if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
