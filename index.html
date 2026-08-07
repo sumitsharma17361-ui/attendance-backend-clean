@@ -6,8 +6,8 @@
     <title>BM Group of Institutions - Enterprise ERP Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { 
             --bg-body: #f0f4f8;
@@ -18,432 +18,166 @@
             --warning: #d97706; 
             --card-bg: #ffffff;
             --card-border: #e2e8f0;
-            --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.06);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+            --shadow-sm: 0 1px 3px 0 rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05);
+            --shadow-hover: 0 10px 15px -3px rgba(0,0,0,0.08);
             --text-main: #0f172a; 
             --text-muted: #64748b; 
             --radius: 12px;
         }
-
         * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding: 0; }
-        
-        body { 
-            background: var(--bg-body);
-            color: var(--text-main); 
-            min-height: 100vh; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            padding: 16px; 
-            position: relative;
-        }
-
-        #toast-container {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 9999;
-            width: 90%;
-            max-width: 420px;
-            pointer-events: none;
-        }
-
-        .toast-card {
-            padding: 12px 16px;
-            border-radius: var(--radius);
-            font-size: 13px;
-            font-weight: 600;
-            text-align: center;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-            border: 1px solid var(--card-border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            opacity: 0;
-            transform: translateY(-16px) scale(0.96);
-            transition: all 0.45s cubic-bezier(0.16, 1, 0.3, 1);
-            pointer-events: auto;
-        }
-
-        .toast-card.show {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-        }
-
+        body { background: var(--bg-body); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 16px; position: relative; }
+        #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; width: 90%; max-width: 420px; pointer-events: none; }
+        .toast-card { padding: 12px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 600; text-align: center; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); border: 1px solid var(--card-border); display: flex; align-items: center; justify-content: center; gap: 10px; opacity: 0; transform: translateY(-16px) scale(0.96); transition: all 0.45s cubic-bezier(0.16,1,0.3,1); pointer-events: auto; }
+        .toast-card.show { opacity: 1; transform: translateY(0) scale(1); }
         .toast-card.toast-success { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
         .toast-card.toast-error { background: #fef2f2; color: #991b1b; border-color: #fecaca; animation: shake 0.4s ease-in-out; }
-
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            20%, 60% { transform: translateX(-4px); }
-            40%, 80% { transform: translateX(4px); }
-        }
-
-        .app-container { 
-            width: 100%; 
-            max-width: 480px; 
-            background: var(--card-bg); 
-            border-radius: 20px; 
-            box-shadow: var(--shadow-md); 
-            border: 1px solid var(--card-border); 
-            overflow: hidden; 
-            animation: cardScaleUp 0.75s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        @keyframes cardScaleUp {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        @keyframes fadeInSlide {
-            from { opacity: 0; transform: translateY(12px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .tab-content-active {
-            animation: fadeInSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-
-        .app-header { 
-            background: #ffffff; 
-            padding: 16px 18px; 
-            border-bottom: 1px solid var(--card-border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .app-header-title h1 { font-size: 15px; font-weight: 800; color: #0f172a; letter-spacing: -0.3px; }
-        .app-header-title p { font-size: 10px; font-weight: 600; color: var(--text-muted); margin-top: 1px; }
-
-        .header-avatar-badge {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .avatar-circle {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: #eff6ff;
-            color: var(--primary);
-            font-weight: 700;
-            font-size: 11px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid #dbeafe;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .avatar-circle:hover { transform: scale(1.05); }
-
-        .notice-banner { 
-            background: #fffbeb; 
-            border-bottom: 1px solid #fef3c7; 
-            color: #92400e; 
-            font-size: 10px; 
-            padding: 6px 12px; 
-            font-weight: 600; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px; 
-        }
-        .notice-marquee { overflow: hidden; white-space: nowrap; width: 100%; }
-        .notice-marquee p { display: inline-block; animation: marquee 16s linear infinite; }
-        @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-        .app-body { padding: 14px; }
-        
-        input, select { 
-            width: 100%; 
-            padding: 9px 12px; 
-            margin-bottom: 8px; 
-            background: #f8fafc;
-            border: 1px solid var(--card-border); 
-            border-radius: 8px; 
-            font-size: 11px; 
-            font-weight: 600;
-            color: var(--text-main);
-            outline: none; 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-        }
-        select option { background: #ffffff; color: #0f172a; }
-        input::placeholder { color: #94a3b8; font-weight: 500; }
-        input:focus, select:focus { 
-            background: #ffffff;
-            border-color: var(--primary); 
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10); 
-        }
-        .password-wrapper { position: relative; width: 100%; }
-        .password-wrapper input { padding-right: 36px; }
-        .eye-icon { position: absolute; right: 10px; top: 38%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); transition: color 0.3s; }
-        .eye-icon:hover { color: var(--primary); }
-                .btn { 
-            width: 100%; 
-            padding: 9px 12px; 
-            border-radius: 8px; 
-            font-weight: 700; 
-            font-size: 11px; 
-            cursor: pointer; 
-            margin-top: 4px; 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-            border: none;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            box-shadow: var(--shadow-sm);
-        }
-        .btn:hover { 
-            transform: translateY(-1px); 
-            box-shadow: var(--shadow-hover);
-        }
-        .btn:active { 
-            transform: scale(0.97) translateY(0); 
-        }
-
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: var(--primary-hover); }
-        .btn-success { background: var(--success); color: white; }
-        .btn-warning { background: var(--warning); color: white; }
-        .btn-accent { background: #0284c7; color: white; }
-        .btn-purple { background: #7c3aed; color: white; }
-        .btn-outline { background: #ffffff; border: 1px solid var(--card-border); color: var(--text-main); }
-        .btn-outline:hover { background: #f8fafc; border-color: #cbd5e1; }
-        .btn-danger { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
-        .btn-danger:hover { background: #fee2e2; }
-        .btn-sm { padding: 5px 10px; font-size: 10px; width: auto; margin: 0; }
-
-        .badge { 
-            padding: 2px 8px; 
-            border-radius: 4px; 
-            font-size: 9px; 
-            font-weight: 700; 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .badge-present { background: #dcfce7; color: #15803d; }
-        .badge-flagged { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-        .badge-active { background: #dbeafe; color: #1d4ed8; }
-        .defaulter-badge { 
-            display: inline-block; 
-            background: #fef2f2; 
-            color: #991b1b; 
-            font-size: 9px; 
-            font-weight: 700; 
-            padding: 2px 6px; 
-            border-radius: 4px; 
-            border: 1px solid #fecaca; 
-            margin-left: 4px; 
-            animation: pulseFade 2.5s infinite ease-in-out;
-        }
-
-        @keyframes pulseFade {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.65; }
-        }
-
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
-        .stat-card { 
-            background: #f8fafc; 
-            padding: 10px; 
-            border-radius: var(--radius); 
-            text-align: center; 
-            border: 1px solid var(--card-border); 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .stat-card:hover { transform: translateY(-1px); border-color: #cbd5e1; box-shadow: var(--shadow-sm); }
-        .stat-card .value { font-size: 18px; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; }
-        .stat-card .label { font-size: 9px; color: var(--text-muted); font-weight: 700; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
-
-        .simulator-card { 
-            background: #f0f9ff; 
-            border: 1px solid #bae6fd; 
-            border-radius: var(--radius); 
-            padding: 8px 12px; 
-            margin-bottom: 10px; 
-            font-size: 10px; 
-            color: #0369a1;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .action-buttons-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
-        .action-buttons-grid .btn { margin-top: 0; font-size: 10px; padding: 8px; }
-
-        .quick-portals-card {
-            background: #ffffff;
-            border: 1px solid var(--card-border);
-            border-radius: var(--radius);
-            padding: 10px;
-            margin: 10px 0;
-        }
-        .portal-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 6px; }
-        .portal-btn {
-            background: #f8fafc;
-            border: 1px solid var(--card-border);
-            border-radius: 8px;
-            padding: 6px 4px;
-            text-align: center;
-            font-size: 9px;
-            font-weight: 700;
-            color: var(--text-main);
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 3px;
-        }
-        .portal-btn:hover { 
-            background: #ffffff; 
-            border-color: var(--primary); 
-            transform: translateY(-1px); 
-            box-shadow: var(--shadow-sm); 
-            color: var(--primary);
-        }
-        .portal-btn:active { transform: scale(0.97); }
-
-        .calendar-container { 
-            background: #ffffff; 
-            border: 1px solid var(--card-border); 
-            border-radius: var(--radius); 
-            padding: 10px; 
-            margin: 10px 0; 
-        }
-        .calendar-header { display: flex; justify-content: space-between; align-items: center; font-size: 10px; font-weight: 800; margin-bottom: 8px; color: var(--text-main); }
-        .calendar-header select { margin-top: 0; padding: 4px 6px; font-size: 10px; width: auto; }
-        
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; font-size: 9px; }
-        .cal-day-head { font-weight: 700; color: var(--text-muted); padding-bottom: 3px; font-size: 8px; }
-        .cal-date { padding: 4px 1px; border-radius: 4px; font-weight: 600; background: #f8fafc; border: 1px solid #f1f5f9; transition: all 0.2s ease; }
-        .cal-date:hover { transform: scale(1.05); z-index: 1; }
-        .cal-p { background: #dcfce7; color: #15803d; font-weight: 800; border-color: #bbf7d0; }
-        .cal-a { background: #fee2e2; color: #b91c1c; font-weight: 800; border-color: #fecaca; }
-        .cal-off { background: #f1f5f9; color: #94a3b8; }
-
-        .tab-bar { display: flex; background: #f1f5f9; border-radius: 8px; padding: 2px; margin-bottom: 10px; }
-        .tab-item { flex: 1; padding: 6px; text-align: center; font-size: 10px; font-weight: 700; cursor: pointer; color: var(--text-muted); border-radius: 6px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .tab-item.active { background: #ffffff; color: var(--primary); box-shadow: var(--shadow-sm); }
-
-        .admin-nav { display: flex; gap: 2px; background: #f1f5f9; padding: 2px; border-radius: 8px; margin-bottom: 10px; overflow-x: auto; flex-wrap: wrap; }
-        .admin-nav-item { flex: 1; text-align: center; padding: 5px 3px; font-size: 9px; font-weight: 700; cursor: pointer; border-radius: 5px; color: var(--text-muted); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); white-space: nowrap; min-width: 40px; }
-        .admin-nav-item.active { background: #ffffff; color: var(--primary); box-shadow: var(--shadow-sm); }
-
-        .tool-sub-card { 
-            background: #f8fafc; 
-            border: 1px solid var(--card-border); 
-            border-radius: var(--radius); 
-            padding: 10px; 
-            margin-bottom: 8px; 
-        }
-        .tool-title { font-size: 10px; font-weight: 800; margin-bottom: 6px; display: block; }
-
-        .period-card {
-            background: #f0f9ff;
-            border: 1px solid #bae6fd;
-            border-radius: var(--radius);
-            padding: 10px;
-            margin: 8px 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .action-btn {
-            border: none;
-            border-radius: 6px;
-            padding: 5px 8px;
-            font-size: 9px;
-            font-weight: 700;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            transition: all 0.2s ease;
-        }
-        .action-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-        .btn-del { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-        .btn-del:hover { background: #fee2e2; }
-        .btn-view { background: #eff6ff; color: #2563eb; border: 1px solid #dbeafe; }
-        .btn-view:hover { background: #dbeafe; }
-
-        .table-container { max-height: 280px; overflow-y: auto; border: 1px solid var(--card-border); border-radius: 8px; margin-top: 6px; background: #ffffff; }
-        table { width: 100%; border-collapse: collapse; font-size: 10px; }
-        th { background: #f8fafc; color: var(--text-muted); padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--card-border); position: sticky; top: 0; font-weight: 700; font-size: 9px; z-index: 2; }
-        td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; font-size: 10px; }
-        
-        .admin-box { background: #ffffff; padding: 10px; border-radius: var(--radius); border: 1px solid var(--card-border); animation: cardScaleUp 0.5s cubic-bezier(0.16, 1, 0.3, 1); margin-bottom: 8px; }
-        
-        .webcam-box { width: 100%; height: 170px; background: #0f172a; border-radius: 8px; overflow: hidden; position: relative; margin-bottom: 6px; display: flex; justify-content: center; align-items: center; border: 1px solid var(--card-border); }
-        video { width: 100%; height: 100%; object-fit: cover; }
-        .scan-overlay { position: absolute; border: 2px dashed #38bdf8; border-radius: 50%; width: 100px; height: 120px; }
-        
-        .svg-icon { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: inline-block; vertical-align: middle; transition: transform 0.3s ease; }
-        .svg-icon-sm { width: 12px; height: 12px; }
-        .svg-icon-lg { width: 16px; height: 16px; }
-
-        .spin-rotate {
-            animation: spin 0.75s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        .modal-overlay {
+        @keyframes shake { 0%,100% { transform:translateX(0); } 20%,60% { transform:translateX(-4px); } 40%,80% { transform:translateX(4px); } }
+        .app-container { width: 100%; max-width: 480px; background: var(--card-bg); border-radius: 20px; box-shadow: var(--shadow-md); border: 1px solid var(--card-border); overflow: hidden; animation: cardScaleUp 0.75s cubic-bezier(0.16,1,0.3,1); }
+        @keyframes cardScaleUp { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }
+        @keyframes fadeInSlide { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+        .tab-content-active { animation: fadeInSlide 0.5s cubic-bezier(0.16,1,0.3,1) forwards; }
+        .app-header { background:#fff; padding:16px 18px; border-bottom:1px solid var(--card-border); display:flex; align-items:center; justify-content:space-between; }
+        .app-header-title h1 { font-size:15px; font-weight:800; color:#0f172a; letter-spacing:-0.3px; }
+        .app-header-title p { font-size:10px; font-weight:600; color:var(--text-muted); margin-top:1px; }
+        .header-avatar-badge { display:flex; align-items:center; gap:8px; }
+        .avatar-circle { width:32px; height:32px; border-radius:50%; background:#eff6ff; color:var(--primary); font-weight:700; font-size:11px; display:flex; align-items:center; justify-content:center; border:1px solid #dbeafe; transition:all 0.3s; }
+        .avatar-circle:hover { transform:scale(1.05); }
+        .notice-banner { background:#fffbeb; border-bottom:1px solid #fef3c7; color:#92400e; font-size:10px; padding:6px 12px; font-weight:600; display:flex; align-items:center; gap:8px; }
+        .notice-marquee { overflow:hidden; white-space:nowrap; width:100%; }
+        .notice-marquee p { display:inline-block; animation:marquee 16s linear infinite; }
+        @keyframes marquee { 0% { transform:translateX(100%); } 100% { transform:translateX(-100%); } }
+        .app-body { padding:14px; }
+        input, select { width:100%; padding:9px 12px; margin-bottom:8px; background:#f8fafc; border:1px solid var(--card-border); border-radius:8px; font-size:11px; font-weight:600; color:var(--text-main); outline:none; transition:all 0.3s; }
+        select option { background:#fff; color:#0f172a; }
+        input::placeholder { color:#94a3b8; font-weight:500; }
+        input:focus, select:focus { background:#fff; border-color:var(--primary); box-shadow:0 0 0 3px rgba(37,99,235,0.10); }
+        .password-wrapper { position:relative; width:100%; }
+        .password-wrapper input { padding-right:36px; }
+        .eye-icon { position:absolute; right:10px; top:38%; transform:translateY(-50%); cursor:pointer; color:var(--text-muted); transition:color 0.3s; }
+        .eye-icon:hover { color:var(--primary); }
+        .btn { width:100%; padding:9px 12px; border-radius:8px; font-weight:700; font-size:11px; cursor:pointer; margin-top:4px; transition:all 0.3s; border:none; display:inline-flex; align-items:center; justify-content:center; gap:6px; box-shadow:var(--shadow-sm); }
+        .btn:hover { transform:translateY(-1px); box-shadow:var(--shadow-hover); }
+        .btn:active { transform:scale(0.97) translateY(0); }
+        .btn-primary { background:var(--primary); color:white; }
+        .btn-primary:hover { background:var(--primary-hover); }
+        .btn-success { background:var(--success); color:white; }
+        .btn-warning { background:var(--warning); color:white; }
+        .btn-accent { background:#0284c7; color:white; }
+        .btn-outline { background:#fff; border:1px solid var(--card-border); color:var(--text-main); }
+        .btn-outline:hover { background:#f8fafc; border-color:#cbd5e1; }
+        .btn-danger { background:#fef2f2; color:var(--danger); border:1px solid #fecaca; }
+        .btn-danger:hover { background:#fee2e2; }
+        .btn-sm { padding:5px 10px; font-size:10px; width:auto; margin:0; }
+        .badge { padding:2px 8px; border-radius:4px; font-size:9px; font-weight:700; transition:all 0.3s; }
+        .badge-present { background:#dcfce7; color:#15803d; }
+        .badge-flagged { background:#fef2f2; color:#991b1b; border:1px solid #fecaca; }
+        .badge-active { background:#dbeafe; color:#1d4ed8; }
+        .defaulter-badge { display:inline-block; background:#fef2f2; color:#991b1b; font-size:9px; font-weight:700; padding:2px 6px; border-radius:4px; border:1px solid #fecaca; margin-left:4px; animation:pulseFade 2.5s infinite ease-in-out; }
+        @keyframes pulseFade { 0%,100% { opacity:1; } 50% { opacity:0.65; } }
+        .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0; }
+        .stat-card { background:#f8fafc; padding:10px; border-radius:var(--radius); text-align:center; border:1px solid var(--card-border); transition:all 0.3s; }
+        .stat-card:hover { transform:translateY(-1px); border-color:#cbd5e1; box-shadow:var(--shadow-sm); }
+        .stat-card .value { font-size:18px; font-weight:800; color:var(--primary); letter-spacing:-0.5px; }
+        .stat-card .label { font-size:9px; color:var(--text-muted); font-weight:700; margin-top:2px; text-transform:uppercase; letter-spacing:0.5px; }
+        .simulator-card { background:#f0f9ff; border:1px solid #bae6fd; border-radius:var(--radius); padding:8px 12px; margin-bottom:10px; font-size:10px; color:#0369a1; display:flex; align-items:center; gap:8px; }
+        .action-buttons-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:6px; }
+        .action-buttons-grid .btn { margin-top:0; font-size:10px; padding:8px; }
+        .quick-portals-card { background:#fff; border:1px solid var(--card-border); border-radius:var(--radius); padding:10px; margin:10px 0; }
+        .portal-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-top:6px; }
+        .portal-btn { background:#f8fafc; border:1px solid var(--card-border); border-radius:8px; padding:6px 4px; text-align:center; font-size:9px; font-weight:700; color:var(--text-main); cursor:pointer; transition:all 0.3s; display:flex; flex-direction:column; align-items:center; gap:3px; }
+        .portal-btn:hover { background:#fff; border-color:var(--primary); transform:translateY(-1px); box-shadow:var(--shadow-sm); color:var(--primary); }
+        .portal-btn:active { transform:scale(0.97); }
+        .calendar-container { background:#fff; border:1px solid var(--card-border); border-radius:var(--radius); padding:10px; margin:10px 0; }
+        .calendar-header { display:flex; justify-content:space-between; align-items:center; font-size:10px; font-weight:800; margin-bottom:8px; color:var(--text-main); }
+        .calendar-header select { margin-top:0; padding:4px 6px; font-size:10px; width:auto; }
+        .calendar-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; text-align:center; font-size:9px; }
+        .cal-day-head { font-weight:700; color:var(--text-muted); padding-bottom:3px; font-size:8px; }
+        .cal-date { padding:4px 1px; border-radius:4px; font-weight:600; background:#f8fafc; border:1px solid #f1f5f9; transition:all 0.2s; }
+        .cal-date:hover { transform:scale(1.05); z-index:1; }
+        .cal-p { background:#dcfce7; color:#15803d; font-weight:800; border-color:#bbf7d0; }
+        .cal-a { background:#fee2e2; color:#b91c1c; font-weight:800; border-color:#fecaca; }
+        .cal-off { background:#f1f5f9; color:#94a3b8; }
+        .tab-bar { display:flex; background:#f1f5f9; border-radius:8px; padding:2px; margin-bottom:10px; }
+        .tab-item { flex:1; padding:6px; text-align:center; font-size:10px; font-weight:700; cursor:pointer; color:var(--text-muted); border-radius:6px; transition:all 0.3s; }
+        .tab-item.active { background:#fff; color:var(--primary); box-shadow:var(--shadow-sm); }
+                .admin-nav { display:flex; gap:2px; background:#f1f5f9; padding:2px; border-radius:8px; margin-bottom:10px; overflow-x:auto; flex-wrap:wrap; }
+        .admin-nav-item { flex:1; text-align:center; padding:5px 3px; font-size:9px; font-weight:700; cursor:pointer; border-radius:5px; color:var(--text-muted); transition:all 0.3s; white-space:nowrap; min-width:40px; }
+        .admin-nav-item.active { background:#fff; color:var(--primary); box-shadow:var(--shadow-sm); }
+        .tool-sub-card { background:#f8fafc; border:1px solid var(--card-border); border-radius:var(--radius); padding:10px; margin-bottom:8px; }
+        .tool-title { font-size:10px; font-weight:800; margin-bottom:6px; display:block; }
+        .period-card { background:#f0f9ff; border:1px solid #bae6fd; border-radius:var(--radius); padding:10px; margin:8px 0; display:flex; justify-content:space-between; align-items:center; }
+        .action-btn { border:none; border-radius:6px; padding:5px 8px; font-size:9px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s; }
+        .action-btn:hover { opacity:0.9; transform:translateY(-1px); }
+        .btn-del { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
+        .btn-del:hover { background:#fee2e2; }
+        .btn-view { background:#eff6ff; color:#2563eb; border:1px solid #dbeafe; }
+        .btn-view:hover { background:#dbeafe; }
+        .table-container { max-height:280px; overflow-y:auto; border:1px solid var(--card-border); border-radius:8px; margin-top:6px; background:#fff; }
+        table { width:100%; border-collapse:collapse; font-size:10px; }
+        th { background:#f8fafc; color:var(--text-muted); padding:6px 8px; text-align:left; border-bottom:1px solid var(--card-border); position:sticky; top:0; font-weight:700; font-size:9px; z-index:2; }
+        td { padding:6px 8px; border-bottom:1px solid #f1f5f9; font-size:10px; }
+        .admin-box { background:#fff; padding:10px; border-radius:var(--radius); border:1px solid var(--card-border); animation:cardScaleUp 0.5s; margin-bottom:8px; }
+        .webcam-box { width:100%; height:170px; background:#0f172a; border-radius:8px; overflow:hidden; position:relative; margin-bottom:6px; display:flex; justify-content:center; align-items:center; border:1px solid var(--card-border); }
+        video { width:100%; height:100%; object-fit:cover; }
+        .scan-overlay { position:absolute; border:2px dashed #38bdf8; border-radius:50%; width:100px; height:120px; }
+        .svg-icon { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; display:inline-block; vertical-align:middle; transition:transform 0.3s; }
+        .svg-icon-sm { width:12px; height:12px; }
+        .spin-rotate { animation:spin 0.75s cubic-bezier(0.4,0,0.2,1); }
+        @keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+        .modal-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.5); backdrop-filter:blur(4px); z-index:10000; display:flex; align-items:center; justify-content:center; padding:16px; }
+        .modal-card { background:#fff; width:100%; max-width:340px; border-radius:14px; padding:16px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1); border:1px solid var(--card-border); animation:cardScaleUp 0.3s; }
+        .flex-buttons { display:flex; gap:6px; }
+        .flex-buttons .btn { margin:0; flex:1; }
+        .sub-section-title { font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; display:block; }
+        .student-count-badge { background:var(--primary); color:white; border-radius:10px; padding:1px 8px; font-size:9px; font-weight:700; }
+        #qrScannerContainer {
+            display: none;
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(15, 23, 42, 0.5);
-            backdrop-filter: blur(4px);
-            z-index: 10000;
-            display: flex;
-            align-items: center;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 99999;
             justify-content: center;
-            padding: 16px;
+            align-items: center;
+            flex-direction: column;
         }
-        .modal-card {
-            background: #ffffff;
-            width: 100%;
-            max-width: 340px;
-            border-radius: 14px;
-            padding: 16px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-            border: 1px solid var(--card-border);
-            animation: cardScaleUp 0.3s ease;
+        #qrScannerContainer.active { display: flex; }
+        #qrScannerContainer #qr-reader { width: 80%; max-width: 380px; }
+        #qrScannerContainer .scanner-status {
+            color: white;
+            font-size: 14px;
+            margin-bottom: 12px;
+            font-weight: 600;
         }
-
-        .flex-buttons { display: flex; gap: 6px; }
-        .flex-buttons .btn { margin: 0; flex: 1; }
-        .flex-center { display: flex; align-items: center; justify-content: center; gap: 6px; }
-        .flex-wrap { display: flex; flex-wrap: wrap; gap: 4px; }
-
-        .sub-section-title { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block; }
-
-        .student-count-badge { background: var(--primary); color: white; border-radius: 10px; padding: 1px 8px; font-size: 9px; font-weight: 700; }
+        #qrScannerContainer .close-scanner {
+            margin-top: 16px;
+            background: #fff;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            color: #0f172a;
+            font-size: 14px;
+        }
+        #qrScannerContainer .close-scanner:hover { background: #f1f5f9; }
+        .qr-success { color: #4ade80 !important; }
+        .qr-error { color: #f87171 !important; }
     </style>
 </head>
 <body>
-    <div id="toast-container">
-        <div id="toast" class="toast-card">
-            <svg id="toast-icon" class="svg-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            <span id="toast-msg">System Active</span>
-        </div>
-    </div>
-
-    <div id="studentExcelModal" class="modal-overlay" style="display: none;">
+    <div id="toast-container"><div id="toast" class="toast-card"><svg id="toast-icon" class="svg-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span id="toast-msg">System Active</span></div></div>
+    
+    <div id="studentExcelModal" class="modal-overlay" style="display:none;">
         <div class="modal-card">
             <h3 style="font-size:13px; font-weight:800; margin-bottom:4px; color:var(--text-main);">Download Student Excel Sheet</h3>
-            <p style="font-size:10px; color:var(--text-muted); margin-bottom:10px; font-weight:600;">Select range for attendance export:</p>
-            <label style="font-size:9px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Report Range</label>
+            <p style="font-size:10px; color:var(--text-muted); margin-bottom:10px; font-weight:600;">Select range:</p>
             <select id="studentExcelRange" style="margin-top:3px;">
                 <option value="CURRENT_MONTH">Current Month</option>
                 <option value="SELECTED_MONTH">Selected Month</option>
                 <option value="FULL_SEMESTER">Full Semester (Jul-Dec 2026)</option>
             </select>
             <div id="selectedMonthWrapper" style="display:none; margin-top:3px;">
-                <label style="font-size:9px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Select Month</label>
                 <select id="studentExcelMonth">
                     <option value="6">July 2026</option>
                     <option value="7">August 2026</option>
@@ -455,192 +189,193 @@
             </div>
             <div style="display:flex; gap:6px; margin-top:10px;">
                 <button class="btn btn-outline" style="flex:1; padding:6px;" onclick="closeStudentExcelModal()">Cancel</button>
-                <button class="btn btn-success" style="flex:1; padding:6px;" onclick="processStudentExcelDownload()">Download Sheet</button>
+                <button class="btn btn-success" style="flex:1; padding:6px;" onclick="processStudentExcelDownload()">Download</button>
             </div>
         </div>
     </div>
+
+    <!-- QR Scanner Overlay -->
+    <div id="qrScannerContainer">
+        <div class="scanner-status" id="qrScannerStatus">📷 Point camera at QR Code</div>
+        <div id="qr-reader"></div>
+        <button class="close-scanner" onclick="stopQRScanner()">✕ Cancel Scan</button>
+    </div>
+
     <div class="app-container">
-    <div class="app-header">
-        <div class="app-header-title">
-            <h1>BM Group of Institutions</h1>
-            <p>B.Tech CSE - 5th Semester (Room 203)</p>
+        <div class="app-header">
+            <div class="app-header-title">
+                <h1>BM Group of Institutions</h1>
+                <p>B.Tech CSE - 5th Semester (Room 203)</p>
+            </div>
+            <div class="header-avatar-badge" id="headerAvatarBox" style="display:none;">
+                <div class="avatar-circle" id="userAvatarText">SS</div>
+            </div>
         </div>
-        <div class="header-avatar-badge" id="headerAvatarBox" style="display:none;">
-            <div class="avatar-circle" id="userAvatarText">SS</div>
+        <div class="notice-banner" id="noticeBanner" style="display:none;">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <div class="notice-marquee"><p id="noticeText">Loading announcements...</p></div>
+        </div>
+        <div class="app-body">
+            <!-- Auth -->
+            <div id="auth-box" class="tab-content-active">
+                <div id="register-fields" style="display:none;">
+                    <input type="text" id="regName" placeholder="Full Student Name">
+                </div>
+                <input type="text" id="rollNo" placeholder="Roll Number (e.g. 24CSE48)">
+                <div class="password-wrapper">
+                    <input type="password" id="password" placeholder="Password">
+                    <span class="eye-icon" id="toggleEye" onclick="togglePassword()">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </span>
+                </div>
+                <button class="btn btn-primary" id="authBtn" onclick="handleAuth()">Sign In</button>
+                <span style="color:var(--primary); cursor:pointer; font-size:11px; display:block; text-align:center; margin-top:10px; font-weight:600;" id="toggleLink" onclick="toggleMode()">New Student? Register Account</span>
+            </div>
+            <!-- Dashboard -->
+<div id="dash-box" style="display:none;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div>
+            <h3 style="font-size:13px; font-weight:800;">
+                <span id="welcomeMsg">Welcome!</span>
+                <span id="defaulterTag" class="defaulter-badge" style="display:none;">DEBARRED RISK</span>
+            </h3>
+            <p style="font-size:10px; color:var(--text-muted); font-weight:600;"><span id="roleLabel">Roll</span>: <span id="userRoll" style="font-weight:700;"></span></p>
+        </div>
+        <button class="btn btn-danger" style="width:auto; padding:4px 8px; margin:0; font-size:10px;" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="stats-grid" id="studentStatsGrid">
+        <div class="stat-card">
+            <div class="value" id="totalDaysCount">0</div>
+            <div class="label">Academic Lectures</div>
+        </div>
+        <div class="stat-card">
+            <div class="value" id="attendancePct">0%</div>
+            <div class="label">Attendance Status</div>
         </div>
     </div>
 
-    <div class="notice-banner" id="noticeBanner" style="display:none;">
-        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        <div class="notice-marquee">
-            <p id="noticeText">Loading announcements...</p>
+    <div class="stats-grid" id="adminStatsGrid" style="display:none;">
+        <div class="stat-card">
+            <div class="value" id="adminTotalStudents">0</div>
+            <div class="label">Enrolled Students</div>
+        </div>
+        <div class="stat-card">
+            <div class="value" id="adminClassAvg">78.5%</div>
+            <div class="label">Class Attendance Avg</div>
         </div>
     </div>
 
-    <div class="app-body">
-        <div id="auth-box" class="tab-content-active">
-            <div id="register-fields" style="display: none;">
-                <input type="text" id="regName" placeholder="Full Student Name">
+    <div class="simulator-card" id="simulatorBox">
+        <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        <div><b>Attendance Advisor:</b> <span id="advisorText">Calculating criteria...</span></div>
+    </div>
+
+    <!-- 🔥 Academic Subject Breakdown REMOVED -->
+
+    <div class="quick-portals-card">
+        <span style="font-size:9px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Quick Portals</span>
+        <div class="portal-grid">
+            <div class="portal-btn" onclick="window.open('https://erp.bmctm.com/fees','_blank')">
+                <svg class="svg-icon" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                <span>Pay Fees</span>
             </div>
-            <input type="text" id="rollNo" placeholder="Roll Number (e.g. 24CSE48)">
-            <div class="password-wrapper">
-                <input type="password" id="password" placeholder="Password">
-                <span class="eye-icon" id="toggleEye" onclick="togglePassword()">
-                    <svg class="svg-icon" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                </span>
+            <div class="portal-btn" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login','_blank')">
+                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <span>Admit Card</span>
             </div>
-            <button class="btn btn-primary" id="authBtn" onclick="handleAuth()">Sign In</button>
-            <span style="color:var(--primary); cursor:pointer; font-size:11px; display:block; text-align:center; margin-top:10px; font-weight:600;" id="toggleLink" onclick="toggleMode()">New Student? Register Account</span>
+            <div class="portal-btn" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login','_blank')">
+                <svg class="svg-icon" viewBox="0 0 24 24"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+                <span>Results</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-box" id="faceEnrollBox" style="margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <span style="font-size:10px; font-weight:800; color:var(--text-main);">AI Face ID Status:</span>
+                <span id="faceStatusBadge" class="badge" style="background:#f1f5f9; color:var(--text-muted); margin-left:3px;">Not Enrolled</span>
+            </div>
+            <button class="action-btn" style="background:var(--primary); color:white;" onclick="openCameraModal('ENROLL')">
+                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                Enroll Face
+            </button>
+        </div>
+        <div id="cameraModal" style="display:none; margin-top:8px; text-align:center;">
+            <div class="webcam-box">
+                <video id="webcamVideo" autoplay playsinline muted></video>
+                <div class="scan-overlay"></div>
+            </div>
+            <p id="cameraScanStatus" style="font-size:10px; font-weight:700; color:var(--primary); margin-bottom:4px;">Loading Face-AI Neural Engine...</p>
+            <button class="btn btn-primary" id="camActionBtn" onclick="executeCameraAction()" style="padding:6px; font-size:10px;">Scan 68-Point Mesh</button>
+            <button class="btn btn-outline" onclick="closeCameraModal()" style="padding:5px; font-size:9px; margin-top:3px;">Cancel</button>
+        </div>
+    </div>
+
+    <div class="tab-bar">
+        <div class="tab-item active" id="studentTabHeader" onclick="switchTab('markTab')">Attendance</div>
+        <div class="tab-item" id="adminTabHeader" style="display:none;" onclick="switchTab('adminTab')">Admin Control</div>
+    </div>
+
+    <div id="markTab" class="tab-content-active">
+        <button class="btn btn-primary" onclick="openFullDayPasscodePrompt()" style="padding:9px; font-size:10px;">
+            <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Mark Full Day Attendance
+        </button>
+        
+        <div class="action-buttons-grid">
+            <button class="btn btn-outline" onclick="openCameraModal('CHECKIN')">
+                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                Face Verify
+            </button>
+            <!-- 🔥 QR Scanner Button - Now opens camera -->
+            <button class="btn btn-accent" onclick="startQRScanner()">
+                <svg class="svg-icon" viewBox="0 0 24 24"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/></svg>
+                Scan QR
+            </button>
         </div>
 
-        <div id="dash-box" style="display: none;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <div>
-                    <h3 style="font-size:13px; font-weight:800;">
-                        <span id="welcomeMsg">Welcome!</span>
-                        <span id="defaulterTag" class="defaulter-badge" style="display:none;">DEBARRED RISK</span>
-                    </h3>
-                    <p style="font-size: 10px; color: var(--text-muted); font-weight:600;"><span id="roleLabel">Roll</span>: <span id="userRoll" style="font-weight:700;"></span></p>
-                </div>
-                <button class="btn btn-danger" style="width:auto; padding:4px 8px; margin:0; font-size:10px;" onclick="logout()">Logout</button>
+        <!-- 🔥 Take Selfie & Mark REMOVED -->
+
+        <div style="text-align:center; font-size:9px; color:var(--text-muted); margin: 10px 0 3px 0; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Live Timetable</div>
+        <div class="period-card" id="periodCardBox">
+            <div>
+                <span style="font-size:8px; font-weight:700; color:var(--text-muted); text-transform:uppercase;" id="periodTimeSlotLabel">CURRENT PERIOD:</span>
+                <h4 id="activePeriodName" style="font-size:11px; font-weight:800; color:#0f172a; margin-top:1px;">Checking...</h4>
             </div>
+            <button class="action-btn" id="markPeriodBtn" style="background:var(--success); color:white; padding:5px 10px;" onclick="markActivePeriodAttendance()">Mark</button>
+        </div>
+            <div class="calendar-container">
+        <div class="calendar-header">
+            <span>Attendance Calendar</span>
+            <select id="calendarViewMode" onchange="toggleCalendarView()" style="padding:3px 6px; font-size:9px; margin:0; width:auto;">
+                <option value="CURRENT_MONTH">Current</option>
+                <option value="FULL_SEMESTER">Full Semester</option>
+            </select>
+        </div>
+        <div id="calendarDisplayWrapper"></div>
+    </div>
 
-            <div class="stats-grid" id="studentStatsGrid">
-                <div class="stat-card">
-                    <div class="value" id="totalDaysCount">0</div>
-                    <div class="label">Academic Lectures</div>
-                </div>
-                <div class="stat-card">
-                    <div class="value" id="attendancePct">0%</div>
-                    <div class="label">Attendance Status</div>
-                </div>
-            </div>
+    <div style="margin-top:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <h4 style="font-size:10px; color:var(--text-muted); font-weight:700;">My Attendance Logs:</h4>
+            <button class="btn btn-success btn-sm" onclick="openStudentExcelModal()">
+                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                Excel
+            </button>
+        </div>
+        <div class="table-container" style="max-height:200px;">
+            <table id="myHistoryTable">
+                <thead><tr><th>Date</th><th>Day</th><th>Lectures</th><th>Status</th></tr></thead>
+                <tbody><tr><td colspan="4" style="text-align:center; padding:12px;">Loading...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
-            <div class="stats-grid" id="adminStatsGrid" style="display:none;">
-                <div class="stat-card">
-                    <div class="value" id="adminTotalStudents">0</div>
-                    <div class="label">Enrolled Students</div>
-                </div>
-                <div class="stat-card">
-                    <div class="value" id="adminClassAvg">78.5%</div>
-                    <div class="label">Class Attendance Avg</div>
-                </div>
-            </div>
-
-            <div class="simulator-card" id="simulatorBox">
-                <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-                <div><b>Attendance Advisor:</b> <span id="advisorText">Calculating criteria...</span></div>
-            </div>
-
-            <div class="admin-box" id="analyticsBox" style="margin:10px 0; padding: 12px; background: #fff; border-radius: var(--radius); border: 1px solid var(--card-border);">
-                <h4 style="font-size:11px; font-weight:800; color:var(--text-main); margin-bottom:8px;">Academic Subject Breakdown</h4>
-                <canvas id="attendanceChart" width="400" height="180"></canvas>
-            </div>
-
-            <div class="quick-portals-card">
-                <span style="font-size:9px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Quick Portals</span>
-                <div class="portal-grid">
-                    <div class="portal-btn" onclick="window.open('https://erp.bmctm.com/fees', '_blank')">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-                        <span>Pay Fees</span>
-                    </div>
-                    <div class="portal-btn" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login', '_blank')">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-                        <span>Admit Card</span>
-                    </div>
-                    <div class="portal-btn" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login', '_blank')">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
-                        <span>Results</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="admin-box" id="faceEnrollBox" style="margin-bottom:10px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <span style="font-size:10px; font-weight:800; color:var(--text-main);">AI Face ID Status:</span>
-                        <span id="faceStatusBadge" class="badge" style="background:#f1f5f9; color:var(--text-muted); margin-left:3px;">Not Enrolled</span>
-                    </div>
-                    <button class="action-btn" style="background:var(--primary); color:white;" onclick="openCameraModal('ENROLL')">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
-                        Enroll Face
-                    </button>
-                </div>
-                <div id="cameraModal" style="display:none; margin-top:8px; text-align:center;">
-                    <div class="webcam-box">
-                        <video id="webcamVideo" autoplay playsinline muted></video>
-                        <div class="scan-overlay"></div>
-                    </div>
-                    <p id="cameraScanStatus" style="font-size:10px; font-weight:700; color:var(--primary); margin-bottom:4px;">Loading Face-AI Neural Engine...</p>
-                    <button class="btn btn-primary" id="camActionBtn" onclick="executeCameraAction()" style="padding:6px; font-size:10px;">Scan 68-Point Mesh</button>
-                    <button class="btn btn-outline" onclick="closeCameraModal()" style="padding:5px; font-size:9px; margin-top:3px;">Cancel</button>
-                </div>
-            </div>
-
-            <div class="tab-bar">
-                <div class="tab-item active" id="studentTabHeader" onclick="switchTab('markTab')">Attendance</div>
-                <div class="tab-item" id="adminTabHeader" style="display:none;" onclick="switchTab('adminTab')">Admin Control</div>
-            </div>
-
-            <div id="markTab" class="tab-content-active">
-                <button class="btn btn-primary" onclick="openFullDayPasscodePrompt()" style="padding:9px; font-size:10px;">
-                    <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                    Mark Full Day Attendance
-                </button>
-                
-                <div class="action-buttons-grid">
-                    <button class="btn btn-outline" onclick="openCameraModal('CHECKIN')">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        Face Verify
-                    </button>
-                    <button class="btn btn-outline" onclick="openStudentQRScanner()">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/></svg>
-                        Scan QR
-                    </button>
-                </div>
-
-                <button class="btn btn-accent" onclick="openSelfieCamera()" style="margin-top:4px; padding:8px; font-size:10px;">
-                    <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
-                    Take Selfie & Mark
-                </button>
-
-                <div style="text-align:center; font-size:9px; color:var(--text-muted); margin: 10px 0 3px 0; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Live Timetable</div>
-                <div class="period-card" id="periodCardBox">
-                    <div>
-                        <span style="font-size:8px; font-weight:700; color:var(--text-muted); text-transform:uppercase;" id="periodTimeSlotLabel">CURRENT PERIOD:</span>
-                        <h4 id="activePeriodName" style="font-size:11px; font-weight:800; color:#0f172a; margin-top:1px;">Checking...</h4>
-                    </div>
-                    <button class="action-btn" id="markPeriodBtn" style="background:var(--success); color:white; padding:5px 10px;" onclick="markActivePeriodAttendance()">Mark</button>
-                </div>
-
-                <div class="calendar-container">
-                    <div class="calendar-header">
-                        <span>Attendance Calendar</span>
-                        <select id="calendarViewMode" onchange="toggleCalendarView()" style="padding:3px 6px; font-size:9px; margin:0; width:auto;">
-                            <option value="CURRENT_MONTH">Current</option>
-                            <option value="FULL_SEMESTER">Full Semester</option>
-                        </select>
-                    </div>
-                    <div id="calendarDisplayWrapper"></div>
-                </div>
-
-                <div style="margin-top:8px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                        <h4 style="font-size:10px; color:var(--text-muted); font-weight:700;">My Attendance Logs:</h4>
-                        <button class="btn btn-success btn-sm" onclick="openStudentExcelModal()">
-                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                            Excel
-                        </button>
-                    </div>
-                    <div class="table-container" style="max-height:200px;">
-                        <table id="myHistoryTable">
-                            <thead><tr><th>Date</th><th>Day</th><th>Lectures</th><th>Status</th></tr></thead>
-                            <tbody><tr><td colspan="4" style="text-align:center; padding:12px;">Loading...</td></tr></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-           <div id="adminTab" style="display:none;">
+<!-- Admin Tab -->
+<div id="adminTab" style="display:none;">
     <div class="admin-nav">
         <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">Excel</div>
         <div class="admin-nav-item" onclick="switchAdminSubTab('subAttendance')">Entry</div>
@@ -696,7 +431,7 @@
             Refresh
         </button>
     </div>
-       <div id="subTools" style="display:none;">
+    <div id="subTools" style="display:none;">
     <div class="tool-sub-card">
         <span class="tool-title" style="color:var(--primary);">➕ Register New Student</span>
         <input type="text" id="adminRegName" placeholder="Full Student Name" style="font-size:10px; padding:7px;">
@@ -745,43 +480,42 @@
         <input type="text" id="deleteStudentRoll" placeholder="Roll No to Delete" style="font-size:10px; padding:7px;">
         <button class="btn btn-danger btn-sm" onclick="deleteEntireStudentAccount()" style="padding:7px; margin:0;">Delete Permanently</button>
     </div>
-       </div>
-                             <div id="subSecurity" style="display:none;">
-                    <div class="admin-box">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                            <span class="sub-section-title" style="margin:0;">🛡️ Suspicious Activity Logs</span>
-                            <button class="btn btn-danger btn-sm" onclick="clearAllSuspiciousLogs()" style="padding:4px 8px; font-size:9px;">
-                                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-                                Clear All
-                            </button>
-                        </div>
-                        <button class="btn btn-outline btn-sm" onclick="fetchSuspiciousLogs()" style="padding:5px; margin-bottom:6px; font-size:9px;">
-                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                            Refresh Logs
-                        </button>
-                        <div class="table-container" style="max-height:200px;">
-                            <table id="securityLogsTable">
-                                <thead><tr><th>Roll</th><th>Type</th><th>Details</th><th>Time</th></tr></thead>
-                                <tbody><tr><td colspan="4" style="text-align:center; padding:12px;">Click Refresh to load...</td></tr></tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="admin-box" style="margin-top:8px;">
-                        <span class="sub-section-title">⏰ Auto-Unblock Status</span>
-                        <button class="btn btn-outline btn-sm" onclick="fetchAutoUnblockStatus()" style="padding:5px; margin-bottom:6px; font-size:9px;">
-                            <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            Check Status
-                        </button>
-                        <div class="table-container" style="max-height:150px;">
-                            <table id="autoUnblockTable">
-                                <thead><tr><th>Roll</th><th>Name</th><th>Time Left</th></tr></thead>
-                                <tbody><tr><td colspan="3" style="text-align:center; padding:12px;">Click Check Status...</td></tr></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+</div>
 
-                <!-- 🔥 FIXED: Directory Tab - Unique Students Only -->
+<div id="subSecurity" style="display:none;">
+    <div class="admin-box">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span class="sub-section-title" style="margin:0;">🛡️ Suspicious Activity Logs</span>
+            <button class="btn btn-danger btn-sm" onclick="clearAllSuspiciousLogs()" style="padding:4px 8px; font-size:9px;">
+                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                Clear All
+            </button>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="fetchSuspiciousLogs()" style="padding:5px; margin-bottom:6px; font-size:9px;">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            Refresh Logs
+        </button>
+        <div class="table-container" style="max-height:200px;">
+            <table id="securityLogsTable">
+                <thead><tr><th>Roll</th><th>Type</th><th>Details</th><th>Time</th></tr></thead>
+                <tbody><tr><td colspan="4" style="text-align:center; padding:12px;">Click Refresh to load...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+    <div class="admin-box" style="margin-top:8px;">
+        <span class="sub-section-title">⏰ Auto-Unblock Status</span>
+        <button class="btn btn-outline btn-sm" onclick="fetchAutoUnblockStatus()" style="padding:5px; margin-bottom:6px; font-size:9px;">
+            <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Check Status
+        </button>
+        <div class="table-container" style="max-height:150px;">
+            <table id="autoUnblockTable">
+                <thead><tr><th>Roll</th><th>Name</th><th>Time Left</th></tr></thead>
+                <tbody><tr><td colspan="3" style="text-align:center; padding:12px;">Click Check Status...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+</div>
                 <div id="subDirectory" style="display:none;">
                     <div class="flex-buttons" style="margin-bottom:6px;">
                         <button class="btn btn-outline btn-sm" onclick="fetchAllStudents()" style="flex:1; padding:6px; font-size:9px;">
@@ -806,10 +540,13 @@
             </div>
         </div>
     </div>
-    </div>
-    <script>
+</div>
+
+<script>
     const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; 
     const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/";
+    let html5QrCode = null;
+    let isScanning = false;
     
     function getDeviceId() {
         const KEY = 'BM_DEVICE_ID';
@@ -840,7 +577,6 @@
     let activeSubjectSubjectCode = "";
     let toastTimeout = null;
     let activeCloudFaceDescriptor = null;
-    let myChart = null;
     let qrVerified = false;
     let allStudentsData = [];
 
@@ -920,7 +656,103 @@
             { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
         ]
     };
-        function updatePeriodTrackerWidget() {
+    // 🔥 QR SCANNER FUNCTIONS - Camera based QR scanning
+async function startQRScanner() {
+    if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
+        return showMsg("No active lecture to scan QR!", true);
+    }
+    
+    if (isScanning) return;
+    
+    const container = document.getElementById('qrScannerContainer');
+    container.classList.add('active');
+    document.getElementById('qrScannerStatus').innerHTML = '📷 Point camera at QR Code';
+    document.getElementById('qrScannerStatus').className = 'scanner-status';
+    
+    try {
+        html5QrCode = new Html5Qrcode("qr-reader");
+        isScanning = true;
+        
+        await html5QrCode.start(
+            { facingMode: "environment" },
+            {
+                fps: 15,
+                qrbox: { width: 280, height: 280 },
+                aspectRatio: 1.0
+            },
+            onQRScanSuccess,
+            onQRScanFailure
+        );
+    } catch (err) {
+        document.getElementById('qrScannerStatus').innerHTML = '❌ Camera access denied. Please allow camera.';
+        document.getElementById('qrScannerStatus').className = 'scanner-status qr-error';
+        isScanning = false;
+        console.error('QR Scanner error:', err);
+    }
+}
+
+async function onQRScanSuccess(decodedText, decodedResult) {
+    // Stop scanning
+    await stopQRScanner();
+    
+    // Show success
+    document.getElementById('qrScannerStatus').innerHTML = '✅ QR Code detected! Verifying...';
+    document.getElementById('qrScannerStatus').className = 'scanner-status qr-success';
+    
+    try {
+        // Send the scanned passcode to backend
+        const res = await fetch(`${API_BASE}/api/auth/verify-qr`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ passcode: decodedText.trim() })
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+            qrVerified = true;
+            showMsg('✅ QR Verified! Marking attendance...');
+            // Close scanner overlay
+            document.getElementById('qrScannerContainer').classList.remove('active');
+            // Mark attendance
+            markSingleAttendance(activeSubjectSubjectCode);
+        } else {
+            document.getElementById('qrScannerStatus').innerHTML = '❌ ' + (data.error || 'Invalid QR Code!');
+            document.getElementById('qrScannerStatus').className = 'scanner-status qr-error';
+            showMsg(data.error || 'Invalid QR Code!', true);
+            // Re-open scanner after error
+            setTimeout(() => {
+                document.getElementById('qrScannerContainer').classList.remove('active');
+                startQRScanner();
+            }, 2000);
+        }
+    } catch (e) {
+        document.getElementById('qrScannerStatus').innerHTML = '❌ Server error!';
+        document.getElementById('qrScannerStatus').className = 'scanner-status qr-error';
+        showMsg('Server error!', true);
+        setTimeout(() => {
+            document.getElementById('qrScannerContainer').classList.remove('active');
+        }, 2000);
+    }
+}
+
+function onQRScanFailure(err) {
+    // Ignore - keeps scanning
+}
+
+async function stopQRScanner() {
+    if (html5QrCode && isScanning) {
+        try {
+            await html5QrCode.stop();
+            await html5QrCode.clear();
+        } catch (e) { /* ignore */ }
+        html5QrCode = null;
+        isScanning = false;
+    }
+    document.getElementById('qrScannerContainer').classList.remove('active');
+}
+
+// Update Period Tracker
+function updatePeriodTrackerWidget() {
     const now = new Date();
     const dayOfWeek = now.getDay();
     const labelEl = document.getElementById('periodTimeSlotLabel');
@@ -1001,57 +833,14 @@ async function openFullDayPasscodePrompt() {
     }
 }
 
+// 🔥 OPEN QR SCANNER - Now uses camera
 async function openStudentQRScanner() {
-    if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
-        return showMsg("No active lecture!", true);
-    }
-    
-    const enteredPasscode = prompt(`Enter QR Passcode:`);
-    if (!enteredPasscode) return;
-    
-    try {
-        const res = await fetch(`${API_BASE}/api/auth/verify-qr`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ passcode: enteredPasscode.trim() })
-        });
-        const data = await res.json();
-        if (res.ok) {
-            qrVerified = true;
-            showMsg('✅ QR Verified!');
-            markSingleAttendance(activeSubjectSubjectCode);
-        } else {
-            showMsg(data.error || 'Invalid QR!', true);
-        }
-    } catch(e) {
-        showMsg('Server error!', true);
-    }
+    await startQRScanner();
 }
 
+// 🔥 SELFIE REMOVED - Function kept empty to avoid errors
 async function openSelfieCamera() {
-    if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
-        return showMsg("No active lecture!", true);
-    }
-    
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: 300, height: 300 } });
-        const video = document.createElement('video');
-        video.srcObject = stream;
-        await video.play();
-        
-        const canvas = document.createElement('canvas');
-        canvas.width = 300;
-        canvas.height = 300;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, 300, 300);
-        
-        const selfieData = canvas.toDataURL('image/jpeg');
-        stream.getTracks().forEach(t => t.stop());
-        
-        markSingleAttendanceWithSelfie(activeSubjectSubjectCode, selfieData);
-    } catch(err) {
-        showMsg('Camera access denied!', true);
-    }
+    showMsg('Selfie feature removed. Use QR or Face Verify.', true);
 }
 
 function openStudentExcelModal() {
@@ -1064,9 +853,8 @@ function openStudentExcelModal() {
 
 function closeStudentExcelModal() {
     document.getElementById('studentExcelModal').style.display = 'none';
-}
-
-function processStudentExcelDownload() {
+    }
+    function processStudentExcelDownload() {
     const range = document.getElementById('studentExcelRange').value;
     const selectedMonth = parseInt(document.getElementById('studentExcelMonth').value);
 
@@ -1121,8 +909,9 @@ function processStudentExcelDownload() {
     downloadFile(csv, fileName);
     closeStudentExcelModal();
     showMsg("Report downloaded!");
-        }
-        async function adminRegisterStudent() {
+}
+
+async function adminRegisterStudent() {
     const name = document.getElementById('adminRegName').value.trim();
     const rawRoll = document.getElementById('adminRegRoll').value.trim();
     const password = document.getElementById('adminRegPass').value.trim() || '123456';
@@ -1293,8 +1082,8 @@ async function fetchAutoUnblockStatus() {
             </tr>
         `).join('');
     } catch(e) { showMsg('Failed', true); }
-        }
-        async function fetchNotices() {
+    }
+    async function fetchNotices() {
     if (localStorage.getItem("GLOBAL_NOTICE_CLEARED") === "true") {
         document.getElementById('noticeBanner').style.display = 'none';
         return;
@@ -1447,8 +1236,9 @@ async function checkUserFaceStatus() {
     } catch (err) {
         if (badge) { badge.innerText = "Not Enrolled"; badge.style.background = "#f1f5f9"; badge.style.color = "var(--text-muted)"; }
     }
-    }
-        async function openCameraModal(mode) {
+}
+
+async function openCameraModal(mode) {
     const user = JSON.parse(localStorage.getItem('user'));
     currentCamMode = mode;
     if (mode === 'CHECKIN') {
@@ -1469,9 +1259,8 @@ async function checkUserFaceStatus() {
             await loadFaceAIModels();
         })
         .catch(err => { showMsg("Camera Access Denied!", true); });
-}
-
-function closeCameraModal() {
+    }
+    function closeCameraModal() {
     const modal = document.getElementById('cameraModal');
     const video = document.getElementById('webcamVideo');
     modal.style.display = 'none';
@@ -1566,8 +1355,9 @@ async function resetStudentPassword() {
         const data = await res.json();
         if (res.ok) showMsg(data.message); else showMsg(data.error, true);
     } catch(e) { showMsg("Failed!", true); }
-        }
-        async function handleAuth() {
+}
+
+async function handleAuth() {
     const rawRoll = document.getElementById('rollNo').value.trim();
     const password = document.getElementById('password').value.trim();
     const deviceId = getDeviceId();
@@ -1614,72 +1404,7 @@ async function resetStudentPassword() {
     }
 }
 
-// 🔥 FIXED: Chart shows ALL 11 subjects (predefined)
-async function loadAnalyticsChart(rollNo) {
-    try {
-        const res = await fetch(`${API_BASE}/api/analytics/${rollNo}`);
-        const data = await res.json();
-        
-        // All 11 subjects predefined
-        const allSubjects = [
-            'BDA - Big Data Analytics', 'ECO - Economics for Engineers',
-            'DAA - Design & Analysis of Algorithm', 'FLA - Formal Language & Automata',
-            'HRM - Human Resource Mgmt', 'CN - Computer Network',
-            'WT - Web Technology', 'CN LAB - Computer Network Lab',
-            'DAA LAB - Algorithm Lab', 'WT LAB - Web Technology Lab',
-            'Internet Lab (Ms. Geeta)'
-        ];
-        
-        const shortNames = {
-            'BDA - Big Data Analytics':'BDA', 'ECO - Economics for Engineers':'ECO',
-            'DAA - Design & Analysis of Algorithm':'DAA', 'FLA - Formal Language & Automata':'FLA',
-            'HRM - Human Resource Mgmt':'HRM', 'CN - Computer Network':'CN',
-            'WT - Web Technology':'WT', 'CN LAB - Computer Network Lab':'CN LAB',
-            'DAA LAB - Algorithm Lab':'DAA LAB', 'WT LAB - Web Technology Lab':'WT LAB',
-            'Internet Lab (Ms. Geeta)':'Internet'
-        };
-        
-        const labels = allSubjects.map(sub => shortNames[sub] || sub);
-        const presentData = allSubjects.map(sub => (data[sub] && data[sub].present) ? data[sub].present : 0);
-        
-        const ctx = document.getElementById('attendanceChart').getContext('2d');
-        if(myChart) myChart.destroy();
-        
-        myChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Lectures Attended',
-                    data: presentData,
-                    backgroundColor: '#2563eb',
-                    borderRadius: 4,
-                    barPercentage: 0.6
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 9 } } },
-                    x: { ticks: { font: { size: 8 } } }
-                }
-            }
-        });
-    } catch(err) {
-        console.error("Chart failed:", err);
-        const ctx = document.getElementById('attendanceChart').getContext('2d');
-        if(myChart) myChart.destroy();
-        myChart = new Chart(ctx, {
-            type: 'bar',
-            data: { 
-                labels: ['BDA','ECO','DAA','FLA','HRM','CN','WT','CN LAB','DAA LAB','WT LAB','Internet'],
-                datasets: [{ data: [0,0,0,0,0,0,0,0,0,0,0], backgroundColor: '#e2e8f0' }]
-            },
-            options: { plugins: { legend: { display: false } } }
-        });
-    }
-}
+// 🔥 CHART REMOVED - loadAnalyticsChart removed
 
 function loadDashboard() {
     const user = JSON.parse(localStorage.getItem('user'));
@@ -1719,9 +1444,9 @@ function loadDashboard() {
     updatePeriodTrackerWidget();
     setInterval(updatePeriodTrackerWidget, 30000);
     fetchNotices();
-    loadAnalyticsChart(user.rollNo);
-                        }
-        function markFullDayAttendance() {
+}
+
+function markFullDayAttendance() {
     if (!qrVerified) {
         return showMsg('Verify QR/Passcode first!', true);
     }
@@ -1756,41 +1481,7 @@ function loadDashboard() {
     }, () => showMsg('GPS Denied!', true));
 }
 
-function markSingleAttendanceWithSelfie(subject, selfieData) {
-    if (!navigator.geolocation) {
-        return showMsg('Geolocation not supported!', true);
-    }
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-        const user = JSON.parse(localStorage.getItem('user'));
-        const fingerprint = getDeviceFingerprint();
-        try {
-            const res = await fetch(`${API_BASE}/api/attendance/mark`, { 
-                method: 'POST', 
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
-                }, 
-                body: JSON.stringify({ 
-                    rollNo: user.rollNo, 
-                    name: user.name, 
-                    subject: subject, 
-                    latitude: pos.coords.latitude, 
-                    longitude: pos.coords.longitude,
-                    selfie: selfieData,
-                    deviceFingerprint: fingerprint,
-                    qrVerified: true
-                }) 
-            });
-            const data = await res.json();
-            if (res.ok) { 
-                showMsg(`✅ Marked ${subject} with Selfie!`); 
-                fetchHistory(user.rollNo); 
-            } else {
-                showMsg(data.error || "Failed", true);
-            }
-        } catch(e) { showMsg("Network Error!", true); }
-    }, () => showMsg('GPS Denied!', true));
-}
+// 🔥 SELFIE REMOVED - markSingleAttendanceWithSelfie removed
 
 function markSingleAttendance(overrideSubject) {
     const sub = overrideSubject || activeSubjectSubjectCode || "WT LAB";
@@ -1807,12 +1498,10 @@ function markSingleAttendance(overrideSubject) {
 
     const todayEntries = globalMyRecords.filter(r => r.date === todayISO && r.subject === sub);
 
-    // Lab: only 1 lecture per day
     if (isLab && todayEntries.length >= 1) {
         return showMsg(`Already marked for ${sub} today! (Lab - 1 only)`, true);
     }
 
-    // Theory: only 1 lecture per subject per day
     if (!isLab && todayEntries.length >= 1) {
         return showMsg(`Already marked for ${sub} today!`, true);
     }
@@ -1850,9 +1539,8 @@ function markSingleAttendance(overrideSubject) {
             }
         } catch(e) { showMsg("Network Error!", true); }
     }, () => showMsg('GPS Denied!', true));
-}
-
-async function markManualAttendance() {
+    }
+    async function markManualAttendance() {
     const user = JSON.parse(localStorage.getItem('user'));
     const studentRollNo = document.getElementById('manualRoll').value.trim();
     const date = document.getElementById('manualDate').value;
@@ -1883,8 +1571,9 @@ async function declareHoliday() {
         const data = await res.json();
         if (res.ok) { showMsg(data.message); } else showMsg(data.error || "Failed", true);
     } catch(e) { showMsg("Network Error!", true); }
-                             }
-        function calculateRealAttendancePercentage() {
+}
+
+function calculateRealAttendancePercentage() {
     const startDate = new Date(2026, 6, 15);
     const today = new Date();
     const holidayDatesList = globalHolidays.map(h => h.date);
@@ -2016,47 +1705,45 @@ async function fetchHistory(rollNo) {
             return `<tr><td><b>${i.date}</b></td><td><b>${dayStr}</b></td><td><span class="badge badge-present">${i.count} Lectures</span></td><td><span class="badge badge-present">${i.status}</span></td></tr>`;
         }).join('');
     } catch(e) { showMsg("Failed to sync logs!", true); }
-}
+                    }
+            async function fetchAllStudents() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/all-students/${user.rollNo}`);
+                const data = await res.json();
+                if (!res.ok) return showMsg(data.error || "Failed", true);
+                
+                allStudentsData = data;
+                
+                document.getElementById('directoryTitle').innerHTML = `All Registered Students <span class="student-count-badge">${data.length}</span>`;
+                
+                const tbody = document.querySelector('#allHistoryTable tbody');
+                if (!tbody) return;
+                
+                if (data.length === 0) {
+                    return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px;">No students registered</td></tr>';
+                }
+                
+                tbody.innerHTML = data.map(s => `
+                    <tr>
+                        <td><b>${s.rollNo}</b></td>
+                        <td>${s.name}</td>
+                        <td><span class="badge ${s.anomalyFlag ? 'badge-flagged' : 'badge-active'}">${s.anomalyFlag ? '⚠️ Flagged' : '✅ Active'}</span></td>
+                        <td>
+                            <button class="action-btn btn-view btn-sm" onclick="showStudentAttendance('${s.rollNo}')" style="padding:2px 6px; font-size:8px;">
+                                <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </button>
+                            <button class="action-btn btn-del btn-sm" onclick="deleteStudentAccount('${s.rollNo}')" style="padding:2px 6px; font-size:8px; margin-left:2px;">
+                                <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch(e) {
+                showMsg("Failed to connect to backend", true);
+            }
+        }
 
-// 🔥 FIXED: All Students - Unique Students Only
-async function fetchAllStudents() {
-    const user = JSON.parse(localStorage.getItem('user'));
-    try {
-        const res = await fetch(`${API_BASE}/api/admin/all-students/${user.rollNo}`);
-        const data = await res.json();
-        if (!res.ok) return showMsg(data.error || "Failed", true);
-        
-        allStudentsData = data;
-        
-        document.getElementById('directoryTitle').innerHTML = `All Registered Students <span class="student-count-badge">${data.length}</span>`;
-        
-        const tbody = document.querySelector('#allHistoryTable tbody');
-        if (!tbody) return;
-        
-        if (data.length === 0) {
-            return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px;">No students registered</td></tr>';
-        }
-        
-        tbody.innerHTML = data.map(s => `
-            <tr>
-                <td><b>${s.rollNo}</b></td>
-                <td>${s.name}</td>
-                <td><span class="badge ${s.anomalyFlag ? 'badge-flagged' : 'badge-active'}">${s.anomalyFlag ? '⚠️ Flagged' : '✅ Active'}</span></td>
-                <td>
-                    <button class="action-btn btn-view btn-sm" onclick="showStudentAttendance('${s.rollNo}')" style="padding:2px 6px; font-size:8px;">
-                        <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                    </button>
-                    <button class="action-btn btn-del btn-sm" onclick="deleteStudentAccount('${s.rollNo}')" style="padding:2px 6px; font-size:8px; margin-left:2px;">
-                        <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-                    </button>
-                </td>
-            </tr>
-        `).join('');
-    } catch(e) {
-        showMsg("Failed to connect to backend", true);
-    }
-        }
-                // 🔥 NEW: Delete student from directory
         async function deleteStudentAccount(rollNo) {
             if (!confirm(`Delete account for ${rollNo} permanently?`)) return;
             const user = JSON.parse(localStorage.getItem('user'));
@@ -2078,7 +1765,6 @@ async function fetchAllStudents() {
             }
         }
 
-        // 🔥 FIXED: Show student attendance - Individual view
         async function showStudentAttendance(rollNo) {
             try {
                 const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
@@ -2112,7 +1798,6 @@ async function fetchAllStudents() {
             }
         }
 
-        // 🔥 FIXED: Attendance Records - Group by Student+Date with Delete Day Button (SVG)
         async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             try {
@@ -2123,7 +1808,6 @@ async function fetchAllStudents() {
 
                 document.getElementById('directoryTitle').innerHTML = `📊 Attendance Records (${data.length} entries) <button class="btn btn-outline btn-sm" onclick="fetchAllStudents()" style="padding:2px 8px; font-size:8px; width:auto;">⬅ Back</button>`;
 
-                // Group by rollNo + date and store IDs
                 const grouped = {};
                 data.forEach(r => {
                     const key = `${r.rollNo}_${r.date}`;
@@ -2134,7 +1818,6 @@ async function fetchAllStudents() {
                     grouped[key].ids.push(r._id);
                 });
 
-                // Store for deletion
                 groupedAdminRecords = grouped;
 
                 const sortedArray = Object.values(grouped).sort((a, b) => a.rollNo.localeCompare(b.rollNo));
@@ -2143,7 +1826,6 @@ async function fetchAllStudents() {
                 if (!tbody) return;
                 if (sortedArray.length === 0) return tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:12px;">No records</td></tr>';
                 
-                // 🔥 ADDED: Actions column with delete day button (SVG icon)
                 tbody.innerHTML = sortedArray.map(g => `
                     <tr>
                         <td><b>${g.rollNo}</b></td>
@@ -2162,7 +1844,6 @@ async function fetchAllStudents() {
             }
         }
 
-        // 🔥 NEW: Delete all attendance records for a student on a specific date
         async function deleteDayGroup(rollNo, date) {
             const user = JSON.parse(localStorage.getItem('user'));
             const key = `${rollNo}_${date}`;
@@ -2182,7 +1863,7 @@ async function fetchAllStudents() {
             }
             if (deletedCount > 0) {
                 showMsg(`✅ ${deletedCount} records deleted for ${rollNo} on ${date}`);
-                fetchAllAttendance(); // Refresh view
+                fetchAllAttendance();
             } else {
                 showMsg('Failed to delete records', true);
             }
@@ -2232,17 +1913,12 @@ async function fetchAllStudents() {
                 const year = 2026;
                 const startDay = (monthIdx === 6) ? 15 : 1;
                 const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
-
                 for (let d = startDay; d <= daysInMonth; d++) {
-                    const y = year;
-                    const m = String(monthIdx + 1).padStart(2, '0');
-                    const day = String(d).padStart(2, '0');
-                    targetDates.push(`${y}-${m}-${day}`);
+                    targetDates.push(`${year}-${String(monthIdx + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
                 }
             }
 
             let headerRow = `Student Roll No,Student Name`;
-
             targetDates.forEach(dt => {
                 const parts = dt.split('-');
                 const dtObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
@@ -2250,25 +1926,20 @@ async function fetchAllStudents() {
                 const dayName = DAY_NAMES[dayOfWeek];
                 headerRow += `,${parts[2]}-${MONTH_NAMES[parseInt(parts[1]) - 1].substring(0,3)} (${dayName})`;
             });
-
             headerRow += `,Total Present\n`;
 
-            let csv = `BM Group - Master Attendance Grid (Jul-Dec 2026)\n`;
-            csv += headerRow;
-
+            let csv = `BM Group - Master Attendance Grid (Jul-Dec 2026)\n${headerRow}`;
             const sortedStudents = Object.values(studentsMap).sort((a, b) => a.roll.localeCompare(b.roll, undefined, { numeric: true }));
 
             sortedStudents.forEach(s => {
                 csv += `"${s.roll}","${s.name}"`;
                 let presentCount = 0;
-
                 targetDates.forEach(dt => {
                     const parts = dt.split('-');
                     const dtObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
                     const dayOfWeek = dtObj.getDay();
                     const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
                     const isHoliday = holidayDatesList.includes(dt);
-
                     if (isWeekend) { csv += `,OFF`; } 
                     else if (isHoliday) { csv += `,H`; } 
                     else {
