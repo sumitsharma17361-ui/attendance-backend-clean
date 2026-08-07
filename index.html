@@ -585,10 +585,10 @@
                     </button>
                 </div>
 
-                <!-- Selfie Capture Button -->
+                <!-- 🔥 Selfie Button with SVG Icon -->
                 <button class="btn btn-accent" onclick="openSelfieCamera()" style="margin-top:6px; padding:9px;">
-                    <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
-                    📸 Take Selfie & Mark Attendance
+                    <svg class="svg-icon" viewBox="0 0 24 24" width="16" height="16"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                    Take Selfie & Mark Attendance
                 </button>
 
                 <div style="text-align:center; font-size:10px; color:var(--text-muted); margin: 12px 0 4px 0; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Live Timetable Period Tracker</div>
@@ -626,8 +626,8 @@
                         </table>
                     </div>
                 </div>
-            </div>
-            <div id="adminTab" style="display:none;">
+                                                                      </div>
+                                                                      <div id="adminTab" style="display:none;">
     <div class="admin-nav">
         <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">Excel</div>
         <div class="admin-nav-item" onclick="switchAdminSubTab('subAttendance')">Entry</div>
@@ -729,7 +729,7 @@
                     </div>
                 </div>
 
-                <!-- Security Tab -->
+                <!-- 🔥 Security Tab -->
                 <div id="subSecurity" style="display:none;">
                     <div class="admin-box">
                         <h4 style="font-size:12px; font-weight:800; color:var(--text-main); margin-bottom:8px;">🛡️ Suspicious Activity Logs</h4>
@@ -804,6 +804,7 @@
     let toastTimeout = null;
     let activeCloudFaceDescriptor = null;
     let myChart = null;
+    let qrVerified = false;
 
     const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -939,24 +940,59 @@ function markActivePeriodAttendance() {
     markSingleAttendance(activeSubjectSubjectCode);
 }
 
-function openFullDayPasscodePrompt() {
+// 🔥 FIXED: Full Day Passcode with QR Verification
+async function openFullDayPasscodePrompt() {
     const enteredPasscode = prompt(`Enter Class Passcode / Daily Master Secret displayed by Teacher:`);
     if (!enteredPasscode) return;
-    if (enteredPasscode.trim() === currentDailyPasscode) {
-        markFullDayAttendance();
-    } else {
-        showMsg("Invalid Class Passcode! Attendance Denied.", true);
+    
+    try {
+        const res = await fetch(`${API_BASE}/api/auth/verify-qr`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ passcode: enteredPasscode.trim() })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            qrVerified = true;
+            showMsg('✅ QR/Passcode Verified! Marking attendance...');
+            markFullDayAttendance();
+        } else {
+            showMsg(data.error || 'Invalid Passcode!', true);
+        }
+    } catch(e) {
+        showMsg('Server error!', true);
     }
 }
 
-function openStudentQRScanner() {
+// 🔥 FIXED: QR Scanner with Verification
+async function openStudentQRScanner() {
     if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
         return showMsg("QR Scan failed: Class time ke bahar mark nahi ho sakti!", true);
     }
-    showMsg("QR Verified! Marking current lecture...");
-    markSingleAttendance(activeSubjectSubjectCode);
+    
+    const enteredPasscode = prompt(`Enter QR Code Passcode displayed on Teacher's screen:`);
+    if (!enteredPasscode) return;
+    
+    try {
+        const res = await fetch(`${API_BASE}/api/auth/verify-qr`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ passcode: enteredPasscode.trim() })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            qrVerified = true;
+            showMsg('✅ QR Verified! Marking attendance...');
+            markSingleAttendance(activeSubjectSubjectCode);
+        } else {
+            showMsg(data.error || 'Invalid QR Code!', true);
+        }
+    } catch(e) {
+        showMsg('Server error!', true);
+    }
 }
 
+// 🔥 Selfie Camera with SVG Icon
 async function openSelfieCamera() {
     if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
         return showMsg("No active lecture to mark!", true);
@@ -995,6 +1031,7 @@ function closeStudentExcelModal() {
     document.getElementById('studentExcelModal').style.display = 'none';
 }
 
+// 🔥 FIXED: Excel Date Format
 function processStudentExcelDownload() {
     const range = document.getElementById('studentExcelRange').value;
     const selectedMonth = parseInt(document.getElementById('studentExcelMonth').value);
@@ -1038,11 +1075,13 @@ function processStudentExcelDownload() {
         grouped[r.date]++; 
     });
 
+    // 🔥 FIXED: Proper date format DD-MM-YYYY
     let csv = "Date,Day,Total Lectures Attended,Status\n";
     Object.keys(grouped).sort().forEach(d => {
         const parts = d.split('-');
+        const formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
         const dayStr = DAY_NAMES[new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])).getDay()];
-        csv += `"${d}","${dayStr}","${grouped[d]} Lectures","Present"\n`;
+        csv += `"${formattedDate}","${dayStr}","${grouped[d]} Lectures","Present"\n`;
     });
 
     const fileName = `Student_Attendance_Report_${range}.csv`;
@@ -1280,20 +1319,41 @@ function switchAdminSubTab(subId) {
     if (subId === 'subSecurity') { fetchSuspiciousLogs(); fetchAutoUnblockStatus(); }
 }
 
-function generateDynamicQR() {
+// 🔥 FIXED: QR Generation with Backend
+async function generateDynamicQR() {
     const refreshIcon = document.getElementById('refreshIcon');
     if (refreshIcon) {
         refreshIcon.classList.remove('spin-rotate');
         void refreshIcon.offsetWidth;
         refreshIcon.classList.add('spin-rotate');
     }
-    const qrBox = document.getElementById('qrcode');
-    qrBox.innerHTML = "";
-    currentDailyPasscode = Math.floor(1000 + Math.random() * 9000).toString();
-    const passcodeEl = document.getElementById('liveClassPasscode');
-    if (passcodeEl) passcodeEl.innerText = currentDailyPasscode;
-    const token = `BMERP_TOKEN_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-    new QRCode(qrBox, { text: token, width: 130, height: 130 });
+    
+    const user = JSON.parse(localStorage.getItem('user'));
+    
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/generate-qr`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requesterRollNo: user.rollNo })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            currentDailyPasscode = data.passcode;
+            const passcodeEl = document.getElementById('liveClassPasscode');
+            if (passcodeEl) passcodeEl.innerText = currentDailyPasscode;
+            
+            const qrBox = document.getElementById('qrcode');
+            qrBox.innerHTML = "";
+            const token = data.token;
+            new QRCode(qrBox, { text: token, width: 130, height: 130 });
+            
+            showMsg('✅ QR Code refreshed! Valid for 5 minutes.');
+        } else {
+            showMsg(data.error || 'Failed to generate QR', true);
+        }
+    } catch(e) {
+        showMsg('Server error!', true);
+    }
 }
 
 async function loadFaceAIModels() {
@@ -1573,7 +1633,12 @@ function loadDashboard() {
     loadAnalyticsChart(user.rollNo);
 }
 
+// 🔥 FIXED: Full Day with QR verification
 function markFullDayAttendance() {
+    if (!qrVerified) {
+        return showMsg('Please verify QR/Passcode first!', true);
+    }
+    
     if (!navigator.geolocation) {
         return showMsg('Geolocation is not supported!', true);
     }
@@ -1592,10 +1657,12 @@ function markFullDayAttendance() {
                     name: user.name, 
                     latitude: pos.coords.latitude, 
                     longitude: pos.coords.longitude,
-                    deviceFingerprint: fingerprint
+                    deviceFingerprint: fingerprint,
+                    qrVerified: qrVerified
                 }) 
             });
             const data = await res.json();
+            qrVerified = false;
             if (res.ok) { showMsg(data.message); fetchHistory(user.rollNo); } 
             else { showMsg(data.error || "Attendance marking failed", true); }
         } catch(e) { showMsg("Network Error! Try again.", true); }
@@ -1623,7 +1690,8 @@ function markSingleAttendanceWithSelfie(subject, selfieData) {
                     latitude: pos.coords.latitude, 
                     longitude: pos.coords.longitude,
                     selfie: selfieData,
-                    deviceFingerprint: fingerprint
+                    deviceFingerprint: fingerprint,
+                    qrVerified: true
                 }) 
             });
             const data = await res.json();
@@ -1637,10 +1705,16 @@ function markSingleAttendanceWithSelfie(subject, selfieData) {
     }, () => showMsg('GPS Denied!', true));
 }
 
+// 🔥 FIXED: Single Attendance with QR check
 function markSingleAttendance(overrideSubject) {
     const sub = overrideSubject || activeSubjectSubjectCode || "WT LAB";
     if (!sub || sub.includes("Off Hours") || sub.includes("Lunch")) {
         return showMsg("No active lecture to mark!", true);
+    }
+
+    // If it's a QR scan, check if QR is verified
+    if (sub === 'QR_ATTENDANCE' && !qrVerified) {
+        return showMsg('Please scan QR code first!', true);
     }
 
     const todayISO = new Date().toISOString().split('T')[0];
@@ -1677,10 +1751,12 @@ function markSingleAttendance(overrideSubject) {
                     subject: sub, 
                     latitude: pos.coords.latitude, 
                     longitude: pos.coords.longitude,
-                    deviceFingerprint: fingerprint
+                    deviceFingerprint: fingerprint,
+                    qrVerified: qrVerified
                 }) 
             });
             const data = await res.json();
+            qrVerified = false;
             if (res.ok) { 
                 showMsg(`Attendance Marked for ${sub}!`); 
                 fetchHistory(user.rollNo); 
@@ -2064,7 +2140,7 @@ function markSingleAttendance(overrideSubject) {
                 csv += `"${s.roll}","${s.name}"`;
                 let presentCount = 0;
 
-                targetDates.forEach(dt => {
+                targetDates.forEach(dt =>  {
                     const parts = dt.split('-');
                     const dtObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
                     const dayOfWeek = dtObj.getDay();
