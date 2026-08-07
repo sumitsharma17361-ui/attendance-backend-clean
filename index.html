@@ -152,7 +152,6 @@
         .qr-success { color: #4ade80 !important; }
         .qr-error { color: #f87171 !important; }
 
-        /* Subject Checkboxes */
         .subject-checkbox-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -187,6 +186,10 @@
             border: none;
         }
         .subject-checkbox-container .select-all:hover { background: #cbd5e1; }
+
+        /* 🔥 Holiday/Weekend status colors */
+        .status-holiday { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+        .status-weekend { background: #e2e8f0; color: #475569; border-color: #cbd5e1; }
     </style>
 </head>
 <body>
@@ -295,7 +298,7 @@
                 <div><b>Attendance Advisor:</b> <span id="advisorText">Calculating criteria...</span></div>
             </div>
 
-            <!-- 🔥 NEW: Admin Live Dashboard Stats -->
+            <!-- Admin Live Dashboard -->
             <div id="adminLiveDashboard" style="display:none; margin:10px 0;">
                 <div class="stats-grid">
                     <div class="stat-card">
@@ -379,7 +382,8 @@
                         Scan QR
                     </button>
                 </div>
-                    <div style="text-align:center; font-size:9px; color:var(--text-muted); margin: 10px 0 3px 0; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Live Timetable</div>
+                    <!-- 🔥 UPDATED: Live Timetable with Holiday/Weekend -->
+    <div style="text-align:center; font-size:9px; color:var(--text-muted); margin: 10px 0 3px 0; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Live Timetable</div>
     <div class="period-card" id="periodCardBox">
         <div>
             <span style="font-size:8px; font-weight:700; color:var(--text-muted); text-transform:uppercase;" id="periodTimeSlotLabel">CURRENT PERIOD:</span>
@@ -451,7 +455,7 @@
             <option value="Duty Leave">Duty Leave (DL)</option>
         </select>
         
-        <!-- 🔥 NEW: Subject Selection -->
+        <!-- Subject Selection -->
         <div style="margin:8px 0;">
             <span style="font-size:10px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">Select Subjects to Mark:</span>
             <div id="subjectCheckboxContainer" class="subject-checkbox-container">
@@ -473,8 +477,9 @@
     <div id="subHoliday" class="admin-box" style="display:none;">
     <span class="sub-section-title">📅 Declare Official Holiday</span>
     <input type="date" id="holidayDate" style="font-size:10px; padding:7px;">
-    <input type="text" id="holidayReason" placeholder="Reason (e.g. Diwali)" style="font-size:10px; padding:7px;">
+    <input type="text" id="holidayReason" placeholder="Reason (e.g. Diwali/Rainy Day)" style="font-size:10px; padding:7px;">
     <button class="btn btn-warning btn-sm" onclick="declareHoliday()" style="padding:7px; margin:0;">Mark Holiday</button>
+    <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">💡 Holiday reason will show to students (e.g., "Diwali", "Rainy Day")</p>
 </div>
 
 <div id="subQR" class="admin-box" style="display:none; text-align:center;">
@@ -788,19 +793,49 @@
         }
         document.getElementById('qrScannerContainer').classList.remove('active');
     }
-        // ----- Period Tracker -----
-function updatePeriodTrackerWidget() {
+        // ----- 🔥 UPDATED: Period Tracker with Holiday/Weekend -----
+async function updatePeriodTrackerWidget() {
     const now = new Date();
     const dayOfWeek = now.getDay();
+    const todayDate = now.toISOString().split('T')[0];
     const labelEl = document.getElementById('periodTimeSlotLabel');
     const nameEl = document.getElementById('activePeriodName');
     const btn = document.getElementById('markPeriodBtn');
 
+    // 🔥 Check if today is holiday or weekend via API
+    try {
+        const res = await fetch(`${API_BASE}/api/date-status/${todayDate}`);
+        const status = await res.json();
+        
+        if (status.isBlocked) {
+            if(labelEl) {
+                labelEl.innerText = status.type + ":";
+                labelEl.style.color = status.type === 'HOLIDAY' ? '#d97706' : '#64748b';
+            }
+            if(nameEl) {
+                nameEl.innerText = status.message;
+                nameEl.style.color = status.type === 'HOLIDAY' ? '#92400e' : '#475569';
+            }
+            if(btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
+            activeSubjectSubjectCode = "";
+            // Update period card background
+            document.getElementById('periodCardBox').className = 'period-card ' + (status.type === 'HOLIDAY' ? 'status-holiday' : 'status-weekend');
+            return;
+        }
+    } catch(e) {
+        // If API fails, fallback to local check
+    }
+
+    // Reset card style for normal days
+    document.getElementById('periodCardBox').className = 'period-card';
+
+    // Weekend check (fallback if API fails)
     if (dayOfWeek === 0 || dayOfWeek === 6) {
-        if(labelEl) labelEl.innerText = "WEEKEND:";
-        if(nameEl) nameEl.innerText = "College Closed";
+        if(labelEl) { labelEl.innerText = "WEEKEND:"; labelEl.style.color = '#64748b'; }
+        if(nameEl) { nameEl.innerText = "College Closed"; nameEl.style.color = '#475569'; }
         if(btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
         activeSubjectSubjectCode = "";
+        document.getElementById('periodCardBox').className = 'period-card status-weekend';
         return;
     }
 
@@ -820,21 +855,24 @@ function updatePeriodTrackerWidget() {
         }
     }
 
+    // Reset label color
+    if(labelEl) labelEl.style.color = '#64748b';
+
     if (foundSlot) {
         if (foundSlot.period === "LUNCH") {
             if(labelEl) labelEl.innerText = "LUNCH BREAK:";
-            if(nameEl) nameEl.innerText = "Lunch Time";
+            if(nameEl) { nameEl.innerText = "Lunch Time"; nameEl.style.color = '#0f172a'; }
             if(btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
             activeSubjectSubjectCode = "";
         } else {
             if(labelEl) labelEl.innerText = `ACTIVE (${foundSlot.start} - ${foundSlot.end}):`;
-            if(nameEl) nameEl.innerText = foundSlot.subject;
+            if(nameEl) { nameEl.innerText = foundSlot.subject; nameEl.style.color = '#0f172a'; }
             if(btn) { btn.disabled = false; btn.style.opacity = "1"; }
             activeSubjectSubjectCode = foundSlot.subject;
         }
     } else {
         if(labelEl) labelEl.innerText = "COLLEGE STATUS:";
-        if(nameEl) nameEl.innerText = "Off Hours / No Class";
+        if(nameEl) { nameEl.innerText = "Off Hours / No Class"; nameEl.style.color = '#64748b'; }
         if(btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
         activeSubjectSubjectCode = "";
     }
@@ -862,7 +900,7 @@ async function openFullDayPasscodePrompt() {
     } catch(e) { showMsg('Server error!', true); }
 }
 
-// 🔥 NEW: Load subjects for manual attendance
+// ----- Load subjects for manual attendance -----
 function loadSubjectsForDay() {
     const date = document.getElementById('manualDate').value;
     if (!date) return;
@@ -1358,7 +1396,7 @@ async function handleAuth() {
     } catch(err) { showMsg('Connection timeout!', true); }
 }
 
-// 🔥 Dashboard Stats Loader
+// ----- Dashboard Stats -----
 async function loadDashboardStats() {
     const user = JSON.parse(localStorage.getItem('user'));
     try {
@@ -1470,11 +1508,14 @@ function markSingleAttendance(overrideSubject) {
             } catch(e) { showMsg("Network Error!", true); }
         }
 
+        // ----- 🔥 UPDATED: Holiday Declare -----
         async function declareHoliday() {
             const user = JSON.parse(localStorage.getItem('user'));
             const date = document.getElementById('holidayDate').value;
             const reason = document.getElementById('holidayReason').value.trim();
             if (!date) return showMsg('Select date!', true);
+            if (!reason) return showMsg('Enter holiday reason (e.g. Diwali, Rainy Day)!', true);
+            if (!confirm(`Declare "${reason}" on ${date}?`)) return;
             try {
                 const res = await fetch(`${API_BASE}/api/admin/holiday`, {
                     method: 'POST',
@@ -1482,7 +1523,8 @@ function markSingleAttendance(overrideSubject) {
                     body: JSON.stringify({ requesterRollNo: user.rollNo, date, reason })
                 });
                 const data = await res.json();
-                if (res.ok) { showMsg(data.message); } else showMsg(data.error || "Failed", true);
+                if (res.ok) { showMsg(`✅ ${data.message}`); document.getElementById('holidayDate').value = ''; document.getElementById('holidayReason').value = ''; }
+                else { showMsg(data.error || "Failed", true); }
             } catch(e) { showMsg("Network Error!", true); }
         }
 
@@ -1540,7 +1582,7 @@ function markSingleAttendance(overrideSubject) {
                     const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
                     const isHoliday = holidayDatesSet.has(dateStr);
                     if (isWeekend) { gridHtml += `<div class="cal-date cal-off">${d}</div>`; }
-                    else if (isHoliday) { gridHtml += `<div class="cal-date cal-off" style="background:#fef3c7; color:#92400e; font-weight:800; border-color:#fde68a;">${d}</div>`; }
+                    else if (isHoliday) { gridHtml += `<div class="cal-date cal-off" style="background:#fef3c7; color:#92400e; font-weight:800; border-color:#fde68a;" title="Holiday">${d}</div>`; }
                     else if (attendedDates.has(dateStr)) { gridHtml += `<div class="cal-date cal-p">${d}</div>`; }
                     else if (dtObj <= today) { gridHtml += `<div class="cal-date cal-a">${d}</div>`; }
                     else { gridHtml += `<div class="cal-date cal-off">${d}</div>`; }
@@ -1726,6 +1768,17 @@ function markSingleAttendance(overrideSubject) {
             downloadFile(csv, fileName);
         }
 
+        // 🔥 NEW: Google Sheets Export (CSV Download)
+        async function downloadGoogleSheetsExport() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            try {
+                window.open(`${API_BASE}/api/export/google-sheets/${user.rollNo}`, '_blank');
+                showMsg('📊 Export started! CSV will download.');
+            } catch(e) {
+                showMsg('Failed to export!', true);
+            }
+        }
+
         async function logout() {
             try { const token = localStorage.getItem('token'); if (token) { await fetch(`${API_BASE}/api/auth/logout`, { method:'POST', headers:{'Authorization':`Bearer ${token}`} }); } } catch(e) {}
             localStorage.removeItem('user'); localStorage.removeItem('token'); location.reload();
@@ -1735,4 +1788,3 @@ function markSingleAttendance(overrideSubject) {
     </script>
 </body>
 </html>
-          
