@@ -991,19 +991,42 @@ app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
+// ---------- 🔥 FIXED: Analytics returns ALL 11 subjects (even if 0) ----------
 app.get('/api/analytics/:rollNo', async (req, res) => {
   try {
     const cleanRoll = req.params.rollNo.trim().toUpperCase();
     const records = await Attendance.find({ rollNo: cleanRoll });
     
+    // Predefined 11 subjects (matching frontend chart)
+    const allSubjects = [
+      'BDA - Big Data Analytics',
+      'ECO - Economics for Engineers',
+      'DAA - Design & Analysis of Algorithm',
+      'FLA - Formal Language & Automata',
+      'HRM - Human Resource Mgmt',
+      'CN - Computer Network',
+      'WT - Web Technology',
+      'CN LAB - Computer Network Lab',
+      'DAA LAB - Algorithm Lab',
+      'WT LAB - Web Technology Lab',
+      'Internet Lab (Ms. Geeta)'
+    ];
+    
+    // Initialize all with 0
     let subjectStats = {};
+    allSubjects.forEach(sub => {
+      subjectStats[sub] = { present: 0, total: 0 };
+    });
+    
+    // Now fill actual counts from records
     records.forEach(rec => {
-      if (!subjectStats[rec.subject]) subjectStats[rec.subject] = { present: 0, total: 0 };
-      subjectStats[rec.subject].total += 1;
-      if (rec.status === 'Present') subjectStats[rec.subject].present += 1;
+      if (subjectStats[rec.subject]) {
+        subjectStats[rec.subject].total += 1;
+        if (rec.status === 'Present') subjectStats[rec.subject].present += 1;
+      }
     });
 
+    // Return all subjects with their data
     res.json(subjectStats);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1023,4 +1046,3 @@ process.on('uncaughtException', (err) => {
 // ---------- Start Server ----------
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
-    
