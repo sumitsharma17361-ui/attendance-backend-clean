@@ -1,4 +1,4 @@
-                <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -257,7 +257,7 @@
         <button class="close-scanner" onclick="stopQRScanner()">✕ Cancel Scan</button>
     </div>
     <div class="app-container">
-    <div class="app-header">
+          <div class="app-header">
         <div class="app-header-title">
             <h1>BM Group of Institutions</h1>
             <p>B.Tech CSE - 5th Semester (Room 203)</p>
@@ -527,8 +527,7 @@
             📚 Mark All Subjects for this Day
         </button>
     </div>
-    
-    <div id="subHoliday" class="admin-box" style="display:none;">
+        <div id="subHoliday" class="admin-box" style="display:none;">
         <span class="sub-section-title">📅 Declare Official Holiday</span>
         <input type="date" id="holidayDate" style="font-size:10px; padding:7px;">
         <input type="text" id="holidayReason" placeholder="Reason (e.g. Diwali/Rainy Day)" style="font-size:10px; padding:7px;">
@@ -770,8 +769,7 @@ function sanitizeAndValidateRollNo(rawRoll) {
     const strictRegex = /^\d{2}(CSE|AIDS)\d{2}$/;
     return { isValid: strictRegex.test(clean), cleanRoll: clean };
 }
-
-// ============================================================
+      // ============================================================
 // 🔥 NEW: SECURITY FUNCTIONS - Mock Location & Sensor Detection
 // ============================================================
 
@@ -782,35 +780,30 @@ function detectMockLocation(position) {
     const timeDiff = now - timestamp;
     const results = { mockDetected: false, reason: '' };
 
-    // Too accurate (< 5 meters) - suspicious
     if (accuracy < 5) {
         results.mockDetected = true;
         results.reason = 'Suspiciously high accuracy (<5m)';
         return results;
     }
 
-    // Missing altitude data
     if (altitude === null || altitude === 0) {
         results.mockDetected = true;
         results.reason = 'Missing altitude data';
         return results;
     }
 
-    // Timestamp mismatch (>5 seconds difference)
     if (Math.abs(timeDiff) > 5000) {
         results.mockDetected = true;
         results.reason = 'GPS timestamp mismatch';
         return results;
     }
 
-    // Moving but no heading data
     if (speed > 1 && heading === null) {
         results.mockDetected = true;
         results.reason = 'Moving but no heading data';
         return results;
     }
 
-    // iOS: Check altitudeAccuracy
     if (position.coords.altitudeAccuracy === null || position.coords.altitudeAccuracy === 0) {
         results.mockDetected = true;
         results.reason = 'Missing altitude accuracy (iOS mock)';
@@ -820,7 +813,7 @@ function detectMockLocation(position) {
     return results;
 }
 
-// 2. Sensor-GPS Consistency Check (Accelerometer + Gyroscope)
+// 2. Sensor-GPS Consistency Check
 let lastAccelData = null;
 let lastGPSData = null;
 
@@ -838,7 +831,6 @@ function checkSensorGPSConsistency(acceleration, gpsCoord) {
         (acceleration.z || 0) ** 2
     );
 
-    // If GPS moved > 50m but acceleration is near 0, it's likely fake
     if (distance > 50 && accelMag < 0.5) {
         return { 
             sensorMismatch: true, 
@@ -865,7 +857,6 @@ function haversineDistance(coord1, coord2) {
 function getAcceleration() {
     return new Promise((resolve) => {
         if (typeof DeviceMotionEvent !== 'undefined') {
-            // Request permission for iOS 13+
             if (typeof DeviceMotionEvent.requestPermission === 'function') {
                 DeviceMotionEvent.requestPermission().then(() => {
                     window.addEventListener('devicemotion', (event) => {
@@ -944,14 +935,12 @@ async function performSecurityChecks(position) {
         isIOS: false
     };
 
-    // Mock location detection
     const mockCheck = detectMockLocation(position);
     results.mockDetected = mockCheck.mockDetected;
     if (mockCheck.mockDetected) {
         console.warn('Mock location detected:', mockCheck.reason);
     }
 
-    // Get accelerometer data and check consistency
     const accel = await getAcceleration();
     const sensorCheck = checkSensorGPSConsistency(accel, {
         latitude: coords.latitude,
@@ -962,14 +951,12 @@ async function performSecurityChecks(position) {
         console.warn('Sensor mismatch detected:', sensorCheck.reason);
     }
 
-    // Timezone check
     const tzCheck = checkTimezoneMismatch(coords.latitude, coords.longitude);
     results.timezoneMismatch = tzCheck.timezoneMismatch;
     if (tzCheck.timezoneMismatch) {
         console.warn('Timezone mismatch detected:', tzCheck.reason);
     }
 
-    // Environment detection
     const pcCheck = detectPCEnvironment();
     results.isPC = pcCheck.isPC;
     const iosCheck = detectIOSEnvironment();
@@ -1031,7 +1018,8 @@ const WEEKLY_SCHEDULE = {
         { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
     ]
 };
-       // ----- QR SCANNER FUNCTIONS -----
+
+// ----- QR SCANNER FUNCTIONS -----
 async function startQRScanner() {
     if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
         return showMsg("No active lecture to scan QR!", true);
@@ -1181,8 +1169,7 @@ async function updatePeriodTrackerWidget() {
         activeSubjectSubjectCode = "";
     }
 }
-
-function markActivePeriodAttendance() {
+      function markActivePeriodAttendance() {
     if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
         return showMsg("Abhi koi active class nahi chal rahi!", true);
     }
@@ -1413,8 +1400,8 @@ async function resetAnomalyFlag() {
         if (res.ok) { showMsg(data.message); document.getElementById('resetAnomalyRoll').value = ''; fetchAllStudents(); }
         else { showMsg(data.error || "Failed", true); }
     } catch(e) { showMsg('Server error!', true); }
-        }
-        // 🔥 NEW: SECURITY ANALYTICS FUNCTIONS
+}
+      // 🔥 NEW: SECURITY ANALYTICS FUNCTIONS
 async function fetchSecurityAnalytics() {
     const user = JSON.parse(localStorage.getItem('user'));
     try {
@@ -1722,8 +1709,7 @@ async function executeCameraAction() {
         } else { statusTxt.innerText = "Mismatch!"; showMsg("Face Mismatch!", true); }
     }
 }
-
-function togglePassword() { const p = document.getElementById('password'); p.type = p.type === 'password' ? 'text' : 'password'; }
+      function togglePassword() { const p = document.getElementById('password'); p.type = p.type === 'password' ? 'text' : 'password'; }
 function toggleMode() {
     isRegistering = !isRegistering;
     document.getElementById('register-fields').style.display = isRegistering ? 'block' : 'none';
@@ -1769,8 +1755,9 @@ async function handleAuth() {
             else { showMsg(data.error || 'Invalid credentials', true); }
         }
     } catch(err) { showMsg('Connection timeout!', true); }
-        }
-        // ----- DASHBOARD STATS -----
+}
+
+// ----- DASHBOARD STATS -----
 async function loadDashboardStats() {
     const user = JSON.parse(localStorage.getItem('user'));
     try {
@@ -1836,6 +1823,21 @@ function updateSecurityBanner(securityStatus) {
 function loadDashboard() {
     const user = JSON.parse(localStorage.getItem('user'));
     if (!user) return;
+    
+    // 🔥 REDIRECT TO NEW UI
+    const userRollClean = (user.rollNo || "").toUpperCase().replace(/[^A-Z0-9]/g,'');
+    const isAdmin = (user.role === 'admin' || userRollClean === '24CSE48' || userRollClean.includes('24CSE48'));
+    
+    if (isAdmin) {
+        window.location.href = 'admin-dashboard.html';
+        return;
+    } else {
+        window.location.href = 'student-dashboard.html';
+        return;
+    }
+    
+    // OLD CODE - Kept for fallback if needed
+    /*
     document.getElementById('auth-box').style.display = 'none';
     document.getElementById('dash-box').style.display = 'block';
     document.getElementById('headerAvatarBox').style.display = 'flex';
@@ -1852,7 +1854,6 @@ function loadDashboard() {
     document.getElementById('faceEnrollBox').style.display = 'block';
     document.getElementById('studentTabHeader').style.display = 'block';
     
-    // 🔥 NEW: Fetch risk score
     fetchUserRiskScore(user.rollNo);
     
     if (isAdmin) {
@@ -1873,6 +1874,7 @@ function loadDashboard() {
     setInterval(updatePeriodTrackerWidget, 30000);
     fetchNotices();
     loadSubjectsForDay();
+    */
 }
 
 // 🔥 UPDATED: markFullDayAttendance with Security Checks
@@ -1884,7 +1886,6 @@ function markFullDayAttendance() {
         const user = JSON.parse(localStorage.getItem('user'));
         const fingerprint = getDeviceFingerprint();
         
-        // 🔥 Perform security checks
         const securityChecks = await performSecurityChecks(pos);
         updateSecurityBanner(securityChecks);
         
@@ -1904,7 +1905,7 @@ function markFullDayAttendance() {
                     longitude:pos.coords.longitude, 
                     deviceFingerprint:fingerprint, 
                     qrVerified:qrVerified,
-                    securityChecks: securityChecks  // 🔥 Send security checks
+                    securityChecks: securityChecks
                 })
             });
             const data = await res.json();
@@ -1949,7 +1950,6 @@ function markSingleAttendance(overrideSubject) {
         const user = JSON.parse(localStorage.getItem('user'));
         const fingerprint = getDeviceFingerprint();
         
-        // 🔥 Perform security checks
         const securityChecks = await performSecurityChecks(pos);
         updateSecurityBanner(securityChecks);
         
@@ -1970,7 +1970,7 @@ function markSingleAttendance(overrideSubject) {
                     longitude:pos.coords.longitude, 
                     deviceFingerprint:fingerprint, 
                     qrVerified:qrVerified,
-                    securityChecks: securityChecks  // 🔥 Send security checks
+                    securityChecks: securityChecks
                 })
             });
             const data = await res.json();
@@ -1987,8 +1987,8 @@ function markSingleAttendance(overrideSubject) {
             }
         } catch(e) { showMsg("Network Error!", true); }
     }, () => showMsg('GPS Denied!', true));
-        }
-        async function declareHoliday() {
+}
+      async function declareHoliday() {
     const user = JSON.parse(localStorage.getItem('user'));
     const date = document.getElementById('holidayDate').value;
     const reason = document.getElementById('holidayReason').value.trim();
@@ -2171,122 +2171,123 @@ async function showStudentAttendance(rollNo) {
             </tr>
         `).join('');
     } catch(e) { showMsg("Failed to load attendance", true); }
-        }
-            async function fetchAllAttendance() {
-        const user = JSON.parse(localStorage.getItem('user'));
-        try {
-            const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
-            const data = await res.json();
-            if (!res.ok) return showMsg(data.error || "Failed", true);
-            globalAllRecords = data;
-            document.getElementById('directoryTitle').innerHTML = `📊 Attendance Records (${data.length} entries) <button class="btn btn-outline btn-sm" onclick="fetchAllStudents()" style="padding:2px 8px; font-size:8px; width:auto;">⬅ Back</button>`;
-            const grouped = {};
-            data.forEach(r => { const key = `${r.rollNo}_${r.date}`; if (!grouped[key]) { grouped[key] = { rollNo:r.rollNo, name:r.studentName, date:r.date, count:0, ids:[] }; } grouped[key].count++; grouped[key].ids.push(r._id); });
-            groupedAdminRecords = grouped;
-            const sortedArray = Object.values(grouped).sort((a,b) => a.rollNo.localeCompare(b.rollNo));
-            const tbody = document.querySelector('#allHistoryTable tbody');
-            if (!tbody) return;
-            if (sortedArray.length === 0) return tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:12px;">No records</td></tr>';
-            tbody.innerHTML = sortedArray.map(g => `
-                <tr><td><b>${g.rollNo}</b></td><td>${g.name}</td><td>${g.date}</td>
-                <td><span class="badge badge-present">${g.count} Lectures</span></td>
-                <td><button class="action-btn btn-del btn-sm" onclick="deleteDayGroup('${g.rollNo}','${g.date}')" style="padding:2px 6px; font-size:8px;" title="Delete all lectures for this day">
-                    <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-                </button></td></tr>
-            `).join('');
-        } catch(e) { showMsg("Failed to connect to backend", true); }
-    }
+}
 
-    async function deleteDayGroup(rollNo, date) {
-        const user = JSON.parse(localStorage.getItem('user'));
-        const key = `${rollNo}_${date}`;
-        const group = groupedAdminRecords[key];
-        if (!group) { showMsg('No records found!', true); return; }
-        if (!confirm(`Delete ${group.count} lectures for ${rollNo} on ${date}?`)) return;
-        let deletedCount = 0;
-        for (let id of group.ids) {
-            try { const res = await fetch(`${API_BASE}/api/attendance/delete/${id}/${user.rollNo}`, { method:'DELETE' }); if (res.ok) deletedCount++; } catch(e) {}
-        }
-        if (deletedCount > 0) { showMsg(`✅ ${deletedCount} records deleted for ${rollNo} on ${date}`); fetchAllAttendance(); } else { showMsg('Failed to delete records', true); }
-    }
+async function fetchAllAttendance() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    try {
+        const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
+        const data = await res.json();
+        if (!res.ok) return showMsg(data.error || "Failed", true);
+        globalAllRecords = data;
+        document.getElementById('directoryTitle').innerHTML = `📊 Attendance Records (${data.length} entries) <button class="btn btn-outline btn-sm" onclick="fetchAllStudents()" style="padding:2px 8px; font-size:8px; width:auto;">⬅ Back</button>`;
+        const grouped = {};
+        data.forEach(r => { const key = `${r.rollNo}_${r.date}`; if (!grouped[key]) { grouped[key] = { rollNo:r.rollNo, name:r.studentName, date:r.date, count:0, ids:[] }; } grouped[key].count++; grouped[key].ids.push(r._id); });
+        groupedAdminRecords = grouped;
+        const sortedArray = Object.values(grouped).sort((a,b) => a.rollNo.localeCompare(b.rollNo));
+        const tbody = document.querySelector('#allHistoryTable tbody');
+        if (!tbody) return;
+        if (sortedArray.length === 0) return tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:12px;">No records</td></tr>';
+        tbody.innerHTML = sortedArray.map(g => `
+            <tr><td><b>${g.rollNo}</b></td><td>${g.name}</td><td>${g.date}</td>
+            <td><span class="badge badge-present">${g.count} Lectures</span></td>
+            <td><button class="action-btn btn-del btn-sm" onclick="deleteDayGroup('${g.rollNo}','${g.date}')" style="padding:2px 6px; font-size:8px;" title="Delete all lectures for this day">
+                <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+            </button></td></tr>
+        `).join('');
+    } catch(e) { showMsg("Failed to connect to backend", true); }
+}
 
-    function downloadFile(content, fileName) {
-        const blob = new Blob([content], { type:'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.setAttribute('href', url);
-        link.setAttribute('download', fileName);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+async function deleteDayGroup(rollNo, date) {
+    const user = JSON.parse(localStorage.getItem('user'));
+    const key = `${rollNo}_${date}`;
+    const group = groupedAdminRecords[key];
+    if (!group) { showMsg('No records found!', true); return; }
+    if (!confirm(`Delete ${group.count} lectures for ${rollNo} on ${date}?`)) return;
+    let deletedCount = 0;
+    for (let id of group.ids) {
+        try { const res = await fetch(`${API_BASE}/api/attendance/delete/${id}/${user.rollNo}`, { method:'DELETE' }); if (res.ok) deletedCount++; } catch(e) {}
     }
+    if (deletedCount > 0) { showMsg(`✅ ${deletedCount} records deleted for ${rollNo} on ${date}`); fetchAllAttendance(); } else { showMsg('Failed to delete records', true); }
+}
 
-    function exportExcelGrid() {
-        if (globalAllRecords.length === 0) return alert("Refresh records first!");
-        const selection = document.getElementById('exportSelection').value;
-        const holidayDatesList = globalHolidays.map(h => h.date);
-        const studentsMap = {};
-        globalAllRecords.forEach(r => {
-            const cleanRoll = r.rollNo.toUpperCase().replace(/[^A-Z0-9]/g,'');
-            if (!studentsMap[cleanRoll]) { studentsMap[cleanRoll] = { name:r.studentName, roll:cleanRoll, dates:{} }; }
-            studentsMap[cleanRoll].dates[r.date] = r.status;
+function downloadFile(content, fileName) {
+    const blob = new Blob([content], { type:'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+function exportExcelGrid() {
+    if (globalAllRecords.length === 0) return alert("Refresh records first!");
+    const selection = document.getElementById('exportSelection').value;
+    const holidayDatesList = globalHolidays.map(h => h.date);
+    const studentsMap = {};
+    globalAllRecords.forEach(r => {
+        const cleanRoll = r.rollNo.toUpperCase().replace(/[^A-Z0-9]/g,'');
+        if (!studentsMap[cleanRoll]) { studentsMap[cleanRoll] = { name:r.studentName, roll:cleanRoll, dates:{} }; }
+        studentsMap[cleanRoll].dates[r.date] = r.status;
+    });
+    let targetDates = [];
+    if (selection === 'ALL_SEMESTER') {
+        let cur = new Date(2026,6,15); const endDate = new Date(2026,11,31);
+        while (cur <= endDate) { const y=cur.getFullYear(); const m=String(cur.getMonth()+1).padStart(2,'0'); const d=String(cur.getDate()).padStart(2,'0'); targetDates.push(`${y}-${m}-${d}`); cur.setDate(cur.getDate()+1); }
+    } else {
+        const monthIdx = parseInt(selection); const year = 2026; const startDay = (monthIdx === 6) ? 15 : 1;
+        const daysInMonth = new Date(year, monthIdx+1, 0).getDate();
+        for (let d=startDay; d<=daysInMonth; d++) { const y=year; const m=String(monthIdx+1).padStart(2,'0'); const day=String(d).padStart(2,'0'); targetDates.push(`${y}-${m}-${day}`); }
+    }
+    let headerRow = `Student Roll No,Student Name`;
+    targetDates.forEach(dt => { const parts=dt.split('-'); const dtObj=new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2])); const dayOfWeek=dtObj.getDay(); const dayName=DAY_NAMES[dayOfWeek]; headerRow += `,${parts[2]}-${MONTH_NAMES[parseInt(parts[1])-1].substring(0,3)} (${dayName})`; });
+    headerRow += `,Total Present\n`;
+    let csv = `BM Group - Master Attendance Grid (Jul-Dec 2026)\n${headerRow}`;
+    const sortedStudents = Object.values(studentsMap).sort((a,b) => a.roll.localeCompare(b.roll, undefined, { numeric:true }));
+    sortedStudents.forEach(s => {
+        csv += `"${s.roll}","${s.name}"`;
+        let presentCount = 0;
+        targetDates.forEach(dt => {
+            const parts=dt.split('-'); const dtObj=new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2])); const dayOfWeek=dtObj.getDay(); const isWeekend=(dayOfWeek===0||dayOfWeek===6); const isHoliday=holidayDatesList.includes(dt);
+            if (isWeekend) { csv += `,OFF`; } else if (isHoliday) { csv += `,H`; } else { const status = s.dates[dt]; if (status === 'Present' || status === 'Duty Leave') { csv += `,P`; presentCount++; } else { csv += `,A`; } }
         });
-        let targetDates = [];
-        if (selection === 'ALL_SEMESTER') {
-            let cur = new Date(2026,6,15); const endDate = new Date(2026,11,31);
-            while (cur <= endDate) { const y=cur.getFullYear(); const m=String(cur.getMonth()+1).padStart(2,'0'); const d=String(cur.getDate()).padStart(2,'0'); targetDates.push(`${y}-${m}-${d}`); cur.setDate(cur.getDate()+1); }
-        } else {
-            const monthIdx = parseInt(selection); const year = 2026; const startDay = (monthIdx === 6) ? 15 : 1;
-            const daysInMonth = new Date(year, monthIdx+1, 0).getDate();
-            for (let d=startDay; d<=daysInMonth; d++) { const y=year; const m=String(monthIdx+1).padStart(2,'0'); const day=String(d).padStart(2,'0'); targetDates.push(`${y}-${m}-${day}`); }
-        }
-        let headerRow = `Student Roll No,Student Name`;
-        targetDates.forEach(dt => { const parts=dt.split('-'); const dtObj=new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2])); const dayOfWeek=dtObj.getDay(); const dayName=DAY_NAMES[dayOfWeek]; headerRow += `,${parts[2]}-${MONTH_NAMES[parseInt(parts[1])-1].substring(0,3)} (${dayName})`; });
-        headerRow += `,Total Present\n`;
-        let csv = `BM Group - Master Attendance Grid (Jul-Dec 2026)\n${headerRow}`;
-        const sortedStudents = Object.values(studentsMap).sort((a,b) => a.roll.localeCompare(b.roll, undefined, { numeric:true }));
-        sortedStudents.forEach(s => {
-            csv += `"${s.roll}","${s.name}"`;
-            let presentCount = 0;
-            targetDates.forEach(dt => {
-                const parts=dt.split('-'); const dtObj=new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2])); const dayOfWeek=dtObj.getDay(); const isWeekend=(dayOfWeek===0||dayOfWeek===6); const isHoliday=holidayDatesList.includes(dt);
-                if (isWeekend) { csv += `,OFF`; } else if (isHoliday) { csv += `,H`; } else { const status = s.dates[dt]; if (status === 'Present' || status === 'Duty Leave') { csv += `,P`; presentCount++; } else { csv += `,A`; } }
-            });
-            csv += `,${presentCount}\n`;
-        });
-        const fileName = selection === 'ALL_SEMESTER' ? 'Full_Semester_Grid_2026.csv' : `Attendance_Grid_${MONTH_NAMES[parseInt(selection)]}_2026.csv`;
-        downloadFile(csv, fileName);
-    }
+        csv += `,${presentCount}\n`;
+    });
+    const fileName = selection === 'ALL_SEMESTER' ? 'Full_Semester_Grid_2026.csv' : `Attendance_Grid_${MONTH_NAMES[parseInt(selection)]}_2026.csv`;
+    downloadFile(csv, fileName);
+}
 
-    // 🔥 NEW: Download Working Days Report
-    async function downloadWorkingDaysReport() {
-        const user = JSON.parse(localStorage.getItem('user'));
-        try {
-            window.open(`${API_BASE}/api/export/working-days/${user.rollNo}`, '_blank');
-            showMsg('📊 Working Days Report downloading...');
-        } catch(e) {
-            showMsg('Failed to download!', true);
-        }
+// 🔥 NEW: Download Working Days Report
+async function downloadWorkingDaysReport() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    try {
+        window.open(`${API_BASE}/api/export/working-days/${user.rollNo}`, '_blank');
+        showMsg('📊 Working Days Report downloading...');
+    } catch(e) {
+        showMsg('Failed to download!', true);
     }
+}
 
-    // 🔥 NEW: Google Sheets Export
-    async function downloadGoogleSheetsExport() {
-        const user = JSON.parse(localStorage.getItem('user'));
-        try {
-            window.open(`${API_BASE}/api/export/google-sheets/${user.rollNo}`, '_blank');
-            showMsg('📊 Export started! CSV will download.');
-        } catch(e) {
-            showMsg('Failed to export!', true);
-        }
+// 🔥 NEW: Google Sheets Export
+async function downloadGoogleSheetsExport() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    try {
+        window.open(`${API_BASE}/api/export/google-sheets/${user.rollNo}`, '_blank');
+        showMsg('📊 Export started! CSV will download.');
+    } catch(e) {
+        showMsg('Failed to export!', true);
     }
+}
 
-    async function logout() {
-        try { const token = localStorage.getItem('token'); if (token) { await fetch(`${API_BASE}/api/auth/logout`, { method:'POST', headers:{'Authorization':`Bearer ${token}`} }); } } catch(e) {}
-        localStorage.removeItem('user'); localStorage.removeItem('token'); location.reload();
-    }
+async function logout() {
+    try { const token = localStorage.getItem('token'); if (token) { await fetch(`${API_BASE}/api/auth/logout`, { method:'POST', headers:{'Authorization':`Bearer ${token}`} }); } } catch(e) {}
+    localStorage.removeItem('user'); localStorage.removeItem('token'); location.reload();
+}
 
-    if (localStorage.getItem('user')) loadDashboard();
+if (localStorage.getItem('user')) loadDashboard();
 </script>
 </body>
 </html>
