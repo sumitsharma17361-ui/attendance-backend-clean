@@ -17,10 +17,10 @@ app.use(cors());
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
 const ADMIN_ROLL_NUMBERS = ['24CSE48'];
-const IP_API_KEY = process.env.IP_API_KEY || ''; // For IP quality check
+const IP_API_KEY = process.env.IP_API_KEY || '';
 const COLLEGE_LAT = 28.4509370;
 const COLLEGE_LNG = 76.7688120;
-const COLLEGE_RADIUS = 50; // meters
+const COLLEGE_RADIUS = 50;
 
 if (!MONGO_URI) {
   console.error('❌ FATAL: MONGO_URI environment variable is not set!');
@@ -90,8 +90,7 @@ const userSchema = new mongoose.Schema({
   profilePic: { type: String, default: null },
   semester: { type: String, default: '5th' },
   branch: { type: String, default: 'CSE' },
-  // 🔥 NEW: Security tracking fields
-  riskScore: { type: Number, default: 0 }, // 0-100
+  riskScore: { type: Number, default: 0 },
   lastRiskCheck: { type: Date, default: null },
   totalSuspiciousAttempts: { type: Number, default: 0 },
   isDeviceTrusted: { type: Boolean, default: false }
@@ -108,7 +107,6 @@ const attendanceSchema = new mongoose.Schema({
   selfie: { type: String, default: null },
   deviceFingerprint: { type: Object, default: null },
   isVerified: { type: Boolean, default: false },
-  // 🔥 NEW: Security flags for each attendance
   securityFlags: {
     mockDetected: { type: Boolean, default: false },
     sensorMismatch: { type: Boolean, default: false },
@@ -235,7 +233,6 @@ function checkLocation(lat, lng) {
   const distance = COLLEGE_RADIUS * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   return { isInside: distance <= COLLEGE_RADIUS, distance: distance.toFixed(0) };
 }
-
 async function checkStudentBlocked(rollNo) {
   const user = await User.findOne({ rollNo });
   if (!user) return { blocked: false };
@@ -302,14 +299,13 @@ function detectAnomaly(user, lat, lng, reqIP, fingerprint) {
 
 // 🔥 NEW: Risk Scoring Engine
 function calculateRiskScore(checks) {
-  // checks = { mockDetected, sensorMismatch, ipMismatch, vpnDetected, timezoneMismatch, accuracy, heading, altitude }
   let score = 0;
   if (checks.mockDetected) score += 30;
   if (checks.sensorMismatch) score += 25;
   if (checks.ipMismatch) score += 20;
   if (checks.vpnDetected) score += 25;
   if (checks.timezoneMismatch) score += 15;
-  if (checks.accuracy && checks.accuracy < 5) score += 10; // Suspiciously accurate
+  if (checks.accuracy && checks.accuracy < 5) score += 10;
   if (checks.heading === null && checks.speed && checks.speed > 0) score += 10;
   if (checks.altitude === null || checks.altitude === 0) score += 5;
   return Math.min(100, score);
@@ -343,13 +339,9 @@ async function verifyIPLocation(ip, claimedLat, claimedLng) {
 // 🔥 NEW: VPN/Proxy Detection
 async function detectVPN(ip) {
   try {
-    // Using free ip-api.com (also provides proxy info)
     const response = await fetch(`http://ip-api.com/json/${ip}`);
     const data = await response.json();
     if (data.status === 'success') {
-      // ip-api.com doesn't directly provide VPN detection
-      // For production, use services like ipqualityscore.com
-      // For now, we'll check if the IP is from a known cloud provider
       const cloudProviders = ['amazon', 'aws', 'google', 'azure', 'digitalocean', 'linode', 'hetzner'];
       const isp = data.isp ? data.isp.toLowerCase() : '';
       const org = data.org ? data.org.toLowerCase() : '';
@@ -403,6 +395,7 @@ const checkActiveSession = async (req, res, next) => {
 
 // ---------- Routes ----------
 app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active & Secured!'));
+
 // ----- Auth Routes -----
 app.post('/api/auth/register', async (req, res) => {
   try {
@@ -511,7 +504,6 @@ app.get('/api/student/profile/:rollNo', async (req, res) => {
     res.json(user);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
-
 // ----- Admin Routes -----
 app.post('/api/admin/reset-password', async (req, res) => {
   try {
@@ -618,6 +610,7 @@ app.post('/api/auth/verify-qr', async (req, res) => {
     res.json({ message: 'QR verified!', verified: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
+
 // ----- Notices -----
 app.get('/api/notices', async (req, res) => {
   try {
@@ -717,7 +710,212 @@ app.get('/api/admin/all-students/:requesterRollNo', async (req, res) => {
     res.json(students);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
+// ----- Admin Routes -----
+app.post('/api/admin/reset-password', async (req, res) => {
+  try {
+    const { requesterRollNo, targetRollNo, newPassword } = req.body;
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const cleanRoll = targetRollNo.trim().toUpperCase();
+    const hashedPassword = await bcrypt.hash(newPassword || '123456', 10);
+    const updated = await User.findOneAndUpdate({ rollNo: cleanRoll }, { password: hashedPassword });
+    if (!updated) return res.status(404).json({ error: 'Student Roll No not found!' });
+    res.json({ message: `Password reset for ${cleanRoll}!` });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
+app.post('/api/admin/reset-device', async (req, res) => {
+  try {
+    const { requesterRollNo, targetRollNo } = req.body;
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const cleanRoll = targetRollNo.trim().toUpperCase();
+    const user = await User.findOne({ rollNo: cleanRoll });
+    if (!user) return res.status(404).json({ error: `Student ${cleanRoll} not found!` });
+    user.boundDeviceId = null;
+    await user.save();
+    res.json({ message: `✅ Device binding reset for ${cleanRoll}!` });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/admin/reset-anomaly', async (req, res) => {
+  try {
+    const { requesterRollNo, targetRollNo } = req.body;
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const cleanRoll = targetRollNo.trim().toUpperCase();
+    const user = await User.findOne({ rollNo: cleanRoll });
+    if (!user) return res.status(404).json({ error: `Student ${cleanRoll} not found!` });
+    user.anomalyFlag = false;
+    user.anomalyDetectedAt = null;
+    user.lastKnownIP = null;
+    user.lastAttendanceTime = null;
+    user.lastAttendanceLocation = {};
+    user.failedAttempts = 0;
+    user.blockUntil = null;
+    user.riskScore = 0;
+    await user.save();
+    res.json({ message: `✅ Anomaly flag reset for ${cleanRoll}!` });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/admin/update-rollno', async (req, res) => {
+  try {
+    const { requesterRollNo, oldRoll, newRoll } = req.body;
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const cleanOld = oldRoll.trim().toUpperCase();
+    const cleanNew = newRoll.trim().toUpperCase();
+    await User.findOneAndUpdate({ rollNo: cleanOld }, { rollNo: cleanNew });
+    await Attendance.updateMany({ rollNo: cleanOld }, { rollNo: cleanNew });
+    res.json({ message: `Roll Number updated from ${cleanOld} to ${cleanNew}!` });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/admin/delete-student', async (req, res) => {
+  try {
+    const { requesterRollNo, targetRollNo } = req.body;
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const cleanTarget = targetRollNo.trim().toUpperCase();
+    await User.findOneAndDelete({ rollNo: cleanTarget });
+    await Attendance.deleteMany({ rollNo: cleanTarget });
+    res.json({ message: `Account and records deleted for ${cleanTarget}!` });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/faculty/override', verifyRole(['faculty', 'admin']), async (req, res) => {
+  try {
+    const { studentRollNo, subject, date, status } = req.body;
+    await Attendance.findOneAndUpdate({ rollNo: studentRollNo, subject, date }, { status, isVerified: true }, { new: true, upsert: true });
+    res.json({ message: "Attendance updated" });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ----- QR Code Routes -----
+app.post('/api/admin/generate-qr', async (req, res) => {
+  try {
+    const { requesterRollNo } = req.body;
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const passcode = Math.floor(1000 + Math.random() * 9000).toString();
+    const token = `BMERP_QR_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+    await QRCode.deleteMany({});
+    await QRCode.create({ token, passcode, expiresAt });
+    console.log(`✅ QR generated: ${passcode}`);
+    res.json({ message: 'QR generated!', passcode, token, expiresAt });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/auth/verify-qr', async (req, res) => {
+  try {
+    const { passcode } = req.body;
+    if (!passcode) return res.status(400).json({ error: 'Passcode required!' });
+    const qrRecord = await QRCode.findOne({ passcode });
+    if (!qrRecord) return res.status(400).json({ error: 'Invalid passcode!' });
+    if (qrRecord.expiresAt < new Date()) {
+      await QRCode.deleteOne({ _id: qrRecord._id });
+      return res.status(400).json({ error: 'QR expired! Please refresh.' });
+    }
+    await QRCode.deleteOne({ _id: qrRecord._id });
+    res.json({ message: 'QR verified!', verified: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ----- Notices -----
+app.get('/api/notices', async (req, res) => {
+  try {
+    const notices = await Notice.find().sort({ date: -1 }).limit(10);
+    res.json(notices);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/admin/notice', async (req, res) => {
+  try {
+    const { requesterRollNo, title, message } = req.body;
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    if (!message || message.trim() === "") {
+      await Notice.deleteMany({});
+      return res.json({ message: 'Notices cleared!' });
+    }
+    const newNotice = await new Notice({ title: title || 'Announcement', message }).save();
+    res.status(201).json({ message: 'Notice published!', notice: newNotice });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ----- Holiday Routes -----
+app.post('/api/admin/holiday', async (req, res) => {
+  try {
+    const { requesterRollNo, date, reason } = req.body;
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    
+    const parts = date.split('-');
+    const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayName = days[dateObj.getDay()];
+    if (dayName === 'Saturday' || dayName === 'Sunday') {
+      return res.status(400).json({ error: 'Cannot declare holiday on weekend (Saturday/Sunday)!' });
+    }
+    
+    await Holiday.findOneAndUpdate({ date }, { date, reason: reason || 'College Holiday' }, { upsert: true, new: true });
+    res.json({ message: `✅ Holiday declared for ${date}: ${reason || 'College Holiday'}` });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/holidays', async (req, res) => {
+  try {
+    const holidays = await Holiday.find();
+    res.json(holidays);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/date-status/:date', async (req, res) => {
+  try {
+    const status = await checkDateStatus(req.params.date);
+    res.json(status);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ----- Suspicious Activity Logs -----
+app.get('/api/admin/suspicious-logs/:requesterRollNo', async (req, res) => {
+  try {
+    if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const logs = await SuspiciousLog.find().sort({ createdAt: -1 }).limit(200);
+    res.json(logs);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/admin/clear-suspicious-logs/:requesterRollNo', async (req, res) => {
+  try {
+    if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const result = await SuspiciousLog.deleteMany({});
+    res.json({ message: `✅ ${result.deletedCount} logs cleared permanently!` });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/admin/flagged-students/:requesterRollNo', async (req, res) => {
+  try {
+    if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const flaggedStudents = await User.find({ anomalyFlag: true }).select('name rollNo anomalyFlag anomalyDetectedAt lastKnownIP lastAttendanceTime');
+    res.json(flaggedStudents);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/admin/auto-unblock-status/:requesterRollNo', async (req, res) => {
+  try {
+    if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const flaggedStudents = await User.find({ anomalyFlag: true }).select('name rollNo anomalyFlag anomalyDetectedAt');
+    const status = flaggedStudents.map(s => {
+      const timeLeft = s.anomalyDetectedAt ? 24 - ((Date.now() - new Date(s.anomalyDetectedAt).getTime()) / (60 * 60 * 1000)) : 0;
+      return { rollNo: s.rollNo, name: s.name, timeLeftHours: Math.max(0, Math.round(timeLeft * 10) / 10), willAutoUnblockAt: s.anomalyDetectedAt ? new Date(new Date(s.anomalyDetectedAt).getTime() + 24 * 60 * 60 * 1000).toLocaleString() : 'N/A' };
+    });
+    res.json(status);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/admin/all-students/:requesterRollNo', async (req, res) => {
+  try {
+    const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo)) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const students = await User.find({ role: 'student' }).select('name rollNo role anomalyFlag anomalyDetectedAt boundDeviceId createdAt deviceFingerprint failedAttempts blockUntil email phone semester branch profilePic riskScore totalSuspiciousAttempts').sort({ rollNo: 1 });
+    res.json(students);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 // 🔥 UPDATED: Dashboard Stats - Counts UNIQUE students, not lectures
 app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
   try {
@@ -795,7 +993,7 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
   try {
     const { 
       rollNo, name, subject, latitude, longitude, selfie, deviceFingerprint,
-      securityChecks  // 🔥 NEW: Frontend sends security check results
+      securityChecks
     } = req.body;
     const today = new Date();
     const todayDate = today.toISOString().split('T')[0];
@@ -824,7 +1022,6 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
     const clientIP = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown';
     const userAgent = req.headers['user-agent'] || 'unknown';
     
-    // 🔥 NEW: Run all security checks
     const securityFlags = {
       mockDetected: securityChecks?.mockDetected || false,
       sensorMismatch: securityChecks?.sensorMismatch || false,
@@ -846,7 +1043,6 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
       speed: securityChecks?.speed
     };
     
-    // Check IP Geolocation
     const ipCheck = await verifyIPLocation(clientIP, latitude, longitude);
     if (ipCheck.suspicious) {
       securityFlags.ipMismatch = true;
@@ -854,7 +1050,6 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
       await logSuspiciousActivity(cleanRoll, name, 'IP_MISMATCH', ipCheck.reason, { latitude, longitude }, clientIP, deviceFingerprint);
     }
     
-    // Check VPN/Proxy
     const vpnCheck = await detectVPN(clientIP);
     if (vpnCheck.suspicious) {
       securityFlags.vpnDetected = true;
@@ -862,10 +1057,8 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
       await logSuspiciousActivity(cleanRoll, name, 'VPN_DETECTED', vpnCheck.reason, { latitude, longitude }, clientIP, deviceFingerprint);
     }
     
-    // Calculate risk score
     riskScore = calculateRiskScore(riskChecks);
     
-    // Check existing anomaly
     const anomaly = detectAnomaly(user, latitude, longitude, clientIP, deviceFingerprint);
     if (anomaly.isAnomaly) {
       await incrementFailedAttempts(cleanRoll, name, anomaly.reason, { latitude, longitude }, clientIP, deviceFingerprint, riskScore);
@@ -880,7 +1073,6 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
       });
     }
     
-    // If risk score is high, block attendance
     if (riskScore >= 50) {
       await incrementFailedAttempts(cleanRoll, name, `High risk score: ${riskScore}`, { latitude, longitude }, clientIP, deviceFingerprint, riskScore);
       await logSuspiciousActivity(cleanRoll, name, 'BLOCKED', `Risk score ${riskScore} - possible mock location`, { latitude, longitude }, clientIP, deviceFingerprint, riskScore);
@@ -898,9 +1090,8 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
     
     user.failedAttempts = 0;
     user.blockUntil = null;
-    user.riskScore = Math.max(0, (user.riskScore || 0) - 5); // Reduce risk score over time
+    user.riskScore = Math.max(0, (user.riskScore || 0) - 5);
     
-    // Save attendance with security flags
     await new Attendance({
       rollNo: cleanRoll,
       studentName: name,
@@ -937,6 +1128,7 @@ app.post('/api/attendance/mark', checkActiveSession, async (req, res) => {
     res.status(500).json({ error: err.message }); 
   }
 });
+
 // ----- 🔥 UPDATED: Full Day Attendance with Security Checks -----
 app.post('/api/attendance/mark-fullday', checkActiveSession, async (req, res) => {
   try {
@@ -965,7 +1157,6 @@ app.post('/api/attendance/mark-fullday', checkActiveSession, async (req, res) =>
     const clientIP = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown';
     const userAgent = req.headers['user-agent'] || 'unknown';
     
-    // 🔥 NEW: Security checks for full day
     const securityFlags = {
       mockDetected: securityChecks?.mockDetected || false,
       sensorMismatch: securityChecks?.sensorMismatch || false,
@@ -1059,7 +1250,6 @@ app.post('/api/attendance/mark-fullday', checkActiveSession, async (req, res) =>
     res.status(201).json({ message: `✅ Full Day Marked (${markedCount} Lectures)!`, riskScore: user.riskScore });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
-
 // ----- 🔥 UPDATED: Admin Manual Attendance with Security Checks -----
 app.post('/api/admin/manual-attendance', async (req, res) => {
   try {
@@ -1265,7 +1455,6 @@ app.get('/api/export/working-days/:requesterRollNo', async (req, res) => {
       if (r.status === 'Present') studentMap[r.rollNo].present += 1;
     });
     
-    // Get risk scores from User model
     const users = await User.find({ role: 'student' }).select('rollNo riskScore totalSuspiciousAttempts');
     const riskMap = {};
     users.forEach(u => {
