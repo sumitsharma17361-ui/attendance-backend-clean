@@ -50,7 +50,7 @@
         .notice-marquee p { display:inline-block; animation:marquee 16s linear infinite; }
         @keyframes marquee { 0% { transform:translateX(100%); } 100% { transform:translateX(-100%); } }
         .app-body { padding:14px; }
-        input, select { width:100%; padding:9px 12px; margin-bottom:8px; background:#f8fafc; border:1px solid var(--card-border); border-radius:8px; font-size:11px; font-weight:600; color:var(--text-main); outline:none; transition:all 0.3s; }
+                input, select { width:100%; padding:9px 12px; margin-bottom:8px; background:#f8fafc; border:1px solid var(--card-border); border-radius:8px; font-size:11px; font-weight:600; color:var(--text-main); outline:none; transition:all 0.3s; }
         select option { background:#fff; color:#0f172a; }
         input::placeholder { color:#94a3b8; font-weight:500; }
         input:focus, select:focus { background:#fff; border-color:var(--primary); box-shadow:0 0 0 3px rgba(37,99,235,0.10); }
@@ -136,7 +136,7 @@
         .risk-badge-low { background:#dcfce7; color:#15803d; }
         .risk-badge-medium { background:#fef3c7; color:#92400e; }
         .risk-badge-high { background:#fef2f2; color:#991b1b; }
-                #qrScannerContainer {
+        #qrScannerContainer {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -153,7 +153,6 @@
         #qrScannerContainer .close-scanner:hover { background: #f1f5f9; }
         .qr-success { color: #4ade80 !important; }
         .qr-error { color: #f87171 !important; }
-
         .subject-checkbox-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -188,11 +187,8 @@
             border: none;
         }
         .subject-checkbox-container .select-all:hover { background: #cbd5e1; }
-
         .status-holiday { background: #fef3c7; color: #92400e; border-color: #fde68a; }
         .status-weekend { background: #e2e8f0; color: #475569; border-color: #cbd5e1; }
-        
-        /* 🔥 NEW: Security Banner Styles */
         .security-banner {
             background: #f0fdf4;
             border: 1px solid #bbf7d0;
@@ -256,206 +252,203 @@
         <button class="close-scanner" onclick="stopQRScanner()">✕ Cancel Scan</button>
     </div>
     <div class="app-container">
-    <div class="app-header">
-        <div class="app-header-title">
-            <h1>BM Group of Institutions</h1>
-            <p>B.Tech CSE - 5th Semester (Room 203)</p>
+<div class="app-header">
+    <div class="app-header-title">
+        <h1>BM Group of Institutions</h1>
+        <p>B.Tech CSE - 5th Semester (Room 203)</p>
+    </div>
+    <div class="header-avatar-badge" id="headerAvatarBox" style="display:none;">
+        <div class="avatar-circle" id="userAvatarText">SS</div>
+    </div>
+</div>
+<div class="notice-banner" id="noticeBanner" style="display:none;">
+    <svg class="svg-icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    <div class="notice-marquee"><p id="noticeText">Loading announcements...</p></div>
+</div>
+<div class="app-body">
+    <!-- Auth -->
+    <div id="auth-box" class="tab-content-active">
+        <div id="register-fields" style="display:none;">
+            <input type="text" id="regName" placeholder="Full Student Name">
         </div>
-        <div class="header-avatar-badge" id="headerAvatarBox" style="display:none;">
-            <div class="avatar-circle" id="userAvatarText">SS</div>
+        <input type="text" id="rollNo" placeholder="Roll Number (e.g. 24CSE48)">
+        <div class="password-wrapper">
+            <input type="password" id="password" placeholder="Password">
+            <span class="eye-icon" id="toggleEye" onclick="togglePassword()">
+                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </span>
+        </div>
+        <button class="btn btn-primary" id="authBtn" onclick="handleAuth()">Sign In</button>
+        <span style="color:var(--primary); cursor:pointer; font-size:11px; display:block; text-align:center; margin-top:10px; font-weight:600;" id="toggleLink" onclick="toggleMode()">New Student? Register Account</span>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dash-box" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div>
+                <h3 style="font-size:13px; font-weight:800;">
+                    <span id="welcomeMsg">Welcome!</span>
+                    <span id="defaulterTag" class="defaulter-badge" style="display:none;">DEBARRED RISK</span>
+                    <span id="riskScoreBadge" style="display:none; font-size:9px; margin-left:6px;"></span>
+                </h3>
+                <p style="font-size:10px; color:var(--text-muted); font-weight:600;"><span id="roleLabel">Roll</span>: <span id="userRoll" style="font-weight:700;"></span></p>
+            </div>
+            <button class="btn btn-danger" style="width:auto; padding:4px 8px; margin:0; font-size:10px;" onclick="logout()">Logout</button>
+        </div>
+
+        <!-- Security Status Banner -->
+        <div id="securityBanner" class="security-banner" style="display:none;">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+            <span id="securityBannerText">Device Trusted</span>
+        </div>
+
+        <div class="stats-grid" id="studentStatsGrid">
+            <div class="stat-card">
+                <div class="value" id="totalDaysCount">0</div>
+                <div class="label">Academic Lectures</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="attendancePct">0%</div>
+                <div class="label">Attendance Status</div>
+            </div>
+        </div>
+
+        <div class="stats-grid" id="adminStatsGrid" style="display:none;">
+            <div class="stat-card">
+                <div class="value" id="adminTotalStudents">0</div>
+                <div class="label">Enrolled Students</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="adminClassAvg">78.5%</div>
+                <div class="label">Class Attendance Avg</div>
+            </div>
+        </div>
+
+        <div class="simulator-card" id="simulatorBox">
+            <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+            <div><b>Attendance Advisor:</b> <span id="advisorText">Calculating criteria...</span></div>
+        </div>
+        <!-- Admin Live Dashboard -->
+<div id="adminLiveDashboard" style="display:none; margin:10px 0;">
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="value" id="liveTotalStudents">0</div>
+            <div class="label">Total Students</div>
+        </div>
+        <div class="stat-card">
+            <div class="value" id="liveTodayPresent">0</div>
+            <div class="label">Present Today</div>
+        </div>
+        <div class="stat-card">
+            <div class="value" id="liveTodayAbsent">0</div>
+            <div class="label">Absent Today</div>
+        </div>
+        <div class="stat-card">
+            <div class="value" id="liveOverallPct">0%</div>
+            <div class="label">Overall %</div>
         </div>
     </div>
-    <div class="notice-banner" id="noticeBanner" style="display:none;">
-        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        <div class="notice-marquee"><p id="noticeText">Loading announcements...</p></div>
-    </div>
-    <div class="app-body">
-                <!-- Auth -->
-        <div id="auth-box" class="tab-content-active">
-            <div id="register-fields" style="display:none;">
-                <input type="text" id="regName" placeholder="Full Student Name">
-            </div>
-            <input type="text" id="rollNo" placeholder="Roll Number (e.g. 24CSE48)">
-            <div class="password-wrapper">
-                <input type="password" id="password" placeholder="Password">
-                <span class="eye-icon" id="toggleEye" onclick="togglePassword()">
-                    <svg class="svg-icon" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                </span>
-            </div>
-            <button class="btn btn-primary" id="authBtn" onclick="handleAuth()">Sign In</button>
-            <span style="color:var(--primary); cursor:pointer; font-size:11px; display:block; text-align:center; margin-top:10px; font-weight:600;" id="toggleLink" onclick="toggleMode()">New Student? Register Account</span>
+    <button class="btn btn-outline btn-sm" onclick="loadDashboardStats()" style="padding:4px; font-size:9px;">Refresh Stats</button>
+</div>
+
+<div class="quick-portals-card">
+    <span style="font-size:9px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Quick Portals</span>
+    <div class="portal-grid">
+        <div class="portal-btn" onclick="window.open('https://erp.bmctm.com/fees','_blank')">
+            <svg class="svg-icon" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+            <span>Pay Fees</span>
         </div>
+        <div class="portal-btn" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login','_blank')">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span>Admit Card</span>
+        </div>
+        <div class="portal-btn" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login','_blank')">
+            <svg class="svg-icon" viewBox="0 0 24 24"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+            <span>Results</span>
+        </div>
+    </div>
+</div>
 
-        <!-- Dashboard -->
-        <div id="dash-box" style="display:none;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <div>
-                    <h3 style="font-size:13px; font-weight:800;">
-                        <span id="welcomeMsg">Welcome!</span>
-                        <span id="defaulterTag" class="defaulter-badge" style="display:none;">DEBARRED RISK</span>
-                        <!-- 🔥 NEW: Risk Score Badge -->
-                        <span id="riskScoreBadge" style="display:none; font-size:9px; margin-left:6px;"></span>
-                    </h3>
-                    <p style="font-size:10px; color:var(--text-muted); font-weight:600;"><span id="roleLabel">Roll</span>: <span id="userRoll" style="font-weight:700;"></span></p>
-                </div>
-                <button class="btn btn-danger" style="width:auto; padding:4px 8px; margin:0; font-size:10px;" onclick="logout()">Logout</button>
-            </div>
-
-            <!-- 🔥 NEW: Security Status Banner -->
-            <div id="securityBanner" class="security-banner" style="display:none;">
-                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-                <span id="securityBannerText">Device Trusted</span>
-            </div>
-
-            <div class="stats-grid" id="studentStatsGrid">
-                <div class="stat-card">
-                    <div class="value" id="totalDaysCount">0</div>
-                    <div class="label">Academic Lectures</div>
-                </div>
-                <div class="stat-card">
-                    <div class="value" id="attendancePct">0%</div>
-                    <div class="label">Attendance Status</div>
-                </div>
-            </div>
-
-            <div class="stats-grid" id="adminStatsGrid" style="display:none;">
-                <div class="stat-card">
-                    <div class="value" id="adminTotalStudents">0</div>
-                    <div class="label">Enrolled Students</div>
-                </div>
-                <div class="stat-card">
-                    <div class="value" id="adminClassAvg">78.5%</div>
-                    <div class="label">Class Attendance Avg</div>
-                </div>
-            </div>
-
-            <div class="simulator-card" id="simulatorBox">
-                <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-                <div><b>Attendance Advisor:</b> <span id="advisorText">Calculating criteria...</span></div>
-            </div>
-
-            <!-- Admin Live Dashboard -->
-            <div id="adminLiveDashboard" style="display:none; margin:10px 0;">
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="value" id="liveTotalStudents">0</div>
-                        <div class="label">Total Students</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="value" id="liveTodayPresent">0</div>
-                        <div class="label">Present Today</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="value" id="liveTodayAbsent">0</div>
-                        <div class="label">Absent Today</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="value" id="liveOverallPct">0%</div>
-                        <div class="label">Overall %</div>
-                    </div>
-                </div>
-                <button class="btn btn-outline btn-sm" onclick="loadDashboardStats()" style="padding:4px; font-size:9px;">Refresh Stats</button>
-            </div>
-
-            <div class="quick-portals-card">
-                <span style="font-size:9px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Quick Portals</span>
-                <div class="portal-grid">
-                    <div class="portal-btn" onclick="window.open('https://erp.bmctm.com/fees','_blank')">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-                        <span>Pay Fees</span>
-                    </div>
-                    <div class="portal-btn" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login','_blank')">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-                        <span>Admit Card</span>
-                    </div>
-                    <div class="portal-btn" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login','_blank')">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
-                        <span>Results</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="admin-box" id="faceEnrollBox" style="margin-bottom:10px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <span style="font-size:10px; font-weight:800; color:var(--text-main);">AI Face ID Status:</span>
-                        <span id="faceStatusBadge" class="badge" style="background:#f1f5f9; color:var(--text-muted); margin-left:3px;">Not Enrolled</span>
-                    </div>
-                    <button class="action-btn" style="background:var(--primary); color:white;" onclick="openCameraModal('ENROLL')">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
-                        Enroll Face
-                    </button>
-                </div>
-                <div id="cameraModal" style="display:none; margin-top:8px; text-align:center;">
-                    <div class="webcam-box">
-                        <video id="webcamVideo" autoplay playsinline muted></video>
-                        <div class="scan-overlay"></div>
-                    </div>
-                    <p id="cameraScanStatus" style="font-size:10px; font-weight:700; color:var(--primary); margin-bottom:4px;">Loading Face-AI Neural Engine...</p>
-                    <button class="btn btn-primary" id="camActionBtn" onclick="executeCameraAction()" style="padding:6px; font-size:10px;">Scan 68-Point Mesh</button>
-                    <button class="btn btn-outline" onclick="closeCameraModal()" style="padding:5px; font-size:9px; margin-top:3px;">Cancel</button>
-                </div>
-            </div>
-
-            <div class="tab-bar">
-                <div class="tab-item active" id="studentTabHeader" onclick="switchTab('markTab')">Attendance</div>
-                <div class="tab-item" id="adminTabHeader" style="display:none;" onclick="switchTab('adminTab')">Admin Control</div>
-            </div>
-
-            <div id="markTab" class="tab-content-active">
-                <button class="btn btn-primary" onclick="openFullDayPasscodePrompt()" style="padding:9px; font-size:10px;">
-                    <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                    Mark Full Day Attendance
-                </button>
-                
-                <div class="action-buttons-grid">
-                    <button class="btn btn-outline" onclick="openCameraModal('CHECKIN')">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        Face Verify
-                    </button>
-                    <button class="btn btn-accent" onclick="startQRScanner()">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/></svg>
-                        Scan QR
-                    </button>
-                </div>
-                    
-    <div style="text-align:center; font-size:9px; color:var(--text-muted); margin: 10px 0 3px 0; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Live Timetable</div>
-    <div class="period-card" id="periodCardBox">
+<div class="admin-box" id="faceEnrollBox" style="margin-bottom:10px;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
         <div>
-            <span style="font-size:8px; font-weight:700; color:var(--text-muted); text-transform:uppercase;" id="periodTimeSlotLabel">CURRENT PERIOD:</span>
-            <h4 id="activePeriodName" style="font-size:11px; font-weight:800; color:#0f172a; margin-top:1px;">Checking...</h4>
+            <span style="font-size:10px; font-weight:800; color:var(--text-main);">AI Face ID Status:</span>
+            <span id="faceStatusBadge" class="badge" style="background:#f1f5f9; color:var(--text-muted); margin-left:3px;">Not Enrolled</span>
         </div>
-        <button class="action-btn" id="markPeriodBtn" style="background:var(--success); color:white; padding:5px 10px;" onclick="markActivePeriodAttendance()">Mark</button>
+        <button class="action-btn" style="background:var(--primary); color:white;" onclick="openCameraModal('ENROLL')">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+            Enroll Face
+        </button>
     </div>
-
-    <div class="calendar-container">
-        <div class="calendar-header">
-            <span>Attendance Calendar</span>
-            <select id="calendarViewMode" onchange="toggleCalendarView()" style="padding:3px 6px; font-size:9px; margin:0; width:auto;">
-                <option value="CURRENT_MONTH">Current</option>
-                <option value="FULL_SEMESTER">Full Semester</option>
-            </select>
+    <div id="cameraModal" style="display:none; margin-top:8px; text-align:center;">
+        <div class="webcam-box">
+            <video id="webcamVideo" autoplay playsinline muted></video>
+            <div class="scan-overlay"></div>
         </div>
-        <div id="calendarDisplayWrapper"></div>
+        <p id="cameraScanStatus" style="font-size:10px; font-weight:700; color:var(--primary); margin-bottom:4px;">Loading Face-AI Neural Engine...</p>
+        <button class="btn btn-primary" id="camActionBtn" onclick="executeCameraAction()" style="padding:6px; font-size:10px;">Scan 68-Point Mesh</button>
+        <button class="btn btn-outline" onclick="closeCameraModal()" style="padding:5px; font-size:9px; margin-top:3px;">Cancel</button>
     </div>
+</div>
 
-    <div style="margin-top:8px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-            <h4 style="font-size:10px; color:var(--text-muted); font-weight:700;">My Attendance Logs:</h4>
-            <button class="btn btn-success btn-sm" onclick="openStudentExcelModal()">
-                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                Excel
+<div class="tab-bar">
+    <div class="tab-item active" id="studentTabHeader" onclick="switchTab('markTab')">Attendance</div>
+    <div class="tab-item" id="adminTabHeader" style="display:none;" onclick="switchTab('adminTab')">Admin Control</div>
+</div>
+        <div id="markTab" class="tab-content-active">
+            <button class="btn btn-primary" onclick="openFullDayPasscodePrompt()" style="padding:9px; font-size:10px;">
+                <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                Mark Full Day Attendance
             </button>
-        </div>
-        <div class="table-container" style="max-height:200px;">
-            <table id="myHistoryTable">
-                <thead><tr><th>Date</th><th>Day</th><th>Lectures</th><th>Status</th></tr></thead>
-                <tbody><tr><td colspan="4" style="text-align:center; padding:12px;">Loading...</td></tr></tbody>
-            </table>
-        </div>
-    </div>
+            
+            <div class="action-buttons-grid">
+                <button class="btn btn-outline" onclick="openCameraModal('CHECKIN')">
+                    <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    Face Verify
+                </button>
+                <button class="btn btn-accent" onclick="startQRScanner()">
+                    <svg class="svg-icon" viewBox="0 0 24 24"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/></svg>
+                    Scan QR
+                </button>
             </div>
-                        <!-- Admin Tab -->
+                
+<div style="text-align:center; font-size:9px; color:var(--text-muted); margin: 10px 0 3px 0; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Live Timetable</div>
+<div class="period-card" id="periodCardBox">
+    <div>
+        <span style="font-size:8px; font-weight:700; color:var(--text-muted); text-transform:uppercase;" id="periodTimeSlotLabel">CURRENT PERIOD:</span>
+        <h4 id="activePeriodName" style="font-size:11px; font-weight:800; color:#0f172a; margin-top:1px;">Checking...</h4>
+    </div>
+    <button class="action-btn" id="markPeriodBtn" style="background:var(--success); color:white; padding:5px 10px;" onclick="markActivePeriodAttendance()">Mark</button>
+</div>
+
+<div class="calendar-container">
+    <div class="calendar-header">
+        <span>Attendance Calendar</span>
+        <select id="calendarViewMode" onchange="toggleCalendarView()" style="padding:3px 6px; font-size:9px; margin:0; width:auto;">
+            <option value="CURRENT_MONTH">Current</option>
+            <option value="FULL_SEMESTER">Full Semester</option>
+        </select>
+    </div>
+    <div id="calendarDisplayWrapper"></div>
+</div>
+
+<div style="margin-top:8px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <h4 style="font-size:10px; color:var(--text-muted); font-weight:700;">My Attendance Logs:</h4>
+        <button class="btn btn-success btn-sm" onclick="openStudentExcelModal()">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+            Excel
+        </button>
+    </div>
+    <div class="table-container" style="max-height:200px;">
+        <table id="myHistoryTable">
+            <thead><tr><th>Date</th><th>Day</th><th>Lectures</th><th>Status</th></tr></thead>
+            <tbody><tr><td colspan="4" style="text-align:center; padding:12px;">Loading...</td></tr></tbody>
+        </table>
+    </div>
+</div>
+        </div>
+                    <!-- Admin Tab -->
 <div id="adminTab" style="display:none;">
     <div class="admin-nav">
         <div class="admin-nav-item active" onclick="switchAdminSubTab('subReports')">Excel</div>
@@ -480,19 +473,16 @@
         </select>
         <button class="btn btn-success btn-sm" onclick="exportExcelGrid()" style="padding:8px; margin:0;">Download Excel Report</button>
         
-        <!-- 🔥 Working Days Export Button -->
         <button class="btn btn-primary btn-sm" onclick="downloadWorkingDaysReport()" style="padding:8px; margin:4px 0 0 0; background:#0284c7;">
             <svg class="svg-icon" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="8" x2="16" y1="2" y2="2"/><line x1="8" x2="16" y1="22" y2="22"/><line x1="2" x2="2" y1="8" y2="16"/><line x1="22" x2="22" y1="8" y2="16"/></svg>
             Download Working Days Report
         </button>
         
-        <!-- 🔥 Google Sheets Export Button -->
         <button class="btn btn-accent btn-sm" onclick="downloadGoogleSheetsExport()" style="padding:8px; margin:4px 0 0 0;">
             <svg class="svg-icon" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="12" x2="12" y1="4" y2="20"/></svg>
             Export to Google Sheets (CSV)
         </button>
         
-        <!-- 🔥 NEW: Security Report Export -->
         <button class="btn btn-danger btn-sm" onclick="downloadSecurityReport()" style="padding:8px; margin:4px 0 0 0; background:#dc2626;">
             <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
             Download Security Report
@@ -526,81 +516,80 @@
             📚 Mark All Subjects for this Day
         </button>
     </div>
-    
     <div id="subHoliday" class="admin-box" style="display:none;">
-        <span class="sub-section-title">📅 Declare Official Holiday</span>
-        <input type="date" id="holidayDate" style="font-size:10px; padding:7px;">
-        <input type="text" id="holidayReason" placeholder="Reason (e.g. Diwali/Rainy Day)" style="font-size:10px; padding:7px;">
-        <button class="btn btn-warning btn-sm" onclick="declareHoliday()" style="padding:7px; margin:0;">Mark Holiday</button>
-        <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">💡 Holiday reason will show to students (e.g., "Diwali", "Rainy Day")</p>
+    <span class="sub-section-title">📅 Declare Official Holiday</span>
+    <input type="date" id="holidayDate" style="font-size:10px; padding:7px;">
+    <input type="text" id="holidayReason" placeholder="Reason (e.g. Diwali/Rainy Day)" style="font-size:10px; padding:7px;">
+    <button class="btn btn-warning btn-sm" onclick="declareHoliday()" style="padding:7px; margin:0;">Mark Holiday</button>
+    <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">💡 Holiday reason will show to students (e.g., "Diwali", "Rainy Day")</p>
+</div>
+
+<div id="subQR" class="admin-box" style="display:none; text-align:center;">
+    <span class="sub-section-title">📱 Dynamic QR & Passcode</span>
+    <p style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Project this screen. Students scan QR or enter passcode.</p>
+    <div style="background:#f8fafc; padding:8px; border-radius:8px; margin-bottom:6px; border:1px solid var(--card-border);">
+        <span style="font-size:9px; font-weight:700; color:var(--text-muted);">CLASS PASSCODE:</span>
+        <h2 id="liveClassPasscode" style="font-size:20px; font-weight:900; color:var(--primary); letter-spacing:4px;">9842</h2>
+    </div>
+    <div id="qrcode" style="display:flex; justify-content:center; margin:6px 0;"></div>
+    <button class="btn btn-outline btn-sm" id="refreshQrBtn" onclick="generateDynamicQR()" style="padding:6px;">
+        <svg id="refreshIcon" class="svg-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+        Refresh
+    </button>
+</div>
+
+<div id="subTools" style="display:none;">
+    <div class="tool-sub-card">
+        <span class="tool-title" style="color:var(--primary);">➕ Register New Student</span>
+        <input type="text" id="adminRegName" placeholder="Full Student Name" style="font-size:10px; padding:7px;">
+        <input type="text" id="adminRegRoll" placeholder="Roll Number (e.g. 24CSE14)" style="font-size:10px; padding:7px;">
+        <input type="text" id="adminRegPass" placeholder="Password (Default: 123456)" style="font-size:10px; padding:7px;">
+        <button class="btn btn-primary btn-sm" onclick="adminRegisterStudent()" style="padding:7px; margin:0;">Register</button>
+    </div>
+    
+    <div class="tool-sub-card" style="border-color:#93c5fd; background:#eff6ff;">
+        <span class="tool-title" style="color:#1d4ed8;">🔓 Reset Device Binding</span>
+        <input type="text" id="resetDeviceRoll" placeholder="Student Roll No (e.g. 24CSE14)" style="font-size:10px; padding:7px;">
+        <button class="btn btn-primary btn-sm" onclick="resetDeviceBinding()" style="padding:7px; margin:0;">Reset</button>
     </div>
 
-    <div id="subQR" class="admin-box" style="display:none; text-align:center;">
-        <span class="sub-section-title">📱 Dynamic QR & Passcode</span>
-        <p style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Project this screen. Students scan QR or enter passcode.</p>
-        <div style="background:#f8fafc; padding:8px; border-radius:8px; margin-bottom:6px; border:1px solid var(--card-border);">
-            <span style="font-size:9px; font-weight:700; color:var(--text-muted);">CLASS PASSCODE:</span>
-            <h2 id="liveClassPasscode" style="font-size:20px; font-weight:900; color:var(--primary); letter-spacing:4px;">9842</h2>
-        </div>
-        <div id="qrcode" style="display:flex; justify-content:center; margin:6px 0;"></div>
-        <button class="btn btn-outline btn-sm" id="refreshQrBtn" onclick="generateDynamicQR()" style="padding:6px;">
-            <svg id="refreshIcon" class="svg-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
-            Refresh
-        </button>
+    <div class="tool-sub-card" style="border-color:#f59e0b; background:#fffbeb;">
+        <span class="tool-title" style="color:#d97706;">⚠️ Unblock Student</span>
+        <input type="text" id="resetAnomalyRoll" placeholder="Student Roll No (e.g. 24CSE14)" style="font-size:10px; padding:7px;">
+        <button class="btn btn-warning btn-sm" onclick="resetAnomalyFlag()" style="padding:7px; margin:0;">Unblock</button>
     </div>
 
-    <div id="subTools" style="display:none;">
-        <div class="tool-sub-card">
-            <span class="tool-title" style="color:var(--primary);">➕ Register New Student</span>
-            <input type="text" id="adminRegName" placeholder="Full Student Name" style="font-size:10px; padding:7px;">
-            <input type="text" id="adminRegRoll" placeholder="Roll Number (e.g. 24CSE14)" style="font-size:10px; padding:7px;">
-            <input type="text" id="adminRegPass" placeholder="Password (Default: 123456)" style="font-size:10px; padding:7px;">
-            <button class="btn btn-primary btn-sm" onclick="adminRegisterStudent()" style="padding:7px; margin:0;">Register</button>
-        </div>
-        
-        <div class="tool-sub-card" style="border-color:#93c5fd; background:#eff6ff;">
-            <span class="tool-title" style="color:#1d4ed8;">🔓 Reset Device Binding</span>
-            <input type="text" id="resetDeviceRoll" placeholder="Student Roll No (e.g. 24CSE14)" style="font-size:10px; padding:7px;">
-            <button class="btn btn-primary btn-sm" onclick="resetDeviceBinding()" style="padding:7px; margin:0;">Reset</button>
-        </div>
-
-        <div class="tool-sub-card" style="border-color:#f59e0b; background:#fffbeb;">
-            <span class="tool-title" style="color:#d97706;">⚠️ Unblock Student</span>
-            <input type="text" id="resetAnomalyRoll" placeholder="Student Roll No (e.g. 24CSE14)" style="font-size:10px; padding:7px;">
-            <button class="btn btn-warning btn-sm" onclick="resetAnomalyFlag()" style="padding:7px; margin:0;">Unblock</button>
-        </div>
-
-        <div class="tool-sub-card">
-            <span class="tool-title" style="color:var(--text-main);">📢 Broadcast Notice</span>
-            <input type="text" id="noticeMsg" placeholder="Notice text..." style="font-size:10px; padding:7px;">
-            <div class="flex-buttons">
-                <button class="btn btn-primary btn-sm" onclick="postNotice()" style="padding:6px;">Publish</button>
-                <button class="btn btn-danger btn-sm" onclick="clearNotice()" style="padding:6px;">Clear</button>
-            </div>
-        </div>
-
-        <div class="tool-sub-card">
-            <span class="tool-title" style="color:var(--primary);">🔄 Update Roll Number</span>
-            <input type="text" id="oldRollFormat" placeholder="Old Roll (e.g. 24-CSE-14)" style="font-size:10px; padding:7px;">
-            <input type="text" id="newRollFormat" placeholder="New Roll (e.g. 24CSE14)" style="font-size:10px; padding:7px;">
-            <button class="btn btn-primary btn-sm" onclick="updateRollNumberFormat()" style="padding:7px; margin:0;">Update</button>
-        </div>
-
-        <div class="tool-sub-card">
-            <span class="tool-title" style="color:var(--warning);">🔑 Reset Password</span>
-            <input type="text" id="resetRoll" placeholder="Student Roll No" style="font-size:10px; padding:7px;">
-            <input type="text" id="resetPass" placeholder="New Password" style="font-size:10px; padding:7px;">
-            <button class="btn btn-warning btn-sm" onclick="resetStudentPassword()" style="padding:7px; margin:0;">Reset</button>
-        </div>
-
-        <div class="tool-sub-card" style="border-color:#fecaca; background:#fef2f2;">
-            <span class="tool-title" style="color:#b91c1c;">🗑️ Delete Account</span>
-            <input type="text" id="deleteStudentRoll" placeholder="Roll No to Delete" style="font-size:10px; padding:7px;">
-            <button class="btn btn-danger btn-sm" onclick="deleteEntireStudentAccount()" style="padding:7px; margin:0;">Delete Permanently</button>
+    <div class="tool-sub-card">
+        <span class="tool-title" style="color:var(--text-main);">📢 Broadcast Notice</span>
+        <input type="text" id="noticeMsg" placeholder="Notice text..." style="font-size:10px; padding:7px;">
+        <div class="flex-buttons">
+            <button class="btn btn-primary btn-sm" onclick="postNotice()" style="padding:6px;">Publish</button>
+            <button class="btn btn-danger btn-sm" onclick="clearNotice()" style="padding:6px;">Clear</button>
         </div>
     </div>
-                <div id="subSecurity" style="display:none;">
-        <!-- 🔥 NEW: Security Analytics Dashboard -->
+
+    <div class="tool-sub-card">
+        <span class="tool-title" style="color:var(--primary);">🔄 Update Roll Number</span>
+        <input type="text" id="oldRollFormat" placeholder="Old Roll (e.g. 24-CSE-14)" style="font-size:10px; padding:7px;">
+        <input type="text" id="newRollFormat" placeholder="New Roll (e.g. 24CSE14)" style="font-size:10px; padding:7px;">
+        <button class="btn btn-primary btn-sm" onclick="updateRollNumberFormat()" style="padding:7px; margin:0;">Update</button>
+    </div>
+
+    <div class="tool-sub-card">
+        <span class="tool-title" style="color:var(--warning);">🔑 Reset Password</span>
+        <input type="text" id="resetRoll" placeholder="Student Roll No" style="font-size:10px; padding:7px;">
+        <input type="text" id="resetPass" placeholder="New Password" style="font-size:10px; padding:7px;">
+        <button class="btn btn-warning btn-sm" onclick="resetStudentPassword()" style="padding:7px; margin:0;">Reset</button>
+    </div>
+
+    <div class="tool-sub-card" style="border-color:#fecaca; background:#fef2f2;">
+        <span class="tool-title" style="color:#b91c1c;">🗑️ Delete Account</span>
+        <input type="text" id="deleteStudentRoll" placeholder="Roll No to Delete" style="font-size:10px; padding:7px;">
+        <button class="btn btn-danger btn-sm" onclick="deleteEntireStudentAccount()" style="padding:7px; margin:0;">Delete Permanently</button>
+    </div>
+</div>
+    <div id="subSecurity" style="display:none;">
+        <!-- Security Analytics Dashboard -->
         <div class="admin-box" id="securityAnalyticsBox">
             <span class="sub-section-title">📊 Security Risk Analytics</span>
             <div id="securityAnalyticsContent">
@@ -629,7 +618,7 @@
             </div>
         </div>
 
-        <!-- 🔥 NEW: Security Logs with Filter -->
+        <!-- Security Logs with Filter -->
         <div class="admin-box">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:4px;">
                 <span class="sub-section-title" style="margin:0;">🛡️ Suspicious Activity Logs</span>
@@ -704,7 +693,7 @@
 </div>
 </div>
     </div>
-    <script>
+        <script>
 const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; 
 const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/";
 let html5QrCode = null;
@@ -770,215 +759,13 @@ function sanitizeAndValidateRollNo(rawRoll) {
     return { isValid: strictRegex.test(clean), cleanRoll: clean };
 }
 
-// ============================================================
-// 🔥 NEW: SECURITY FUNCTIONS - Mock Location & Sensor Detection
-// ============================================================
-
-// 1. Mock Location Detection for Android/iOS
-function detectMockLocation(position) {
-    const { accuracy, altitude, heading, speed, timestamp } = position.coords;
-    const now = Date.now();
-    const timeDiff = now - timestamp;
-    const results = { mockDetected: false, reason: '' };
-
-    // Too accurate (< 5 meters) - suspicious
-    if (accuracy < 5) {
-        results.mockDetected = true;
-        results.reason = 'Suspiciously high accuracy (<5m)';
-        return results;
-    }
-
-    // Missing altitude data
-    if (altitude === null || altitude === 0) {
-        results.mockDetected = true;
-        results.reason = 'Missing altitude data';
-        return results;
-    }
-
-    // Timestamp mismatch (>5 seconds difference)
-    if (Math.abs(timeDiff) > 5000) {
-        results.mockDetected = true;
-        results.reason = 'GPS timestamp mismatch';
-        return results;
-    }
-
-    // Moving but no heading data
-    if (speed > 1 && heading === null) {
-        results.mockDetected = true;
-        results.reason = 'Moving but no heading data';
-        return results;
-    }
-
-    // iOS: Check altitudeAccuracy
-    if (position.coords.altitudeAccuracy === null || position.coords.altitudeAccuracy === 0) {
-        results.mockDetected = true;
-        results.reason = 'Missing altitude accuracy (iOS mock)';
-        return results;
-    }
-
-    return results;
+function togglePassword() { const p = document.getElementById('password'); p.type = p.type === 'password' ? 'text' : 'password'; }
+function toggleMode() {
+    isRegistering = !isRegistering;
+    document.getElementById('register-fields').style.display = isRegistering ? 'block' : 'none';
+    document.getElementById('authBtn').innerText = isRegistering ? 'Register' : 'Sign In';
+    document.getElementById('toggleLink').innerText = isRegistering ? 'Already registered? Sign In' : 'New Student? Register';
 }
-
-// 2. Sensor-GPS Consistency Check (Accelerometer + Gyroscope)
-let lastAccelData = null;
-let lastGPSData = null;
-
-function checkSensorGPSConsistency(acceleration, gpsCoord) {
-    if (!lastGPSData || !lastAccelData) {
-        lastGPSData = gpsCoord;
-        lastAccelData = acceleration;
-        return { sensorMismatch: false, reason: '' };
-    }
-
-    const distance = haversineDistance(lastGPSData, gpsCoord);
-    const accelMag = Math.sqrt(
-        (acceleration.x || 0) ** 2 + 
-        (acceleration.y || 0) ** 2 + 
-        (acceleration.z || 0) ** 2
-    );
-
-    // If GPS moved > 50m but acceleration is near 0, it's likely fake
-    if (distance > 50 && accelMag < 0.5) {
-        return { 
-            sensorMismatch: true, 
-            reason: `GPS moved ${Math.round(distance)}m but no acceleration detected` 
-        };
-    }
-
-    lastGPSData = gpsCoord;
-    lastAccelData = acceleration;
-    return { sensorMismatch: false, reason: '' };
-}
-
-function haversineDistance(coord1, coord2) {
-    const R = 6371000;
-    const dLat = (coord2.latitude - coord1.latitude) * Math.PI / 180;
-    const dLon = (coord2.longitude - coord1.longitude) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(coord1.latitude * Math.PI / 180) * Math.cos(coord2.latitude * Math.PI / 180) *
-              Math.sin(dLon/2) * Math.sin(dLon/2);
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-}
-
-// 3. Get Accelerometer Data
-function getAcceleration() {
-    return new Promise((resolve) => {
-        if (typeof DeviceMotionEvent !== 'undefined') {
-            // Request permission for iOS 13+
-            if (typeof DeviceMotionEvent.requestPermission === 'function') {
-                DeviceMotionEvent.requestPermission().then(() => {
-                    window.addEventListener('devicemotion', (event) => {
-                        const accel = event.acceleration || event.accelerationIncludingGravity;
-                        resolve({
-                            x: accel.x || 0,
-                            y: accel.y || 0,
-                            z: accel.z || 0
-                        });
-                    }, { once: true });
-                    setTimeout(() => resolve({ x: 0, y: 0, z: 0 }), 3000);
-                }).catch(() => resolve({ x: 0, y: 0, z: 0 }));
-            } else {
-                window.addEventListener('devicemotion', (event) => {
-                    const accel = event.acceleration || event.accelerationIncludingGravity;
-                    resolve({
-                        x: accel.x || 0,
-                        y: accel.y || 0,
-                        z: accel.z || 0
-                    });
-                }, { once: true });
-                setTimeout(() => resolve({ x: 0, y: 0, z: 0 }), 3000);
-            }
-        } else {
-            resolve({ x: 0, y: 0, z: 0 });
-        }
-    });
-}
-        // 4. Timezone Mismatch Check
-function checkTimezoneMismatch(lat, lng) {
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const offset = new Date().getTimezoneOffset();
-    const expectedOffset = -Math.round(lng / 15) * 60;
-    
-    if (Math.abs(offset - expectedOffset) > 60) {
-        return { 
-            timezoneMismatch: true, 
-            reason: `System timezone (${timezone}, offset ${offset}) doesn't match location` 
-        };
-    }
-    return { timezoneMismatch: false, reason: '' };
-}
-
-// 5. PC Environment Detection
-function detectPCEnvironment() {
-    const userAgent = navigator.userAgent || '';
-    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|Windows Phone/i.test(userAgent);
-    if (!isMobile) {
-        return { isPC: true, reason: 'Non-mobile device detected' };
-    }
-    return { isPC: false, reason: '' };
-}
-
-// 6. iOS Specific Detection
-function detectIOSEnvironment() {
-    const userAgent = navigator.userAgent || '';
-    const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
-    return { isIOS };
-}
-
-// 7. Complete Security Check Function
-async function performSecurityChecks(position) {
-    const coords = position.coords;
-    const results = {
-        mockDetected: false,
-        sensorMismatch: false,
-        timezoneMismatch: false,
-        accuracy: coords.accuracy,
-        heading: coords.heading,
-        altitude: coords.altitude,
-        speed: coords.speed,
-        platform: navigator.platform || 'unknown',
-        userAgent: navigator.userAgent || 'unknown',
-        isPC: false,
-        isIOS: false
-    };
-
-    // Mock location detection
-    const mockCheck = detectMockLocation(position);
-    results.mockDetected = mockCheck.mockDetected;
-    if (mockCheck.mockDetected) {
-        console.warn('Mock location detected:', mockCheck.reason);
-    }
-
-    // Get accelerometer data and check consistency
-    const accel = await getAcceleration();
-    const sensorCheck = checkSensorGPSConsistency(accel, {
-        latitude: coords.latitude,
-        longitude: coords.longitude
-    });
-    results.sensorMismatch = sensorCheck.sensorMismatch;
-    if (sensorCheck.sensorMismatch) {
-        console.warn('Sensor mismatch detected:', sensorCheck.reason);
-    }
-
-    // Timezone check
-    const tzCheck = checkTimezoneMismatch(coords.latitude, coords.longitude);
-    results.timezoneMismatch = tzCheck.timezoneMismatch;
-    if (tzCheck.timezoneMismatch) {
-        console.warn('Timezone mismatch detected:', tzCheck.reason);
-    }
-
-    // Environment detection
-    const pcCheck = detectPCEnvironment();
-    results.isPC = pcCheck.isPC;
-    const iosCheck = detectIOSEnvironment();
-    results.isIOS = iosCheck.isIOS;
-
-    return results;
-}
-
-// ============================================================
-// END OF NEW SECURITY FUNCTIONS
-// ============================================================
 
 const WEEKLY_SCHEDULE = {
     1: [
@@ -1029,7 +816,123 @@ const WEEKLY_SCHEDULE = {
         { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
     ]
 };
-       // ----- QR SCANNER FUNCTIONS -----
+            // ============================================================
+// SECURITY FUNCTIONS
+// ============================================================
+
+function detectMockLocation(position) {
+    const { accuracy, altitude, heading, speed, timestamp } = position.coords;
+    const now = Date.now();
+    const timeDiff = now - timestamp;
+    const results = { mockDetected: false, reason: '' };
+    if (accuracy < 5) { results.mockDetected = true; results.reason = 'Suspiciously high accuracy (<5m)'; return results; }
+    if (altitude === null || altitude === 0) { results.mockDetected = true; results.reason = 'Missing altitude data'; return results; }
+    if (Math.abs(timeDiff) > 5000) { results.mockDetected = true; results.reason = 'GPS timestamp mismatch'; return results; }
+    if (speed > 1 && heading === null) { results.mockDetected = true; results.reason = 'Moving but no heading data'; return results; }
+    if (position.coords.altitudeAccuracy === null || position.coords.altitudeAccuracy === 0) {
+        results.mockDetected = true; results.reason = 'Missing altitude accuracy (iOS mock)'; return results;
+    }
+    return results;
+}
+
+let lastAccelData = null;
+let lastGPSData = null;
+
+function checkSensorGPSConsistency(acceleration, gpsCoord) {
+    if (!lastGPSData || !lastAccelData) {
+        lastGPSData = gpsCoord; lastAccelData = acceleration;
+        return { sensorMismatch: false, reason: '' };
+    }
+    const distance = haversineDistance(lastGPSData, gpsCoord);
+    const accelMag = Math.sqrt((acceleration.x || 0) ** 2 + (acceleration.y || 0) ** 2 + (acceleration.z || 0) ** 2);
+    if (distance > 50 && accelMag < 0.5) {
+        return { sensorMismatch: true, reason: `GPS moved ${Math.round(distance)}m but no acceleration detected` };
+    }
+    lastGPSData = gpsCoord; lastAccelData = acceleration;
+    return { sensorMismatch: false, reason: '' };
+}
+
+function haversineDistance(coord1, coord2) {
+    const R = 6371000;
+    const dLat = (coord2.latitude - coord1.latitude) * Math.PI / 180;
+    const dLon = (coord2.longitude - coord1.longitude) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(coord1.latitude * Math.PI / 180) * Math.cos(coord2.latitude * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function getAcceleration() {
+    return new Promise((resolve) => {
+        if (typeof DeviceMotionEvent !== 'undefined') {
+            if (typeof DeviceMotionEvent.requestPermission === 'function') {
+                DeviceMotionEvent.requestPermission().then(() => {
+                    window.addEventListener('devicemotion', (event) => {
+                        const accel = event.acceleration || event.accelerationIncludingGravity;
+                        resolve({ x: accel.x || 0, y: accel.y || 0, z: accel.z || 0 });
+                    }, { once: true });
+                    setTimeout(() => resolve({ x: 0, y: 0, z: 0 }), 3000);
+                }).catch(() => resolve({ x: 0, y: 0, z: 0 }));
+            } else {
+                window.addEventListener('devicemotion', (event) => {
+                    const accel = event.acceleration || event.accelerationIncludingGravity;
+                    resolve({ x: accel.x || 0, y: accel.y || 0, z: accel.z || 0 });
+                }, { once: true });
+                setTimeout(() => resolve({ x: 0, y: 0, z: 0 }), 3000);
+            }
+        } else { resolve({ x: 0, y: 0, z: 0 }); }
+    });
+}
+
+function checkTimezoneMismatch(lat, lng) {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const offset = new Date().getTimezoneOffset();
+    const expectedOffset = -Math.round(lng / 15) * 60;
+    if (Math.abs(offset - expectedOffset) > 60) {
+        return { timezoneMismatch: true, reason: `System timezone (${timezone}, offset ${offset}) doesn't match location` };
+    }
+    return { timezoneMismatch: false, reason: '' };
+}
+
+function detectPCEnvironment() {
+    const userAgent = navigator.userAgent || '';
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|Windows Phone/i.test(userAgent);
+    if (!isMobile) { return { isPC: true, reason: 'Non-mobile device detected' }; }
+    return { isPC: false, reason: '' };
+}
+
+function detectIOSEnvironment() {
+    const userAgent = navigator.userAgent || '';
+    return { isIOS: /iPhone|iPad|iPod/i.test(userAgent) };
+}
+
+async function performSecurityChecks(position) {
+    const coords = position.coords;
+    const results = {
+        mockDetected: false, sensorMismatch: false, timezoneMismatch: false,
+        accuracy: coords.accuracy, heading: coords.heading, altitude: coords.altitude,
+        speed: coords.speed, platform: navigator.platform || 'unknown',
+        userAgent: navigator.userAgent || 'unknown', isPC: false, isIOS: false
+    };
+    const mockCheck = detectMockLocation(position);
+    results.mockDetected = mockCheck.mockDetected;
+    if (mockCheck.mockDetected) console.warn('Mock location detected:', mockCheck.reason);
+    const accel = await getAcceleration();
+    const sensorCheck = checkSensorGPSConsistency(accel, { latitude: coords.latitude, longitude: coords.longitude });
+    results.sensorMismatch = sensorCheck.sensorMismatch;
+    if (sensorCheck.sensorMismatch) console.warn('Sensor mismatch detected:', sensorCheck.reason);
+    const tzCheck = checkTimezoneMismatch(coords.latitude, coords.longitude);
+    results.timezoneMismatch = tzCheck.timezoneMismatch;
+    if (tzCheck.timezoneMismatch) console.warn('Timezone mismatch detected:', tzCheck.reason);
+    const pcCheck = detectPCEnvironment();
+    results.isPC = pcCheck.isPC;
+    const iosCheck = detectIOSEnvironment();
+    results.isIOS = iosCheck.isIOS;
+    return results;
+}
+
+// ============================================================
+// QR SCANNER FUNCTIONS
+// ============================================================
+
 async function startQRScanner() {
     if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
         return showMsg("No active lecture to scan QR!", true);
@@ -1062,8 +965,7 @@ async function onQRScanSuccess(decodedText, decodedResult) {
     document.getElementById('qrScannerStatus').className = 'scanner-status qr-success';
     try {
         const res = await fetch(`${API_BASE}/api/auth/verify-qr`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ passcode: decodedText.trim() })
         });
         const data = await res.json();
@@ -1076,18 +978,13 @@ async function onQRScanSuccess(decodedText, decodedResult) {
             document.getElementById('qrScannerStatus').innerHTML = '❌ ' + (data.error || 'Invalid QR Code!');
             document.getElementById('qrScannerStatus').className = 'scanner-status qr-error';
             showMsg(data.error || 'Invalid QR Code!', true);
-            setTimeout(() => {
-                document.getElementById('qrScannerContainer').classList.remove('active');
-                startQRScanner();
-            }, 2000);
+            setTimeout(() => { document.getElementById('qrScannerContainer').classList.remove('active'); startQRScanner(); }, 2000);
         }
     } catch (e) {
         document.getElementById('qrScannerStatus').innerHTML = '❌ Server error!';
         document.getElementById('qrScannerStatus').className = 'scanner-status qr-error';
         showMsg('Server error!', true);
-        setTimeout(() => {
-            document.getElementById('qrScannerContainer').classList.remove('active');
-        }, 2000);
+        setTimeout(() => { document.getElementById('qrScannerContainer').classList.remove('active'); }, 2000);
     }
 }
 
@@ -1096,13 +993,14 @@ function onQRScanFailure(err) { /* Ignore */ }
 async function stopQRScanner() {
     if (html5QrCode && isScanning) {
         try { await html5QrCode.stop(); await html5QrCode.clear(); } catch(e) {}
-        html5QrCode = null;
-        isScanning = false;
+        html5QrCode = null; isScanning = false;
     }
     document.getElementById('qrScannerContainer').classList.remove('active');
 }
+            // ============================================================
+// ATTENDANCE FUNCTIONS - PART 1
+// ============================================================
 
-// ----- PERIOD TRACKER -----
 async function updatePeriodTrackerWidget() {
     const now = new Date();
     const dayOfWeek = now.getDay();
@@ -1110,29 +1008,19 @@ async function updatePeriodTrackerWidget() {
     const labelEl = document.getElementById('periodTimeSlotLabel');
     const nameEl = document.getElementById('activePeriodName');
     const btn = document.getElementById('markPeriodBtn');
-
     try {
         const res = await fetch(`${API_BASE}/api/date-status/${todayDate}`);
         const status = await res.json();
-        
         if (status.isBlocked) {
-            if(labelEl) {
-                labelEl.innerText = status.type + ":";
-                labelEl.style.color = status.type === 'HOLIDAY' ? '#d97706' : '#64748b';
-            }
-            if(nameEl) {
-                nameEl.innerText = status.message;
-                nameEl.style.color = status.type === 'HOLIDAY' ? '#92400e' : '#475569';
-            }
+            if(labelEl) { labelEl.innerText = status.type + ":"; labelEl.style.color = status.type === 'HOLIDAY' ? '#d97706' : '#64748b'; }
+            if(nameEl) { nameEl.innerText = status.message; nameEl.style.color = status.type === 'HOLIDAY' ? '#92400e' : '#475569'; }
             if(btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
             activeSubjectSubjectCode = "";
             document.getElementById('periodCardBox').className = 'period-card ' + (status.type === 'HOLIDAY' ? 'status-holiday' : 'status-weekend');
             return;
         }
     } catch(e) {}
-
     document.getElementById('periodCardBox').className = 'period-card';
-
     if (dayOfWeek === 0 || dayOfWeek === 6) {
         if(labelEl) { labelEl.innerText = "WEEKEND:"; labelEl.style.color = '#64748b'; }
         if(nameEl) { nameEl.innerText = "College Closed"; nameEl.style.color = '#475569'; }
@@ -1141,25 +1029,19 @@ async function updatePeriodTrackerWidget() {
         document.getElementById('periodCardBox').className = 'period-card status-weekend';
         return;
     }
-
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     const daySchedule = WEEKLY_SCHEDULE[dayOfWeek] || [];
     let foundSlot = null;
-
     for (let slot of daySchedule) {
         const sParts = slot.start.split(':');
         const eParts = slot.end.split(':');
         const startMins = parseInt(sParts[0]) * 60 + parseInt(sParts[1]);
         const endMins = parseInt(eParts[0]) * 60 + parseInt(eParts[1]);
-
         if (currentMinutes >= startMins && currentMinutes < endMins) {
-            foundSlot = slot;
-            break;
+            foundSlot = slot; break;
         }
     }
-
     if(labelEl) labelEl.style.color = '#64748b';
-
     if (foundSlot) {
         if (foundSlot.period === "LUNCH") {
             if(labelEl) labelEl.innerText = "LUNCH BREAK:";
@@ -1192,8 +1074,7 @@ async function openFullDayPasscodePrompt() {
     if (!enteredPasscode) return;
     try {
         const res = await fetch(`${API_BASE}/api/auth/verify-qr`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ passcode: enteredPasscode.trim() })
         });
         const data = await res.json();
@@ -1202,7 +1083,66 @@ async function openFullDayPasscodePrompt() {
     } catch(e) { showMsg('Server error!', true); }
 }
 
-// ----- LOAD SUBJECTS FOR MANUAL ATTENDANCE -----
+function markFullDayAttendance() {
+    if (!qrVerified) { return showMsg('Verify QR/Passcode first!', true); }
+    if (!navigator.geolocation) { return showMsg('Geolocation not supported!', true); }
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        const user = JSON.parse(localStorage.getItem('user'));
+        const fingerprint = getDeviceFingerprint();
+        const securityChecks = await performSecurityChecks(pos);
+        updateSecurityBanner(securityChecks);
+        if (securityChecks.mockDetected) {
+            showMsg('❌ Fake GPS detected! Attendance blocked.', true);
+            return;
+        }
+        try {
+            const res = await fetch(`${API_BASE}/api/attendance/mark-fullday`, {
+                method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${localStorage.getItem('token')||''}`},
+                body:JSON.stringify({ rollNo:user.rollNo, name:user.name, latitude:pos.coords.latitude, longitude:pos.coords.longitude, deviceFingerprint:fingerprint, qrVerified:qrVerified, securityChecks: securityChecks })
+            });
+            const data = await res.json();
+            qrVerified = false;
+            if (res.ok) { showMsg(data.message); fetchHistory(user.rollNo); if (data.riskScore !== undefined) { userRiskScore = data.riskScore; updateRiskBadge(userRiskScore); } }
+            else { showMsg(data.error || "Failed", true); }
+        } catch(e) { showMsg("Network Error!", true); }
+    }, () => showMsg('GPS Denied!', true));
+}
+
+function markSingleAttendance(overrideSubject) {
+    const sub = overrideSubject || activeSubjectSubjectCode || "WT LAB";
+    if (!sub || sub.includes("Off Hours") || sub.includes("Lunch")) { return showMsg("No active lecture!", true); }
+    if (sub === 'QR_ATTENDANCE' && !qrVerified) { return showMsg('Scan QR first!', true); }
+    const todayISO = new Date().toISOString().split('T')[0];
+    const isLab = sub.includes("LAB") || sub.includes("Lab");
+    const todayEntries = globalMyRecords.filter(r => r.date === todayISO && r.subject === sub);
+    if (isLab && todayEntries.length >= 1) { return showMsg(`Already marked for ${sub} today! (Lab - 1 only)`, true); }
+    if (!isLab && todayEntries.length >= 1) { return showMsg(`Already marked for ${sub} today!`, true); }
+    if (!navigator.geolocation) { return showMsg('Geolocation not supported!', true); }
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        const user = JSON.parse(localStorage.getItem('user'));
+        const fingerprint = getDeviceFingerprint();
+        const securityChecks = await performSecurityChecks(pos);
+        updateSecurityBanner(securityChecks);
+        if (securityChecks.mockDetected) {
+            showMsg('❌ Fake GPS detected! Attendance blocked.', true);
+            return;
+        }
+        try {
+            const res = await fetch(`${API_BASE}/api/attendance/mark`, {
+                method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${localStorage.getItem('token')||''}`},
+                body:JSON.stringify({ rollNo:user.rollNo, name:user.name, subject:sub, latitude:pos.coords.latitude, longitude:pos.coords.longitude, deviceFingerprint:fingerprint, qrVerified:qrVerified, securityChecks: securityChecks })
+            });
+            const data = await res.json();
+            qrVerified = false;
+            if (res.ok) { showMsg(`✅ Marked ${sub}!`); fetchHistory(user.rollNo); if (data.riskScore !== undefined) { userRiskScore = data.riskScore; updateRiskBadge(userRiskScore); } }
+            else { showMsg(data.error || "Failed", true); }
+        } catch(e) { showMsg("Network Error!", true); }
+    }, () => showMsg('GPS Denied!', true));
+}
+            // ============================================================
+// ADMIN FUNCTIONS - PART 1 (Manual Attendance, Holiday, QR)
+// ============================================================
+
 function loadSubjectsForDay() {
     const date = document.getElementById('manualDate').value;
     if (!date) return;
@@ -1210,7 +1150,6 @@ function loadSubjectsForDay() {
     const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayName = days[dateObj.getDay()];
-    
     const timetable = {
         'Monday': ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'DAA - Design & Analysis of Algorithm', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'CN - Computer Network', 'WT - Web Technology'],
         'Tuesday': ['WT - Web Technology', 'ECO - Economics for Engineers', 'Internet Lab (Ms. Geeta)', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'BDA - Big Data Analytics'],
@@ -1218,21 +1157,10 @@ function loadSubjectsForDay() {
         'Thursday': ['BDA - Big Data Analytics', 'WT - Web Technology', 'CN - Computer Network', 'DAA - Design & Analysis of Algorithm', 'DAA LAB - Algorithm Lab', 'HRM - Human Resource Mgmt'],
         'Friday': ['DAA - Design & Analysis of Algorithm', 'CN - Computer Network', 'FLA - Formal Language & Automata', 'BDA - Big Data Analytics', 'WT LAB - Web Technology Lab']
     };
-    
     const subjects = timetable[dayName] || ['General Class'];
     const container = document.getElementById('subjectCheckboxContainer');
-    container.innerHTML = `
-        <label class="select-all">
-            <input type="checkbox" id="selectAllSubjects" onchange="toggleAllSubjects()"> Select All (${subjects.length} subjects)
-        </label>
-    `;
-    subjects.forEach(sub => {
-        container.innerHTML += `
-            <label>
-                <input type="checkbox" class="subject-checkbox" value="${sub}"> ${sub}
-            </label>
-        `;
-    });
+    container.innerHTML = `<label class="select-all"><input type="checkbox" id="selectAllSubjects" onchange="toggleAllSubjects()"> Select All (${subjects.length} subjects)</label>`;
+    subjects.forEach(sub => { container.innerHTML += `<label><input type="checkbox" class="subject-checkbox" value="${sub}"> ${sub}</label>`; });
 }
 
 function toggleAllSubjects() {
@@ -1248,7 +1176,6 @@ function selectAllSubjects(select) {
     if (master) master.checked = select;
 }
 
-// ----- MANUAL ATTENDANCE BULK -----
 async function markManualAttendanceBulk() {
     const user = JSON.parse(localStorage.getItem('user'));
     const studentRollNo = document.getElementById('manualRoll').value.trim();
@@ -1262,8 +1189,7 @@ async function markManualAttendanceBulk() {
     if (!confirm(`Mark ${subjects.length} subjects for ${studentRollNo} on ${date}?`)) return;
     try {
         const res = await fetch(`${API_BASE}/api/admin/manual-attendance-bulk`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ requesterRollNo: user.rollNo, studentRollNo, date, subjects, status })
         });
         const data = await res.json();
@@ -1283,49 +1209,45 @@ async function markAllSubjectsForDay() {
     await markManualAttendanceBulk();
 }
 
-// ----- STUDENT EXCEL EXPORT -----
-function openStudentExcelModal() {
-    document.getElementById('studentExcelModal').style.display = 'flex';
-    document.getElementById('studentExcelRange').onchange = function() {
-        document.getElementById('selectedMonthWrapper').style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none';
-    };
+async function declareHoliday() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    const date = document.getElementById('holidayDate').value;
+    const reason = document.getElementById('holidayReason').value.trim();
+    if (!date) return showMsg('Select date!', true);
+    if (!reason) return showMsg('Enter holiday reason (e.g. Diwali, Rainy Day)!', true);
+    if (!confirm(`Declare "${reason}" on ${date}?`)) return;
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/holiday`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requesterRollNo: user.rollNo, date, reason })
+        });
+        const data = await res.json();
+        if (res.ok) { showMsg(`✅ ${data.message}`); document.getElementById('holidayDate').value = ''; document.getElementById('holidayReason').value = ''; }
+        else { showMsg(data.error || "Failed", true); }
+    } catch(e) { showMsg("Network Error!", true); }
 }
 
-function closeStudentExcelModal() {
-    document.getElementById('studentExcelModal').style.display = 'none';
+async function generateDynamicQR() {
+    const refreshIcon = document.getElementById('refreshIcon');
+    if (refreshIcon) { refreshIcon.classList.remove('spin-rotate'); void refreshIcon.offsetWidth; refreshIcon.classList.add('spin-rotate'); }
+    const user = JSON.parse(localStorage.getItem('user'));
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/generate-qr`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requesterRollNo: user.rollNo })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            currentDailyPasscode = data.passcode;
+            document.getElementById('liveClassPasscode').innerText = currentDailyPasscode;
+            const qrBox = document.getElementById('qrcode');
+            qrBox.innerHTML = "";
+            new QRCode(qrBox, { text: data.token, width: 120, height: 120 });
+            showMsg('✅ QR Refreshed! Valid for 5 min.');
+        } else { showMsg(data.error || 'Failed', true); }
+    } catch(e) { showMsg('Server error!', true); }
 }
 
-function processStudentExcelDownload() {
-    const range = document.getElementById('studentExcelRange').value;
-    const selectedMonth = parseInt(document.getElementById('studentExcelMonth').value);
-    if (globalMyRecords.length === 0) { closeStudentExcelModal(); return showMsg("No records to export!", true); }
-    const today = new Date();
-    let filteredRecords = [];
-    if (range === 'CURRENT_MONTH') {
-        const currentMonthIdx = today.getMonth(), currentYear = today.getFullYear();
-        filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); return parseInt(parts[0]) === currentYear && (parseInt(parts[1])-1) === currentMonthIdx; });
-    } else if (range === 'SELECTED_MONTH') {
-        filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); return parseInt(parts[0]) === 2026 && (parseInt(parts[1])-1) === selectedMonth; });
-    } else {
-        filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); const m = parseInt(parts[1])-1; return parseInt(parts[0]) === 2026 && m >= 6 && m <= 11; });
-    }
-    if (filteredRecords.length === 0) { closeStudentExcelModal(); return showMsg("No records for selected period!", true); }
-    const grouped = {};
-    filteredRecords.forEach(r => { if (!grouped[r.date]) grouped[r.date] = 0; grouped[r.date]++; });
-    let csv = "Date,Day,Total Lectures,Status\n";
-    Object.keys(grouped).sort().forEach(d => {
-        const parts = d.split('-');
-        const formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
-        const dayStr = DAY_NAMES[new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2])).getDay()];
-        csv += `"${formattedDate}","${dayStr}","${grouped[d]}","Present"\n`;
-    });
-    const fileName = `Student_Attendance_${range}.csv`;
-    downloadFile(csv, fileName);
-    closeStudentExcelModal();
-    showMsg("Report downloaded!");
-}
-
-// ----- ADMIN FUNCTIONS -----
 async function adminRegisterStudent() {
     const name = document.getElementById('adminRegName').value.trim();
     const rawRoll = document.getElementById('adminRegRoll').value.trim();
@@ -1334,8 +1256,7 @@ async function adminRegisterStudent() {
     if (!name || !validation.isValid) return showMsg('Valid Name and Roll No required!', true);
     try {
         const res = await fetch(`${API_BASE}/api/auth/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, rollNo: validation.cleanRoll, password })
         });
         const data = await res.json();
@@ -1343,41 +1264,10 @@ async function adminRegisterStudent() {
         else { showMsg(data.error || "Registration failed", true); }
     } catch(e) { showMsg("Server error!", true); }
 }
-
-async function updateRollNumberFormat() {
-    const user = JSON.parse(localStorage.getItem('user'));
-    const oldRoll = document.getElementById('oldRollFormat').value.trim();
-    const rawNewRoll = document.getElementById('newRollFormat').value.trim();
-    const validation = sanitizeAndValidateRollNo(rawNewRoll);
-    if (!oldRoll || !validation.isValid) return showMsg('Valid New Roll No required!', true);
-    try {
-        const res = await fetch(`${API_BASE}/api/admin/update-rollno`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ requesterRollNo: user.rollNo, oldRoll, newRoll: validation.cleanRoll })
-        });
-        const data = await res.json();
-        if (res.ok) { showMsg("Roll Number updated!"); document.getElementById('oldRollFormat').value = ''; document.getElementById('newRollFormat').value = ''; }
-        else { showMsg(data.error || "Failed", true); }
-    } catch(e) { showMsg("Server error!", true); }
-}
-
-async function deleteEntireStudentAccount() {
-    const user = JSON.parse(localStorage.getItem('user'));
-    const targetRoll = document.getElementById('deleteStudentRoll').value.trim();
-    if (!targetRoll) return showMsg('Enter Roll Number!', true);
-    if (!confirm(`Delete ${targetRoll} permanently?`)) return;
-    try {
-        const res = await fetch(`${API_BASE}/api/admin/delete-student`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo: targetRoll })
-        });
-        const data = await res.json();
-        if (res.ok) { showMsg(data.message || `Account ${targetRoll} deleted!`); document.getElementById('deleteStudentRoll').value = ''; fetchAllStudents(); }
-        else { showMsg(data.error || "Failed", true); }
-    } catch(e) { showMsg("Server error!", true); }
-}
+            
+            // ============================================================
+// ADMIN FUNCTIONS - PART 2 (Tools - Reset, Unblock, Update, Delete)
+// ============================================================
 
 async function resetDeviceBinding() {
     const user = JSON.parse(localStorage.getItem('user'));
@@ -1386,8 +1276,7 @@ async function resetDeviceBinding() {
     if (!confirm(`Reset device binding for ${targetRoll}?`)) return;
     try {
         const res = await fetch(`${API_BASE}/api/admin/reset-device`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo: targetRoll })
         });
         const data = await res.json();
@@ -1403,16 +1292,151 @@ async function resetAnomalyFlag() {
     if (!confirm(`Unblock ${targetRoll}?`)) return;
     try {
         const res = await fetch(`${API_BASE}/api/admin/reset-anomaly`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo: targetRoll })
         });
         const data = await res.json();
         if (res.ok) { showMsg(data.message); document.getElementById('resetAnomalyRoll').value = ''; fetchAllStudents(); }
         else { showMsg(data.error || "Failed", true); }
     } catch(e) { showMsg('Server error!', true); }
-        }
-                // 🔥 NEW: SECURITY ANALYTICS FUNCTIONS
+}
+
+async function updateRollNumberFormat() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    const oldRoll = document.getElementById('oldRollFormat').value.trim();
+    const rawNewRoll = document.getElementById('newRollFormat').value.trim();
+    const validation = sanitizeAndValidateRollNo(rawNewRoll);
+    if (!oldRoll || !validation.isValid) return showMsg('Valid New Roll No required!', true);
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/update-rollno`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requesterRollNo: user.rollNo, oldRoll, newRoll: validation.cleanRoll })
+        });
+        const data = await res.json();
+        if (res.ok) { showMsg("Roll Number updated!"); document.getElementById('oldRollFormat').value = ''; document.getElementById('newRollFormat').value = ''; }
+        else { showMsg(data.error || "Failed", true); }
+    } catch(e) { showMsg("Server error!", true); }
+}
+
+async function resetStudentPassword() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    const targetRollNo = document.getElementById('resetRoll').value.trim();
+    const newPassword = document.getElementById('resetPass').value.trim();
+    if (!targetRollNo) return showMsg('Roll number required!', true);
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/reset-password`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo, newPassword })
+        });
+        const data = await res.json();
+        if (res.ok) showMsg(data.message); else showMsg(data.error, true);
+    } catch(e) { showMsg("Failed!", true); }
+}
+
+async function deleteEntireStudentAccount() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    const targetRoll = document.getElementById('deleteStudentRoll').value.trim();
+    if (!targetRoll) return showMsg('Enter Roll Number!', true);
+    if (!confirm(`Delete ${targetRoll} permanently?`)) return;
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/delete-student`, {
+            method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo: targetRoll })
+        });
+        const data = await res.json();
+        if (res.ok) { showMsg(data.message || `Account ${targetRoll} deleted!`); document.getElementById('deleteStudentRoll').value = ''; fetchAllStudents(); }
+        else { showMsg(data.error || "Failed", true); }
+    } catch(e) { showMsg("Server error!", true); }
+}
+
+async function fetchAllStudents() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/all-students/${user.rollNo}`);
+        const data = await res.json();
+        if (!res.ok) return showMsg(data.error || "Failed", true);
+        allStudentsData = data;
+        document.getElementById('directoryTitle').innerHTML = `All Registered Students <span class="student-count-badge">${data.length}</span>`;
+        const tbody = document.querySelector('#allHistoryTable tbody');
+        if (!tbody) return;
+        if (data.length === 0) { return tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:12px;">No students registered</td></tr>'; }
+        tbody.innerHTML = data.map(s => {
+            const riskClass = s.riskScore >= 50 ? 'badge-flagged' : (s.riskScore >= 25 ? 'badge' : 'badge-present');
+            const riskLabel = s.riskScore >= 50 ? '🔴 High' : (s.riskScore >= 25 ? '⚠️ Med' : '✅ Low');
+            return `<tr><td><b>${s.rollNo}</b></td><td>${s.name}</td>
+                <td><span class="badge ${s.anomalyFlag ? 'badge-flagged' : 'badge-active'}">${s.anomalyFlag ? '⚠️ Flagged' : '✅ Active'}</span></td>
+                <td><span class="badge ${riskClass}">${riskLabel} ${s.riskScore || 0}%</span></td>
+                <td>
+                    <button class="action-btn btn-view btn-sm" onclick="showStudentAttendance('${s.rollNo}')" style="padding:2px 6px; font-size:8px;">
+                        <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                    <button class="action-btn btn-del btn-sm" onclick="deleteStudentAccount('${s.rollNo}')" style="padding:2px 6px; font-size:8px; margin-left:2px;">
+                        <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                    </button>
+                </td></tr>`;
+        }).join('');
+    } catch(e) { showMsg("Failed to connect to backend", true); }
+}
+
+async function deleteStudentAccount(rollNo) {
+    if (!confirm(`Delete account for ${rollNo} permanently?`)) return;
+    const user = JSON.parse(localStorage.getItem('user'));
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/delete-student`, { method:'DELETE', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ requesterRollNo:user.rollNo, targetRollNo:rollNo }) });
+        const data = await res.json();
+        if (res.ok) { showMsg(data.message || `Account ${rollNo} deleted!`); fetchAllStudents(); } else { showMsg(data.error || "Failed", true); }
+    } catch(e) { showMsg("Server error!", true); }
+}
+
+async function showStudentAttendance(rollNo) {
+    try {
+        const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
+        const data = await res.json();
+        if (!res.ok) return showMsg("Failed to load attendance", true);
+        const total = data.length, present = data.filter(r => r.status === 'Present').length, pct = total > 0 ? Math.round((present/total)*100) : 0;
+        const tbody = document.querySelector('#allHistoryTable tbody');
+        if (!tbody) return;
+        document.getElementById('directoryTitle').innerHTML = `📊 ${rollNo}: ${present}/${total} present (${pct}%) <button class="btn btn-outline btn-sm" onclick="fetchAllStudents()" style="padding:2px 8px; font-size:8px; width:auto;">⬅ Back</button>`;
+        if (data.length === 0) { tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:12px;">No records for ${rollNo}</td></tr>`; return; }
+        tbody.innerHTML = data.slice(0,30).map(r => `<tr><td><b>${r.date}</b></td><td>${r.subject || 'N/A'}</td><td><span class="badge badge-present">${r.status}</span></td><td><span class="badge ${r.securityFlags?.riskScore >= 50 ? 'badge-flagged' : 'badge-present'}">${r.securityFlags?.riskScore || 0}</span></td><td style="font-size:8px; color:var(--text-muted);">${r.ipAddress || 'N/A'}</td></tr>`).join('');
+    } catch(e) { showMsg("Failed to load attendance", true); }
+}
+
+async function fetchAllAttendance() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    try {
+        const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
+        const data = await res.json();
+        if (!res.ok) return showMsg(data.error || "Failed", true);
+        globalAllRecords = data;
+        document.getElementById('directoryTitle').innerHTML = `📊 Attendance Records (${data.length} entries) <button class="btn btn-outline btn-sm" onclick="fetchAllStudents()" style="padding:2px 8px; font-size:8px; width:auto;">⬅ Back</button>`;
+        const grouped = {};
+        data.forEach(r => { const key = `${r.rollNo}_${r.date}`; if (!grouped[key]) { grouped[key] = { rollNo:r.rollNo, name:r.studentName, date:r.date, count:0, ids:[] }; } grouped[key].count++; grouped[key].ids.push(r._id); });
+        groupedAdminRecords = grouped;
+        const sortedArray = Object.values(grouped).sort((a,b) => a.rollNo.localeCompare(b.rollNo));
+        const tbody = document.querySelector('#allHistoryTable tbody');
+        if (!tbody) return;
+        if (sortedArray.length === 0) return tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:12px;">No records</td></tr>';
+        tbody.innerHTML = sortedArray.map(g => `<tr><td><b>${g.rollNo}</b></td><td>${g.name}</td><td>${g.date}</td><td><span class="badge badge-present">${g.count} Lectures</span></td><td><button class="action-btn btn-del btn-sm" onclick="deleteDayGroup('${g.rollNo}','${g.date}')" style="padding:2px 6px; font-size:8px;" title="Delete all lectures for this day"><svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></button></td></tr>`).join('');
+    } catch(e) { showMsg("Failed to connect to backend", true); }
+}
+
+async function deleteDayGroup(rollNo, date) {
+    const user = JSON.parse(localStorage.getItem('user'));
+    const key = `${rollNo}_${date}`;
+    const group = groupedAdminRecords[key];
+    if (!group) { showMsg('No records found!', true); return; }
+    if (!confirm(`Delete ${group.count} lectures for ${rollNo} on ${date}?`)) return;
+    let deletedCount = 0;
+    for (let id of group.ids) {
+        try { const res = await fetch(`${API_BASE}/api/attendance/delete/${id}/${user.rollNo}`, { method:'DELETE' }); if (res.ok) deletedCount++; } catch(e) {}
+    }
+    if (deletedCount > 0) { showMsg(`✅ ${deletedCount} records deleted for ${rollNo} on ${date}`); fetchAllAttendance(); } else { showMsg('Failed to delete records', true); }
+}
+            // ============================================================
+// SECURITY ANALYTICS FUNCTIONS
+// ============================================================
+
 async function fetchSecurityAnalytics() {
     const user = JSON.parse(localStorage.getItem('user'));
     try {
@@ -1425,55 +1449,33 @@ async function fetchSecurityAnalytics() {
             document.getElementById('secTotalStudents').innerText = data.totalStudents || 0;
             showMsg('✅ Security analytics updated!');
         }
-    } catch(e) {
-        console.error('Failed to fetch security analytics:', e);
-        showMsg('Failed to fetch analytics', true);
-    }
+    } catch(e) { console.error('Failed to fetch security analytics:', e); showMsg('Failed to fetch analytics', true); }
 }
 
-// 🔥 NEW: Filter Suspicious Logs
 async function filterSuspiciousLogs(type) {
     const user = JSON.parse(localStorage.getItem('user'));
     try {
         const url = new URL(`${API_BASE}/api/admin/suspicious-logs/${user.rollNo}/filter`);
         if (type) url.searchParams.append('type', type);
-        
         const res = await fetch(url);
         const data = await res.json();
         if (res.ok) {
             const tbody = document.querySelector('#securityLogsTable tbody');
             if (!tbody) return;
-            if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:12px;">No logs found</td></tr>';
-                return;
-            }
-            tbody.innerHTML = data.slice(0,100).map(log => `
-                <tr>
-                    <td><b>${log.rollNo || 'N/A'}</b></td>
-                    <td><span class="badge badge-flagged">${log.type || 'UNKNOWN'}</span></td>
-                    <td style="font-size:9px;">${log.details || 'No details'}</td>
-                    <td><span class="badge ${log.riskScore >= 50 ? 'badge-flagged' : 'badge-present'}">${log.riskScore || 0}</span></td>
-                    <td style="font-size:9px;">${new Date(log.createdAt).toLocaleString()}</td>
-                </tr>
-            `).join('');
+            if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:12px;">No logs found</td></tr>'; return; }
+            tbody.innerHTML = data.slice(0,100).map(log => `<tr><td><b>${log.rollNo || 'N/A'}</b></td><td><span class="badge badge-flagged">${log.type || 'UNKNOWN'}</span></td><td style="font-size:9px;">${log.details || 'No details'}</td><td><span class="badge ${log.riskScore >= 50 ? 'badge-flagged' : 'badge-present'}">${log.riskScore || 0}</span></td><td style="font-size:9px;">${new Date(log.createdAt).toLocaleString()}</td></tr>`).join('');
         }
-    } catch(e) {
-        showMsg('Failed to filter logs', true);
-    }
+    } catch(e) { showMsg('Failed to filter logs', true); }
 }
 
-// 🔥 NEW: Download Security Report
 async function downloadSecurityReport() {
     const user = JSON.parse(localStorage.getItem('user'));
     try {
         window.open(`${API_BASE}/api/export/security-analytics/${user.rollNo}`, '_blank');
         showMsg('📊 Security report downloading...');
-    } catch(e) {
-        showMsg('Failed to download!', true);
-    }
+    } catch(e) { showMsg('Failed to download!', true); }
 }
 
-// ----- FETCH SUSPICIOUS LOGS -----
 async function fetchSuspiciousLogs() {
     const user = JSON.parse(localStorage.getItem('user'));
     try {
@@ -1483,15 +1485,7 @@ async function fetchSuspiciousLogs() {
         const tbody = document.querySelector('#securityLogsTable tbody');
         if (!tbody) return;
         if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:12px;">✅ No suspicious activity</td></tr>'; return; }
-        tbody.innerHTML = data.slice(0,100).map(log => `
-            <tr>
-                <td><b>${log.rollNo || 'N/A'}</b></td>
-                <td><span class="badge badge-flagged">${log.type || 'UNKNOWN'}</span></td>
-                <td style="font-size:9px;">${log.details || 'No details'}</td>
-                <td><span class="badge ${log.riskScore >= 50 ? 'badge-flagged' : 'badge-present'}">${log.riskScore || 0}</span></td>
-                <td style="font-size:9px;">${new Date(log.createdAt).toLocaleString()}</td>
-            </tr>
-        `).join('');
+        tbody.innerHTML = data.slice(0,100).map(log => `<tr><td><b>${log.rollNo || 'N/A'}</b></td><td><span class="badge badge-flagged">${log.type || 'UNKNOWN'}</span></td><td style="font-size:9px;">${log.details || 'No details'}</td><td><span class="badge ${log.riskScore >= 50 ? 'badge-flagged' : 'badge-present'}">${log.riskScore || 0}</span></td><td style="font-size:9px;">${new Date(log.createdAt).toLocaleString()}</td></tr>`).join('');
     } catch(e) { showMsg('Failed to load logs', true); }
 }
 
@@ -1515,111 +1509,14 @@ async function fetchAutoUnblockStatus() {
         const tbody = document.querySelector('#autoUnblockTable tbody');
         if (!tbody) return;
         if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px;">✅ No blocked students</td></tr>'; return; }
-        tbody.innerHTML = data.map(s => `
-            <tr><td><b>${s.rollNo}</b></td><td>${s.name}</td>
-            <td><span class="badge ${s.timeLeftHours < 1 ? 'badge-present' : 'badge-flagged'}">${s.timeLeftHours.toFixed(1)}h</span></td></tr>
-        `).join('');
+        tbody.innerHTML = data.map(s => `<tr><td><b>${s.rollNo}</b></td><td>${s.name}</td><td><span class="badge ${s.timeLeftHours < 1 ? 'badge-present' : 'badge-flagged'}">${s.timeLeftHours.toFixed(1)}h</span></td></tr>`).join('');
     } catch(e) { showMsg('Failed', true); }
 }
 
-// ----- NOTICES -----
-async function fetchNotices() {
-    if (localStorage.getItem("GLOBAL_NOTICE_CLEARED") === "true") {
-        document.getElementById('noticeBanner').style.display = 'none'; return;
-    }
-    const activeNotice = localStorage.getItem("ACTIVE_BROADCAST_NOTICE");
-    if (activeNotice && activeNotice.trim() !== "") {
-        document.getElementById('noticeBanner').style.display = 'flex';
-        document.getElementById('noticeText').innerText = `${activeNotice}`;
-        return;
-    }
-    try {
-        const res = await fetch(`${API_BASE}/api/notices`);
-        const data = await res.json();
-        if (data.length > 0 && localStorage.getItem("GLOBAL_NOTICE_CLEARED") !== "true") {
-            const latestNotice = data[data.length-1].message;
-            document.getElementById('noticeBanner').style.display = 'flex';
-            document.getElementById('noticeText').innerText = `${latestNotice}`;
-        } else { document.getElementById('noticeBanner').style.display = 'none'; }
-    } catch(err) { document.getElementById('noticeBanner').style.display = 'none'; }
-}
+// ============================================================
+// FACE AI FUNCTIONS
+// ============================================================
 
-async function postNotice() {
-    const user = JSON.parse(localStorage.getItem('user'));
-    const message = document.getElementById('noticeMsg').value.trim();
-    if (!message) return showMsg('Notice text required!', true);
-    localStorage.removeItem("GLOBAL_NOTICE_CLEARED");
-    localStorage.setItem("ACTIVE_BROADCAST_NOTICE", message);
-    document.getElementById('noticeBanner').style.display = 'flex';
-    document.getElementById('noticeText').innerText = `${message}`;
-    showMsg('Notice Published!');
-    document.getElementById('noticeMsg').value = '';
-    try { await fetch(`${API_BASE}/api/admin/notice`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ requesterRollNo: user.rollNo, title:'Announcement', message }) }); } catch(err) {}
-}
-
-async function clearNotice() {
-    const user = JSON.parse(localStorage.getItem('user'));
-    localStorage.setItem("GLOBAL_NOTICE_CLEARED","true");
-    localStorage.removeItem("ACTIVE_BROADCAST_NOTICE");
-    document.getElementById('noticeBanner').style.display = 'none';
-    document.getElementById('noticeText').innerText = '';
-    showMsg('Notice Cleared!');
-    try { await fetch(`${API_BASE}/api/admin/notice`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ requesterRollNo: user.rollNo, title:'Announcement', message:"" }) }); } catch(err) {}
-}
-
-// ----- TABS -----
-function switchTab(tabId) {
-    const markTab = document.getElementById('markTab');
-    const adminTab = document.getElementById('adminTab');
-    markTab.style.display = tabId === 'markTab' ? 'block' : 'none';
-    adminTab.style.display = tabId === 'adminTab' ? 'block' : 'none';
-    markTab.classList.remove('tab-content-active');
-    adminTab.classList.remove('tab-content-active');
-    if (tabId === 'markTab') markTab.classList.add('tab-content-active');
-    if (tabId === 'adminTab') adminTab.classList.add('tab-content-active');
-    const tabs = document.querySelectorAll('.tab-bar .tab-item');
-    tabs[0].classList.toggle('active', tabId === 'markTab');
-    if(tabs[1]) tabs[1].classList.toggle('active', tabId === 'adminTab');
-    if(tabId === 'adminTab') { fetchAllStudents(); fetchSecurityAnalytics(); }
-}
-
-function switchAdminSubTab(subId) {
-    const subTabs = ['subReports','subAttendance','subHoliday','subQR','subTools','subDirectory','subSecurity'];
-    subTabs.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) { el.style.display = (id === subId) ? 'block' : 'none'; el.classList.remove('tab-content-active'); if (id === subId) el.classList.add('tab-content-active'); }
-    });
-    const navItems = document.querySelectorAll('.admin-nav-item');
-    navItems.forEach((item, idx) => { item.classList.toggle('active', subTabs[idx] === subId); });
-    if (subId === 'subQR') generateDynamicQR();
-    if (subId === 'subDirectory') fetchAllStudents();
-    if (subId === 'subSecurity') { fetchSuspiciousLogs(); fetchAutoUnblockStatus(); fetchSecurityAnalytics(); }
-}
-
-// ----- QR GENERATION -----
-async function generateDynamicQR() {
-    const refreshIcon = document.getElementById('refreshIcon');
-    if (refreshIcon) { refreshIcon.classList.remove('spin-rotate'); void refreshIcon.offsetWidth; refreshIcon.classList.add('spin-rotate'); }
-    const user = JSON.parse(localStorage.getItem('user'));
-    try {
-        const res = await fetch(`${API_BASE}/api/admin/generate-qr`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ requesterRollNo: user.rollNo })
-        });
-        const data = await res.json();
-        if (res.ok) {
-            currentDailyPasscode = data.passcode;
-            document.getElementById('liveClassPasscode').innerText = currentDailyPasscode;
-            const qrBox = document.getElementById('qrcode');
-            qrBox.innerHTML = "";
-            new QRCode(qrBox, { text: data.token, width: 120, height: 120 });
-            showMsg('✅ QR Refreshed! Valid for 5 min.');
-        } else { showMsg(data.error || 'Failed', true); }
-    } catch(e) { showMsg('Server error!', true); }
-}
-
-// ----- FACE AI -----
 async function loadFaceAIModels() {
     if (isModelsLoaded) return true;
     try {
@@ -1720,55 +1617,113 @@ async function executeCameraAction() {
         } else { statusTxt.innerText = "Mismatch!"; showMsg("Face Mismatch!", true); }
     }
 }
+            // ============================================================
+// DASHBOARD & HISTORY FUNCTIONS
+// ============================================================
 
-function togglePassword() { const p = document.getElementById('password'); p.type = p.type === 'password' ? 'text' : 'password'; }
-function toggleMode() {
-    isRegistering = !isRegistering;
-    document.getElementById('register-fields').style.display = isRegistering ? 'block' : 'none';
-    document.getElementById('authBtn').innerText = isRegistering ? 'Register' : 'Sign In';
-    document.getElementById('toggleLink').innerText = isRegistering ? 'Already registered? Sign In' : 'New Student? Register';
+function calculateRealAttendancePercentage() {
+    const startDate = new Date(2026,6,15);
+    const today = new Date();
+    const holidayDatesList = globalHolidays.map(h => h.date);
+    let totalWorkingDays = 0;
+    let cur = new Date(startDate);
+    while (cur <= today) {
+        const dayOfWeek = cur.getDay();
+        const y = cur.getFullYear();
+        const m = String(cur.getMonth()+1).padStart(2,'0');
+        const d = String(cur.getDate()).padStart(2,'0');
+        const isoStr = `${y}-${m}-${d}`;
+        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+        const isHoliday = holidayDatesList.includes(isoStr);
+        if (!isWeekend && !isHoliday) { totalWorkingDays++; }
+        cur.setDate(cur.getDate()+1);
+    }
+    const DEFAULT_DAILY_ACADEMIC_LECTURES = 6;
+    const totalConductedLectures = totalWorkingDays * DEFAULT_DAILY_ACADEMIC_LECTURES;
+    const academicAttendedLectures = globalMyRecords.filter(r => { const sub = r.subject || ""; return !sub.includes("LIB") && !sub.includes("Sports"); }).length;
+    if (totalConductedLectures === 0) return { pct:100, totalWorkingDays, totalConductedLectures, totalAttendedLectures:academicAttendedLectures };
+    const pct = Math.min(100, ((academicAttendedLectures / totalConductedLectures) * 100)).toFixed(1);
+    return { pct, totalWorkingDays, totalConductedLectures, totalAttendedLectures:academicAttendedLectures };
 }
 
-async function resetStudentPassword() {
-    const user = JSON.parse(localStorage.getItem('user'));
-    const targetRollNo = document.getElementById('resetRoll').value.trim();
-    const newPassword = document.getElementById('resetPass').value.trim();
-    if (!targetRollNo) return showMsg('Roll number required!', true);
+function renderAttendanceCalendar(historyData) {
+    const wrapper = document.getElementById('calendarDisplayWrapper');
+    const mode = document.getElementById('calendarViewMode').value;
+    const attendedDates = new Set(historyData.map(h => h.date));
+    const holidayDatesSet = new Set(globalHolidays.map(h => h.date));
+    let monthsToRender = [];
+    const today = new Date();
+    const currentMonthIdx = today.getMonth();
+    if (mode === 'FULL_SEMESTER') { monthsToRender = [6,7,8,9,10,11]; } else { monthsToRender = [currentMonthIdx]; }
+    let wrapperHtml = "";
+    monthsToRender.forEach(mIdx => {
+        const year = 2026;
+        const monthName = MONTH_NAMES[mIdx];
+        const daysInMonth = new Date(year, mIdx+1, 0).getDate();
+        const firstDayOfWeek = new Date(year, mIdx, 1).getDay();
+        let gridHtml = `<div style="margin-bottom:8px; border-bottom:1px solid var(--card-border); padding-bottom:6px;">
+            <div style="font-size:10px; font-weight:800; color:var(--primary); margin-bottom:4px;">${monthName} ${year}</div>
+            <div class="calendar-grid"><div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div>
+            <div class="cal-day-head">W</div><div class="cal-day-head">T</div><div class="cal-day-head">F</div><div class="cal-day-head">S</div>`;
+        for (let i=0; i<firstDayOfWeek; i++) { gridHtml += `<div class="cal-date cal-off"></div>`; }
+        for (let d=1; d<=daysInMonth; d++) {
+            const dateStr = `2026-${String(mIdx+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const dtObj = new Date(year, mIdx, d);
+            const dayOfWeek = dtObj.getDay();
+            const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+            const isHoliday = holidayDatesSet.has(dateStr);
+            if (isWeekend) { gridHtml += `<div class="cal-date cal-off">${d}</div>`; }
+            else if (isHoliday) { gridHtml += `<div class="cal-date cal-off" style="background:#fef3c7; color:#92400e; font-weight:800; border-color:#fde68a;" title="Holiday">${d}</div>`; }
+            else if (attendedDates.has(dateStr)) { gridHtml += `<div class="cal-date cal-p">${d}</div>`; }
+            else if (dtObj <= today) { gridHtml += `<div class="cal-date cal-a">${d}</div>`; }
+            else { gridHtml += `<div class="cal-date cal-off">${d}</div>`; }
+        }
+        gridHtml += `</div></div>`;
+        wrapperHtml += gridHtml;
+    });
+    wrapper.innerHTML = wrapperHtml;
+}
+
+function toggleCalendarView() { renderAttendanceCalendar(globalMyRecords); }
+
+async function fetchHistory(rollNo) {
+    try { const hRes = await fetch(`${API_BASE}/api/holidays`); globalHolidays = await hRes.json(); } catch(e) { globalHolidays = []; }
     try {
-        const res = await fetch(`${API_BASE}/api/admin/reset-password`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo, newPassword })
-        });
+        const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
         const data = await res.json();
-        if (res.ok) showMsg(data.message); else showMsg(data.error, true);
-    } catch(e) { showMsg("Failed!", true); }
+        globalMyRecords = data || [];
+        const tbody = document.querySelector('#myHistoryTable tbody');
+        const dateGrouped = {};
+        globalMyRecords.forEach(item => { if (!dateGrouped[item.date]) { dateGrouped[item.date] = { date:item.date, count:0, status:item.status }; } dateGrouped[item.date].count++; });
+        const calc = calculateRealAttendancePercentage();
+        document.getElementById('totalDaysCount').innerText = calc.totalAttendedLectures;
+        const pctEl = document.getElementById('attendancePct');
+        if (pctEl) { pctEl.innerText = `${calc.pct}%`; pctEl.style.color = calc.pct >= 75 ? 'var(--success)' : 'var(--danger)'; }
+        document.getElementById('defaulterTag').style.display = (calc.pct < 75) ? 'inline-block' : 'none';
+        const advisorBox = document.getElementById('advisorText');
+        if (advisorBox) {
+            if (calc.pct >= 75) {
+                const safeLectures = Math.floor(calc.totalAttendedLectures - 0.75 * calc.totalConductedLectures);
+                const safeDays = Math.floor(safeLectures / 6);
+                advisorBox.innerHTML = `Safe Zone (<b>${calc.pct}%</b>). Skip approx <b>${Math.max(0, safeDays)}</b> days safely.`;
+            } else {
+                const neededLectures = Math.ceil(0.75 * calc.totalConductedLectures - calc.totalAttendedLectures);
+                advisorBox.innerHTML = `Low Attendance (<b>${calc.pct}%</b>). Need <b>${Math.max(0, neededLectures)}</b> more lectures.`;
+            }
+        }
+        renderAttendanceCalendar(globalMyRecords);
+        const sortedDates = Object.values(dateGrouped).sort((a,b) => b.date.localeCompare(a.date));
+        if (!tbody) return;
+        if (sortedDates.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px;">No records</td></tr>';
+        tbody.innerHTML = sortedDates.map(i => {
+            const parts = i.date.split('-');
+            const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2])).getDay();
+            const dayStr = DAY_NAMES[dateObj];
+            return `<tr><td><b>${i.date}</b></td><td><b>${dayStr}</b></td><td><span class="badge badge-present">${i.count} Lectures</span></td><td><span class="badge badge-present">${i.status}</span></td></tr>`;
+        }).join('');
+    } catch(e) { showMsg("Failed to sync logs!", true); }
 }
 
-async function handleAuth() {
-    const rawRoll = document.getElementById('rollNo').value.trim();
-    const password = document.getElementById('password').value.trim();
-    const deviceId = getDeviceId();
-    const validation = sanitizeAndValidateRollNo(rawRoll);
-    if (!validation.isValid) { return showMsg('Enter valid Roll No (e.g. 24CSE09)!', true); }
-    if (!password) { return showMsg('Enter your password!', true); }
-    showMsg('Connecting...');
-    try {
-        if (isRegistering) {
-            const name = document.getElementById('regName').value.trim();
-            if (!name) return showMsg('Enter Full Name!', true);
-            const res = await fetch(`${API_BASE}/api/auth/register`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ name, rollNo: validation.cleanRoll, password, deviceId }) });
-            const data = await res.json();
-            if (res.ok) { showMsg('Registered! Login now.'); toggleMode(); } else { showMsg(data.error || 'Registration failed', true); }
-        } else {
-            const res = await fetch(`${API_BASE}/api/auth/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ rollNo: validation.cleanRoll, password, deviceId }) });
-            const data = await res.json();
-            if (res.ok) { localStorage.setItem('user', JSON.stringify(data.user)); localStorage.setItem('token', data.token); loadDashboard(); }
-            else { showMsg(data.error || 'Invalid credentials', true); }
-        }
-    } catch(err) { showMsg('Connection timeout!', true); }
-        }
-                // ----- DASHBOARD STATS -----
 async function loadDashboardStats() {
     const user = JSON.parse(localStorage.getItem('user'));
     try {
@@ -1783,7 +1738,6 @@ async function loadDashboardStats() {
     } catch(e) { console.error('Dashboard stats failed:', e); }
 }
 
-// 🔥 NEW: Fetch Risk Score
 async function fetchUserRiskScore(rollNo) {
     try {
         const res = await fetch(`${API_BASE}/api/student/risk-score/${rollNo}`);
@@ -1811,7 +1765,6 @@ function updateRiskBadge(score) {
     }
 }
 
-// 🔥 NEW: Update Security Banner
 function updateSecurityBanner(securityStatus) {
     const banner = document.getElementById('securityBanner');
     const text = document.getElementById('securityBannerText');
@@ -1849,10 +1802,7 @@ function loadDashboard() {
     document.getElementById('simulatorBox').style.display = 'flex';
     document.getElementById('faceEnrollBox').style.display = 'block';
     document.getElementById('studentTabHeader').style.display = 'block';
-    
-    // 🔥 NEW: Fetch risk score
     fetchUserRiskScore(user.rollNo);
-    
     if (isAdmin) {
         document.getElementById('adminTabHeader').style.display = 'block';
         document.getElementById('adminLiveDashboard').style.display = 'block';
@@ -1873,231 +1823,158 @@ function loadDashboard() {
     loadSubjectsForDay();
 }
 
-// 🔥 UPDATED: markFullDayAttendance with Security Checks
-function markFullDayAttendance() {
-    if (!qrVerified) { return showMsg('Verify QR/Passcode first!', true); }
-    if (!navigator.geolocation) { return showMsg('Geolocation not supported!', true); }
-    
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-        const user = JSON.parse(localStorage.getItem('user'));
-        const fingerprint = getDeviceFingerprint();
-        
-        // 🔥 Perform security checks
-        const securityChecks = await performSecurityChecks(pos);
-        updateSecurityBanner(securityChecks);
-        
-        if (securityChecks.mockDetected) {
-            showMsg('❌ Fake GPS detected! Attendance blocked.', true);
-            return;
-        }
-        
-        try {
-            const res = await fetch(`${API_BASE}/api/attendance/mark-fullday`, {
-                method:'POST', 
-                headers:{'Content-Type':'application/json','Authorization':`Bearer ${localStorage.getItem('token')||''}`},
-                body:JSON.stringify({ 
-                    rollNo:user.rollNo, 
-                    name:user.name, 
-                    latitude:pos.coords.latitude, 
-                    longitude:pos.coords.longitude, 
-                    deviceFingerprint:fingerprint, 
-                    qrVerified:qrVerified,
-                    securityChecks: securityChecks  // 🔥 Send security checks
-                })
-            });
-            const data = await res.json();
-            qrVerified = false;
-            if (res.ok) { 
-                showMsg(data.message); 
-                fetchHistory(user.rollNo);
-                if (data.riskScore !== undefined) {
-                    userRiskScore = data.riskScore;
-                    updateRiskBadge(userRiskScore);
-                }
-            } else { 
-                showMsg(data.error || "Failed", true); 
-            }
-        } catch(e) { showMsg("Network Error!", true); }
-    }, () => showMsg('GPS Denied!', true));
-}
+// ============================================================
+// NOTICES, TABS, EXPORT & LOGOUT FUNCTIONS
+// ============================================================
 
-// 🔥 UPDATED: markSingleAttendance with Security Checks
-function markSingleAttendance(overrideSubject) {
-    const sub = overrideSubject || activeSubjectSubjectCode || "WT LAB";
-    if (!sub || sub.includes("Off Hours") || sub.includes("Lunch")) { 
-        return showMsg("No active lecture!", true); 
+async function fetchNotices() {
+    if (localStorage.getItem("GLOBAL_NOTICE_CLEARED") === "true") {
+        document.getElementById('noticeBanner').style.display = 'none'; return;
     }
-    if (sub === 'QR_ATTENDANCE' && !qrVerified) { 
-        return showMsg('Scan QR first!', true); 
+    const activeNotice = localStorage.getItem("ACTIVE_BROADCAST_NOTICE");
+    if (activeNotice && activeNotice.trim() !== "") {
+        document.getElementById('noticeBanner').style.display = 'flex';
+        document.getElementById('noticeText').innerText = `${activeNotice}`;
+        return;
     }
-    const todayISO = new Date().toISOString().split('T')[0];
-    const isLab = sub.includes("LAB") || sub.includes("Lab");
-    const todayEntries = globalMyRecords.filter(r => r.date === todayISO && r.subject === sub);
-    if (isLab && todayEntries.length >= 1) { 
-        return showMsg(`Already marked for ${sub} today! (Lab - 1 only)`, true); 
-    }
-    if (!isLab && todayEntries.length >= 1) { 
-        return showMsg(`Already marked for ${sub} today!`, true); 
-    }
-    if (!navigator.geolocation) { 
-        return showMsg('Geolocation not supported!', true); 
-    }
-    
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-        const user = JSON.parse(localStorage.getItem('user'));
-        const fingerprint = getDeviceFingerprint();
-        
-        // 🔥 Perform security checks
-        const securityChecks = await performSecurityChecks(pos);
-        updateSecurityBanner(securityChecks);
-        
-        if (securityChecks.mockDetected) {
-            showMsg('❌ Fake GPS detected! Attendance blocked.', true);
-            return;
-        }
-        
-        try {
-            const res = await fetch(`${API_BASE}/api/attendance/mark`, {
-                method:'POST', 
-                headers:{'Content-Type':'application/json','Authorization':`Bearer ${localStorage.getItem('token')||''}`},
-                body:JSON.stringify({ 
-                    rollNo:user.rollNo, 
-                    name:user.name, 
-                    subject:sub, 
-                    latitude:pos.coords.latitude, 
-                    longitude:pos.coords.longitude, 
-                    deviceFingerprint:fingerprint, 
-                    qrVerified:qrVerified,
-                    securityChecks: securityChecks  // 🔥 Send security checks
-                })
-            });
-            const data = await res.json();
-            qrVerified = false;
-            if (res.ok) { 
-                showMsg(`✅ Marked ${sub}!`); 
-                fetchHistory(user.rollNo);
-                if (data.riskScore !== undefined) {
-                    userRiskScore = data.riskScore;
-                    updateRiskBadge(userRiskScore);
-                }
-            } else { 
-                showMsg(data.error || "Failed", true); 
-            }
-        } catch(e) { showMsg("Network Error!", true); }
-    }, () => showMsg('GPS Denied!', true));
-        }
-        async function declareHoliday() {
-    const user = JSON.parse(localStorage.getItem('user'));
-    const date = document.getElementById('holidayDate').value;
-    const reason = document.getElementById('holidayReason').value.trim();
-    if (!date) return showMsg('Select date!', true);
-    if (!reason) return showMsg('Enter holiday reason (e.g. Diwali, Rainy Day)!', true);
-    if (!confirm(`Declare "${reason}" on ${date}?`)) return;
     try {
-        const res = await fetch(`${API_BASE}/api/admin/holiday`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ requesterRollNo: user.rollNo, date, reason })
-        });
+        const res = await fetch(`${API_BASE}/api/notices`);
         const data = await res.json();
-        if (res.ok) { showMsg(`✅ ${data.message}`); document.getElementById('holidayDate').value = ''; document.getElementById('holidayReason').value = ''; }
-        else { showMsg(data.error || "Failed", true); }
-    } catch(e) { showMsg("Network Error!", true); }
+        if (data.length > 0 && localStorage.getItem("GLOBAL_NOTICE_CLEARED") !== "true") {
+            const latestNotice = data[data.length-1].message;
+            document.getElementById('noticeBanner').style.display = 'flex';
+            document.getElementById('noticeText').innerText = `${latestNotice}`;
+        } else { document.getElementById('noticeBanner').style.display = 'none'; }
+    } catch(err) { document.getElementById('noticeBanner').style.display = 'none'; }
 }
 
-function calculateRealAttendancePercentage() {
-    const startDate = new Date(2026,6,15);
-    const today = new Date();
-    const holidayDatesList = globalHolidays.map(h => h.date);
-    let totalWorkingDays = 0;
-    let cur = new Date(startDate);
-    while (cur <= today) {
-        const dayOfWeek = cur.getDay();
-        const y = cur.getFullYear();
-        const m = String(cur.getMonth()+1).padStart(2,'0');
-        const d = String(cur.getDate()).padStart(2,'0');
-        const isoStr = `${y}-${m}-${d}`;
-        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-        const isHoliday = holidayDatesList.includes(isoStr);
-        if (!isWeekend && !isHoliday) { totalWorkingDays++; }
-        cur.setDate(cur.getDate()+1);
-    }
-    const DEFAULT_DAILY_ACADEMIC_LECTURES = 6;
-    const totalConductedLectures = totalWorkingDays * DEFAULT_DAILY_ACADEMIC_LECTURES;
-    const academicAttendedLectures = globalMyRecords.filter(r => { const sub = r.subject || ""; return !sub.includes("LIB") && !sub.includes("Sports"); }).length;
-    if (totalConductedLectures === 0) return { pct:100, totalWorkingDays, totalConductedLectures, totalAttendedLectures:academicAttendedLectures };
-    const pct = Math.min(100, ((academicAttendedLectures / totalConductedLectures) * 100)).toFixed(1);
-    return { pct, totalWorkingDays, totalConductedLectures, totalAttendedLectures:academicAttendedLectures };
-}
-
-function toggleCalendarView() { renderAttendanceCalendar(globalMyRecords); }
-
-function renderAttendanceCalendar(historyData) {
-    const wrapper = document.getElementById('calendarDisplayWrapper');
-    const mode = document.getElementById('calendarViewMode').value;
-    const attendedDates = new Set(historyData.map(h => h.date));
-    const holidayDatesSet = new Set(globalHolidays.map(h => h.date));
-    let monthsToRender = [];
-    const today = new Date();
-    const currentMonthIdx = today.getMonth();
-    if (mode === 'FULL_SEMESTER') { monthsToRender = [6,7,8,9,10,11]; } else { monthsToRender = [currentMonthIdx]; }
-    let wrapperHtml = "";
-    monthsToRender.forEach(mIdx => {
-        const year = 2026;
-        const monthName = MONTH_NAMES[mIdx];
-        const daysInMonth = new Date(year, mIdx+1, 0).getDate();
-        const firstDayOfWeek = new Date(year, mIdx, 1).getDay();
-        let gridHtml = `<div style="margin-bottom:8px; border-bottom:1px solid var(--card-border); padding-bottom:6px;">
-            <div style="font-size:10px; font-weight:800; color:var(--primary); margin-bottom:4px;">${monthName} ${year}</div>
-            <div class="calendar-grid"><div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div>
-            <div class="cal-day-head">W</div><div class="cal-day-head">T</div><div class="cal-day-head">F</div><div class="cal-day-head">S</div>`;
-        for (let i=0; i<firstDayOfWeek; i++) { gridHtml += `<div class="cal-date cal-off"></div>`; }
-        for (let d=1; d<=daysInMonth; d++) {
-            const dateStr = `2026-${String(mIdx+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-            const dtObj = new Date(year, mIdx, d);
-            const dayOfWeek = dtObj.getDay();
-            const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-            const isHoliday = holidayDatesSet.has(dateStr);
-            let cls = 'cal-off'; 
-            
-            if (dtObj > today) {
-                cls = 'cal-off'; 
-            } else if (isHoliday) {
-                cls = 'cal-a'; // Mark holiday visually
-            } else if (isWeekend) {
-                cls = 'cal-off'; // Weekend
-            } else if (attendedDates.has(dateStr)) {
-                cls = 'cal-p'; // Present
-            } else {
-                cls = 'cal-a'; // Absent
-            }
-            
-            gridHtml += `<div class="cal-date ${cls}" title="${isHoliday ? 'Holiday' : ''}">${d}</div>`;
-        }
-        gridHtml += `</div></div>`;
-        wrapperHtml += gridHtml;
-    });
-    
-    wrapper.innerHTML = wrapperHtml;
-    
-    // Update dashboard stats right after rendering calendar
-    const stats = calculateRealAttendancePercentage();
-    const pctEl = document.getElementById('attendancePct');
-    const totalDaysEl = document.getElementById('totalDaysCount');
-    
-    if (pctEl) pctEl.innerText = `${stats.pct}%`;
-    if (totalDaysEl) totalDaysEl.innerText = stats.totalAttendedLectures;
-}
-
-// ----- EXPORT REPORTS -----
-async function exportExcelGrid() {
-    const selection = document.getElementById('exportSelection').value;
+async function postNotice() {
     const user = JSON.parse(localStorage.getItem('user'));
-    
-    try {
-        window.open(`${API_BASE}/api/export/excel/${user.rollNo}?range=${selection}`, '_blank');
-        showMsg('📊 Excel Report downloading...');
-    } catch(e) { showMsg('Failed to download Excel', true); }
+    const message = document.getElementById('noticeMsg').value.trim();
+    if (!message) return showMsg('Notice text required!', true);
+    localStorage.removeItem("GLOBAL_NOTICE_CLEARED");
+    localStorage.setItem("ACTIVE_BROADCAST_NOTICE", message);
+    document.getElementById('noticeBanner').style.display = 'flex';
+    document.getElementById('noticeText').innerText = `${message}`;
+    showMsg('Notice Published!');
+    document.getElementById('noticeMsg').value = '';
+    try { await fetch(`${API_BASE}/api/admin/notice`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ requesterRollNo: user.rollNo, title:'Announcement', message }) }); } catch(err) {}
+}
+
+async function clearNotice() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    localStorage.setItem("GLOBAL_NOTICE_CLEARED","true");
+    localStorage.removeItem("ACTIVE_BROADCAST_NOTICE");
+    document.getElementById('noticeBanner').style.display = 'none';
+    document.getElementById('noticeText').innerText = '';
+    showMsg('Notice Cleared!');
+    try { await fetch(`${API_BASE}/api/admin/notice`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ requesterRollNo: user.rollNo, title:'Announcement', message:"" }) }); } catch(err) {}
+}
+
+function switchTab(tabId) {
+    const markTab = document.getElementById('markTab');
+    const adminTab = document.getElementById('adminTab');
+    markTab.style.display = tabId === 'markTab' ? 'block' : 'none';
+    adminTab.style.display = tabId === 'adminTab' ? 'block' : 'none';
+    markTab.classList.remove('tab-content-active');
+    adminTab.classList.remove('tab-content-active');
+    if (tabId === 'markTab') markTab.classList.add('tab-content-active');
+    if (tabId === 'adminTab') adminTab.classList.add('tab-content-active');
+    const tabs = document.querySelectorAll('.tab-bar .tab-item');
+    tabs[0].classList.toggle('active', tabId === 'markTab');
+    if(tabs[1]) tabs[1].classList.toggle('active', tabId === 'adminTab');
+    if(tabId === 'adminTab') { fetchAllStudents(); fetchSecurityAnalytics(); }
+}
+
+function switchAdminSubTab(subId) {
+    const subTabs = ['subReports','subAttendance','subHoliday','subQR','subTools','subDirectory','subSecurity'];
+    subTabs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.style.display = (id === subId) ? 'block' : 'none'; el.classList.remove('tab-content-active'); if (id === subId) el.classList.add('tab-content-active'); }
+    });
+    const navItems = document.querySelectorAll('.admin-nav-item');
+    navItems.forEach((item, idx) => { item.classList.toggle('active', subTabs[idx] === subId); });
+    if (subId === 'subQR') generateDynamicQR();
+    if (subId === 'subDirectory') fetchAllStudents();
+    if (subId === 'subSecurity') { fetchSuspiciousLogs(); fetchAutoUnblockStatus(); fetchSecurityAnalytics(); }
+}
+
+function openStudentExcelModal() {
+    document.getElementById('studentExcelModal').style.display = 'flex';
+    document.getElementById('studentExcelRange').onchange = function() {
+        document.getElementById('selectedMonthWrapper').style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none';
+    };
+}
+
+function closeStudentExcelModal() {
+    document.getElementById('studentExcelModal').style.display = 'none';
+}
+
+function processStudentExcelDownload() {
+    const range = document.getElementById('studentExcelRange').value;
+    const selectedMonth = parseInt(document.getElementById('studentExcelMonth').value);
+    if (globalMyRecords.length === 0) { closeStudentExcelModal(); return showMsg("No records to export!", true); }
+    const today = new Date();
+    let filteredRecords = [];
+    if (range === 'CURRENT_MONTH') {
+        const currentMonthIdx = today.getMonth(), currentYear = today.getFullYear();
+        filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); return parseInt(parts[0]) === currentYear && (parseInt(parts[1])-1) === currentMonthIdx; });
+    } else if (range === 'SELECTED_MONTH') {
+        filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); return parseInt(parts[0]) === 2026 && (parseInt(parts[1])-1) === selectedMonth; });
+    } else {
+        filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); const m = parseInt(parts[1])-1; return parseInt(parts[0]) === 2026 && m >= 6 && m <= 11; });
+    }
+    if (filteredRecords.length === 0) { closeStudentExcelModal(); return showMsg("No records for selected period!", true); }
+    const grouped = {};
+    filteredRecords.forEach(r => { if (!grouped[r.date]) grouped[r.date] = 0; grouped[r.date]++; });
+    let csv = "Date,Day,Total Lectures,Status\n";
+    Object.keys(grouped).sort().forEach(d => {
+        const parts = d.split('-');
+        const formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        const dayStr = DAY_NAMES[new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2])).getDay()];
+        csv += `"${formattedDate}","${dayStr}","${grouped[d]}","Present"\n`;
+    });
+    const fileName = `Student_Attendance_${range}.csv`;
+    downloadFile(csv, fileName);
+    closeStudentExcelModal();
+    showMsg("Report downloaded!");
+}
+
+function exportExcelGrid() {
+    if (globalAllRecords.length === 0) return alert("Refresh records first!");
+    const selection = document.getElementById('exportSelection').value;
+    const holidayDatesList = globalHolidays.map(h => h.date);
+    const studentsMap = {};
+    globalAllRecords.forEach(r => {
+        const cleanRoll = r.rollNo.toUpperCase().replace(/[^A-Z0-9]/g,'');
+        if (!studentsMap[cleanRoll]) { studentsMap[cleanRoll] = { name:r.studentName, roll:cleanRoll, dates:{} }; }
+        studentsMap[cleanRoll].dates[r.date] = r.status;
+    });
+    let targetDates = [];
+    if (selection === 'ALL_SEMESTER') {
+        let cur = new Date(2026,6,15); const endDate = new Date(2026,11,31);
+        while (cur <= endDate) { const y=cur.getFullYear(); const m=String(cur.getMonth()+1).padStart(2,'0'); const d=String(cur.getDate()).padStart(2,'0'); targetDates.push(`${y}-${m}-${d}`); cur.setDate(cur.getDate()+1); }
+    } else {
+        const monthIdx = parseInt(selection); const year = 2026; const startDay = (monthIdx === 6) ? 15 : 1;
+        const daysInMonth = new Date(year, monthIdx+1, 0).getDate();
+        for (let d=startDay; d<=daysInMonth; d++) { const y=year; const m=String(monthIdx+1).padStart(2,'0'); const day=String(d).padStart(2,'0'); targetDates.push(`${y}-${m}-${day}`); }
+    }
+    let headerRow = `Student Roll No,Student Name`;
+    targetDates.forEach(dt => { const parts=dt.split('-'); const dtObj=new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2])); const dayOfWeek=dtObj.getDay(); const dayName=DAY_NAMES[dayOfWeek]; headerRow += `,${parts[2]}-${MONTH_NAMES[parseInt(parts[1])-1].substring(0,3)} (${dayName})`; });
+    headerRow += `,Total Present\n`;
+    let csv = `BM Group - Master Attendance Grid (Jul-Dec 2026)\n${headerRow}`;
+    const sortedStudents = Object.values(studentsMap).sort((a,b) => a.roll.localeCompare(b.roll, undefined, { numeric:true }));
+    sortedStudents.forEach(s => {
+        csv += `"${s.roll}","${s.name}"`;
+        let presentCount = 0;
+        targetDates.forEach(dt => {
+            const parts=dt.split('-'); const dtObj=new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2])); const dayOfWeek=dtObj.getDay(); const isWeekend=(dayOfWeek===0||dayOfWeek===6); const isHoliday=holidayDatesList.includes(dt);
+            if (isWeekend) { csv += `,OFF`; } else if (isHoliday) { csv += `,H`; } else { const status = s.dates[dt]; if (status === 'Present' || status === 'Duty Leave') { csv += `,P`; presentCount++; } else { csv += `,A`; } }
+        });
+        csv += `,${presentCount}\n`;
+    });
+    const fileName = selection === 'ALL_SEMESTER' ? 'Full_Semester_Grid_2026.csv' : `Attendance_Grid_${MONTH_NAMES[parseInt(selection)]}_2026.csv`;
+    downloadFile(csv, fileName);
 }
 
 async function downloadWorkingDaysReport() {
@@ -2111,40 +1988,54 @@ async function downloadWorkingDaysReport() {
 async function downloadGoogleSheetsExport() {
     const user = JSON.parse(localStorage.getItem('user'));
     try {
-        window.open(`${API_BASE}/api/export/csv/${user.rollNo}`, '_blank');
-        showMsg('📊 CSV Export downloading...');
-    } catch(e) { showMsg('Failed to export CSV', true); }
+        window.open(`${API_BASE}/api/export/google-sheets/${user.rollNo}`, '_blank');
+        showMsg('📊 Export started! CSV will download.');
+    } catch(e) { showMsg('Failed to export!', true); }
 }
 
 function downloadFile(content, fileName) {
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
+    const blob = new Blob([content], { type:'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", fileName);
-    link.style.visibility = 'hidden';
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', fileName);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 
-// ----- LOGOUT & AUTO-LOGIN -----
-function logout() {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    document.getElementById('dash-box').style.display = 'none';
-    document.getElementById('headerAvatarBox').style.display = 'none';
-    document.getElementById('auth-box').style.display = 'block';
-    showMsg('Logged out successfully');
+async function handleAuth() {
+    const rawRoll = document.getElementById('rollNo').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const deviceId = getDeviceId();
+    const validation = sanitizeAndValidateRollNo(rawRoll);
+    if (!validation.isValid) { return showMsg('Enter valid Roll No (e.g. 24CSE09)!', true); }
+    if (!password) { return showMsg('Enter your password!', true); }
+    showMsg('Connecting...');
+    try {
+        if (isRegistering) {
+            const name = document.getElementById('regName').value.trim();
+            if (!name) return showMsg('Enter Full Name!', true);
+            const res = await fetch(`${API_BASE}/api/auth/register`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ name, rollNo: validation.cleanRoll, password, deviceId }) });
+            const data = await res.json();
+            if (res.ok) { showMsg('Registered! Login now.'); toggleMode(); } else { showMsg(data.error || 'Registration failed', true); }
+        } else {
+            const res = await fetch(`${API_BASE}/api/auth/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ rollNo: validation.cleanRoll, password, deviceId }) });
+            const data = await res.json();
+            if (res.ok) { localStorage.setItem('user', JSON.stringify(data.user)); localStorage.setItem('token', data.token); loadDashboard(); }
+            else { showMsg(data.error || 'Invalid credentials', true); }
+        }
+    } catch(err) { showMsg('Connection timeout!', true); }
 }
 
-// Auto-login initialization
-window.addEventListener('DOMContentLoaded', () => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (user) {
-        loadDashboard();
-    }
-});
-    </script>
+async function logout() {
+    try { const token = localStorage.getItem('token'); if (token) { await fetch(`${API_BASE}/api/auth/logout`, { method:'POST', headers:{'Authorization':`Bearer ${token}`} }); } } catch(e) {}
+    localStorage.removeItem('user'); localStorage.removeItem('token'); location.reload();
+}
+
+// Auto-login on page load
+if (localStorage.getItem('user')) loadDashboard();
+</script>
 </body>
 </html>
