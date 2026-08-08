@@ -166,7 +166,6 @@ const Notice = mongoose.model('Notice', noticeSchema);
 const SuspiciousLog = mongoose.model('SuspiciousLog', suspiciousLogSchema);
 const BlacklistToken = mongoose.model('BlacklistToken', blacklistSchema);
 const QRCode = mongoose.model('QRCode', qrCodeSchema);
-
 // ---------- Helper: Check if date is holiday or weekend ----------
 async function checkDateStatus(dateStr) {
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -365,7 +364,6 @@ async function detectVPN(ip) {
     return { suspicious: false };
   }
 }
-
 async function autoResetAnomalyFlags() {
   try {
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -617,6 +615,7 @@ app.post('/api/auth/verify-qr', async (req, res) => {
     res.json({ message: 'QR verified!', verified: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
+
 // ----- Notices -----
 app.get('/api/notices', async (req, res) => {
   try {
@@ -637,7 +636,6 @@ app.post('/api/admin/notice', async (req, res) => {
     res.status(201).json({ message: 'Notice published!', notice: newNotice });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
-
 // ----- Holiday Routes -----
 app.post('/api/admin/holiday', async (req, res) => {
   try {
@@ -1231,6 +1229,7 @@ app.get('/api/export/google-sheets/:requesterRollNo', async (req, res) => {
     res.send(csv);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
+
 // 🔥 NEW: Export with Working Days Info
 app.get('/api/export/working-days/:requesterRollNo', async (req, res) => {
   try {
