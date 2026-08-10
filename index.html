@@ -1241,12 +1241,12 @@
                     
                     // Show today's present students
                     const presentList = document.getElementById('todayPresentList');
-                    if (data.todayPresentStudents) {
+                    if (data.todayPresentStudents && data.todayPresentStudents.length > 0) {
                         presentList.innerHTML = data.todayPresentStudents.map(s => 
                             `<div class="present-item"><span>${s.rollNo}</span><span>${s.name}</span></div>`
                         ).join('');
                     } else {
-                        presentList.innerHTML = '<div style="padding:8px; text-align:center; color:var(--text-muted);">Loading present students...</div>';
+                        presentList.innerHTML = '<div style="padding:8px; text-align:center; color:var(--text-muted);">No students present yet today.</div>';
                     }
                 }
             } catch(e) { console.error('Dashboard stats failed:', e); }
