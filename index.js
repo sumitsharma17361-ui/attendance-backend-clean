@@ -49,7 +49,7 @@ const loginSchema = z.object({
   deviceId: z.string().optional()
 });
 
-// ---------- Timetable (Monday last lecture = LIB - Library) ----------
+// ---------- Timetable (Monday last = LIB - Library) ----------
 const TIME_TABLE = {
   Monday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'DAA - Design & Analysis of Algorithm', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'CN - Computer Network', 'LIB - Library'],
   Tuesday: ['WT - Web Technology', 'ECO - Economics for Engineers', 'Internet Lab (Ms. Geeta)', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'BDA - Big Data Analytics'],
@@ -501,7 +501,7 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
       todayAbsent, 
       overallAttendance: totalAttendance, 
       overallPct, 
-      todayPresentStudents: presentList,  // 👈 list for admin
+      todayPresentStudents: presentList,
       workingDaysSoFar,
       totalWorkingDaysSemester
     });
@@ -546,8 +546,8 @@ app.post('/api/attendance/mark', async (req, res) => {
     const user = await User.findOne({ rollNo: cleanRoll });
     if (!user) return res.status(404).json({ error: 'Student not found!' });
     
-    // Check if subject is LIB - skip counting as attendance? But we still mark it as Present if they mark it.
-    // We'll allow marking but it won't count in attendance percentage because we filter out 'LIB' and 'Sports' etc.
+    // Check if subject is Library/Sports - we still allow marking but won't count in attendance percentage
+    // (filtering is done in calculateRealAttendancePercentage)
     const isLab = subject.includes("LAB") || subject.includes("Lab");
     const todayEntries = await Attendance.find({ rollNo: cleanRoll, subject, date: todayDate });
     if (isLab && todayEntries.length >= 1) return res.status(400).json({ error: `Already marked for ${subject} today! (Lab - 1 lecture only)` });
@@ -577,7 +577,7 @@ app.post('/api/attendance/mark', async (req, res) => {
   }
 });
 
-// ----- Full Day Attendance -----
+// ----- Full Day Attendance (skip Library, Sports) -----
 app.post('/api/attendance/mark-fullday', async (req, res) => {
   try {
     const { rollNo, name, latitude, longitude } = req.body;
@@ -604,10 +604,15 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayName = days[today.getDay()];
-    const todaySubjects = TIME_TABLE[dayName] || ['General Class'];
-    let markedCount = 0;
+    const allSubjects = TIME_TABLE[dayName] || ['General Class'];
     
-    for (let sub of todaySubjects) {
+    // Filter out Library, Sports, etc. (subjects that shouldn't count in attendance)
+    const academicSubjects = allSubjects.filter(sub => 
+      !sub.includes("LIB") && !sub.includes("Library") && !sub.includes("Sports")
+    );
+    
+    let markedCount = 0;
+    for (let sub of academicSubjects) {
       const exists = await Attendance.findOne({ rollNo: cleanRoll, subject: sub, date: todayDate });
       if (!exists) {
         await new Attendance({
@@ -630,8 +635,8 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     user.blockUntil = null;
     await user.save();
     
-    if (markedCount === 0) return res.status(400).json({ error: 'Full Day already marked!' });
-    res.status(201).json({ message: `✅ Full Day Marked (${markedCount} Lectures)!` });
+    if (markedCount === 0) return res.status(400).json({ error: 'All academic subjects already marked!' });
+    res.status(201).json({ message: `✅ Full Day Marked (${markedCount} academic Lectures)!` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -734,7 +739,8 @@ app.get('/api/analytics/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Export -----
+// ----- Export Routes -----
+// 1. Full export (all students) - existing
 app.get('/api/export/google-sheets/:requesterRollNo', async (req, res) => {
   try {
     if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
@@ -748,6 +754,77 @@ app.get('/api/export/google-sheets/:requesterRollNo', async (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename=attendance_export.csv');
     res.send(csv);
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// 2. Single student export by range
+app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) => {
+  try {
+    const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo)) {
+      return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    }
+
+    const { studentRollNo, range, month } = req.query;
+    if (!studentRollNo) {
+      return res.status(400).json({ error: 'studentRollNo is required' });
+    }
+
+    const cleanStudent = studentRollNo.trim().toUpperCase();
+    const today = new Date();
+    let startDate, endDate;
+
+    if (range === 'CURRENT_MONTH') {
+      startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+      endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    } else if (range === 'SELECTED_MONTH') {
+      const m = parseInt(month);
+      if (isNaN(m) || m < 0 || m > 11) {
+        return res.status(400).json({ error: 'Invalid month' });
+      }
+      startDate = new Date(2026, m, 1);
+      endDate = new Date(2026, m + 1, 0);
+    } else { // FULL_SEMESTER
+      startDate = new Date(SEMESTER_START);
+      endDate = new Date(SEMESTER_END);
+    }
+
+    const startStr = startDate.toISOString().split('T')[0];
+    const endStr = endDate.toISOString().split('T')[0];
+
+    const records = await Attendance.find({
+      rollNo: cleanStudent,
+      date: { $gte: startStr, $lte: endStr }
+    }).sort({ date: 1 });
+
+    if (records.length === 0) {
+      return res.status(404).json({ error: 'No records found for this student in the selected range.' });
+    }
+
+    const studentName = records[0].studentName || 'Unknown';
+
+    let csv = `Student Attendance Report\n`;
+    csv += `Student: ${studentName} (${cleanStudent})\n`;
+    csv += `Range: ${startStr} to ${endStr}\n`;
+    csv += `Generated: ${new Date().toLocaleString()}\n\n`;
+    csv += 'Date,Subject,Status,Location,IP Address\n';
+
+    records.forEach(r => {
+      const loc = r.location ? `(${r.location.latitude}, ${r.location.longitude})` : 'N/A';
+      csv += `${r.date},${r.subject},${r.status},${loc},${r.ipAddress || 'N/A'}\n`;
+    });
+
+    const total = records.length;
+    const present = records.filter(r => r.status === 'Present').length;
+    const pct = total > 0 ? Math.round((present / total) * 100) : 0;
+    csv += `\nTotal Lectures: ${total}, Present: ${present}, Attendance %: ${pct}%\n`;
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=attendance_${cleanStudent}_${range}.csv`);
+    res.send(csv);
+  } catch (err) {
+    console.error('Student export error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ---------- Global Error Handlers ----------
