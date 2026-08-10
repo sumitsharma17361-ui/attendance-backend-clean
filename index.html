@@ -6,9 +6,8 @@
     <title>BM Group of Institutions - Enterprise ERP Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- html2pdf for PDF export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <style>
-        /* ===== All CSS from original working version + new styles ===== */
         :root {
             --bg-body: #f0f4f8;
             --primary: #2563eb;
@@ -221,7 +220,7 @@
         .admin-box.sub-directory { background: #fce7f3; border-color: #fbcfe8; }
         .admin-box { transition: background 0.3s, border-color 0.3s; }
 
-        /* Summary card */
+        /* Student summary card */
         .summary-card {
             background: var(--bg-body);
             border-radius: 8px;
@@ -262,39 +261,16 @@
             border: 1px solid var(--card-border);
             font-size: 8px;
         }
-
-        /* Impersonation banner */
-        .impersonation-banner {
-            background: #fef3c7;
-            color: #92400e;
-            padding: 6px 12px;
-            font-size: 10px;
-            font-weight: 600;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #fde68a;
-        }
-        .impersonation-banner button {
-            background: #dc2626;
-            color: white;
-            border: none;
-            padding: 2px 10px;
-            border-radius: 4px;
-            font-size: 9px;
-            font-weight: 700;
-            cursor: pointer;
-        }
-        .impersonation-banner button:hover { background: #b91c1c; }
     </style>
 </head>
 <body>
-
-    <!-- ===== Toast, Download Progress, Modals ===== -->
     <div id="toast-container"><div id="toast" class="toast-card"><svg id="toast-icon" class="svg-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span id="toast-msg">System Active</span></div></div>
-    <div id="downloadProgress" class="download-progress"><div class="spinner"></div><span id="downloadStatus">Preparing file...</span></div>
-
-    <!-- Student Excel Modal -->
+    
+    <div id="downloadProgress" class="download-progress">
+        <div class="spinner"></div>
+        <span id="downloadStatus">Preparing file...</span>
+    </div>
+    
     <div id="studentExcelModal" class="modal-overlay" style="display:none;">
         <div class="modal-card">
             <h3 style="font-size:13px; font-weight:800; margin-bottom:4px; color:var(--text-main);">Download Student Excel Sheet</h3>
@@ -321,16 +297,7 @@
         </div>
     </div>
 
-    <!-- ===== APP ===== -->
     <div class="app-container">
-
-        <!-- Impersonation Banner -->
-        <div id="impersonationBanner" class="impersonation-banner" style="display:none;">
-            <span id="impersonationText">You are logged in as <b>STUDENT</b></span>
-            <button onclick="switchBackFromImpersonation()">Switch Back</button>
-        </div>
-
-        <!-- Header -->
         <div class="app-header">
             <div class="app-header-title">
                 <h1>BM Group of Institutions</h1>
@@ -340,13 +307,10 @@
                 <div class="avatar-circle" id="userAvatarText">SS</div>
             </div>
         </div>
-
-        <!-- Notice Banner -->
         <div class="notice-banner" id="noticeBanner" style="display:none;">
             <svg class="svg-icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             <div class="notice-marquee"><p id="noticeText">Loading announcements...</p></div>
         </div>
-
         <div class="app-body">
             <!-- Auth -->
             <div id="auth-box" class="tab-content-active">
@@ -366,66 +330,111 @@
 
             <!-- Dashboard -->
             <div id="dash-box" style="display:none;">
-
-                <!-- Profile Summary -->
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <div>
-                        <h3 style="font-size:13px; font-weight:800;"><span id="welcomeMsg">Welcome!</span></h3>
+                        <h3 style="font-size:13px; font-weight:800;">
+                            <span id="welcomeMsg">Welcome!</span>
+                        </h3>
                         <p style="font-size:10px; color:var(--text-muted); font-weight:600;"><span id="roleLabel">Roll</span>: <span id="userRoll" style="font-weight:700;"></span></p>
                     </div>
                     <button class="btn btn-danger" style="width:auto; padding:4px 8px; margin:0; font-size:10px;" onclick="logout()">Logout</button>
                 </div>
 
-                <!-- Stats -->
                 <div class="stats-grid" id="studentStatsGrid">
-                    <div class="stat-card"><div class="value" id="totalDaysCount">0</div><div class="label">Academic Lectures</div></div>
-                    <div class="stat-card"><div class="value" id="attendancePct">0%</div><div class="label">Attendance Status</div></div>
+                    <div class="stat-card">
+                        <div class="value" id="totalDaysCount">0</div>
+                        <div class="label">Academic Lectures</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value" id="attendancePct">0%</div>
+                        <div class="label">Attendance Status</div>
+                    </div>
+                </div>
+
+                <div class="stats-grid" id="adminStatsGrid" style="display:none;">
+                    <div class="stat-card">
+                        <div class="value" id="adminTotalStudents">0</div>
+                        <div class="label">Enrolled Students</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value" id="adminClassAvg">0%</div>
+                        <div class="label">Class Attendance Avg</div>
+                    </div>
                 </div>
 
                 <div class="simulator-card" id="simulatorBox">
                     <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
                     <div><b>Attendance Advisor:</b> <span id="advisorText">Calculating criteria...</span></div>
                 </div>
-
+                
                 <!-- Admin Live Dashboard -->
                 <div id="adminLiveDashboard" style="display:none; margin:10px 0;">
                     <div class="stats-grid">
-                        <div class="stat-card"><div class="value" id="liveTotalStudents">0</div><div class="label">Total Students</div></div>
-                        <div class="stat-card"><div class="value" id="liveTodayPresent">0</div><div class="label">Present Today</div></div>
-                        <div class="stat-card"><div class="value" id="liveTodayAbsent">0</div><div class="label">Absent Today</div></div>
-                        <div class="stat-card"><div class="value" id="liveOverallPct">0%</div><div class="label">Overall %</div></div>
+                        <div class="stat-card">
+                            <div class="value" id="liveTotalStudents">0</div>
+                            <div class="label">Total Students</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value" id="liveTodayPresent">0</div>
+                            <div class="label">Present Today</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value" id="liveTodayAbsent">0</div>
+                            <div class="label">Absent Today</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value" id="liveOverallPct">0%</div>
+                            <div class="label">Overall %</div>
+                        </div>
                     </div>
+                    <!-- Present Students List -->
                     <div style="background:#f8fafc; border-radius:8px; padding:8px; border:1px solid var(--card-border);">
                         <span style="font-size:9px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">📋 Today's Present Students</span>
                         <div id="todayPresentList"></div>
                     </div>
                     <div class="stats-grid" style="margin-top:8px;">
-                        <div class="stat-card"><div class="value" id="workingDaysSoFar">0</div><div class="label">Working Days (so far)</div></div>
-                        <div class="stat-card"><div class="value" id="totalWorkingDaysSemester">0</div><div class="label">Total Working Days (Semester)</div></div>
+                        <div class="stat-card">
+                            <div class="value" id="workingDaysSoFar">0</div>
+                            <div class="label">Working Days (so far)</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value" id="totalWorkingDaysSemester">0</div>
+                            <div class="label">Total Working Days (Semester)</div>
+                        </div>
                     </div>
                     <button class="btn btn-outline btn-sm" onclick="loadDashboardStats()" style="padding:4px; font-size:9px;">Refresh Stats</button>
                 </div>
 
-                <!-- Quick Portals -->
                 <div class="quick-portals-card">
                     <span style="font-size:9px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Quick Portals</span>
                     <div class="portal-grid">
-                        <div class="portal-btn" onclick="window.open('https://erp.bmctm.com/fees','_blank')">💰 Pay Fees</div>
-                        <div class="portal-btn" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login','_blank')">🎓 Admit Card</div>
-                        <div class="portal-btn" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login','_blank')">📊 Results</div>
+                        <div class="portal-btn" onclick="window.open('https://erp.bmctm.com/fees','_blank')">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                            <span>Pay Fees</span>
+                        </div>
+                        <div class="portal-btn" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login','_blank')">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            <span>Admit Card</span>
+                        </div>
+                        <div class="portal-btn" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login','_blank')">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+                            <span>Results</span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Tabs -->
                 <div class="tab-bar">
                     <div class="tab-item active" id="studentTabHeader" onclick="switchTab('markTab')">Attendance</div>
                     <div class="tab-item" id="adminTabHeader" style="display:none;" onclick="switchTab('adminTab')">Admin Control</div>
                 </div>
-
-                <!-- Attendance Tab -->
+                
                 <div id="markTab" class="tab-content-active">
-                    <button class="btn btn-primary" onclick="openFullDayPasscodePrompt()" style="padding:9px; font-size:10px;">📚 Mark Full Day Attendance</button>
-                    <div style="text-align:center; font-size:9px; color:var(--text-muted); margin:10px 0 3px;">Live Timetable</div>
+                    <button class="btn btn-primary" onclick="openFullDayPasscodePrompt()" style="padding:9px; font-size:10px;">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                        Mark Full Day Attendance
+                    </button>
+                    
+                    <div style="text-align:center; font-size:9px; color:var(--text-muted); margin: 10px 0 3px 0; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Live Timetable</div>
                     <div class="period-card" id="periodCardBox">
                         <div>
                             <span style="font-size:8px; font-weight:700; color:var(--text-muted); text-transform:uppercase;" id="periodTimeSlotLabel">CURRENT PERIOD:</span>
@@ -448,7 +457,10 @@
                     <div style="margin-top:8px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                             <h4 style="font-size:10px; color:var(--text-muted); font-weight:700;">My Attendance Logs:</h4>
-                            <button class="btn btn-success btn-sm" onclick="openStudentExcelModal()">📥 Excel</button>
+                            <button class="btn btn-success btn-sm" onclick="openStudentExcelModal()">
+                                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                                Excel
+                            </button>
                         </div>
                         <div class="table-container" style="max-height:200px;">
                             <table id="myHistoryTable">
@@ -458,7 +470,7 @@
                         </div>
                     </div>
                 </div>
-
+                
                 <!-- Admin Tab -->
                 <div id="adminTab" style="display:none;">
                     <div class="admin-nav">
@@ -470,7 +482,6 @@
                         <div class="admin-nav-item" onclick="switchAdminSubTab('subDirectory')">Directory</div>
                     </div>
 
-                    <!-- Reports -->
                     <div id="subReports" class="admin-box sub-reports tab-content-active">
                         <span class="sub-section-title">📊 Export Reports</span>
                         <select id="exportSelection" style="padding:8px; margin-bottom:6px; font-size:10px;">
@@ -482,11 +493,18 @@
                             <option value="10">November 2026</option>
                             <option value="11">December 2026</option>
                         </select>
-                        <button class="btn btn-success btn-sm" onclick="exportExcelGrid()">Download Excel Report</button>
-                        <button class="btn btn-accent btn-sm" onclick="downloadGoogleSheetsExport()">Export to Google Sheets (CSV)</button>
+                        <button class="btn btn-success btn-sm" onclick="exportExcelGrid()" style="padding:8px; margin:0;">Download Excel Report</button>
+                        <button class="btn btn-accent btn-sm" onclick="downloadGoogleSheetsExport()" style="padding:8px; margin:4px 0 0 0;">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="12" x2="12" y1="4" y2="20"/></svg>
+                            Export to Google Sheets (CSV)
+                        </button>
+
+                        <!-- Single Student Export -->
                         <hr style="margin:12px 0; border-color:var(--card-border);">
                         <span class="sub-section-title">👤 Single Student Attendance</span>
-                        <select id="singleStudentSelect" style="padding:8px; margin-bottom:6px; font-size:10px;"><option value="">Select Student...</option></select>
+                        <select id="singleStudentSelect" style="padding:8px; margin-bottom:6px; font-size:10px;">
+                            <option value="">Select Student...</option>
+                        </select>
                         <select id="singleStudentRange" style="padding:8px; margin-bottom:6px; font-size:10px;" onchange="toggleSingleMonthWrapper()">
                             <option value="CURRENT_MONTH">Current Month</option>
                             <option value="SELECTED_MONTH">Selected Month</option>
@@ -494,15 +512,20 @@
                         </select>
                         <div id="singleStudentMonthWrapper" style="display:none; margin-bottom:6px;">
                             <select id="singleStudentMonth" style="padding:8px; font-size:10px;">
-                                <option value="6">July</option><option value="7">August</option>
-                                <option value="8">September</option><option value="9">October</option>
-                                <option value="10">November</option><option value="11">December</option>
+                                <option value="6">July 2026</option>
+                                <option value="7">August 2026</option>
+                                <option value="8">September 2026</option>
+                                <option value="9">October 2026</option>
+                                <option value="10">November 2026</option>
+                                <option value="11">December 2026</option>
                             </select>
                         </div>
-                        <button class="btn btn-primary btn-sm" onclick="downloadSingleStudentAttendance()">📥 Download Student CSV</button>
+                        <button class="btn btn-primary btn-sm" onclick="downloadSingleStudentAttendance()" style="padding:8px; margin:0;">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                            Download Student CSV
+                        </button>
                     </div>
 
-                    <!-- Manual Attendance -->
                     <div id="subAttendance" class="admin-box sub-attendance" style="display:none;">
                         <span class="sub-section-title">📝 Manual Backdate Attendance</span>
                         <input type="text" id="manualRoll" placeholder="Student Roll No (e.g. 24CSE14)" style="font-size:10px; padding:7px;">
@@ -511,128 +534,123 @@
                             <option value="Present">Present</option>
                             <option value="Duty Leave">Duty Leave (DL)</option>
                         </select>
+                        
                         <div style="margin:8px 0;">
                             <span style="font-size:10px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">Select Subjects to Mark:</span>
                             <div id="subjectCheckboxContainer" class="subject-checkbox-container">
-                                <label class="select-all"><input type="checkbox" id="selectAllSubjects" onchange="toggleAllSubjects()"> Select All</label>
+                                <label class="select-all">
+                                    <input type="checkbox" id="selectAllSubjects" onchange="toggleAllSubjects()"> Select All
+                                </label>
                             </div>
                         </div>
-                        <div class="flex-buttons">
-                            <button class="btn btn-primary btn-sm" onclick="markManualAttendanceBulk()">Mark Selected</button>
-                            <button class="btn btn-outline btn-sm" onclick="selectAllSubjects(true)">All</button>
-                            <button class="btn btn-outline btn-sm" onclick="selectAllSubjects(false)">Clear</button>
-                        </div>
-                        <button class="btn btn-success btn-sm" onclick="markAllSubjectsForDay()" style="margin-top:4px;">📚 Mark All Subjects</button>
-                    </div>
 
-                    <!-- Holiday -->
+                        <div class="flex-buttons">
+                            <button class="btn btn-primary btn-sm" onclick="markManualAttendanceBulk()" style="padding:7px; flex:2;">Mark Selected</button>
+                            <button class="btn btn-outline btn-sm" onclick="selectAllSubjects(true)" style="padding:7px; flex:1;">All</button>
+                            <button class="btn btn-outline btn-sm" onclick="selectAllSubjects(false)" style="padding:7px; flex:1;">Clear</button>
+                        </div>
+                        <button class="btn btn-success btn-sm" onclick="markAllSubjectsForDay()" style="margin-top:4px; padding:6px; font-size:9px;">
+                            📚 Mark All Subjects for this Day
+                        </button>
+                    </div>
+                    
                     <div id="subHoliday" class="admin-box sub-holiday" style="display:none;">
                         <span class="sub-section-title">📅 Declare Official Holiday</span>
                         <input type="date" id="holidayDate" style="font-size:10px; padding:7px;">
                         <input type="text" id="holidayReason" placeholder="Reason (e.g. Diwali/Rainy Day)" style="font-size:10px; padding:7px;">
-                        <button class="btn btn-warning btn-sm" onclick="declareHoliday()">Mark Holiday</button>
+                        <button class="btn btn-warning btn-sm" onclick="declareHoliday()" style="padding:7px; margin:0;">Mark Holiday</button>
                         <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">💡 Holiday reason will show to students</p>
                     </div>
 
-                    <!-- Passcode (NEW: Two types) -->
                     <div id="subPasscode" class="admin-box sub-passcode" style="display:none; text-align:center;">
-                        <span class="sub-section-title">🔐 Class Passcodes</span>
-                        <div style="display:flex; flex-direction:column; gap:12px; margin-top:6px;">
-                            <!-- Full Day Passcode -->
-                            <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px;">
-                                <span style="font-size:9px; font-weight:700; color:#15803d;">📅 Full Day Attendance (5‑digit)</span>
-                                <div style="font-size:24px; font-weight:900; color:var(--primary); letter-spacing:4px; margin:4px 0;" id="fullDayPasscodeDisplay">98421</div>
-                                <button class="btn btn-outline btn-sm" onclick="generatePasscode('full_day')" style="padding:4px 8px; font-size:9px; width:auto; margin:0 auto;">
-                                    <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
-                                    Refresh Full Day Passcode
-                                </button>
-                                <p style="font-size:8px; color:var(--text-muted); margin-top:2px;">Valid for 5 minutes</p>
-                            </div>
-                            <!-- Single Lecture Passcode -->
-                            <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:10px;">
-                                <span style="font-size:9px; font-weight:700; color:#1d4ed8;">📖 Single Lecture (4‑digit)</span>
-                                <div style="font-size:24px; font-weight:900; color:var(--primary); letter-spacing:4px; margin:4px 0;" id="singleLecturePasscodeDisplay">6319</div>
-                                <button class="btn btn-outline btn-sm" onclick="generatePasscode('single_lecture')" style="padding:4px 8px; font-size:9px; width:auto; margin:0 auto;">
-                                    <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
-                                    Refresh Single Lecture Passcode
-                                </button>
-                                <p style="font-size:8px; color:var(--text-muted); margin-top:2px;">Valid for 5 minutes</p>
-                            </div>
+                        <span class="sub-section-title">📱 Class Passcode</span>
+                        <p style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Share this passcode with students. They enter it to mark attendance.</p>
+                        <div class="passcode-display">
+                            <span style="font-size:9px; font-weight:700; color:var(--text-muted);">CLASS PASSCODE:</span>
+                            <h2 id="liveClassPasscode">9842</h2>
                         </div>
+                        <button class="btn btn-outline btn-sm" id="refreshPasscodeBtn" onclick="generatePasscode()" style="padding:6px;">
+                            <svg id="refreshIcon" class="svg-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+                            Refresh Passcode
+                        </button>
+                        <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">Passcode auto-refreshes every 5 minutes</p>
                     </div>
 
-                    <!-- Tools (NEW: Login as Student) -->
                     <div id="subTools" class="admin-box sub-tools" style="display:none;">
-                        <!-- Existing tools -->
                         <div class="tool-sub-card">
                             <span class="tool-title" style="color:var(--primary);">➕ Register New Student</span>
                             <input type="text" id="adminRegName" placeholder="Full Student Name" style="font-size:10px; padding:7px;">
                             <input type="text" id="adminRegRoll" placeholder="Roll Number (e.g. 24CSE14)" style="font-size:10px; padding:7px;">
                             <input type="text" id="adminRegPass" placeholder="Password (Default: 123456)" style="font-size:10px; padding:7px;">
-                            <button class="btn btn-primary btn-sm" onclick="adminRegisterStudent()">Register</button>
+                            <button class="btn btn-primary btn-sm" onclick="adminRegisterStudent()" style="padding:7px; margin:0;">Register</button>
                         </div>
+                        
                         <div class="tool-sub-card" style="border-color:#93c5fd; background:#eff6ff;">
                             <span class="tool-title" style="color:#1d4ed8;">🔓 Reset Device Binding (Student Only)</span>
                             <input type="text" id="resetDeviceRoll" placeholder="Student Roll No (e.g. 24CSE14)" style="font-size:10px; padding:7px;">
-                            <button class="btn btn-primary btn-sm" onclick="resetDeviceBinding()">Reset</button>
+                            <button class="btn btn-primary btn-sm" onclick="resetDeviceBinding()" style="padding:7px; margin:0;">Reset</button>
                         </div>
+
                         <div class="tool-sub-card">
                             <span class="tool-title" style="color:var(--text-main);">📢 Broadcast Notice</span>
                             <input type="text" id="noticeMsg" placeholder="Notice text..." style="font-size:10px; padding:7px;">
                             <div class="flex-buttons">
-                                <button class="btn btn-primary btn-sm" onclick="postNotice()">Publish</button>
-                                <button class="btn btn-danger btn-sm" onclick="clearNotice()">Clear</button>
+                                <button class="btn btn-primary btn-sm" onclick="postNotice()" style="padding:6px;">Publish</button>
+                                <button class="btn btn-danger btn-sm" onclick="clearNotice()" style="padding:6px;">Clear</button>
                             </div>
                         </div>
+
                         <div class="tool-sub-card">
                             <span class="tool-title" style="color:var(--primary);">🔄 Update Roll Number</span>
                             <input type="text" id="oldRollFormat" placeholder="Old Roll (e.g. 24-CSE-14)" style="font-size:10px; padding:7px;">
                             <input type="text" id="newRollFormat" placeholder="New Roll (e.g. 24CSE14)" style="font-size:10px; padding:7px;">
-                            <button class="btn btn-primary btn-sm" onclick="updateRollNumberFormat()">Update</button>
+                            <button class="btn btn-primary btn-sm" onclick="updateRollNumberFormat()" style="padding:7px; margin:0;">Update</button>
                         </div>
+
                         <div class="tool-sub-card">
                             <span class="tool-title" style="color:var(--warning);">🔑 Reset Password</span>
                             <input type="text" id="resetRoll" placeholder="Student Roll No" style="font-size:10px; padding:7px;">
                             <input type="text" id="resetPass" placeholder="New Password" style="font-size:10px; padding:7px;">
-                            <button class="btn btn-warning btn-sm" onclick="resetStudentPassword()">Reset</button>
+                            <button class="btn btn-warning btn-sm" onclick="resetStudentPassword()" style="padding:7px; margin:0;">Reset</button>
                         </div>
+
                         <div class="tool-sub-card" style="border-color:#fecaca; background:#fef2f2;">
                             <span class="tool-title" style="color:#b91c1c;">🗑️ Delete Account</span>
                             <input type="text" id="deleteStudentRoll" placeholder="Roll No to Delete" style="font-size:10px; padding:7px;">
-                            <button class="btn btn-danger btn-sm" onclick="deleteEntireStudentAccount()">Delete Permanently</button>
-                        </div>
-
-                        <!-- 🆕 Login as Student -->
-                        <div class="tool-sub-card" style="border-color:#93c5fd; background:#eff6ff; margin-top:8px;">
-                            <span class="tool-title" style="color:#1d4ed8;">🔑 Login as Student (Admin Only)</span>
-                            <p style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">Select a student to login without password/device binding</p>
-                            <select id="loginAsStudentSelect" style="padding:7px; font-size:10px; margin-bottom:4px;">
-                                <option value="">Select Student...</option>
-                            </select>
-                            <button class="btn btn-primary btn-sm" onclick="loginAsStudent()">Login as Student</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteEntireStudentAccount()" style="padding:7px; margin:0;">Delete Permanently</button>
                         </div>
                     </div>
-
-                    <!-- Directory -->
+                    
                     <div id="subDirectory" class="admin-box sub-directory" style="display:none;">
                         <div class="flex-buttons" style="margin-bottom:6px;">
-                            <button class="btn btn-outline btn-sm" onclick="fetchAllStudents()">👥 All Students</button>
-                            <button class="btn btn-outline btn-sm" onclick="fetchAllAttendance()">📋 Attendance Records</button>
+                            <button class="btn btn-outline btn-sm" onclick="fetchAllStudents()" style="flex:1; padding:6px; font-size:9px;">
+                                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                All Students
+                            </button>
+                            <button class="btn btn-outline btn-sm" onclick="fetchAllAttendance()" style="flex:1; padding:6px; font-size:9px;">
+                                <svg class="svg-icon" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                                Attendance Records
+                            </button>
                         </div>
-                        <h4 style="font-size:10px; color:var(--text-muted); font-weight:700;" id="directoryTitle">All Registered Students <span id="studentCountBadge" class="student-count-badge">0</span></h4>
-                        <div class="table-container"><table id="allHistoryTable"><thead><tr><th>Roll</th><th>Name</th><th>Device Bound</th><th>Actions</th></tr></thead><tbody><tr><td colspan="4" style="text-align:center; padding:12px;">Click "All Students" to load...</td></tr></tbody></table></div>
+                        <h4 style="font-size:10px; color:var(--text-muted); font-weight:700;" id="directoryTitle">
+                            All Registered Students <span id="studentCountBadge" class="student-count-badge">0</span>
+                        </h4>
+                        <div class="table-container">
+                            <table id="allHistoryTable">
+                                <thead><tr><th>Roll</th><th>Name</th><th>Device Bound</th><th>Actions</th></tr></thead>
+                                <tbody><tr><td colspan="4" style="text-align:center; padding:12px;">Click "All Students" to load...</td></tr></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
+    
     <script>
         // ============================================================
-        // COMPLETE JAVASCRIPT – All working features + new ones
+        // CONFIGURATION
         // ============================================================
-
-        // ===== CONFIGURATION =====
         const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com";
         const ADMIN_ROLL_NUMBERS = ['24CSE48'];
         let globalAllRecords = [], globalMyRecords = [], globalHolidays = [], groupedAdminRecords = {};
@@ -641,13 +659,13 @@
         let allStudentsData = [];
         let passcodeVerified = false;
         let isRegistering = false;
-        let isImpersonating = false;
-        let originalUser = null;
 
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-        // ===== TOAST / UI HELPERS =====
+        // ============================================================
+        // TOAST / UI HELPERS
+        // ============================================================
         function showMsg(text, isError = false) {
             const toast = document.getElementById('toast');
             const toastMsg = document.getElementById('toast-msg');
@@ -690,7 +708,9 @@
             return deviceId;
         }
 
-        // ===== TIMETABLE & PERIOD TRACKER (same as original) =====
+        // ============================================================
+        // TIMETABLE & PERIOD TRACKER (Monday: Library last)
+        // ============================================================
         const WEEKLY_SCHEDULE = {
             1: [
                 { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
@@ -740,6 +760,8 @@
                 { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
             ]
         };
+
+        // ----- Subject list for manual attendance -----
         const DAY_SUBJECTS = {
             'Monday': ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'DAA - Design & Analysis of Algorithm', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'CN - Computer Network', 'LIB - Library'],
             'Tuesday': ['WT - Web Technology', 'ECO - Economics for Engineers', 'Internet Lab (Ms. Geeta)', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'BDA - Big Data Analytics'],
@@ -749,7 +771,6 @@
         };
 
         async function updatePeriodTrackerWidget() {
-            // (Same as original – works)
             const now = new Date();
             const dayOfWeek = now.getDay();
             const todayDate = now.toISOString().split('T')[0];
@@ -810,26 +831,27 @@
             }
         }
 
-        // ===== PASSCODE FUNCTIONS (NEW with type) =====
-        let currentFullDayPasscode = "98421";
-        let currentSingleLecturePasscode = "6319";
+        // ============================================================
+        // PASSCODE FUNCTIONS
+        // ============================================================
+        let currentPasscode = "9842";
 
         function openPasscodePromptForSingle() {
             if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
                 return showMsg("No active lecture to mark!", true);
             }
-            const enteredPasscode = prompt(`Enter 4-digit Single Lecture Passcode for ${activeSubjectSubjectCode}:`);
+            const enteredPasscode = prompt(`Enter Class Passcode for ${activeSubjectSubjectCode}:`);
             if (!enteredPasscode) return;
-            verifyPasscode(enteredPasscode, 'single_lecture', () => {
+            verifyPasscode(enteredPasscode, () => {
                 markSingleAttendance(activeSubjectSubjectCode);
             });
         }
 
-        async function verifyPasscode(passcode, type, callback) {
+        async function verifyPasscode(passcode, callback) {
             try {
                 const res = await fetch(`${API_BASE}/api/auth/verify-passcode`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ passcode: passcode.trim(), type })
+                    body: JSON.stringify({ passcode: passcode.trim() })
                 });
                 const data = await res.json();
                 if (res.ok && data.verified) {
@@ -845,12 +867,15 @@
         }
 
         async function openFullDayPasscodePrompt() {
-            const enteredPasscode = prompt(`Enter 5-digit Full Day Passcode:`);
+            const enteredPasscode = prompt(`Enter Class Passcode for Full Day Attendance:`);
             if (!enteredPasscode) return;
-            verifyPasscode(enteredPasscode, 'full_day', markFullDayAttendance);
+            verifyPasscode(enteredPasscode, markFullDayAttendance);
         }
 
-        // ===== ATTENDANCE FUNCTIONS (same as original) =====
+        // ============================================================
+        // ATTENDANCE FUNCTIONS
+        // ============================================================
+
         function markActivePeriodAttendance() {
             if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
                 return showMsg("No active class right now!", true);
@@ -865,35 +890,38 @@
         function markSingleAttendance(overrideSubject) {
             const sub = overrideSubject || activeSubjectSubjectCode || "WT LAB";
             if (!sub || sub.includes("Off Hours") || sub.includes("Lunch")) { return showMsg("No active lecture!", true); }
+            
             const todayISO = new Date().toISOString().split('T')[0];
             const isLab = sub.includes("LAB") || sub.includes("Lab");
             const todayEntries = globalMyRecords.filter(r => r.date === todayISO && r.subject === sub);
             if (isLab && todayEntries.length >= 1) { return showMsg(`Already marked for ${sub} today! (Lab - 1 only)`, true); }
             if (!isLab && todayEntries.length >= 1) { return showMsg(`Already marked for ${sub} today!`, true); }
+            
             if (!navigator.geolocation) { return showMsg('Geolocation not supported!', true); }
+            
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 const user = JSON.parse(localStorage.getItem('user'));
                 try {
                     const res = await fetch(`${API_BASE}/api/attendance/mark`, {
-                        method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${localStorage.getItem('token')}`},
-                        body:JSON.stringify({
-                            rollNo: user.rollNo,
-                            name: user.name,
-                            subject: sub,
-                            latitude: pos.coords.latitude,
-                            longitude: pos.coords.longitude
+                        method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${localStorage.getItem('token')||''}`},
+                        body:JSON.stringify({ 
+                            rollNo: user.rollNo, 
+                            name: user.name, 
+                            subject: sub, 
+                            latitude: pos.coords.latitude, 
+                            longitude: pos.coords.longitude 
                         })
                     });
                     const data = await res.json();
                     passcodeVerified = false;
-                    if (res.ok) {
-                        showMsg(`✅ Marked ${sub}!`);
-                        fetchHistory(user.rollNo);
-                    } else {
-                        showMsg(data.error || "Failed", true);
+                    if (res.ok) { 
+                        showMsg(`✅ Marked ${sub}!`); 
+                        fetchHistory(user.rollNo); 
+                    } else { 
+                        showMsg(data.error || "Failed", true); 
                     }
-                } catch(e) {
-                    showMsg("Network Error!", true);
+                } catch(e) { 
+                    showMsg("Network Error!", true); 
                 }
             }, () => showMsg('GPS Access Denied! Please enable GPS.', true));
         }
@@ -901,39 +929,43 @@
         function markFullDayAttendance() {
             if (!passcodeVerified) { return showMsg('Verify passcode first!', true); }
             if (!navigator.geolocation) { return showMsg('Geolocation not supported!', true); }
+            
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 const user = JSON.parse(localStorage.getItem('user'));
                 try {
                     const res = await fetch(`${API_BASE}/api/attendance/mark-fullday`, {
-                        method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${localStorage.getItem('token')}`},
-                        body:JSON.stringify({
-                            rollNo: user.rollNo,
-                            name: user.name,
-                            latitude: pos.coords.latitude,
-                            longitude: pos.coords.longitude
+                        method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${localStorage.getItem('token')||''}`},
+                        body:JSON.stringify({ 
+                            rollNo: user.rollNo, 
+                            name: user.name, 
+                            latitude: pos.coords.latitude, 
+                            longitude: pos.coords.longitude 
                         })
                     });
                     const data = await res.json();
                     passcodeVerified = false;
-                    if (res.ok) {
-                        showMsg(data.message);
-                        fetchHistory(user.rollNo);
-                    } else {
-                        showMsg(data.error || "Failed", true);
+                    if (res.ok) { 
+                        showMsg(data.message); 
+                        fetchHistory(user.rollNo); 
+                    } else { 
+                        showMsg(data.error || "Failed", true); 
                     }
-                } catch(e) {
-                    showMsg("Network Error!", true);
+                } catch(e) { 
+                    showMsg("Network Error!", true); 
                 }
             }, () => showMsg('GPS Access Denied!', true));
         }
 
-        // ===== ADMIN FUNCTIONS (with new passcode generation) =====
+        // ============================================================
+        // ADMIN FUNCTIONS
+        // ============================================================
+
         function loadSubjectsForDay() {
             const date = document.getElementById('manualDate').value;
             if (!date) return;
             const parts = date.split('-');
             const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-            const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             const dayName = days[dateObj.getDay()];
             const subjects = DAY_SUBJECTS[dayName] || ['General Class'];
             const container = document.getElementById('subjectCheckboxContainer');
@@ -967,7 +999,7 @@
             if (!confirm(`Mark ${subjects.length} subjects for ${studentRollNo} on ${date}?`)) return;
             try {
                 const res = await fetch(`${API_BASE}/api/admin/manual-attendance-bulk`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ requesterRollNo: user.rollNo, studentRollNo, date, subjects, status })
                 });
                 const data = await res.json();
@@ -996,7 +1028,7 @@
             if (!confirm(`Declare "${reason}" on ${date}?`)) return;
             try {
                 const res = await fetch(`${API_BASE}/api/admin/holiday`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ requesterRollNo: user.rollNo, date, reason })
                 });
                 const data = await res.json();
@@ -1005,33 +1037,25 @@
             } catch(e) { showMsg("Network Error!", true); }
         }
 
-        // NEW: generate passcode with type
-        async function generatePasscode(type) {
+        async function generatePasscode() {
+            const refreshIcon = document.getElementById('refreshIcon');
+            if (refreshIcon) { refreshIcon.classList.remove('spin-rotate'); void refreshIcon.offsetWidth; refreshIcon.classList.add('spin-rotate'); }
             const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) return showMsg('Admin access required!', true);
             try {
                 const res = await fetch(`${API_BASE}/api/admin/generate-passcode`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-                    body: JSON.stringify({ requesterRollNo: user.rollNo, type })
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requesterRollNo: user.rollNo })
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    if (type === 'full_day') {
-                        currentFullDayPasscode = data.passcode;
-                        document.getElementById('fullDayPasscodeDisplay').innerText = currentFullDayPasscode;
-                    } else {
-                        currentSingleLecturePasscode = data.passcode;
-                        document.getElementById('singleLecturePasscodeDisplay').innerText = currentSingleLecturePasscode;
-                    }
-                    showMsg(`✅ ${type === 'full_day' ? 'Full Day' : 'Single Lecture'} passcode refreshed!`);
-                } else {
-                    showMsg(data.error || 'Failed', true);
-                }
+                    currentPasscode = data.passcode;
+                    document.getElementById('liveClassPasscode').innerText = currentPasscode;
+                    showMsg('✅ Passcode Refreshed! Valid for 5 min.');
+                } else { showMsg(data.error || 'Failed', true); }
             } catch(e) { showMsg('Server error!', true); }
         }
 
         async function adminRegisterStudent() {
-            const user = JSON.parse(localStorage.getItem('user'));
             const name = document.getElementById('adminRegName').value.trim();
             const rawRoll = document.getElementById('adminRegRoll').value.trim();
             const password = document.getElementById('adminRegPass').value.trim() || '123456';
@@ -1039,11 +1063,11 @@
             if (!name || !validation.isValid) return showMsg('Valid Name and Roll No required!', true);
             try {
                 const res = await fetch(`${API_BASE}/api/auth/register`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, rollNo: validation.cleanRoll, password })
                 });
                 const data = await res.json();
-                if (res.ok) { showMsg(`Student ${name} Registered!`); document.getElementById('adminRegName').value = ''; document.getElementById('adminRegRoll').value = ''; document.getElementById('adminRegPass').value = ''; fetchAllStudents(); populateStudentSelect(); populateLoginAsStudentSelect(); }
+                if (res.ok) { showMsg(`Student ${name} Registered!`); document.getElementById('adminRegName').value = ''; document.getElementById('adminRegRoll').value = ''; document.getElementById('adminRegPass').value = ''; fetchAllStudents(); populateStudentSelect(); }
                 else { showMsg(data.error || "Registration failed", true); }
             } catch(e) { showMsg("Server error!", true); }
         }
@@ -1055,7 +1079,7 @@
             if (!confirm(`Reset device binding for ${targetRoll}?`)) return;
             try {
                 const res = await fetch(`${API_BASE}/api/admin/reset-device`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo: targetRoll })
                 });
                 const data = await res.json();
@@ -1072,7 +1096,7 @@
             if (!oldRoll || !validation.isValid) return showMsg('Valid New Roll No required!', true);
             try {
                 const res = await fetch(`${API_BASE}/api/admin/update-rollno`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ requesterRollNo: user.rollNo, oldRoll, newRoll: validation.cleanRoll })
                 });
                 const data = await res.json();
@@ -1088,7 +1112,7 @@
             if (!targetRollNo) return showMsg('Roll number required!', true);
             try {
                 const res = await fetch(`${API_BASE}/api/admin/reset-password`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo, newPassword })
                 });
                 const data = await res.json();
@@ -1103,87 +1127,82 @@
             if (!confirm(`Delete ${targetRoll} permanently?`)) return;
             try {
                 const res = await fetch(`${API_BASE}/api/admin/delete-student`, {
-                    method: 'DELETE', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+                    method: 'DELETE', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo: targetRoll })
                 });
                 const data = await res.json();
-                if (res.ok) { showMsg(data.message || `Account ${targetRoll} deleted!`); document.getElementById('deleteStudentRoll').value = ''; fetchAllStudents(); populateStudentSelect(); populateLoginAsStudentSelect(); }
+                if (res.ok) { showMsg(data.message || `Account ${targetRoll} deleted!`); document.getElementById('deleteStudentRoll').value = ''; fetchAllStudents(); populateStudentSelect(); }
                 else { showMsg(data.error || "Failed", true); }
             } catch(e) { showMsg("Server error!", true); }
         }
 
-        // ===== POPULATE DROPDOWNS =====
+        // ----- Populate student dropdown for single export -----
         function populateStudentSelect() {
             const select = document.getElementById('singleStudentSelect');
             if (!select) return;
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) return;
-            fetch(`${API_BASE}/api/admin/all-students/${user.rollNo}`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-            })
-            .then(res => res.json())
-            .then(data => {
-                select.innerHTML = '<option value="">Select Student...</option>';
-                data.forEach(s => {
-                    select.innerHTML += `<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`;
-                });
-            })
-            .catch(() => {});
-        }
-
-        function populateLoginAsStudentSelect() {
-            const select = document.getElementById('loginAsStudentSelect');
-            if (!select) return;
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) return;
-            fetch(`${API_BASE}/api/admin/all-students/${user.rollNo}`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-            })
-            .then(res => res.json())
-            .then(data => {
-                select.innerHTML = '<option value="">Select Student...</option>';
-                data.forEach(s => {
-                    if (s.role !== 'admin') {
-                        select.innerHTML += `<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`;
+            fetch(`${API_BASE}/api/admin/all-students/${user.rollNo}`)
+                .then(res => res.json())
+                .then(data => {
+                    select.innerHTML = '<option value="">Select Student...</option>';
+                    const adminSelf = data.find(s => s.rollNo === user.rollNo);
+                    if (adminSelf) {
+                        select.innerHTML += `<option value="${adminSelf.rollNo}">${adminSelf.rollNo} - ${adminSelf.name} (Admin)</option>`;
                     }
-                });
-            })
-            .catch(() => {});
+                    data.forEach(s => {
+                        if (s.rollNo !== user.rollNo) {
+                            select.innerHTML += `<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`;
+                        }
+                    });
+                })
+                .catch(() => {});
         }
 
+        // Toggle month wrapper for single student export
         function toggleSingleMonthWrapper() {
             const range = document.getElementById('singleStudentRange').value;
             const wrapper = document.getElementById('singleStudentMonthWrapper');
-            if (wrapper) wrapper.style.display = (range === 'SELECTED_MONTH') ? 'block' : 'none';
+            if (wrapper) {
+                wrapper.style.display = (range === 'SELECTED_MONTH') ? 'block' : 'none';
+            }
         }
 
+        // ----- Single Student Export (FIXED) -----
         async function downloadSingleStudentAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) return showMsg('Admin access required!', true);
+            if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) {
+                return showMsg('Admin access required!', true);
+            }
             const studentRoll = document.getElementById('singleStudentSelect').value;
             if (!studentRoll) return showMsg('Select a student!', true);
             const range = document.getElementById('singleStudentRange').value;
             let month = '';
-            if (range === 'SELECTED_MONTH') month = document.getElementById('singleStudentMonth').value;
+            if (range === 'SELECTED_MONTH') {
+                month = document.getElementById('singleStudentMonth').value;
+            }
             showDownloadProgress('Generating student report...');
             try {
                 const url = `${API_BASE}/api/export/student-attendance/${user.rollNo}?studentRollNo=${studentRoll}&range=${range}&month=${month}`;
-                const res = await fetch(url, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
-                if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed'); }
+                const res = await fetch(url);
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || 'Failed to fetch');
+                }
                 const csv = await res.text();
                 const fileName = `Attendance_${studentRoll}_${range}_${new Date().toISOString().split('T')[0]}.csv`;
-                hideDownloadProgress();
                 downloadFile(csv, fileName, 'text/csv');
-            } catch(e) { hideDownloadProgress(); showMsg(e.message || 'Failed', true); }
+            } catch(e) {
+                hideDownloadProgress();
+                showMsg(e.message || 'Failed to download', true);
+            }
         }
 
-        // ===== FETCH ALL STUDENTS =====
+        // ----- Fetch all students (for directory) -----
         async function fetchAllStudents() {
             const user = JSON.parse(localStorage.getItem('user'));
             try {
-                const res = await fetch(`${API_BASE}/api/admin/all-students/${user.rollNo}`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-                });
+                const res = await fetch(`${API_BASE}/api/admin/all-students/${user.rollNo}`);
                 const data = await res.json();
                 if (!res.ok) return showMsg(data.error || "Failed", true);
                 allStudentsData = data;
@@ -1196,12 +1215,14 @@
                     return `<tr><td><b>${s.rollNo}</b></td><td>${s.name}</td>
                         <td><span class="badge ${s.boundDeviceId ? 'badge-active' : 'badge-present'}">${deviceStatus}</span></td>
                         <td>
-                            <button class="action-btn btn-view btn-sm" onclick="showStudentAttendance('${s.rollNo}')" style="padding:2px 6px; font-size:8px;">👁️</button>
-                            <button class="action-btn btn-del btn-sm" onclick="deleteStudentAccount('${s.rollNo}')" style="padding:2px 6px; font-size:8px;">🗑️</button>
+                            <button class="action-btn btn-view btn-sm" onclick="showStudentAttendance('${s.rollNo}')" style="padding:2px 6px; font-size:8px;">
+                                <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </button>
+                            <button class="action-btn btn-del btn-sm" onclick="deleteStudentAccount('${s.rollNo}')" style="padding:2px 6px; font-size:8px; margin-left:2px;">
+                                <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                            </button>
                         </td></tr>`;
                 }).join('');
-                populateStudentSelect();
-                populateLoginAsStudentSelect();
             } catch(e) { showMsg("Failed to connect to backend", true); }
         }
 
@@ -1209,16 +1230,18 @@
             if (!confirm(`Delete account for ${rollNo} permanently?`)) return;
             const user = JSON.parse(localStorage.getItem('user'));
             try {
-                const res = await fetch(`${API_BASE}/api/admin/delete-student`, { method:'DELETE', headers:{'Content-Type':'application/json','Authorization':`Bearer ${localStorage.getItem('token')}`}, body:JSON.stringify({ requesterRollNo:user.rollNo, targetRollNo:rollNo }) });
+                const res = await fetch(`${API_BASE}/api/admin/delete-student`, { method:'DELETE', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ requesterRollNo:user.rollNo, targetRollNo:rollNo }) });
                 const data = await res.json();
-                if (res.ok) { showMsg(data.message || `Account ${rollNo} deleted!`); fetchAllStudents(); populateStudentSelect(); populateLoginAsStudentSelect(); } else { showMsg(data.error || "Failed", true); }
+                if (res.ok) { showMsg(data.message || `Account ${rollNo} deleted!`); fetchAllStudents(); populateStudentSelect(); } else { showMsg(data.error || "Failed", true); }
             } catch(e) { showMsg("Server error!", true); }
         }
 
-        // ===== STUDENT SUMMARY (with PDF/Excel) =====
+        // ============================================================
+        // 🆕 UPDATED: showStudentAttendance with Summary & Export
+        // ============================================================
         async function showStudentAttendance(rollNo) {
             try {
-                const token = localStorage.getItem('token');
+                const token = localStorage.getItem('token') || '';
                 // Fetch summary
                 const summaryRes = await fetch(`${API_BASE}/api/student/summary/${rollNo}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -1240,6 +1263,7 @@
                 const tbody = document.querySelector('#allHistoryTable tbody');
                 if (!tbody) return;
 
+                // Build summary card
                 let summaryHtml = '';
                 if (summaryRes.ok && summaryData) {
                     const s = summaryData;
@@ -1300,16 +1324,30 @@
             }
         }
 
-        // PDF Download
+        // ============================================================
+        // 🆕 DOWNLOAD FUNCTIONS FOR STUDENT
+        // ============================================================
+
+        // Download PDF report for a student
         async function downloadStudentPDF(rollNo) {
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('token') || '';
             try {
-                const summaryRes = await fetch(`${API_BASE}/api/student/summary/${rollNo}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const summaryRes = await fetch(`${API_BASE}/api/student/summary/${rollNo}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
                 const summary = await summaryRes.json();
-                const historyRes = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const historyRes = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
                 const history = await historyRes.json();
-                if (!summaryRes.ok || !historyRes.ok) { showMsg('Failed to fetch data for PDF', true); return; }
+
+                if (!summaryRes.ok || !historyRes.ok) {
+                    showMsg('Failed to fetch data for PDF', true);
+                    return;
+                }
+
                 const name = history.length > 0 ? history[0].studentName : rollNo;
+                // Build HTML content for PDF
                 const content = `
                     <div style="font-family: Arial, sans-serif; padding: 20px;">
                         <h1 style="color: #2563eb;">BM Group of Institutions</h1>
@@ -1327,37 +1365,60 @@
                         </table>
                         <h3>Subject-wise</h3>
                         <ul>
-                            ${Object.entries(summary.subjectStats || {}).map(([sub, st]) => `<li>${sub}: ${st.percentage}% (${st.present}/${st.total})</li>`).join('')}
+                            ${Object.entries(summary.subjectStats || {}).map(([sub, st]) => `
+                                <li>${sub}: ${st.percentage}% (${st.present}/${st.total})</li>
+                            `).join('')}
                         </ul>
                         <hr>
                         <h3>Attendance History</h3>
                         <table style="width:100%; border-collapse:collapse; border:1px solid #ccc;">
                             <thead><tr style="background:#f0f0f0;"><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
                             <tbody>
-                                ${history.slice(0,50).map(r => `<tr><td>${r.date}</td><td>${r.subject}</td><td>${r.status}</td></tr>`).join('')}
+                                ${history.slice(0,50).map(r => `
+                                    <tr><td>${r.date}</td><td>${r.subject}</td><td>${r.status}</td></tr>
+                                `).join('')}
                             </tbody>
                         </table>
                         <p style="margin-top:20px; font-size:10px; color:#999;">This is a computer-generated report.</p>
                     </div>
                 `;
+
                 const win = window.open('', '_blank');
-                if (!win) { showMsg('Please allow popups to download PDF', true); return; }
-                win.document.write(`<html><head><title>${rollNo} Attendance Report</title><style>body{font-family:Arial;padding:20px;}</style></head><body>${content}</body></html>`);
+                if (!win) {
+                    showMsg('Please allow popups to download PDF', true);
+                    return;
+                }
+                win.document.write(`
+                    <html><head><title>${rollNo} Attendance Report</title>
+                    <style>body{font-family:Arial;padding:20px;}</style></head>
+                    <body>${content}</body></html>
+                `);
                 win.document.close();
                 win.print();
                 showMsg('✅ PDF download started');
-            } catch(e) { showMsg('Failed to generate PDF', true); }
+            } catch(e) {
+                showMsg('Failed to generate PDF', true);
+            }
         }
 
-        // Excel Download
+        // Download Excel (CSV) for a student
         async function downloadStudentExcel(rollNo) {
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('token') || '';
             try {
-                const summaryRes = await fetch(`${API_BASE}/api/student/summary/${rollNo}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const summaryRes = await fetch(`${API_BASE}/api/student/summary/${rollNo}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
                 const summary = await summaryRes.json();
-                const historyRes = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const historyRes = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
                 const history = await historyRes.json();
-                if (!summaryRes.ok || !historyRes.ok) { showMsg('Failed to fetch data for Excel', true); return; }
+
+                if (!summaryRes.ok || !historyRes.ok) {
+                    showMsg('Failed to fetch data for Excel', true);
+                    return;
+                }
+
                 const name = history.length > 0 ? history[0].studentName : rollNo;
                 let csv = `Student Attendance Report\n`;
                 csv += `Student: ${name} (${rollNo})\n`;
@@ -1377,24 +1438,32 @@
                     const loc = r.location ? `(${r.location.latitude}, ${r.location.longitude})` : 'N/A';
                     csv += `"${r.date}","${r.subject}","${r.status}","${loc}","${r.ipAddress || 'N/A'}"\n`;
                 });
+
                 downloadFile(csv, `Attendance_${rollNo}_${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
                 showMsg('✅ Excel download started');
-            } catch(e) { showMsg('Failed to generate Excel', true); }
+            } catch(e) {
+                showMsg('Failed to generate Excel', true);
+            }
         }
 
-        // ===== ATTENDANCE RECORDS (with delete) =====
+        // ----- Attendance Records with Delete button -----
         async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             try {
-                const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-                });
+                const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
                 const data = await res.json();
                 if (!res.ok) return showMsg(data.error || "Failed", true);
                 globalAllRecords = data;
                 document.getElementById('directoryTitle').innerHTML = `📊 Attendance Records (${data.length} entries) <button class="btn btn-outline btn-sm" onclick="fetchAllStudents()" style="padding:2px 8px; font-size:8px; width:auto;">⬅ Back</button>`;
                 const grouped = {};
-                data.forEach(r => { const key = `${r.rollNo}_${r.date}`; if (!grouped[key]) { grouped[key] = { rollNo:r.rollNo, name:r.studentName, date:r.date, count:0, ids:[] }; } grouped[key].count++; grouped[key].ids.push(r._id); });
+                data.forEach(r => { 
+                    const key = `${r.rollNo}_${r.date}`; 
+                    if (!grouped[key]) { 
+                        grouped[key] = { rollNo:r.rollNo, name:r.studentName, date:r.date, count:0, ids:[] }; 
+                    } 
+                    grouped[key].count++; 
+                    grouped[key].ids.push(r._id); 
+                });
                 groupedAdminRecords = grouped;
                 const sortedArray = Object.values(grouped).sort((a,b) => a.rollNo.localeCompare(b.rollNo));
                 const tbody = document.querySelector('#allHistoryTable tbody');
@@ -1405,13 +1474,18 @@
                         <td><b>${g.rollNo}</b></td>
                         <td>${g.name}</td>
                         <td>${g.date}</td>
-                        <td><span class="badge badge-present">${g.count} Lectures</span>
-                        <td><button class="action-btn btn-del btn-sm" onclick="deleteDayGroup('${g.rollNo}','${g.date}')" style="padding:2px 6px; font-size:8px;">🗑️</button></td>
+                        <td>
+                            <span class="badge badge-present">${g.count} Lectures</span>
+                            <button class="action-btn btn-del btn-sm" onclick="deleteDayGroup('${g.rollNo}','${g.date}')" style="padding:2px 6px; font-size:8px; margin-left:4px;" title="Delete all lectures for this day">
+                                <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                            </button>
+                        </td>
                     </tr>
                 `).join('');
             } catch(e) { showMsg("Failed to connect to backend", true); }
         }
 
+        // Delete all lectures for a student on a given date
         async function deleteDayGroup(rollNo, date) {
             const user = JSON.parse(localStorage.getItem('user'));
             const key = `${rollNo}_${date}`;
@@ -1420,19 +1494,23 @@
             if (!confirm(`Delete ${group.count} lectures for ${rollNo} on ${date}?`)) return;
             let deletedCount = 0;
             for (let id of group.ids) {
-                try {
-                    const res = await fetch(`${API_BASE}/api/attendance/delete/${id}/${user.rollNo}`, {
-                        method: 'DELETE',
-                        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-                    });
-                    if (res.ok) deletedCount++;
+                try { 
+                    const res = await fetch(`${API_BASE}/api/attendance/delete/${id}/${user.rollNo}`, { method:'DELETE' }); 
+                    if (res.ok) deletedCount++; 
                 } catch(e) {}
             }
-            if (deletedCount > 0) { showMsg(`✅ ${deletedCount} records deleted for ${rollNo} on ${date}`); fetchAllAttendance(); }
-            else { showMsg('Failed to delete records', true); }
+            if (deletedCount > 0) { 
+                showMsg(`✅ ${deletedCount} records deleted for ${rollNo} on ${date}`); 
+                fetchAllAttendance(); 
+            } else { 
+                showMsg('Failed to delete records', true); 
+            }
         }
 
-        // ===== DASHBOARD & HISTORY =====
+        // ============================================================
+        // DASHBOARD & HISTORY FUNCTIONS
+        // ============================================================
+
         function calculateRealAttendancePercentage() {
             const startDate = new Date(2026,6,15);
             const today = new Date();
@@ -1452,9 +1530,9 @@
             }
             const DEFAULT_DAILY_ACADEMIC_LECTURES = 6;
             const totalConductedLectures = totalWorkingDays * DEFAULT_DAILY_ACADEMIC_LECTURES;
-            const academicAttendedLectures = globalMyRecords.filter(r => {
-                const sub = r.subject || "";
-                return !sub.includes("LIB") && !sub.includes("Sports") && !sub.includes("Library");
+            const academicAttendedLectures = globalMyRecords.filter(r => { 
+                const sub = r.subject || ""; 
+                return !sub.includes("LIB") && !sub.includes("Sports") && !sub.includes("Library"); 
             }).length;
             if (totalConductedLectures === 0) return { pct:100, totalWorkingDays, totalConductedLectures, totalAttendedLectures:academicAttendedLectures };
             const pct = Math.min(100, ((academicAttendedLectures / totalConductedLectures) * 100)).toFixed(1);
@@ -1504,9 +1582,7 @@
         async function fetchHistory(rollNo) {
             try { const hRes = await fetch(`${API_BASE}/api/holidays`); globalHolidays = await hRes.json(); } catch(e) { globalHolidays = []; }
             try {
-                const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-                });
+                const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
                 const data = await res.json();
                 globalMyRecords = data || [];
                 const tbody = document.querySelector('#myHistoryTable tbody');
@@ -1519,17 +1595,18 @@
                 const advisorBox = document.getElementById('advisorText');
                 if (advisorBox) {
                     if (calc.pct >= 75) {
-                        const safeDays = Math.floor((calc.totalAttendedLectures - 0.75 * calc.totalConductedLectures) / 6);
+                        const safeLectures = Math.floor(calc.totalAttendedLectures - 0.75 * calc.totalConductedLectures);
+                        const safeDays = Math.floor(safeLectures / 6);
                         advisorBox.innerHTML = `Safe Zone (<b>${calc.pct}%</b>). Skip approx <b>${Math.max(0, safeDays)}</b> days safely.`;
                     } else {
-                        const needed = Math.ceil(0.75 * calc.totalConductedLectures - calc.totalAttendedLectures);
-                        advisorBox.innerHTML = `Low Attendance (<b>${calc.pct}%</b>). Need <b>${Math.max(0, needed)}</b> more lectures.`;
+                        const neededLectures = Math.ceil(0.75 * calc.totalConductedLectures - calc.totalAttendedLectures);
+                        advisorBox.innerHTML = `Low Attendance (<b>${calc.pct}%</b>). Need <b>${Math.max(0, neededLectures)}</b> more lectures.`;
                     }
                 }
                 renderAttendanceCalendar(globalMyRecords);
                 const sortedDates = Object.values(dateGrouped).sort((a,b) => b.date.localeCompare(a.date));
                 if (!tbody) return;
-                if (sortedDates.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px;">No records</td></tr>'; return; }
+                if (sortedDates.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px;">No records</td></tr>';
                 tbody.innerHTML = sortedDates.map(i => {
                     const parts = i.date.split('-');
                     const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2])).getDay();
@@ -1543,9 +1620,7 @@
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) return;
             try {
-                const res = await fetch(`${API_BASE}/api/admin/dashboard-stats/${user.rollNo}`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-                });
+                const res = await fetch(`${API_BASE}/api/admin/dashboard-stats/${user.rollNo}`);
                 const data = await res.json();
                 if (res.ok) {
                     document.getElementById('liveTotalStudents').innerText = data.totalStudents || 0;
@@ -1554,9 +1629,12 @@
                     document.getElementById('liveOverallPct').innerText = (data.overallPct || 0) + '%';
                     document.getElementById('workingDaysSoFar').innerText = data.workingDaysSoFar || 0;
                     document.getElementById('totalWorkingDaysSemester').innerText = data.totalWorkingDaysSemester || 0;
+                    
                     const presentList = document.getElementById('todayPresentList');
                     if (data.todayPresentStudents && data.todayPresentStudents.length > 0) {
-                        presentList.innerHTML = data.todayPresentStudents.map(s => `<div class="present-item"><span>${s.rollNo}</span><span>${s.name}</span></div>`).join('');
+                        presentList.innerHTML = data.todayPresentStudents.map(s => 
+                            `<div class="present-item"><span>${s.rollNo}</span><span>${s.name}</span></div>`
+                        ).join('');
                     } else {
                         presentList.innerHTML = '<div style="padding:8px; text-align:center; color:var(--text-muted);">No students present yet today.</div>';
                     }
@@ -1564,7 +1642,10 @@
             } catch(e) { console.error('Dashboard stats failed:', e); }
         }
 
-        // ===== NOTICES, TABS, EXPORT =====
+        // ============================================================
+        // NOTICES, TABS, EXPORT & LOGOUT FUNCTIONS
+        // ============================================================
+
         async function fetchNotices() {
             if (localStorage.getItem("GLOBAL_NOTICE_CLEARED") === "true") {
                 document.getElementById('noticeBanner').style.display = 'none'; return;
@@ -1596,13 +1677,7 @@
             document.getElementById('noticeText').innerText = `${message}`;
             showMsg('Notice Published!');
             document.getElementById('noticeMsg').value = '';
-            try {
-                await fetch(`${API_BASE}/api/admin/notice`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-                    body: JSON.stringify({ requesterRollNo: user.rollNo, title: 'Announcement', message })
-                });
-            } catch(err) {}
+            try { await fetch(`${API_BASE}/api/admin/notice`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ requesterRollNo: user.rollNo, title:'Announcement', message }) }); } catch(err) {}
         }
 
         async function clearNotice() {
@@ -1612,40 +1687,38 @@
             document.getElementById('noticeBanner').style.display = 'none';
             document.getElementById('noticeText').innerText = '';
             showMsg('Notice Cleared!');
-            try {
-                await fetch(`${API_BASE}/api/admin/notice`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-                    body: JSON.stringify({ requesterRollNo: user.rollNo, title: 'Announcement', message: "" })
-                });
-            } catch(err) {}
+            try { await fetch(`${API_BASE}/api/admin/notice`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ requesterRollNo: user.rollNo, title:'Announcement', message:"" }) }); } catch(err) {}
         }
 
         function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            document.querySelectorAll('.tab-bar .tab-item').forEach(el => el.classList.remove('active'));
+            const markTab = document.getElementById('markTab');
+            const adminTab = document.getElementById('adminTab');
+            markTab.style.display = tabId === 'markTab' ? 'block' : 'none';
+            adminTab.style.display = tabId === 'adminTab' ? 'block' : 'none';
+            markTab.classList.remove('tab-content-active');
+            adminTab.classList.remove('tab-content-active');
+            if (tabId === 'markTab') markTab.classList.add('tab-content-active');
+            if (tabId === 'adminTab') adminTab.classList.add('tab-content-active');
             const tabs = document.querySelectorAll('.tab-bar .tab-item');
-            if (tabId === 'markTab') { tabs[0].classList.add('active'); }
-            if (tabId === 'adminTab') { if(tabs[1]) tabs[1].classList.add('active'); }
+            tabs[0].classList.toggle('active', tabId === 'markTab');
+            if(tabs[1]) tabs[1].classList.toggle('active', tabId === 'adminTab');
         }
 
         function switchAdminSubTab(subId) {
             const subTabs = ['subReports','subAttendance','subHoliday','subPasscode','subTools','subDirectory'];
             subTabs.forEach(id => {
                 const el = document.getElementById(id);
-                if (el) { el.style.display = (id === subId) ? 'block' : 'none'; }
+                if (el) { 
+                    el.style.display = (id === subId) ? 'block' : 'none'; 
+                    el.classList.remove('tab-content-active'); 
+                    if (id === subId) el.classList.add('tab-content-active'); 
+                }
             });
-            document.querySelectorAll('.admin-nav-item').forEach((item, idx) => {
-                item.classList.toggle('active', subTabs[idx] === subId);
-            });
-            if (subId === 'subPasscode') {
-                generatePasscode('full_day');
-                generatePasscode('single_lecture');
-            }
-            if (subId === 'subDirectory') { fetchAllStudents(); populateStudentSelect(); populateLoginAsStudentSelect(); }
-            if (subId === 'subReports') { populateStudentSelect(); populateLoginAsStudentSelect(); }
-            if (subId === 'subTools') { populateLoginAsStudentSelect(); }
+            const navItems = document.querySelectorAll('.admin-nav-item');
+            navItems.forEach((item, idx) => { item.classList.toggle('active', subTabs[idx] === subId); });
+            if (subId === 'subPasscode') generatePasscode();
+            if (subId === 'subDirectory') { fetchAllStudents(); populateStudentSelect(); }
+            if (subId === 'subReports') { populateStudentSelect(); }
         }
 
         function openStudentExcelModal() {
@@ -1662,78 +1735,134 @@
         function processStudentExcelDownload() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user) { closeStudentExcelModal(); return showMsg("Please login first!", true); }
+            
             const range = document.getElementById('studentExcelRange').value;
             const selectedMonth = document.getElementById('studentExcelMonth').value;
+            
             if (globalMyRecords.length === 0) { closeStudentExcelModal(); return showMsg("No records to export!", true); }
+            
             closeStudentExcelModal();
+            showDownloadProgress('Preparing attendance report...');
+            
             const today = new Date();
             let filteredRecords = [];
+            
             if (range === 'CURRENT_MONTH') {
                 const currentMonthIdx = today.getMonth();
-                filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); return parseInt(parts[0]) === today.getFullYear() && (parseInt(parts[1]) - 1) === currentMonthIdx; });
+                const currentYear = today.getFullYear();
+                filteredRecords = globalMyRecords.filter(r => {
+                    const parts = r.date.split('-');
+                    return parseInt(parts[0]) === currentYear && (parseInt(parts[1]) - 1) === currentMonthIdx;
+                });
             } else if (range === 'SELECTED_MONTH') {
                 const monthIdx = parseInt(selectedMonth);
-                filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); return parseInt(parts[0]) === 2026 && (parseInt(parts[1]) - 1) === monthIdx; });
+                filteredRecords = globalMyRecords.filter(r => {
+                    const parts = r.date.split('-');
+                    return parseInt(parts[0]) === 2026 && (parseInt(parts[1]) - 1) === monthIdx;
+                });
             } else {
-                filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); const m = parseInt(parts[1]) - 1; return parseInt(parts[0]) === 2026 && m >= 6 && m <= 11; });
+                filteredRecords = globalMyRecords.filter(r => {
+                    const parts = r.date.split('-');
+                    const m = parseInt(parts[1]) - 1;
+                    return parseInt(parts[0]) === 2026 && m >= 6 && m <= 11;
+                });
             }
-            if (filteredRecords.length === 0) return showMsg("No records for selected period!", true);
+            
+            if (filteredRecords.length === 0) { hideDownloadProgress(); return showMsg("No records for selected period!", true); }
+            
             const grouped = {};
             filteredRecords.forEach(r => { if (!grouped[r.date]) grouped[r.date] = []; grouped[r.date].push(r); });
-            const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+            
+            const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
             let csv = "Date,Day,Subject,Status\n";
             const sortedDates = Object.keys(grouped).sort();
+            
             sortedDates.forEach(date => {
                 const parts = date.split('-');
                 const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
                 const dayName = dayNames[dateObj.getDay()];
                 grouped[date].forEach(record => {
-                    csv += `"${date}","${dayName}","${record.subject || 'General'}","${record.status || 'Present'}"\n`;
+                    const status = record.status || 'Present';
+                    const subject = record.subject || 'General';
+                    csv += `"${date}","${dayName}","${subject}","${status}"\n`;
                 });
             });
-            csv += `\n"Total Days: ${sortedDates.length}","Total Lectures: ${filteredRecords.length}"\n`;
+            
+            const totalDays = sortedDates.length;
+            const totalRecords = filteredRecords.length;
+            csv += `\n"Total Days: ${totalDays}","Total Lectures: ${totalRecords}"\n`;
             csv += `"Student: ${user.name}","Roll No: ${user.rollNo}","Generated: ${new Date().toLocaleString()}"`;
+            
             const fileName = `Attendance_${range}_${new Date().toISOString().split('T')[0]}.csv`;
             downloadFile(csv, fileName, 'text/csv');
         }
 
         function exportExcelGrid() {
             const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) return showMsg("Admin access required!", true);
+            if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) { return showMsg("Admin access required!", true); }
             if (globalAllRecords.length === 0) { showMsg("No records! Click 'Attendance Records' first.", true); return; }
+            
             const selection = document.getElementById('exportSelection').value;
+            showDownloadProgress('Generating master grid report...');
+            
             const holidayDatesList = globalHolidays.map(h => h.date);
             const studentsMap = {};
+            
             globalAllRecords.forEach(r => {
                 const cleanRoll = r.rollNo.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                if (!studentsMap[cleanRoll]) studentsMap[cleanRoll] = { name: r.studentName || r.name || 'Unknown', roll: cleanRoll, dates: {} };
-                if (!studentsMap[cleanRoll].dates[r.date]) studentsMap[cleanRoll].dates[r.date] = [];
+                if (!studentsMap[cleanRoll]) {
+                    studentsMap[cleanRoll] = { name: r.studentName || r.name || 'Unknown', roll: cleanRoll, dates: {} };
+                }
+                if (!studentsMap[cleanRoll].dates[r.date]) { studentsMap[cleanRoll].dates[r.date] = []; }
                 studentsMap[cleanRoll].dates[r.date].push(r.status || 'Present');
             });
+            
             let targetDates = [];
             if (selection === 'ALL_SEMESTER') {
                 let cur = new Date(2026, 6, 15);
                 const endDate = new Date(2026, 11, 31);
-                while (cur <= endDate) { const y = cur.getFullYear(); const m = String(cur.getMonth()+1).padStart(2,'0'); const d = String(cur.getDate()).padStart(2,'0'); targetDates.push(`${y}-${m}-${d}`); cur.setDate(cur.getDate()+1); }
+                while (cur <= endDate) {
+                    const y = cur.getFullYear();
+                    const m = String(cur.getMonth() + 1).padStart(2, '0');
+                    const d = String(cur.getDate()).padStart(2, '0');
+                    targetDates.push(`${y}-${m}-${d}`);
+                    cur.setDate(cur.getDate() + 1);
+                }
             } else {
                 const monthIdx = parseInt(selection);
+                const year = 2026;
                 const startDay = (monthIdx === 6) ? 15 : 1;
-                const daysInMonth = new Date(2026, monthIdx + 1, 0).getDate();
-                for (let d = startDay; d <= daysInMonth; d++) { targetDates.push(`2026-${String(monthIdx+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`); }
+                const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+                for (let d = startDay; d <= daysInMonth; d++) {
+                    const y = year;
+                    const m = String(monthIdx + 1).padStart(2, '0');
+                    const day = String(d).padStart(2, '0');
+                    targetDates.push(`${y}-${m}-${day}`);
+                }
             }
-            let csv = "BM Group - Master Attendance Grid (Jul-Dec 2026)\nStudent Roll No,Student Name";
-            targetDates.forEach(dt => { const parts = dt.split('-'); const dtObj = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2])); const dayName = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dtObj.getDay()]; csv += `,${parts[2]}/${parts[1]} (${dayName})`; });
+            
+            let csv = "BM Group - Master Attendance Grid (Jul-Dec 2026)\n";
+            csv += "Student Roll No,Student Name";
+            targetDates.forEach(dt => {
+                const parts = dt.split('-');
+                const dtObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                const dayName = DAY_NAMES[dtObj.getDay()];
+                csv += `,${parts[2]}/${parts[1]} (${dayName})`;
+            });
             csv += ",Total Present\n";
-            const sortedStudents = Object.values(studentsMap).sort((a,b) => a.roll.localeCompare(b.roll, undefined, { numeric: true }));
+            
+            const sortedStudents = Object.values(studentsMap).sort((a, b) => a.roll.localeCompare(b.roll, undefined, { numeric: true }));
+            
             sortedStudents.forEach(s => {
                 csv += `"${s.roll}","${s.name}"`;
                 let presentCount = 0;
                 targetDates.forEach(dt => {
                     const parts = dt.split('-');
-                    const dtObj = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+                    const dtObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
                     const dayOfWeek = dtObj.getDay();
                     const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
                     const isHoliday = holidayDatesList.includes(dt);
+                    
                     if (isWeekend) { csv += `,OFF`; }
                     else if (isHoliday) { csv += `,H`; }
                     else {
@@ -1745,29 +1874,39 @@
                 });
                 csv += `,${presentCount}\n`;
             });
-            const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+            
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
             const fileName = selection === 'ALL_SEMESTER' ? 'Full_Semester_Attendance_Grid_2026.csv' : `Attendance_Grid_${monthNames[parseInt(selection)]}_2026.csv`;
+            
             downloadFile(csv, fileName, 'text/csv');
         }
 
         function downloadGoogleSheetsExport() {
             const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) return showMsg("Admin access required!", true);
+            if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) { return showMsg("Admin access required!", true); }
+            showDownloadProgress('Preparing Google Sheets export...');
+            
             let csv = "Date,Roll No,Name,Subject,Status,Timestamp\n";
-            const sortedRecords = [...globalAllRecords].sort((a,b) => {
+            const sortedRecords = [...globalAllRecords].sort((a, b) => {
                 if (a.date !== b.date) return a.date.localeCompare(b.date);
                 return a.rollNo.localeCompare(b.rollNo);
             });
             sortedRecords.forEach(r => {
                 csv += `"${r.date}","${r.rollNo}","${r.studentName || r.name || 'Unknown'}","${r.subject || 'General'}","${r.status || 'Present'}","${r.timestamp || ''}"\n`;
             });
+            
             const fileName = `Google_Sheets_Export_${new Date().toISOString().split('T')[0]}.csv`;
             downloadFile(csv, fileName, 'text/csv');
         }
 
-        // ===== DOWNLOAD HELPER =====
+        // ============================================================
+        // DOWNLOAD HELPER - APP COMPATIBLE
+        // ============================================================
+
         function downloadFile(content, fileName, mimeType = 'text/csv') {
+            console.log('📥 Downloading:', fileName);
             showDownloadProgress('Preparing file...');
+            
             try {
                 const blob = new Blob(['\uFEFF' + content], { type: `${mimeType};charset=utf-8;` });
                 const url = URL.createObjectURL(blob);
@@ -1783,6 +1922,7 @@
                 showMsg("✅ Download started!");
                 return true;
             } catch(e) {
+                console.error('Download failed:', e);
                 hideDownloadProgress();
                 showMsg("⚠️ Download failed! Please try again.", true);
                 return false;
@@ -1800,58 +1940,18 @@
             if (el) { el.classList.remove('show'); }
         }
 
-        // ===== ADMIN LOGIN AS STUDENT =====
-        async function loginAsStudent() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) return showMsg('Admin access required!', true);
-            const targetRoll = document.getElementById('loginAsStudentSelect').value;
-            if (!targetRoll) return showMsg('Please select a student!', true);
-            try {
-                const res = await fetch(`${API_BASE}/api/admin/login-as-student`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-                    body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo: targetRoll })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    originalUser = user;
-                    isImpersonating = true;
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    localStorage.setItem('token', data.token);
-                    document.getElementById('impersonationText').innerHTML = `You are logged in as <b>${data.user.name} (${data.user.rollNo})</b>`;
-                    document.getElementById('impersonationBanner').style.display = 'flex';
-                    showMsg(`✅ Logged in as ${data.user.name}`);
-                    loadDashboard();
-                } else {
-                    showMsg(data.error || 'Failed', true);
-                }
-            } catch(e) { showMsg('Network error!', true); }
-        }
+        // ============================================================
+        // AUTHENTICATION FUNCTIONS
+        // ============================================================
 
-        function switchBackFromImpersonation() {
-            if (originalUser) {
-                localStorage.setItem('user', JSON.stringify(originalUser));
-                // Restore admin token
-                const adminToken = localStorage.getItem('adminToken');
-                if (adminToken) localStorage.setItem('token', adminToken);
-                isImpersonating = false;
-                originalUser = null;
-                document.getElementById('impersonationBanner').style.display = 'none';
-                showMsg('Switched back to admin');
-                loadDashboard();
-            } else {
-                location.reload();
-            }
-        }
-
-        // ===== AUTHENTICATION =====
         async function handleAuth() {
             const rawRoll = document.getElementById('rollNo').value.trim();
             const password = document.getElementById('password').value.trim();
             const deviceId = getDeviceId();
             const validation = sanitizeAndValidateRollNo(rawRoll);
-            if (!validation.isValid) return showMsg('Enter valid Roll No (e.g. 24CSE09)!', true);
-            if (!password) return showMsg('Enter your password!', true);
+            if (!validation.isValid) { return showMsg('Enter valid Roll No (e.g. 24CSE09)!', true); }
+            if (!password) { return showMsg('Enter your password!', true); }
+            showMsg('Connecting...');
             try {
                 if (isRegistering) {
                     const name = document.getElementById('regName').value.trim();
@@ -1862,34 +1962,15 @@
                 } else {
                     const res = await fetch(`${API_BASE}/api/auth/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ rollNo: validation.cleanRoll, password, deviceId }) });
                     const data = await res.json();
-                    if (res.ok) {
-                        localStorage.setItem('user', JSON.stringify(data.user));
-                        localStorage.setItem('token', data.token);
-                        if (ADMIN_ROLL_NUMBERS.includes(data.user.rollNo)) {
-                            localStorage.setItem('adminToken', data.token);
-                        }
-                        loadDashboard();
-                    } else {
-                        showMsg(data.error || 'Invalid credentials', true);
-                    }
+                    if (res.ok) { localStorage.setItem('user', JSON.stringify(data.user)); localStorage.setItem('token', data.token); loadDashboard(); }
+                    else { showMsg(data.error || 'Invalid credentials', true); }
                 }
             } catch(err) { showMsg('Connection timeout!', true); }
         }
 
         async function logout() {
-            try {
-                const token = localStorage.getItem('token');
-                if (token) {
-                    await fetch(`${API_BASE}/api/auth/logout`, { method:'POST', headers:{'Authorization':`Bearer ${token}`} });
-                }
-            } catch(e) {}
-            localStorage.removeItem('user');
-            localStorage.removeItem('token');
-            localStorage.removeItem('adminToken');
-            isImpersonating = false;
-            originalUser = null;
-            document.getElementById('impersonationBanner').style.display = 'none';
-            location.reload();
+            try { const token = localStorage.getItem('token'); if (token) { await fetch(`${API_BASE}/api/auth/logout`, { method:'POST', headers:{'Authorization':`Bearer ${token}`} }); } } catch(e) {}
+            localStorage.removeItem('user'); localStorage.removeItem('token'); location.reload();
         }
 
         function loadDashboard() {
@@ -1901,20 +1982,24 @@
             document.getElementById('welcomeMsg').innerText = `Hello, ${user.name}!`;
             const initials = user.name ? user.name.split(' ').map(n=>n[0]).join('').toUpperCase().substring(0,2) : 'ST';
             document.getElementById('userAvatarText').innerText = initials;
+            const userRollClean = (user.rollNo || "").toUpperCase().replace(/[^A-Z0-9]/g,'');
+            const isAdmin = ADMIN_ROLL_NUMBERS.includes(userRollClean);
+            document.getElementById('roleLabel').innerText = "Roll";
             document.getElementById('userRoll').innerText = user.rollNo;
-            const isAdmin = ADMIN_ROLL_NUMBERS.includes(user.rollNo);
-            document.getElementById('adminTabHeader').style.display = isAdmin ? 'block' : 'none';
-            document.getElementById('adminLiveDashboard').style.display = isAdmin ? 'block' : 'none';
+            document.getElementById('studentStatsGrid').style.display = 'grid';
+            document.getElementById('adminStatsGrid').style.display = 'none';
+            document.getElementById('simulatorBox').style.display = 'flex';
+            document.getElementById('studentTabHeader').style.display = 'block';
+            
             if (isAdmin) {
+                document.getElementById('adminTabHeader').style.display = 'block';
+                document.getElementById('adminLiveDashboard').style.display = 'block';
                 loadDashboardStats();
                 setInterval(loadDashboardStats, 60000);
                 populateStudentSelect();
-                populateLoginAsStudentSelect();
-                if (localStorage.getItem('token')) localStorage.setItem('adminToken', localStorage.getItem('token'));
-            }
-            if (isImpersonating && originalUser) {
-                document.getElementById('impersonationBanner').style.display = 'flex';
-                document.getElementById('impersonationText').innerHTML = `You are logged in as <b>${user.name} (${user.rollNo})</b>`;
+            } else {
+                document.getElementById('adminTabHeader').style.display = 'none';
+                document.getElementById('adminLiveDashboard').style.display = 'none';
             }
             switchTab('markTab');
             fetchHistory(user.rollNo);
@@ -1924,27 +2009,30 @@
             loadSubjectsForDay();
             updatePeriodTrackerWidget();
             setInterval(updatePeriodTrackerWidget, 30000);
-            if (isAdmin) {
-                generatePasscode('full_day');
-                generatePasscode('single_lecture');
-            }
         }
 
-        // ===== INITIALIZATION =====
+        // ----- Range change handler for single student export -----
+        document.getElementById('singleStudentRange')?.addEventListener('change', function() {
+            const wrapper = document.getElementById('singleStudentMonthWrapper');
+            if (wrapper) {
+                wrapper.style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none';
+            }
+        });
+
+        // ============================================================
+        // INITIALIZATION
+        // ============================================================
+        
         if (localStorage.getItem('user')) {
             loadDashboard();
         }
-
+        
         document.getElementById('studentExcelRange')?.addEventListener('change', function() {
             const wrapper = document.getElementById('selectedMonthWrapper');
             if (wrapper) { wrapper.style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none'; }
         });
-        document.getElementById('singleStudentRange')?.addEventListener('change', function() {
-            const wrapper = document.getElementById('singleStudentMonthWrapper');
-            if (wrapper) { wrapper.style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none'; }
-        });
-
-        console.log('✅ BM Group ERP Portal loaded successfully (v2 with two passcodes & login-as-student)');
+        
+        console.log('✅ BM Group ERP Portal loaded successfully!');
         console.log('📱 College Location: 28.4509370, 76.7688120');
         console.log('📅 Semester starts: 15 July 2026');
         console.log('📚 Monday last lecture: LIB - Library (not counted)');
