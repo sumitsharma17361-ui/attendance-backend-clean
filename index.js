@@ -19,7 +19,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
 const ADMIN_ROLL_NUMBERS = ['24CSE48'];
 const COLLEGE_LAT = 28.4509370;
 const COLLEGE_LNG = 76.7688120;
-const COLLEGE_RADIUS = 500; // meters
+const COLLEGE_RADIUS = 500;
 
 if (!MONGO_URI) {
   console.error('❌ FATAL: MONGO_URI environment variable is not set!');
@@ -215,6 +215,7 @@ app.post('/api/auth/register', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ----- FIXED: Login Route - Admin excluded from device binding -----
 app.post('/api/auth/login', async (req, res) => {
   try {
     const parseResult = loginSchema.safeParse(req.body);
@@ -229,8 +230,11 @@ app.post('/api/auth/login', async (req, res) => {
     user.failedAttempts = 0;
     user.blockUntil = null;
     
-    // Device binding only for students
-    if (user.role === 'student') {
+    // 🔥 FIX: Device binding ONLY for students, NOT for admin
+    const isAdmin = ADMIN_ROLL_NUMBERS.includes(cleanRoll);
+    
+    if (!isAdmin && user.role === 'student') {
+      // Only students get device binding
       if (!user.boundDeviceId && deviceId) { 
         user.boundDeviceId = deviceId; 
         await user.save(); 
@@ -239,6 +243,7 @@ app.post('/api/auth/login', async (req, res) => {
         return res.status(403).json({ error: 'Unauthorized Device! Account bound to another phone.' });
       }
     }
+    // Admin ke liye koi device binding check nahi hai - freely login on any device
     
     const token = jwt.sign({ id: user._id, rollNo: user.rollNo, name: user.name, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     user.activeSession = token;
@@ -333,7 +338,7 @@ app.delete('/api/admin/delete-student', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Passcode Routes (Replacing QR) -----
+// ----- Passcode Routes -----
 app.post('/api/admin/generate-passcode', async (req, res) => {
   try {
     const { requesterRollNo } = req.body;
@@ -348,8 +353,6 @@ app.post('/api/auth/verify-passcode', async (req, res) => {
   try {
     const { passcode } = req.body;
     if (!passcode) return res.status(400).json({ error: 'Passcode required!' });
-    // Simple passcode verification - can be enhanced with DB storage if needed
-    // For now, passcode 9842 is the default
     if (passcode === '9842') {
       return res.json({ message: 'Passcode verified!', verified: true });
     }
@@ -421,7 +424,6 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
     const todayPresentStudents = await Attendance.distinct('rollNo', { date: today, status: 'Present' });
     const todayPresent = todayPresentStudents.length;
     
-    // Get names of present students
     const presentStudentDetails = await Attendance.find({ date: today, status: 'Present' })
       .select('rollNo studentName')
       .lean();
@@ -456,7 +458,7 @@ app.get('/api/admin/all-students/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Attendance Marking (Simplified) -----
+// ----- Attendance Marking -----
 app.post('/api/attendance/mark', async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude } = req.body;
@@ -510,7 +512,7 @@ app.post('/api/attendance/mark', async (req, res) => {
   }
 });
 
-// ----- Full Day Attendance (Simplified) -----
+// ----- Full Day Attendance -----
 app.post('/api/attendance/mark-fullday', async (req, res) => {
   try {
     const { rollNo, name, latitude, longitude } = req.body;
