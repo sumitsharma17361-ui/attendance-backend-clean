@@ -107,7 +107,6 @@ const noticeSchema = new mongoose.Schema({
   date: { type: Date, default: Date.now }
 });
 
-// ----- Passcode Schema (replaces QR) -----
 const passcodeSchema = new mongoose.Schema({
   passcode: { type: String, required: true, unique: true },
   expiresAt: { type: Date, required: true }
@@ -369,9 +368,7 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
     const { requesterRollNo } = req.body;
     if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     
-    // Delete old passcodes
     await Passcode.deleteMany({});
-    
     const passcode = Math.floor(1000 + Math.random() * 9000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
     await Passcode.create({ passcode, expiresAt });
@@ -392,7 +389,6 @@ app.post('/api/auth/verify-passcode', async (req, res) => {
       await Passcode.deleteOne({ _id: record._id });
       return res.status(400).json({ error: 'Passcode expired! Please refresh.' });
     }
-    // Valid - return success
     res.json({ message: 'Passcode verified!', verified: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -424,7 +420,6 @@ app.post('/api/admin/holiday', async (req, res) => {
     const { requesterRollNo, date, reason } = req.body;
     if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     
-    // Check if date >= SEMESTER_START
     const parts = date.split('-');
     const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
     if (dateObj < SEMESTER_START) {
@@ -456,13 +451,15 @@ app.get('/api/date-status/:date', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Admin Dashboard Stats (with Working Days) -----
+// ----- Admin Dashboard Stats (Fixed) -----
 app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
   try {
     if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    
     const totalStudents = await User.countDocuments({ role: 'student' });
     const today = new Date();
     const todayDate = today.toISOString().split('T')[0];
+    console.log(`📊 Dashboard stats for ${todayDate}`);
     
     // Today's attendance
     const todayPresentStudents = await Attendance.distinct('rollNo', { date: todayDate, status: 'Present' });
@@ -495,6 +492,8 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
     const workingDaysSoFar = await getWorkingDays(semesterStartStr, todayStr);
     const totalWorkingDaysSemester = await getWorkingDays(semesterStartStr, SEMESTER_END.toISOString().split('T')[0]);
     
+    console.log(`Working days so far: ${workingDaysSoFar}, total: ${totalWorkingDaysSemester}`);
+    
     res.json({ 
       totalStudents, 
       todayPresent, 
@@ -505,7 +504,10 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
       workingDaysSoFar,
       totalWorkingDaysSemester
     });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { 
+    console.error('Dashboard stats error:', err);
+    res.status(500).json({ error: err.message }); 
+  }
 });
 
 // ----- All Students for Admin -----
@@ -518,7 +520,7 @@ app.get('/api/admin/all-students/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Attendance Marking (Simplified) -----
+// ----- Attendance Marking -----
 app.post('/api/attendance/mark', async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude } = req.body;
@@ -572,7 +574,7 @@ app.post('/api/attendance/mark', async (req, res) => {
   }
 });
 
-// ----- Full Day Attendance (Simplified) -----
+// ----- Full Day Attendance -----
 app.post('/api/attendance/mark-fullday', async (req, res) => {
   try {
     const { rollNo, name, latitude, longitude } = req.body;
@@ -636,7 +638,6 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
     const { requesterRollNo, studentRollNo, date, subjects, status } = req.body;
     if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     
-    // Check if date is before semester start
     const parts = date.split('-');
     const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
     if (dateObj < SEMESTER_START) {
