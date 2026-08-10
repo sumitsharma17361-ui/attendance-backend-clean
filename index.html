@@ -77,8 +77,6 @@
         .stat-card .value { font-size:18px; font-weight:800; color:var(--primary); letter-spacing:-0.5px; }
         .stat-card .label { font-size:9px; color:var(--text-muted); font-weight:700; margin-top:2px; text-transform:uppercase; letter-spacing:0.5px; }
         .simulator-card { background:#f0f9ff; border:1px solid #bae6fd; border-radius:var(--radius); padding:8px 12px; margin-bottom:10px; font-size:10px; color:#0369a1; display:flex; align-items:center; gap:8px; }
-        .action-buttons-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:6px; }
-        .action-buttons-grid .btn { margin-top:0; font-size:10px; padding:8px; }
         .quick-portals-card { background:#fff; border:1px solid var(--card-border); border-radius:var(--radius); padding:10px; margin:10px 0; }
         .portal-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-top:6px; }
         .portal-btn { background:#f8fafc; border:1px solid var(--card-border); border-radius:8px; padding:6px 4px; text-align:center; font-size:9px; font-weight:700; color:var(--text-main); cursor:pointer; transition:all 0.3s; display:flex; flex-direction:column; align-items:center; gap:3px; }
@@ -336,6 +334,16 @@
                         </div>
                     </div>
                     <div id="todayPresentList"></div>
+                    <div class="stats-grid" style="margin-top:8px;">
+                        <div class="stat-card">
+                            <div class="value" id="workingDaysSoFar">0</div>
+                            <div class="label">Working Days (so far)</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value" id="totalWorkingDaysSemester">0</div>
+                            <div class="label">Total Working Days (Semester)</div>
+                        </div>
+                    </div>
                     <button class="btn btn-outline btn-sm" onclick="loadDashboardStats()" style="padding:4px; font-size:9px;">Refresh Stats</button>
                 </div>
 
@@ -363,21 +371,11 @@
                 </div>
                 
                 <div id="markTab" class="tab-content-active">
+                    <!-- Only Full Day Attendance button (removed other two) -->
                     <button class="btn btn-primary" onclick="openFullDayPasscodePrompt()" style="padding:9px; font-size:10px;">
                         <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                         Mark Full Day Attendance
                     </button>
-                    
-                    <div class="action-buttons-grid">
-                        <button class="btn btn-outline" onclick="markSingleAttendance()">
-                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                            Mark Current Lecture
-                        </button>
-                        <button class="btn btn-accent" onclick="openPasscodePrompt()">
-                            <svg class="svg-icon" viewBox="0 0 24 24"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/></svg>
-                            Enter Passcode
-                        </button>
-                    </div>
                     
                     <div style="text-align:center; font-size:9px; color:var(--text-muted); margin: 10px 0 3px 0; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Live Timetable</div>
                     <div class="period-card" id="periodCardBox">
@@ -745,7 +743,7 @@
         // ============================================================
         let currentPasscode = "9842";
 
-        function openPasscodePrompt() {
+        function openPasscodePromptForSingle() {
             if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
                 return showMsg("No active lecture to mark!", true);
             }
@@ -768,7 +766,7 @@
                     showMsg('✅ Passcode Verified!');
                     if (callback) callback();
                 } else {
-                    showMsg('❌ Invalid Passcode!', true);
+                    showMsg('❌ ' + (data.error || 'Invalid Passcode!'), true);
                 }
             } catch(e) {
                 showMsg('Server error!', true);
@@ -790,7 +788,7 @@
                 return showMsg("No active class right now!", true);
             }
             if (!passcodeVerified) {
-                openPasscodePrompt();
+                openPasscodePromptForSingle();
                 return;
             }
             markSingleAttendance(activeSubjectSubjectCode);
@@ -1230,6 +1228,7 @@
 
         async function loadDashboardStats() {
             const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'admin') return;
             try {
                 const res = await fetch(`${API_BASE}/api/admin/dashboard-stats/${user.rollNo}`);
                 const data = await res.json();
@@ -1238,6 +1237,8 @@
                     document.getElementById('liveTodayPresent').innerText = data.todayPresent || 0;
                     document.getElementById('liveTodayAbsent').innerText = data.todayAbsent || 0;
                     document.getElementById('liveOverallPct').innerText = (data.overallPct || 0) + '%';
+                    document.getElementById('workingDaysSoFar').innerText = data.workingDaysSoFar || 0;
+                    document.getElementById('totalWorkingDaysSemester').innerText = data.totalWorkingDaysSemester || 0;
                     
                     // Show today's present students
                     const presentList = document.getElementById('todayPresentList');
@@ -1636,6 +1637,7 @@
         console.log('📱 College Location:', '28.4509370, 76.7688120');
         console.log('📱 College Radius:', '500 meters');
         console.log('📱 API Base:', API_BASE);
+        console.log('📅 Semester starts: 15 July 2026');
     </script>
 </body>
 </html>
