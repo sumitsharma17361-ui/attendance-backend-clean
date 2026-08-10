@@ -8,7 +8,6 @@ const { z } = require('zod');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const helmet = require('helmet');
 
@@ -20,29 +19,16 @@ const app = express();
 // ---------- Security Headers ----------
 app.use(helmet());
 
-// ---------- CORS with Whitelist (FIX #32) ----------
-const allowedOrigins = [
-  'https://your-frontend-domain.com',
-  'https://7361-ui.github.io',
-  'http://localhost:3000',
-  'http://localhost:5000',
-  'https://bm-group-erp.netlify.app'
-];
+// ---------- CORS ----------
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: true,
   credentials: true
 }));
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// ---------- File Upload Setup (FIX #4) ----------
+// ---------- File Upload Setup ----------
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -57,9 +43,10 @@ const storage = multer.diskStorage({
     cb(null, unique + path.extname(file.originalname));
   }
 });
+
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowed = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
     cb(null, allowed.includes(file.mimetype));
@@ -68,31 +55,13 @@ const upload = multer({
 
 // ---------- Environment Variables ----------
 const MONGO_URI = process.env.MONGO_URI;
-const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString('hex'); // FIX #28
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || crypto.randomBytes(64).toString('hex');
+const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString('hex');
 const ADMIN_ROLL_NUMBERS = ['24CSE48'];
 const COLLEGE_LAT = 28.4509370;
 const COLLEGE_LNG = 76.7688120;
 const COLLEGE_RADIUS = 500;
 const SEMESTER_START = new Date(2026, 6, 15);
 const SEMESTER_END = new Date(2026, 11, 31);
-
-// ---------- Email Setup (FIX #16) ----------
-const EMAIL_USER = process.env.EMAIL_USER || '';
-const EMAIL_PASS = process.env.EMAIL_PASS || '';
-const EMAIL_HOST = process.env.EMAIL_HOST || 'smtp.gmail.com';
-const EMAIL_PORT = parseInt(process.env.EMAIL_PORT || '587');
-
-let transporter = null;
-if (EMAIL_USER && EMAIL_PASS) {
-  transporter = nodemailer.createTransport({
-    host: EMAIL_HOST,
-    port: EMAIL_PORT,
-    secure: EMAIL_PORT === 465,
-    auth: { user: EMAIL_USER, pass: EMAIL_PASS }
-  });
-  console.log('📧 Email transporter configured');
-}
 
 if (!MONGO_URI) {
   console.error('❌ FATAL: MONGO_URI environment variable is not set!');
@@ -121,16 +90,6 @@ const loginSchema = z.object({
   deviceId: z.string().optional()
 });
 
-const forgotPasswordSchema = z.object({
-  rollNo: z.string().min(1, "Roll No required"),
-  email: z.string().email("Valid email required")
-});
-
-const resetPasswordSchema = z.object({
-  token: z.string().min(1, "Token required"),
-  newPassword: z.string().min(6, "Password must be at least 6 characters")
-});
-
 // ---------- Timetable ----------
 const TIME_TABLE = {
   Monday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'DAA - Design & Analysis of Algorithm', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'CN - Computer Network', 'LIB - Library'],
@@ -141,10 +100,7 @@ const TIME_TABLE = {
 };
 
 // ---------- MongoDB Connection ----------
-mongoose.connect(MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
+mongoose.connect(MONGO_URI)
   .then(() => console.log('✅ MongoDB Connected Successfully!'))
   .catch(err => {
     console.error('❌ MongoDB Connection Error:', err.message);
@@ -169,10 +125,7 @@ const userSchema = new mongoose.Schema({
   semester: { type: String, default: '5th' },
   branch: { type: String, default: 'CSE' },
   activeSession: { type: String, default: null },
-  refreshToken: { type: String, default: null },
-  resetPasswordToken: { type: String, default: null },
-  resetPasswordExpires: { type: Date, default: null },
-  isEmailVerified: { type: Boolean, default: false }
+  refreshToken: { type: String, default: null }
 }, { timestamps: true });
 
 const attendanceSchema = new mongoose.Schema({
@@ -318,34 +271,8 @@ async function incrementFailedAttempts(rollNo) {
     user.blockUntil = new Date(Date.now() + 60 * 60 * 1000);
     await AuditLog.create({ rollNo, action: 'ACCOUNT_BLOCKED', details: 'Blocked for 1 hour due to 5 failed attempts' });
     console.log(`🚫 ${rollNo} blocked for 1 hour`);
-    // Send email alert (FIX #16)
-    if (transporter && user.email) {
-      try {
-        await transporter.sendMail({
-          from: EMAIL_USER,
-          to: user.email,
-          subject: '⚠️ Account Blocked - BM Group ERP',
-          html: `<h3>Your account has been blocked for 1 hour</h3><p>Reason: 5 failed attendance attempts</p><p>Roll No: ${rollNo}</p><p>Time: ${new Date().toLocaleString()}</p>`
-        });
-      } catch(e) {}
-    }
   }
   await user.save();
-}
-
-// ---------- Email Helper (FIX #16) ----------
-async function sendEmail(to, subject, html) {
-  if (!transporter) {
-    console.log('📧 Email not configured');
-    return false;
-  }
-  try {
-    await transporter.sendMail({ from: EMAIL_USER, to, subject, html });
-    return true;
-  } catch(e) {
-    console.error('Email error:', e);
-    return false;
-  }
 }
 
 // ---------- RBAC Middleware ----------
@@ -359,31 +286,6 @@ const verifyRole = (roles) => (req, res, next) => {
     next();
   } catch (err) { res.status(400).json({ error: "Invalid Token" }); }
 };
-
-// ---------- Refresh Token Middleware (FIX #31) ----------
-const generateTokens = (user) => {
-  const accessToken = jwt.sign({ id: user._id, rollNo: user.rollNo, name: user.name, role: user.role }, JWT_SECRET, { expiresIn: '15m' });
-  const refreshToken = jwt.sign({ id: user._id, rollNo: user.rollNo }, JWT_REFRESH_SECRET, { expiresIn: '7d' });
-  return { accessToken, refreshToken };
-};
-
-app.post('/api/auth/refresh-token', async (req, res) => {
-  const { refreshToken } = req.body;
-  if (!refreshToken) return res.status(401).json({ error: 'Refresh token required' });
-  try {
-    const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
-    const user = await User.findById(decoded.id);
-    if (!user || user.refreshToken !== refreshToken) {
-      return res.status(403).json({ error: 'Invalid refresh token' });
-    }
-    const tokens = generateTokens(user);
-    user.refreshToken = tokens.refreshToken;
-    await user.save();
-    res.json({ accessToken: tokens.accessToken, refreshToken: tokens.refreshToken });
-  } catch(err) {
-    res.status(403).json({ error: 'Invalid refresh token' });
-  }
-});
 
 // ---------- Routes ----------
 app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active!'));
@@ -432,17 +334,15 @@ app.post('/api/auth/login', async (req, res) => {
       }
     }
     
-    const tokens = generateTokens(user);
-    user.refreshToken = tokens.refreshToken;
-    user.activeSession = tokens.accessToken;
+    const token = jwt.sign({ id: user._id, rollNo: user.rollNo, name: user.name, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+    user.activeSession = token;
     await user.save();
     
     await AuditLog.create({ rollNo: cleanRoll, action: 'LOGIN', details: `Login from ${req.ip}` });
     
     res.json({ 
       message: 'Login successful!', 
-      accessToken: tokens.accessToken, 
-      refreshToken: tokens.refreshToken,
+      token,
       user: { name: user.name, rollNo: user.rollNo, role: user.role, email: user.email, profilePic: user.profilePic || user.profilePicPath }
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -454,7 +354,7 @@ app.post('/api/auth/logout', async (req, res) => {
     if (token) {
       const decoded = jwt.decode(token);
       if (decoded) {
-        await User.findOneAndUpdate({ rollNo: decoded.rollNo }, { activeSession: null, refreshToken: null });
+        await User.findOneAndUpdate({ rollNo: decoded.rollNo }, { activeSession: null });
         await AuditLog.create({ rollNo: decoded.rollNo, action: 'LOGOUT', details: 'Logout' });
       }
     }
@@ -462,56 +362,25 @@ app.post('/api/auth/logout', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Forgot Password (FIX #10) -----
-app.post('/api/auth/forgot-password', async (req, res) => {
+// ----- Admin Reset Password (without email) -----
+app.post('/api/admin/reset-password', async (req, res) => {
   try {
-    const parseResult = forgotPasswordSchema.safeParse(req.body);
-    if (!parseResult.success) return res.status(400).json({ error: parseResult.error.errors[0].message });
-    const { rollNo, email } = parseResult.data;
-    const cleanRoll = rollNo.trim().toUpperCase();
-    const user = await User.findOne({ rollNo: cleanRoll });
-    if (!user) return res.status(404).json({ error: 'User not found!' });
-    if (user.email !== email) return res.status(400).json({ error: 'Email does not match records!' });
-    
-    const token = crypto.randomBytes(32).toString('hex');
-    user.resetPasswordToken = token;
-    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000);
-    await user.save();
-    
-    const resetLink = `https://your-frontend.com/reset-password?token=${token}`;
-    await sendEmail(email, '🔑 Password Reset - BM Group ERP', 
-      `<h3>Reset Your Password</h3><p>Click the link below to reset your password (valid for 1 hour):</p><a href="${resetLink}">${resetLink}</a>`);
-    
-    res.json({ message: 'Password reset email sent!' });
-  } catch(err) { res.status(500).json({ error: err.message }); }
+    const { requesterRollNo, targetRollNo, newPassword } = req.body;
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const cleanRoll = targetRollNo.trim().toUpperCase();
+    const hashedPassword = await bcrypt.hash(newPassword || '123456', 10);
+    const updated = await User.findOneAndUpdate({ rollNo: cleanRoll }, { password: hashedPassword });
+    if (!updated) return res.status(404).json({ error: 'Student Roll No not found!' });
+    await AuditLog.create({ rollNo: cleanRoll, action: 'PASSWORD_RESET', details: `Reset by ${requesterRollNo}` });
+    res.json({ message: `Password reset for ${cleanRoll}!` });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/auth/reset-password', async (req, res) => {
-  try {
-    const parseResult = resetPasswordSchema.safeParse(req.body);
-    if (!parseResult.success) return res.status(400).json({ error: parseResult.error.errors[0].message });
-    const { token, newPassword } = parseResult.data;
-    const user = await User.findOne({ 
-      resetPasswordToken: token,
-      resetPasswordExpires: { $gt: new Date() }
-    });
-    if (!user) return res.status(400).json({ error: 'Invalid or expired token!' });
-    
-    user.password = await bcrypt.hash(newPassword, 10);
-    user.resetPasswordToken = null;
-    user.resetPasswordExpires = null;
-    await user.save();
-    
-    await sendEmail(user.email, '✅ Password Reset Successful', `<h3>Your password has been reset successfully.</h3>`);
-    res.json({ message: 'Password reset successful!' });
-  } catch(err) { res.status(500).json({ error: err.message }); }
-});
-
-// ----- Student Profile (UPDATED with file upload - FIX #4 & #23) -----
+// ----- Student Profile (with file upload) -----
 app.get('/api/student/profile/:rollNo', async (req, res) => {
   try {
     const cleanRoll = req.params.rollNo.trim().toUpperCase();
-    const user = await User.findOne({ rollNo: cleanRoll }).select('-password -activeSession -refreshToken -resetPasswordToken -resetPasswordExpires');
+    const user = await User.findOne({ rollNo: cleanRoll }).select('-password -activeSession');
     if (!user) return res.status(404).json({ error: 'Student not found!' });
     res.json(user);
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -540,7 +409,6 @@ app.post('/api/student/profile-pic', upload.single('profilePic'), async (req, re
     const cleanRoll = rollNo.trim().toUpperCase();
     const user = await User.findOne({ rollNo: cleanRoll });
     if (!user) return res.status(404).json({ error: 'Student not found!' });
-    // Delete old pic if exists
     if (user.profilePicPath) {
       const oldPath = path.join(__dirname, user.profilePicPath);
       if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
@@ -563,19 +431,6 @@ app.get('/api/student/profile-pic/:filename', (req, res) => {
 });
 
 // ----- Admin Routes -----
-app.post('/api/admin/reset-password', async (req, res) => {
-  try {
-    const { requesterRollNo, targetRollNo, newPassword } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
-    const cleanRoll = targetRollNo.trim().toUpperCase();
-    const hashedPassword = await bcrypt.hash(newPassword || '123456', 10);
-    const updated = await User.findOneAndUpdate({ rollNo: cleanRoll }, { password: hashedPassword });
-    if (!updated) return res.status(404).json({ error: 'Student Roll No not found!' });
-    await AuditLog.create({ rollNo: cleanRoll, action: 'PASSWORD_RESET', details: `Reset by ${requesterRollNo}` });
-    res.json({ message: `Password reset for ${cleanRoll}!` });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
 app.post('/api/admin/reset-device', async (req, res) => {
   try {
     const { requesterRollNo, targetRollNo } = req.body;
@@ -620,7 +475,7 @@ app.delete('/api/admin/delete-student', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Bulk Import Students (FIX #11) -----
+// ----- Bulk Import Students -----
 app.post('/api/admin/bulk-import', async (req, res) => {
   try {
     const { requesterRollNo, students } = req.body;
@@ -675,7 +530,7 @@ app.post('/api/auth/verify-passcode', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Notices (FIX #18 - Target roles) -----
+// ----- Notices -----
 app.get('/api/notices', async (req, res) => {
   try {
     const { role } = req.query;
@@ -694,15 +549,6 @@ app.post('/api/admin/notice', async (req, res) => {
       return res.json({ message: 'Notices cleared!' });
     }
     const newNotice = await new Notice({ title: title || 'Announcement', message, target: target || 'all' }).save();
-    // Send email to all students (FIX #16)
-    if (transporter) {
-      const students = await User.find({ role: 'student', email: { $ne: null } }).select('email');
-      for (const s of students) {
-        try {
-          await sendEmail(s.email, `📢 ${title || 'Announcement'}`, `<h3>${title || 'Announcement'}</h3><p>${message}</p><p>From: BM Group ERP</p>`);
-        } catch(e) {}
-      }
-    }
     res.status(201).json({ message: 'Notice published!', notice: newNotice });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -720,15 +566,6 @@ app.post('/api/admin/holiday', async (req, res) => {
     if (dayName === 'Saturday' || dayName === 'Sunday') return res.status(400).json({ error: 'Cannot declare holiday on weekend!' });
     await Holiday.findOneAndUpdate({ date }, { date, reason: reason || 'College Holiday' }, { upsert: true, new: true });
     await AuditLog.create({ rollNo: requesterRollNo, action: 'HOLIDAY_DECLARED', details: `${date}: ${reason}` });
-    // Email alert (FIX #16)
-    if (transporter) {
-      const students = await User.find({ role: 'student', email: { $ne: null } }).select('email');
-      for (const s of students) {
-        try {
-          await sendEmail(s.email, `🎉 Holiday Declared`, `<h3>Holiday Declared</h3><p>Date: ${date}</p><p>Reason: ${reason || 'College Holiday'}</p>`);
-        } catch(e) {}
-      }
-    }
     res.json({ message: `✅ Holiday declared for ${date}: ${reason || 'College Holiday'}` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -786,7 +623,6 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
     const presentCount = await Attendance.countDocuments({ status: 'Present', rollNo: { $nin: ADMIN_ROLL_NUMBERS } });
     const overallPct = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : 0;
     
-    // Subject-wise attendance for admin (FIX #13)
     const subjectStats = await Attendance.aggregate([
       { $match: { rollNo: { $nin: ADMIN_ROLL_NUMBERS } } },
       { $group: { _id: '$subject', total: { $sum: 1 }, present: { $sum: { $cond: [{ $eq: ['$status', 'Present'] }, 1, 0] } } } }
@@ -797,7 +633,6 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
     const workingDaysSoFar = await getWorkingDays(semesterStartStr, todayStr);
     const totalWorkingDaysSemester = await getWorkingDays(semesterStartStr, SEMESTER_END.toISOString().split('T')[0]);
     
-    // Recent audit logs (FIX #17)
     const recentLogs = await AuditLog.find().sort({ timestamp: -1 }).limit(50);
     
     res.json({ 
@@ -805,8 +640,7 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
       overallAttendance: totalAttendance, overallPct, 
       todayPresentStudents: presentList,
       workingDaysSoFar, totalWorkingDaysSemester,
-      subjectStats,
-      recentLogs
+      subjectStats, recentLogs
     });
   } catch (err) { 
     console.error('Dashboard stats error:', err);
@@ -814,7 +648,7 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
   }
 });
 
-// ----- All Users (Students + Faculty) -----
+// ----- All Users -----
 app.get('/api/admin/all-users/:requesterRollNo', async (req, res) => {
   try {
     const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
@@ -826,17 +660,12 @@ app.get('/api/admin/all-users/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Internal Messaging (FIX #18) -----
+// ----- Internal Messaging -----
 app.post('/api/messages/send', async (req, res) => {
   try {
     const { from, to, subject, message } = req.body;
     if (!from || !to || !message) return res.status(400).json({ error: 'From, To, and Message required' });
     const msg = await new Message({ from, to, subject, message }).save();
-    // Send email notification (FIX #16)
-    const receiver = await User.findOne({ rollNo: to });
-    if (receiver && receiver.email && transporter) {
-      await sendEmail(receiver.email, `📩 ${subject || 'New Message'}`, `<h3>New Message</h3><p>From: ${from}</p><p>${message}</p>`);
-    }
     res.status(201).json({ message: 'Message sent!', msg });
   } catch(err) { res.status(500).json({ error: err.message }); }
 });
@@ -857,14 +686,13 @@ app.put('/api/messages/:id/read', async (req, res) => {
   } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Leave Application (FIX #12) -----
+// ----- Leave Application -----
 app.post('/api/attendance/leave-request', async (req, res) => {
   try {
     const { rollNo, date, subject, reason } = req.body;
     const cleanRoll = rollNo.trim().toUpperCase();
     const user = await User.findOne({ rollNo: cleanRoll });
     if (!user) return res.status(404).json({ error: 'User not found!' });
-    // Check if attendance exists for that date/subject
     const record = await Attendance.findOne({ rollNo: cleanRoll, date, subject });
     if (record) {
       record.status = 'Leave Requested';
@@ -881,14 +709,6 @@ app.post('/api/attendance/leave-request', async (req, res) => {
         isVerified: false,
         markedBy: 'student'
       }).save();
-    }
-    // Notify admin via email (FIX #16)
-    if (transporter) {
-      const admin = await User.findOne({ rollNo: ADMIN_ROLL_NUMBERS[0] });
-      if (admin && admin.email) {
-        await sendEmail(admin.email, `📋 Leave Request from ${cleanRoll}`, 
-          `<h3>Leave Request</h3><p>Student: ${user.name} (${cleanRoll})</p><p>Date: ${date}</p><p>Subject: ${subject}</p><p>Reason: ${reason}</p>`);
-      }
     }
     res.json({ message: 'Leave request submitted!' });
   } catch(err) { res.status(500).json({ error: err.message }); }
@@ -909,17 +729,11 @@ app.post('/api/admin/leave-action', async (req, res) => {
     });
     record.status = newStatus;
     await record.save();
-    // Notify student via email (FIX #16)
-    const student = await User.findOne({ rollNo: rollNo.trim().toUpperCase() });
-    if (student && student.email && transporter) {
-      await sendEmail(student.email, `📋 Leave ${action === 'approve' ? 'Approved' : 'Rejected'}`, 
-        `<h3>Leave ${action === 'approve' ? 'Approved' : 'Rejected'}</h3><p>Date: ${date}</p><p>Subject: ${subject}</p>`);
-    }
     res.json({ message: `Leave ${action}ed successfully` });
   } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Attendance Marking (UPDATED) -----
+// ----- Attendance Marking -----
 app.post('/api/attendance/mark', async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude } = req.body;
@@ -976,7 +790,7 @@ app.post('/api/attendance/mark', async (req, res) => {
   }
 });
 
-// ----- Full Day Attendance (skip Library) -----
+// ----- Full Day Attendance -----
 app.post('/api/attendance/mark-fullday', async (req, res) => {
   try {
     const { rollNo, name, latitude, longitude } = req.body;
@@ -1077,7 +891,7 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- History & Analytics -----
+// ----- History -----
 app.get('/api/attendance/history/:rollNo', async (req, res) => {
   try {
     const history = await Attendance.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ date: -1 });
@@ -1101,7 +915,7 @@ app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Subject-wise Analytics (FIX #13) -----
+// ----- Subject-wise Analytics -----
 app.get('/api/analytics/subject/:rollNo', async (req, res) => {
   try {
     const cleanRoll = req.params.rollNo.trim().toUpperCase();
@@ -1124,7 +938,6 @@ app.get('/api/analytics/subject/:rollNo', async (req, res) => {
         }
       }
     });
-    // Calculate percentages
     Object.keys(subjectStats).forEach(key => {
       const s = subjectStats[key];
       s.percentage = s.total > 0 ? Math.round((s.present / s.total) * 100) : 0;
@@ -1133,7 +946,7 @@ app.get('/api/analytics/subject/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Exports (FIX #15 - PDF) -----
+// ----- Exports -----
 app.get('/api/export/google-sheets/:requesterRollNo', async (req, res) => {
   try {
     if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
@@ -1149,7 +962,6 @@ app.get('/api/export/google-sheets/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Single Student Export -----
 app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) => {
   try {
     const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
@@ -1191,7 +1003,7 @@ app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Audit Logs (FIX #17) -----
+// ----- Audit Logs -----
 app.get('/api/admin/audit-logs/:requesterRollNo', async (req, res) => {
   try {
     if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
