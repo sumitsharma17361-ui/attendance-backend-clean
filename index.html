@@ -6,7 +6,6 @@
     <title>BM Group of Institutions - Enterprise ERP Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        /* (All CSS remains same as previous version with themed sub-tabs) */
         :root {
             --bg-body: #f0f4f8;
             --primary: #2563eb;
@@ -441,7 +440,6 @@
 
                     <div id="subReports" class="admin-box sub-reports tab-content-active">
                         <span class="sub-section-title">📊 Export Reports</span>
-                        <!-- Existing full export -->
                         <select id="exportSelection" style="padding:8px; margin-bottom:6px; font-size:10px;">
                             <option value="ALL_SEMESTER">Full Semester (Jul-Dec 2026)</option>
                             <option value="6">July 2026</option>
@@ -457,13 +455,13 @@
                             Export to Google Sheets (CSV)
                         </button>
 
-                        <!-- New: Single Student Export -->
+                        <!-- Single Student Export -->
                         <hr style="margin:12px 0; border-color:var(--card-border);">
                         <span class="sub-section-title">👤 Single Student Attendance</span>
                         <select id="singleStudentSelect" style="padding:8px; margin-bottom:6px; font-size:10px;">
                             <option value="">Select Student...</option>
                         </select>
-                        <select id="singleStudentRange" style="padding:8px; margin-bottom:6px; font-size:10px;">
+                        <select id="singleStudentRange" style="padding:8px; margin-bottom:6px; font-size:10px;" onchange="toggleSingleMonthWrapper()">
                             <option value="CURRENT_MONTH">Current Month</option>
                             <option value="SELECTED_MONTH">Selected Month</option>
                             <option value="FULL_SEMESTER">Full Semester</option>
@@ -610,6 +608,7 @@
         // CONFIGURATION
         // ============================================================
         const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com";
+        const ADMIN_ROLL_NUMBERS = ['24CSE48'];
         let globalAllRecords = [], globalMyRecords = [], globalHolidays = [], groupedAdminRecords = {};
         let activeSubjectSubjectCode = "";
         let toastTimeout = null;
@@ -666,7 +665,7 @@
         }
 
         // ============================================================
-        // TIMETABLE & PERIOD TRACKER (Corrected Monday: Library last)
+        // TIMETABLE & PERIOD TRACKER (Monday: Library last)
         // ============================================================
         const WEEKLY_SCHEDULE = {
             1: [
@@ -718,7 +717,7 @@
             ]
         };
 
-        // ----- Subject list for manual attendance (exclude Library from default list) -----
+        // ----- Subject list for manual attendance -----
         const DAY_SUBJECTS = {
             'Monday': ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'DAA - Design & Analysis of Algorithm', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'CN - Computer Network', 'LIB - Library'],
             'Tuesday': ['WT - Web Technology', 'ECO - Economics for Engineers', 'Internet Lab (Ms. Geeta)', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'BDA - Big Data Analytics'],
@@ -917,7 +916,6 @@
         // ADMIN FUNCTIONS
         // ============================================================
 
-        // ----- Load subjects for manual attendance (exclude Library from default selection) -----
         function loadSubjectsForDay() {
             const date = document.getElementById('manualDate').value;
             if (!date) return;
@@ -1099,22 +1097,40 @@
             const select = document.getElementById('singleStudentSelect');
             if (!select) return;
             const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || user.role !== 'admin') return;
+            if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) return;
             fetch(`${API_BASE}/api/admin/all-students/${user.rollNo}`)
                 .then(res => res.json())
                 .then(data => {
                     select.innerHTML = '<option value="">Select Student...</option>';
+                    // Add current user (admin) first if present
+                    const adminSelf = data.find(s => s.rollNo === user.rollNo);
+                    if (adminSelf) {
+                        select.innerHTML += `<option value="${adminSelf.rollNo}">${adminSelf.rollNo} - ${adminSelf.name} (Admin)</option>`;
+                    }
                     data.forEach(s => {
-                        select.innerHTML += `<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`;
+                        if (s.rollNo !== user.rollNo) {
+                            select.innerHTML += `<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`;
+                        }
                     });
                 })
                 .catch(() => {});
         }
 
-        // ----- Single Student Export -----
+        // Toggle month wrapper for single student export
+        function toggleSingleMonthWrapper() {
+            const range = document.getElementById('singleStudentRange').value;
+            const wrapper = document.getElementById('singleStudentMonthWrapper');
+            if (wrapper) {
+                wrapper.style.display = (range === 'SELECTED_MONTH') ? 'block' : 'none';
+            }
+        }
+
+        // ----- Single Student Export (FIXED) -----
         async function downloadSingleStudentAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
+            if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) {
+                return showMsg('Admin access required!', true);
+            }
             const studentRoll = document.getElementById('singleStudentSelect').value;
             if (!studentRoll) return showMsg('Select a student!', true);
             const range = document.getElementById('singleStudentRange').value;
@@ -1364,7 +1380,7 @@
 
         async function loadDashboardStats() {
             const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || user.role !== 'admin') return;
+            if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) return;
             try {
                 const res = await fetch(`${API_BASE}/api/admin/dashboard-stats/${user.rollNo}`);
                 const data = await res.json();
@@ -1376,7 +1392,6 @@
                     document.getElementById('workingDaysSoFar').innerText = data.workingDaysSoFar || 0;
                     document.getElementById('totalWorkingDaysSemester').innerText = data.totalWorkingDaysSemester || 0;
                     
-                    // Show today's present students
                     const presentList = document.getElementById('todayPresentList');
                     if (data.todayPresentStudents && data.todayPresentStudents.length > 0) {
                         presentList.innerHTML = data.todayPresentStudents.map(s => 
@@ -1546,7 +1561,7 @@
 
         function exportExcelGrid() {
             const user = JSON.parse(localStorage.getItem('user'));
-            if (!user) { return showMsg("Please login!", true); }
+            if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) { return showMsg("Admin access required!", true); }
             if (globalAllRecords.length === 0) { showMsg("No records! Click 'Attendance Records' first.", true); return; }
             
             const selection = document.getElementById('exportSelection').value;
@@ -1630,7 +1645,7 @@
 
         function downloadGoogleSheetsExport() {
             const user = JSON.parse(localStorage.getItem('user'));
-            if (!user) { return showMsg("Please login!", true); }
+            if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) { return showMsg("Admin access required!", true); }
             showDownloadProgress('Preparing Google Sheets export...');
             
             let csv = "Date,Roll No,Name,Subject,Status,Timestamp\n";
@@ -1730,7 +1745,7 @@
             const initials = user.name ? user.name.split(' ').map(n=>n[0]).join('').toUpperCase().substring(0,2) : 'ST';
             document.getElementById('userAvatarText').innerText = initials;
             const userRollClean = (user.rollNo || "").toUpperCase().replace(/[^A-Z0-9]/g,'');
-            const isAdmin = (user.role === 'admin' || userRollClean === '24CSE48' || userRollClean.includes('24CSE48'));
+            const isAdmin = ADMIN_ROLL_NUMBERS.includes(userRollClean);
             document.getElementById('roleLabel').innerText = "Roll";
             document.getElementById('userRoll').innerText = user.rollNo;
             document.getElementById('studentStatsGrid').style.display = 'grid';
