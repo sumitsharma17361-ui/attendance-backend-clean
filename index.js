@@ -109,6 +109,7 @@ const noticeSchema = new mongoose.Schema({
 
 const passcodeSchema = new mongoose.Schema({
   passcode: { type: String, required: true, unique: true },
+  type: { type: String, enum: ['full_day', 'single_lecture'], required: true },
   expiresAt: { type: Date, required: true }
 }, { timestamps: true });
 
@@ -365,26 +366,58 @@ app.delete('/api/admin/delete-student', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Passcode Routes -----
+// ----- Admin Login as Student (NEW) -----
+app.post('/api/admin/login-as-student', async (req, res) => {
+  try {
+    const { requesterRollNo, targetRollNo } = req.body;
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) {
+      return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    }
+    const cleanTarget = targetRollNo.trim().toUpperCase();
+    const student = await User.findOne({ rollNo: cleanTarget });
+    if (!student) return res.status(404).json({ error: 'Student not found!' });
+    // Generate a token for the student (role = student)
+    const token = jwt.sign({ id: student._id, rollNo: student.rollNo, name: student.name, role: 'student' }, JWT_SECRET, { expiresIn: '1h' });
+    // Log the action
+    console.log(`🔑 Admin ${requesterRollNo} logged in as ${cleanTarget}`);
+    res.json({ 
+      message: `Logged in as ${student.name}`, 
+      token, 
+      user: { name: student.name, rollNo: student.rollNo, role: 'student' },
+      isImpersonating: true,
+      adminRoll: requesterRollNo
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ----- Passcode Routes (UPDATED for two types) -----
 app.post('/api/admin/generate-passcode', async (req, res) => {
   try {
-    const { requesterRollNo } = req.body;
+    const { requesterRollNo, type } = req.body;
     if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
-    
-    await Passcode.deleteMany({});
-    const passcode = Math.floor(1000 + Math.random() * 9000).toString();
+    if (!type || !['full_day', 'single_lecture'].includes(type)) {
+      return res.status(400).json({ error: 'Invalid passcode type. Use "full_day" or "single_lecture".' });
+    }
+    // Delete old passcodes of the same type
+    await Passcode.deleteMany({ type });
+    const length = type === 'full_day' ? 5 : 4;
+    const passcode = Math.floor(Math.pow(10, length-1) + Math.random() * (Math.pow(10, length) - Math.pow(10, length-1))).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
-    await Passcode.create({ passcode, expiresAt });
-    res.json({ message: 'Passcode generated!', passcode, expiresAt });
+    await Passcode.create({ passcode, type, expiresAt });
+    res.json({ message: `Passcode generated for ${type}`, passcode, type, expiresAt });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/api/auth/verify-passcode', async (req, res) => {
   try {
-    const { passcode } = req.body;
+    const { passcode, type } = req.body;
     if (!passcode) return res.status(400).json({ error: 'Passcode required!' });
-    
-    const record = await Passcode.findOne({ passcode });
+    if (!type || !['full_day', 'single_lecture'].includes(type)) {
+      return res.status(400).json({ error: 'Invalid passcode type.' });
+    }
+    const record = await Passcode.findOne({ passcode, type });
     if (!record) {
       return res.status(400).json({ error: 'Invalid passcode!' });
     }
@@ -740,25 +773,35 @@ app.get('/api/analytics/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ====== 🆕 STUDENT SUMMARY ROUTE (for admin) ======
+// ====== 🆕 OPTIMIZED STUDENT SUMMARY ROUTE ======
 app.get('/api/student/summary/:rollNo', async (req, res) => {
   try {
     const cleanRoll = req.params.rollNo.trim().toUpperCase();
     const user = await User.findOne({ rollNo: cleanRoll });
     if (!user) return res.status(404).json({ error: 'Student not found!' });
 
-    const allRecords = await Attendance.find({ rollNo: cleanRoll });
-    const holidays = await Holiday.find({});
+    // Get all attendance records for this student
+    const allRecords = await Attendance.find({ rollNo: cleanRoll }).lean();
+    const holidays = await Holiday.find({}).lean();
     const holidaySet = new Set(holidays.map(h => h.date));
 
-    // Calculate total conducted academic lectures since semester start
+    // Compute total conducted academic subjects and days
     const today = new Date();
     const semesterStart = new Date(2026, 6, 15);
     let current = new Date(semesterStart);
     let totalConductedAcademicSubjects = 0;
     const academicDaysSet = new Set();
-    const presentDaysSet = new Set();
     const subjectStats = {};
+
+    // Precompute subject counts per day from timetable (to avoid repeated lookups)
+    const dayNameMap = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayAcademicSubjects = {};
+    for (let d = 0; d < 7; d++) {
+      const dayName = dayNameMap[d];
+      const subjects = TIME_TABLE[dayName] || [];
+      const academic = subjects.filter(sub => !sub.includes("LIB") && !sub.includes("Library") && !sub.includes("Sports"));
+      dayAcademicSubjects[dayName] = academic;
+    }
 
     while (current <= today) {
       const dateStr = current.toISOString().split('T')[0];
@@ -768,41 +811,46 @@ app.get('/api/student/summary/:rollNo', async (req, res) => {
 
       if (!isWeekend && !isHoliday) {
         academicDaysSet.add(dateStr);
-        const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][dayOfWeek];
-        const daySubjects = TIME_TABLE[dayName] || [];
-        const academicSubjects = daySubjects.filter(sub => 
-          !sub.includes("LIB") && !sub.includes("Library") && !sub.includes("Sports")
-        );
+        const dayName = dayNameMap[dayOfWeek];
+        const academicSubjects = dayAcademicSubjects[dayName] || [];
         totalConductedAcademicSubjects += academicSubjects.length;
 
-        // Check student's attendance for each academic subject on this day
-        let hasPresent = false;
-        for (let sub of academicSubjects) {
-          const record = await Attendance.findOne({ rollNo: cleanRoll, subject: sub, date: dateStr, status: 'Present' });
+        // Initialize subjectStats for subjects not seen yet
+        academicSubjects.forEach(sub => {
           if (!subjectStats[sub]) {
             subjectStats[sub] = { total: 0, present: 0 };
           }
           subjectStats[sub].total = (subjectStats[sub].total || 0) + 1;
-          if (record) {
-            subjectStats[sub].present = (subjectStats[sub].present || 0) + 1;
-            hasPresent = true;
-          }
-        }
-        if (hasPresent) {
-          presentDaysSet.add(dateStr);
-        }
+        });
       }
       current.setDate(current.getDate() + 1);
     }
 
-    // Count actual attended academic records
-    const academicAttendedRecords = allRecords.filter(r => 
-      r.status === 'Present' && 
-      !r.subject.includes("LIB") && 
-      !r.subject.includes("Library") && 
-      !r.subject.includes("Sports")
-    );
-    const totalAcademicLecturesAttended = academicAttendedRecords.length;
+    // Now process all attendance records to count present per subject and days present
+    const presentDaysSet = new Set();
+    const subjectPresentCount = {};
+
+    allRecords.forEach(rec => {
+      const sub = rec.subject;
+      // Only count academic subjects (exclude library, sports)
+      if (sub.includes("LIB") || sub.includes("Library") || sub.includes("Sports")) return;
+      if (rec.status === 'Present' || rec.status === 'Duty Leave') {
+        if (!subjectPresentCount[sub]) subjectPresentCount[sub] = 0;
+        subjectPresentCount[sub] = (subjectPresentCount[sub] || 0) + 1;
+        presentDaysSet.add(rec.date);
+      }
+    });
+
+    // Update subjectStats with present counts
+    Object.keys(subjectPresentCount).forEach(sub => {
+      if (subjectStats[sub]) {
+        subjectStats[sub].present = subjectPresentCount[sub];
+      }
+    });
+
+    // Calculate total academic lectures attended (sum of present counts)
+    let totalAcademicLecturesAttended = 0;
+    Object.values(subjectPresentCount).forEach(v => totalAcademicLecturesAttended += v);
 
     const pct = totalConductedAcademicSubjects > 0 
       ? Math.round((totalAcademicLecturesAttended / totalConductedAcademicSubjects) * 100) 
@@ -816,9 +864,9 @@ app.get('/api/student/summary/:rollNo', async (req, res) => {
     const subjectStatsFinal = {};
     for (let [sub, stats] of Object.entries(subjectStats)) {
       subjectStatsFinal[sub] = {
-        present: stats.present,
-        total: stats.total,
-        percentage: stats.total > 0 ? Math.round((stats.present / stats.total) * 100) : 0
+        present: stats.present || 0,
+        total: stats.total || 0,
+        percentage: stats.total > 0 ? Math.round(((stats.present || 0) / stats.total) * 100) : 0
       };
     }
 
