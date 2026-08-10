@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BM Group of Institutions - Enterprise ERP Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- html2pdf for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        /* ===== CSS Variables ===== */
+        /* ===== All CSS from original working version + new styles ===== */
         :root {
             --bg-body: #f0f4f8;
             --primary: #2563eb;
@@ -211,6 +212,7 @@
         }
         #todayPresentList .present-item:last-child { border-bottom: none; }
 
+        /* Themed sub-tabs */
         .admin-box.sub-reports { background: #f0fdf4; border-color: #bbf7d0; }
         .admin-box.sub-attendance { background: #fefce8; border-color: #fef08a; }
         .admin-box.sub-holiday { background: #fef2f2; border-color: #fecaca; }
@@ -219,6 +221,7 @@
         .admin-box.sub-directory { background: #fce7f3; border-color: #fbcfe8; }
         .admin-box { transition: background 0.3s, border-color 0.3s; }
 
+        /* Summary card */
         .summary-card {
             background: var(--bg-body);
             border-radius: 8px;
@@ -287,7 +290,7 @@
 </head>
 <body>
 
-    <!-- Toast, download progress, etc. -->
+    <!-- ===== Toast, Download Progress, Modals ===== -->
     <div id="toast-container"><div id="toast" class="toast-card"><svg id="toast-icon" class="svg-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span id="toast-msg">System Active</span></div></div>
     <div id="downloadProgress" class="download-progress"><div class="spinner"></div><span id="downloadStatus">Preparing file...</span></div>
 
@@ -318,13 +321,15 @@
         </div>
     </div>
 
-    <!-- APP -->
+    <!-- ===== APP ===== -->
     <div class="app-container">
+
         <!-- Impersonation Banner -->
         <div id="impersonationBanner" class="impersonation-banner" style="display:none;">
             <span id="impersonationText">You are logged in as <b>STUDENT</b></span>
             <button onclick="switchBackFromImpersonation()">Switch Back</button>
         </div>
+
         <!-- Header -->
         <div class="app-header">
             <div class="app-header-title">
@@ -335,6 +340,7 @@
                 <div class="avatar-circle" id="userAvatarText">SS</div>
             </div>
         </div>
+
         <!-- Notice Banner -->
         <div class="notice-banner" id="noticeBanner" style="display:none;">
             <svg class="svg-icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -360,6 +366,7 @@
 
             <!-- Dashboard -->
             <div id="dash-box" style="display:none;">
+
                 <!-- Profile Summary -->
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <div>
@@ -527,7 +534,7 @@
                         <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">💡 Holiday reason will show to students</p>
                     </div>
 
-                    <!-- Passcode (UPDATED with two types) -->
+                    <!-- Passcode (NEW: Two types) -->
                     <div id="subPasscode" class="admin-box sub-passcode" style="display:none; text-align:center;">
                         <span class="sub-section-title">🔐 Class Passcodes</span>
                         <div style="display:flex; flex-direction:column; gap:12px; margin-top:6px;">
@@ -622,8 +629,10 @@
 
     <script>
         // ============================================================
-        // CONFIGURATION
+        // COMPLETE JAVASCRIPT – All working features + new ones
         // ============================================================
+
+        // ===== CONFIGURATION =====
         const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com";
         const ADMIN_ROLL_NUMBERS = ['24CSE48'];
         let globalAllRecords = [], globalMyRecords = [], globalHolidays = [], groupedAdminRecords = {};
@@ -638,9 +647,7 @@
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-        // ============================================================
-        // TOAST / UI HELPERS
-        // ============================================================
+        // ===== TOAST / UI HELPERS =====
         function showMsg(text, isError = false) {
             const toast = document.getElementById('toast');
             const toastMsg = document.getElementById('toast-msg');
@@ -683,9 +690,7 @@
             return deviceId;
         }
 
-        // ============================================================
-        // TIMETABLE & PERIOD TRACKER
-        // ============================================================
+        // ===== TIMETABLE & PERIOD TRACKER (same as original) =====
         const WEEKLY_SCHEDULE = {
             1: [
                 { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
@@ -744,6 +749,7 @@
         };
 
         async function updatePeriodTrackerWidget() {
+            // (Same as original – works)
             const now = new Date();
             const dayOfWeek = now.getDay();
             const todayDate = now.toISOString().split('T')[0];
@@ -804,9 +810,7 @@
             }
         }
 
-        // ============================================================
-        // PASSCODE FUNCTIONS (UPDATED with type)
-        // ============================================================
+        // ===== PASSCODE FUNCTIONS (NEW with type) =====
         let currentFullDayPasscode = "98421";
         let currentSingleLecturePasscode = "6319";
 
@@ -846,9 +850,7 @@
             verifyPasscode(enteredPasscode, 'full_day', markFullDayAttendance);
         }
 
-        // ============================================================
-        // ATTENDANCE FUNCTIONS
-        // ============================================================
+        // ===== ATTENDANCE FUNCTIONS (same as original) =====
         function markActivePeriodAttendance() {
             if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
                 return showMsg("No active class right now!", true);
@@ -925,9 +927,7 @@
             }, () => showMsg('GPS Access Denied!', true));
         }
 
-        // ============================================================
-        // ADMIN FUNCTIONS
-        // ============================================================
+        // ===== ADMIN FUNCTIONS (with new passcode generation) =====
         function loadSubjectsForDay() {
             const date = document.getElementById('manualDate').value;
             if (!date) return;
@@ -1005,6 +1005,7 @@
             } catch(e) { showMsg("Network Error!", true); }
         }
 
+        // NEW: generate passcode with type
         async function generatePasscode(type) {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) return showMsg('Admin access required!', true);
@@ -1111,7 +1112,7 @@
             } catch(e) { showMsg("Server error!", true); }
         }
 
-        // ----- Populate dropdowns -----
+        // ===== POPULATE DROPDOWNS =====
         function populateStudentSelect() {
             const select = document.getElementById('singleStudentSelect');
             if (!select) return;
@@ -1176,7 +1177,7 @@
             } catch(e) { hideDownloadProgress(); showMsg(e.message || 'Failed', true); }
         }
 
-        // ----- Fetch all students -----
+        // ===== FETCH ALL STUDENTS =====
         async function fetchAllStudents() {
             const user = JSON.parse(localStorage.getItem('user'));
             try {
@@ -1199,6 +1200,8 @@
                             <button class="action-btn btn-del btn-sm" onclick="deleteStudentAccount('${s.rollNo}')" style="padding:2px 6px; font-size:8px;">🗑️</button>
                         </td></tr>`;
                 }).join('');
+                populateStudentSelect();
+                populateLoginAsStudentSelect();
             } catch(e) { showMsg("Failed to connect to backend", true); }
         }
 
@@ -1212,9 +1215,7 @@
             } catch(e) { showMsg("Server error!", true); }
         }
 
-        // ============================================================
-        // 🆕 STUDENT SUMMARY (optimized) + EXPORT
-        // ============================================================
+        // ===== STUDENT SUMMARY (with PDF/Excel) =====
         async function showStudentAttendance(rollNo) {
             try {
                 const token = localStorage.getItem('token');
@@ -1299,7 +1300,7 @@
             }
         }
 
-        // Download PDF
+        // PDF Download
         async function downloadStudentPDF(rollNo) {
             const token = localStorage.getItem('token');
             try {
@@ -1348,7 +1349,7 @@
             } catch(e) { showMsg('Failed to generate PDF', true); }
         }
 
-        // Download Excel
+        // Excel Download
         async function downloadStudentExcel(rollNo) {
             const token = localStorage.getItem('token');
             try {
@@ -1381,7 +1382,7 @@
             } catch(e) { showMsg('Failed to generate Excel', true); }
         }
 
-        // ----- Attendance Records with Delete -----
+        // ===== ATTENDANCE RECORDS (with delete) =====
         async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             try {
@@ -1431,9 +1432,7 @@
             else { showMsg('Failed to delete records', true); }
         }
 
-        // ============================================================
-        // DASHBOARD & HISTORY
-        // ============================================================
+        // ===== DASHBOARD & HISTORY =====
         function calculateRealAttendancePercentage() {
             const startDate = new Date(2026,6,15);
             const today = new Date();
@@ -1565,9 +1564,7 @@
             } catch(e) { console.error('Dashboard stats failed:', e); }
         }
 
-        // ============================================================
-        // NOTICES, TABS, EXPORT
-        // ============================================================
+        // ===== NOTICES, TABS, EXPORT =====
         async function fetchNotices() {
             if (localStorage.getItem("GLOBAL_NOTICE_CLEARED") === "true") {
                 document.getElementById('noticeBanner').style.display = 'none'; return;
@@ -1768,9 +1765,7 @@
             downloadFile(csv, fileName, 'text/csv');
         }
 
-        // ============================================================
-        // DOWNLOAD HELPER
-        // ============================================================
+        // ===== DOWNLOAD HELPER =====
         function downloadFile(content, fileName, mimeType = 'text/csv') {
             showDownloadProgress('Preparing file...');
             try {
@@ -1805,9 +1800,7 @@
             if (el) { el.classList.remove('show'); }
         }
 
-        // ============================================================
-        // 🆕 ADMIN LOGIN AS STUDENT
-        // ============================================================
+        // ===== ADMIN LOGIN AS STUDENT =====
         async function loginAsStudent() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) return showMsg('Admin access required!', true);
@@ -1838,7 +1831,7 @@
         function switchBackFromImpersonation() {
             if (originalUser) {
                 localStorage.setItem('user', JSON.stringify(originalUser));
-                // Restore admin token (we stored it earlier)
+                // Restore admin token
                 const adminToken = localStorage.getItem('adminToken');
                 if (adminToken) localStorage.setItem('token', adminToken);
                 isImpersonating = false;
@@ -1851,9 +1844,7 @@
             }
         }
 
-        // ============================================================
-        // AUTHENTICATION
-        // ============================================================
+        // ===== AUTHENTICATION =====
         async function handleAuth() {
             const rawRoll = document.getElementById('rollNo').value.trim();
             const password = document.getElementById('password').value.trim();
@@ -1874,7 +1865,6 @@
                     if (res.ok) {
                         localStorage.setItem('user', JSON.stringify(data.user));
                         localStorage.setItem('token', data.token);
-                        // If admin, store adminToken
                         if (ADMIN_ROLL_NUMBERS.includes(data.user.rollNo)) {
                             localStorage.setItem('adminToken', data.token);
                         }
@@ -1940,9 +1930,7 @@
             }
         }
 
-        // ============================================================
-        // INITIALIZATION
-        // ============================================================
+        // ===== INITIALIZATION =====
         if (localStorage.getItem('user')) {
             loadDashboard();
         }
