@@ -19,9 +19,9 @@ const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
 const ADMIN_ROLL_NUMBERS = ['24CSE48'];
 const COLLEGE_LAT = 28.4509370;
 const COLLEGE_LNG = 76.7688120;
-const COLLEGE_RADIUS = 500;
-const SEMESTER_START = new Date(2026, 6, 15);
-const SEMESTER_END = new Date(2026, 11, 31);
+const COLLEGE_RADIUS = 50;
+const SEMESTER_START = new Date(2026, 6, 15); // 15 July 2026
+const SEMESTER_END = new Date(2026, 11, 31); // 31 Dec 2026
 
 if (!MONGO_URI) {
   console.error('❌ FATAL: MONGO_URI environment variable is not set!');
@@ -49,7 +49,7 @@ const loginSchema = z.object({
   deviceId: z.string().optional()
 });
 
-// ---------- Timetable ----------
+// ---------- Timetable (Monday last = LIB - Library) ----------
 const TIME_TABLE = {
   Monday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'DAA - Design & Analysis of Algorithm', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'CN - Computer Network', 'LIB - Library'],
   Tuesday: ['WT - Web Technology', 'ECO - Economics for Engineers', 'Internet Lab (Ms. Geeta)', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'BDA - Big Data Analytics'],
@@ -72,7 +72,7 @@ const userSchema = new mongoose.Schema({
   rollNo: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   phone: { type: String, default: null },
-  role: { type: String, enum: ['student', 'admin'], default: 'student' },
+  role: { type: String, enum: ['student', 'faculty', 'admin'], default: 'student' },
   boundDeviceId: { type: String, default: null },
   lastAttendanceTime: { type: Date, default: null },
   lastAttendanceLocation: { latitude: Number, longitude: Number },
@@ -126,19 +126,31 @@ async function checkDateStatus(dateStr) {
   const dayName = days[dateObj.getDay()];
   
   if (dayName === 'Saturday' || dayName === 'Sunday') {
-    return { isBlocked: true, type: 'WEEKEND', message: `📅 ${dayName}: College Closed (Weekend)`, dayName };
+    return { 
+      isBlocked: true, 
+      type: 'WEEKEND',
+      message: `📅 ${dayName}: College Closed (Weekend)`,
+      dayName 
+    };
   }
   
   const holiday = await Holiday.findOne({ date: dateStr });
   if (holiday) {
-    return { isBlocked: true, type: 'HOLIDAY', message: `🎉 Holiday: ${holiday.reason}`, dayName, holiday: holiday.reason };
+    return { 
+      isBlocked: true, 
+      type: 'HOLIDAY',
+      message: `🎉 Holiday: ${holiday.reason}`,
+      dayName,
+      holiday: holiday.reason
+    };
   }
   
   return { isBlocked: false, dayName };
 }
 
-// ---------- Helper: Get Working Days ----------
+// ---------- Helper: Get Working Days (excluding weekends & holidays) ----------
 async function getWorkingDays(startDate, endDate) {
+  // Convert string dates to Date objects if needed
   const start = typeof startDate === 'string' ? new Date(startDate) : startDate;
   const end = typeof endDate === 'string' ? new Date(endDate) : endDate;
   
@@ -202,6 +214,18 @@ async function incrementFailedAttempts(rollNo) {
   await user.save();
 }
 
+// ---------- RBAC Middleware ----------
+const verifyRole = (roles) => (req, res, next) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) return res.status(401).json({ error: "Access Denied" });
+  try {
+    const verified = jwt.verify(token, JWT_SECRET);
+    if (!roles.includes(verified.role)) return res.status(403).json({ error: "Unauthorized Role!" });
+    req.user = verified;
+    next();
+  } catch (err) { res.status(400).json({ error: "Invalid Token" }); }
+};
+
 // ---------- Routes ----------
 app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active!'));
 
@@ -235,7 +259,9 @@ app.post('/api/auth/login', async (req, res) => {
     user.failedAttempts = 0;
     user.blockUntil = null;
     
+    // Device binding ONLY for students, NOT for admin
     const isAdmin = ADMIN_ROLL_NUMBERS.includes(cleanRoll);
+    
     if (!isAdmin && user.role === 'student') {
       if (!user.boundDeviceId && deviceId) { 
         user.boundDeviceId = deviceId; 
@@ -245,6 +271,7 @@ app.post('/api/auth/login', async (req, res) => {
         return res.status(403).json({ error: 'Unauthorized Device! Account bound to another phone.' });
       }
     }
+    // Admin and faculty can login from any device
     
     const token = jwt.sign({ id: user._id, rollNo: user.rollNo, name: user.name, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     user.activeSession = token;
@@ -264,29 +291,29 @@ app.post('/api/auth/logout', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Student Profile (simple) -----
+// ----- Student Profile -----
+app.post('/api/student/profile', async (req, res) => {
+  try {
+    const { rollNo, email, phone, profilePic, semester, branch } = req.body;
+    const cleanRoll = rollNo.trim().toUpperCase();
+    const user = await User.findOne({ rollNo: cleanRoll });
+    if (!user) return res.status(404).json({ error: 'Student not found!' });
+    if (email) user.email = email;
+    if (phone) user.phone = phone;
+    if (profilePic) user.profilePic = profilePic;
+    if (semester) user.semester = semester;
+    if (branch) user.branch = branch;
+    await user.save();
+    res.json({ message: 'Profile updated successfully!', user: { name: user.name, rollNo: user.rollNo, email: user.email, phone: user.phone, semester: user.semester, branch: user.branch, profilePic: user.profilePic } });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.get('/api/student/profile/:rollNo', async (req, res) => {
   try {
     const cleanRoll = req.params.rollNo.trim().toUpperCase();
     const user = await User.findOne({ rollNo: cleanRoll }).select('-password -activeSession');
     if (!user) return res.status(404).json({ error: 'Student not found!' });
     res.json(user);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.put('/api/student/profile', async (req, res) => {
-  try {
-    const { rollNo, email, phone, semester, branch, profilePic } = req.body;
-    const cleanRoll = rollNo.trim().toUpperCase();
-    const user = await User.findOne({ rollNo: cleanRoll });
-    if (!user) return res.status(404).json({ error: 'Student not found!' });
-    if (email) user.email = email;
-    if (phone) user.phone = phone;
-    if (semester) user.semester = semester;
-    if (branch) user.branch = branch;
-    if (profilePic) user.profilePic = profilePic;
-    await user.save();
-    res.json({ message: 'Profile updated successfully!', user: { name: user.name, rollNo: user.rollNo, email: user.email, phone: user.phone, semester: user.semester, branch: user.branch, profilePic: user.profilePic } });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -344,6 +371,7 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
   try {
     const { requesterRollNo } = req.body;
     if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    
     await Passcode.deleteMany({});
     const passcode = Math.floor(1000 + Math.random() * 9000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
@@ -356,8 +384,11 @@ app.post('/api/auth/verify-passcode', async (req, res) => {
   try {
     const { passcode } = req.body;
     if (!passcode) return res.status(400).json({ error: 'Passcode required!' });
+    
     const record = await Passcode.findOne({ passcode });
-    if (!record) return res.status(400).json({ error: 'Invalid passcode!' });
+    if (!record) {
+      return res.status(400).json({ error: 'Invalid passcode!' });
+    }
     if (record.expiresAt < new Date()) {
       await Passcode.deleteOne({ _id: record._id });
       return res.status(400).json({ error: 'Passcode expired! Please refresh.' });
@@ -392,12 +423,19 @@ app.post('/api/admin/holiday', async (req, res) => {
   try {
     const { requesterRollNo, date, reason } = req.body;
     if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    
     const parts = date.split('-');
     const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-    if (dateObj < SEMESTER_START) return res.status(400).json({ error: 'Cannot declare holiday before 15 July 2026!' });
+    if (dateObj < SEMESTER_START) {
+      return res.status(400).json({ error: 'Cannot declare holiday before 15 July 2026!' });
+    }
+    
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayName = days[dateObj.getDay()];
-    if (dayName === 'Saturday' || dayName === 'Sunday') return res.status(400).json({ error: 'Cannot declare holiday on weekend!' });
+    if (dayName === 'Saturday' || dayName === 'Sunday') {
+      return res.status(400).json({ error: 'Cannot declare holiday on weekend (Saturday/Sunday)!' });
+    }
+    
     await Holiday.findOneAndUpdate({ date }, { date, reason: reason || 'College Holiday' }, { upsert: true, new: true });
     res.json({ message: `✅ Holiday declared for ${date}: ${reason || 'College Holiday'}` });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -417,22 +455,29 @@ app.get('/api/date-status/:date', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Admin Dashboard Stats -----
+// ----- Admin Dashboard Stats (FIXED) -----
 app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
   try {
     if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    
     const totalStudents = await User.countDocuments({ role: 'student' });
     const today = new Date();
     const todayDate = today.toISOString().split('T')[0];
+    console.log(`📊 Dashboard stats for ${todayDate}`);
     
-    const todayPresentStudents = await Attendance.distinct('rollNo', { date: todayDate, status: 'Present', rollNo: { $nin: ADMIN_ROLL_NUMBERS } });
+    // Today's attendance
+    const todayPresentStudents = await Attendance.distinct('rollNo', { date: todayDate, status: 'Present' });
     const todayPresent = todayPresentStudents.length;
     
-    const presentStudentDetails = await Attendance.find({ date: todayDate, status: 'Present', rollNo: { $nin: ADMIN_ROLL_NUMBERS } })
-      .select('rollNo studentName').lean();
+    // Get details of present students (for list)
+    const presentStudentDetails = await Attendance.find({ date: todayDate, status: 'Present' })
+      .select('rollNo studentName')
+      .lean();
     const uniquePresent = {};
     presentStudentDetails.forEach(s => {
-      if (!uniquePresent[s.rollNo]) uniquePresent[s.rollNo] = { rollNo: s.rollNo, name: s.studentName };
+      if (!uniquePresent[s.rollNo]) {
+        uniquePresent[s.rollNo] = { rollNo: s.rollNo, name: s.studentName };
+      }
     });
     const presentList = Object.values(uniquePresent);
     
@@ -442,20 +487,27 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
     const absentRollNos = allRollNos.filter(r => !presentRollNos.has(r));
     const todayAbsent = absentRollNos.length;
     
-    const totalAttendance = await Attendance.countDocuments({ rollNo: { $nin: ADMIN_ROLL_NUMBERS } });
-    const presentCount = await Attendance.countDocuments({ status: 'Present', rollNo: { $nin: ADMIN_ROLL_NUMBERS } });
+    const totalAttendance = await Attendance.countDocuments();
+    const presentCount = await Attendance.countDocuments({ status: 'Present' });
     const overallPct = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : 0;
     
+    // Working days calculation
     const semesterStartStr = SEMESTER_START.toISOString().split('T')[0];
     const todayStr = today.toISOString().split('T')[0];
     const workingDaysSoFar = await getWorkingDays(semesterStartStr, todayStr);
     const totalWorkingDaysSemester = await getWorkingDays(semesterStartStr, SEMESTER_END.toISOString().split('T')[0]);
     
+    console.log(`Working days so far: ${workingDaysSoFar}, total: ${totalWorkingDaysSemester}`);
+    
     res.json({ 
-      totalStudents, todayPresent, todayAbsent, 
-      overallAttendance: totalAttendance, overallPct, 
+      totalStudents, 
+      todayPresent, 
+      todayAbsent, 
+      overallAttendance: totalAttendance, 
+      overallPct, 
       todayPresentStudents: presentList,
-      workingDaysSoFar, totalWorkingDaysSemester
+      workingDaysSoFar,
+      totalWorkingDaysSemester
     });
   } catch (err) { 
     console.error('Dashboard stats error:', err);
@@ -463,15 +515,17 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
   }
 });
 
-// ----- All Students for Admin -----
+// ----- All Students for Admin (including admin himself for export) -----
 app.get('/api/admin/all-students/:requesterRollNo', async (req, res) => {
   try {
     const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
     if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo)) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const students = await User.find({ role: 'student' }).select('name rollNo role boundDeviceId createdAt email phone semester branch profilePic').sort({ rollNo: 1 });
-    // Also include admin for export dropdown
+    // Also add the admin himself to the list (for self‑download)
     const admin = await User.findOne({ rollNo: requesterRollNo }).select('name rollNo');
-    if (admin) students.unshift({ ...admin._doc, role: 'admin' });
+    if (admin) {
+      students.unshift({ ...admin._doc, role: 'admin' });
+    }
     res.json(students);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -484,7 +538,9 @@ app.post('/api/attendance/mark', async (req, res) => {
     const todayDate = today.toISOString().split('T')[0];
     
     const dateStatus = await checkDateStatus(todayDate);
-    if (dateStatus.isBlocked) return res.status(400).json({ error: dateStatus.message });
+    if (dateStatus.isBlocked) {
+      return res.status(400).json({ error: dateStatus.message });
+    }
     
     const cleanRoll = rollNo.trim().toUpperCase();
     const blockCheck = await checkStudentBlocked(cleanRoll);
@@ -499,6 +555,7 @@ app.post('/api/attendance/mark', async (req, res) => {
     const user = await User.findOne({ rollNo: cleanRoll });
     if (!user) return res.status(404).json({ error: 'Student not found!' });
     
+    // Check if subject is Library/Sports - we still allow marking but won't count in attendance percentage
     const isLab = subject.includes("LAB") || subject.includes("Lab");
     const todayEntries = await Attendance.find({ rollNo: cleanRoll, subject, date: todayDate });
     if (isLab && todayEntries.length >= 1) return res.status(400).json({ error: `Already marked for ${subject} today! (Lab - 1 lecture only)` });
@@ -528,7 +585,7 @@ app.post('/api/attendance/mark', async (req, res) => {
   }
 });
 
-// ----- Full Day Attendance (skip Library) -----
+// ----- Full Day Attendance (skip Library, Sports) -----
 app.post('/api/attendance/mark-fullday', async (req, res) => {
   try {
     const { rollNo, name, latitude, longitude } = req.body;
@@ -536,7 +593,9 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     const todayDate = today.toISOString().split('T')[0];
     
     const dateStatus = await checkDateStatus(todayDate);
-    if (dateStatus.isBlocked) return res.status(400).json({ error: dateStatus.message });
+    if (dateStatus.isBlocked) {
+      return res.status(400).json({ error: dateStatus.message });
+    }
     
     const cleanRoll = rollNo.trim().toUpperCase();
     const blockCheck = await checkStudentBlocked(cleanRoll);
@@ -554,7 +613,11 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayName = days[today.getDay()];
     const allSubjects = TIME_TABLE[dayName] || ['General Class'];
-    const academicSubjects = allSubjects.filter(sub => !sub.includes("LIB") && !sub.includes("Library") && !sub.includes("Sports"));
+    
+    // Filter out Library, Sports, etc.
+    const academicSubjects = allSubjects.filter(sub => 
+      !sub.includes("LIB") && !sub.includes("Library") && !sub.includes("Sports")
+    );
     
     let markedCount = 0;
     for (let sub of academicSubjects) {
@@ -585,7 +648,7 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Admin Manual Attendance -----
+// ----- Admin Manual Attendance (with semester start check) -----
 app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNo, date, subjects, status } = req.body;
@@ -593,16 +656,23 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
     
     const parts = date.split('-');
     const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-    if (dateObj < SEMESTER_START) return res.status(400).json({ error: 'Cannot mark before 15 July 2026!' });
+    if (dateObj < SEMESTER_START) {
+      return res.status(400).json({ error: 'Cannot mark attendance before 15 July 2026! College was closed.' });
+    }
     
     const dateStatus = await checkDateStatus(date);
-    if (dateStatus.isBlocked) return res.status(400).json({ error: `Cannot mark on ${dateStatus.type}` });
+    if (dateStatus.isBlocked) {
+      return res.status(400).json({ error: `Cannot mark attendance on ${dateStatus.type}: ${dateStatus.message}` });
+    }
     
     const targetRoll = studentRollNo.trim().toUpperCase();
     const user = await User.findOne({ rollNo: targetRoll });
     if (!user) return res.status(404).json({ error: `Roll No ${targetRoll} not registered!` });
     
     let markedCount = 0;
+    const markedSubjects = [];
+    const alreadyMarked = [];
+    
     for (let sub of subjects) {
       const exists = await Attendance.findOne({ rollNo: targetRoll, subject: sub, date });
       if (!exists) {
@@ -617,9 +687,15 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
           isVerified: true
         }).save();
         markedCount++;
+        markedSubjects.push(sub);
+      } else {
+        alreadyMarked.push(sub);
       }
     }
-    res.status(201).json({ message: `✅ Marked ${markedCount} lectures for ${user.name}` });
+    
+    let message = `✅ Marked ${markedCount} lectures for ${user.name} on ${date}`;
+    if (alreadyMarked.length > 0) message += `. Already marked: ${alreadyMarked.join(', ')}`;
+    res.status(201).json({ message, markedSubjects, alreadyMarked, total: markedCount });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -671,7 +747,8 @@ app.get('/api/analytics/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Exports -----
+// ----- Export Routes -----
+// 1. Full export (all students)
 app.get('/api/export/google-sheets/:requesterRollNo', async (req, res) => {
   try {
     if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
@@ -687,45 +764,85 @@ app.get('/api/export/google-sheets/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// 2. Single student export by range (FIXED)
 app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) => {
   try {
     const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo)) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo)) {
+      return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    }
+
     const { studentRollNo, range, month } = req.query;
-    if (!studentRollNo) return res.status(400).json({ error: 'studentRollNo required' });
+    if (!studentRollNo) {
+      return res.status(400).json({ error: 'studentRollNo is required' });
+    }
+
     const cleanStudent = studentRollNo.trim().toUpperCase();
     const today = new Date();
     let startDate, endDate;
+
     if (range === 'CURRENT_MONTH') {
       startDate = new Date(today.getFullYear(), today.getMonth(), 1);
       endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     } else if (range === 'SELECTED_MONTH') {
       const m = parseInt(month);
-      if (isNaN(m) || m < 0 || m > 11) return res.status(400).json({ error: 'Invalid month' });
+      if (isNaN(m) || m < 0 || m > 11) {
+        return res.status(400).json({ error: 'Invalid month' });
+      }
       startDate = new Date(2026, m, 1);
       endDate = new Date(2026, m + 1, 0);
-    } else {
+    } else { // FULL_SEMESTER
       startDate = new Date(SEMESTER_START);
       endDate = new Date(SEMESTER_END);
     }
+
     const startStr = startDate.toISOString().split('T')[0];
     const endStr = endDate.toISOString().split('T')[0];
-    const records = await Attendance.find({ rollNo: cleanStudent, date: { $gte: startStr, $lte: endStr } }).sort({ date: 1 });
-    if (records.length === 0) return res.status(404).json({ error: 'No records found' });
+
+    const records = await Attendance.find({
+      rollNo: cleanStudent,
+      date: { $gte: startStr, $lte: endStr }
+    }).sort({ date: 1 });
+
+    if (records.length === 0) {
+      return res.status(404).json({ error: 'No records found for this student in the selected range.' });
+    }
+
     const studentName = records[0].studentName || 'Unknown';
-    let csv = `Student Attendance Report\nStudent: ${studentName} (${cleanStudent})\nRange: ${startStr} to ${endStr}\n\nDate,Subject,Status,Location,IP Address\n`;
+
+    let csv = `Student Attendance Report\n`;
+    csv += `Student: ${studentName} (${cleanStudent})\n`;
+    csv += `Range: ${startStr} to ${endStr}\n`;
+    csv += `Generated: ${new Date().toLocaleString()}\n\n`;
+    csv += 'Date,Subject,Status,Location,IP Address\n';
+
     records.forEach(r => {
       const loc = r.location ? `(${r.location.latitude}, ${r.location.longitude})` : 'N/A';
       csv += `${r.date},${r.subject},${r.status},${loc},${r.ipAddress || 'N/A'}\n`;
     });
+
     const total = records.length;
-    const present = records.filter(r => r.status === 'Present' || r.status === 'Duty Leave').length;
+    const present = records.filter(r => r.status === 'Present').length;
     const pct = total > 0 ? Math.round((present / total) * 100) : 0;
-    csv += `\nTotal: ${total}, Present: ${present}, Attendance: ${pct}%\n`;
+    csv += `\nTotal Lectures: ${total}, Present: ${present}, Attendance %: ${pct}%\n`;
+
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename=attendance_${cleanStudent}_${range}.csv`);
     res.send(csv);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Student export error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---------- Global Error Handlers ----------
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  process.exit(1);
 });
 
 // ---------- Start Server ----------
