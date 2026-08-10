@@ -150,11 +150,15 @@ async function checkDateStatus(dateStr) {
 
 // ---------- Helper: Get Working Days (excluding weekends & holidays) ----------
 async function getWorkingDays(startDate, endDate) {
+  // Convert string dates to Date objects if needed
+  const start = typeof startDate === 'string' ? new Date(startDate) : startDate;
+  const end = typeof endDate === 'string' ? new Date(endDate) : endDate;
+  
   let workingDays = 0;
-  const holidays = await Holiday.find({ date: { $gte: startDate, $lte: endDate } });
+  const holidays = await Holiday.find({ date: { $gte: start.toISOString().split('T')[0], $lte: end.toISOString().split('T')[0] } });
   const holidaySet = new Set(holidays.map(h => h.date));
-  let current = new Date(startDate);
-  while (current <= endDate) {
+  let current = new Date(start);
+  while (current <= end) {
     const dateStr = current.toISOString().split('T')[0];
     const dayOfWeek = current.getDay();
     const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
@@ -511,12 +515,17 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
   }
 });
 
-// ----- All Students for Admin -----
+// ----- All Students for Admin (including admin himself for export) -----
 app.get('/api/admin/all-students/:requesterRollNo', async (req, res) => {
   try {
     const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
     if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo)) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const students = await User.find({ role: 'student' }).select('name rollNo role boundDeviceId createdAt email phone semester branch profilePic').sort({ rollNo: 1 });
+    // Also add the admin himself to the list (for self‑download)
+    const admin = await User.findOne({ rollNo: requesterRollNo }).select('name rollNo');
+    if (admin) {
+      students.unshift({ ...admin._doc, role: 'admin' });
+    }
     res.json(students);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -547,7 +556,6 @@ app.post('/api/attendance/mark', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'Student not found!' });
     
     // Check if subject is Library/Sports - we still allow marking but won't count in attendance percentage
-    // (filtering is done in calculateRealAttendancePercentage)
     const isLab = subject.includes("LAB") || subject.includes("Lab");
     const todayEntries = await Attendance.find({ rollNo: cleanRoll, subject, date: todayDate });
     if (isLab && todayEntries.length >= 1) return res.status(400).json({ error: `Already marked for ${subject} today! (Lab - 1 lecture only)` });
@@ -606,7 +614,7 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     const dayName = days[today.getDay()];
     const allSubjects = TIME_TABLE[dayName] || ['General Class'];
     
-    // Filter out Library, Sports, etc. (subjects that shouldn't count in attendance)
+    // Filter out Library, Sports, etc.
     const academicSubjects = allSubjects.filter(sub => 
       !sub.includes("LIB") && !sub.includes("Library") && !sub.includes("Sports")
     );
@@ -740,7 +748,7 @@ app.get('/api/analytics/:rollNo', async (req, res) => {
 });
 
 // ----- Export Routes -----
-// 1. Full export (all students) - existing
+// 1. Full export (all students)
 app.get('/api/export/google-sheets/:requesterRollNo', async (req, res) => {
   try {
     if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
@@ -756,7 +764,7 @@ app.get('/api/export/google-sheets/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// 2. Single student export by range
+// 2. Single student export by range (FIXED)
 app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) => {
   try {
     const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
