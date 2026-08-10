@@ -199,6 +199,7 @@
             max-height: 120px;
             overflow-y: auto;
             font-size: 10px;
+            margin: 6px 0;
         }
         #todayPresentList .present-item {
             display: flex;
@@ -208,7 +209,7 @@
         }
         #todayPresentList .present-item:last-child { border-bottom: none; }
 
-        /* ----- Themed sub-tabs ----- */
+        /* Themed sub-tabs */
         .admin-box.sub-reports { background: #f0fdf4; border-color: #bbf7d0; }
         .admin-box.sub-attendance { background: #fefce8; border-color: #fef08a; }
         .admin-box.sub-holiday { background: #fef2f2; border-color: #fecaca; }
@@ -322,6 +323,7 @@
                     <div><b>Attendance Advisor:</b> <span id="advisorText">Calculating criteria...</span></div>
                 </div>
                 
+                <!-- Admin Live Dashboard -->
                 <div id="adminLiveDashboard" style="display:none; margin:10px 0;">
                     <div class="stats-grid">
                         <div class="stat-card">
@@ -341,7 +343,11 @@
                             <div class="label">Overall %</div>
                         </div>
                     </div>
-                    <div id="todayPresentList"></div>
+                    <!-- Present Students List -->
+                    <div style="background:#f8fafc; border-radius:8px; padding:8px; border:1px solid var(--card-border);">
+                        <span style="font-size:9px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">📋 Today's Present Students</span>
+                        <div id="todayPresentList"></div>
+                    </div>
                     <div class="stats-grid" style="margin-top:8px;">
                         <div class="stat-card">
                             <div class="value" id="workingDaysSoFar">0</div>
@@ -432,7 +438,6 @@
                         <div class="admin-nav-item" onclick="switchAdminSubTab('subDirectory')">Directory</div>
                     </div>
 
-                    <!-- Each sub‑tab box gets a theme class -->
                     <div id="subReports" class="admin-box sub-reports tab-content-active">
                         <span class="sub-section-title">📊 Export Excel Reports</span>
                         <select id="exportSelection" style="padding:8px; margin-bottom:6px; font-size:10px;">
@@ -633,7 +638,7 @@
         }
 
         // ============================================================
-        // TIMETABLE & PERIOD TRACKER
+        // TIMETABLE & PERIOD TRACKER (Updated for Monday: Library as last)
         // ============================================================
         const WEEKLY_SCHEDULE = {
             1: [
@@ -644,7 +649,7 @@
                 { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
                 { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
                 { start: "13:50", end: "14:35", subject: "CN - Computer Network", period: "P7" },
-                { start: "14:35", end: "15:20", subject: "LIB - Library", period: "P8" }
+                { start: "14:35", end: "15:20", subject: "LIB - Library", period: "P8" }  // ← Library (does not count)
             ],
             2: [
                 { start: "09:20", end: "10:05", subject: "WT - Web Technology", period: "P1" },
@@ -883,7 +888,7 @@
             const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             const dayName = days[dateObj.getDay()];
             const timetable = {
-                'Monday': ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'DAA - Design & Analysis of Algorithm', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'CN - Computer Network', 'WT - Web Technology'],
+                'Monday': ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'DAA - Design & Analysis of Algorithm', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'CN - Computer Network', 'LIB - Library'],
                 'Tuesday': ['WT - Web Technology', 'ECO - Economics for Engineers', 'Internet Lab (Ms. Geeta)', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'BDA - Big Data Analytics'],
                 'Wednesday': ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'FLA - Formal Language & Automata', 'WT - Web Technology', 'CN LAB - Computer Network Lab'],
                 'Thursday': ['BDA - Big Data Analytics', 'WT - Web Technology', 'CN - Computer Network', 'DAA - Design & Analysis of Algorithm', 'DAA LAB - Algorithm Lab', 'HRM - Human Resource Mgmt'],
@@ -1193,7 +1198,11 @@
             }
             const DEFAULT_DAILY_ACADEMIC_LECTURES = 6;
             const totalConductedLectures = totalWorkingDays * DEFAULT_DAILY_ACADEMIC_LECTURES;
-            const academicAttendedLectures = globalMyRecords.filter(r => { const sub = r.subject || ""; return !sub.includes("LIB") && !sub.includes("Sports"); }).length;
+            // Filter out Library, Sports, etc.
+            const academicAttendedLectures = globalMyRecords.filter(r => { 
+                const sub = r.subject || ""; 
+                return !sub.includes("LIB") && !sub.includes("Sports") && !sub.includes("Library"); 
+            }).length;
             if (totalConductedLectures === 0) return { pct:100, totalWorkingDays, totalConductedLectures, totalAttendedLectures:academicAttendedLectures };
             const pct = Math.min(100, ((academicAttendedLectures / totalConductedLectures) * 100)).toFixed(1);
             return { pct, totalWorkingDays, totalConductedLectures, totalAttendedLectures:academicAttendedLectures };
@@ -1290,6 +1299,7 @@
                     document.getElementById('workingDaysSoFar').innerText = data.workingDaysSoFar || 0;
                     document.getElementById('totalWorkingDaysSemester').innerText = data.totalWorkingDaysSemester || 0;
                     
+                    // Show today's present students
                     const presentList = document.getElementById('todayPresentList');
                     if (data.todayPresentStudents && data.todayPresentStudents.length > 0) {
                         presentList.innerHTML = data.todayPresentStudents.map(s => 
@@ -1682,10 +1692,10 @@
             if (wrapper) { wrapper.style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none'; }
         });
         
-        console.log('✅ BM Group ERP Portal loaded successfully! (Simplified Security)');
-        console.log('📱 College Location:', '28.4509370, 76.7688120');
-        console.log('📱 College Radius:', '500 meters');
+        console.log('✅ BM Group ERP Portal loaded successfully!');
+        console.log('📱 College Location: 28.4509370, 76.7688120');
         console.log('📅 Semester starts: 15 July 2026');
+        console.log('📚 Monday last lecture: LIB - Library (not counted)');
     </script>
 </body>
 </html>
