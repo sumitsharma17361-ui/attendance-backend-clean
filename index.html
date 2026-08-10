@@ -5,22 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BM Group of Institutions - Enterprise ERP Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { 
+        :root {
             --bg-body: #f0f4f8;
-            --primary: #2563eb; 
+            --primary: #2563eb;
             --primary-hover: #1d4ed8;
-            --success: #16a34a; 
-            --danger: #dc2626; 
-            --warning: #d97706; 
+            --success: #16a34a;
+            --danger: #dc2626;
+            --warning: #d97706;
             --card-bg: #ffffff;
             --card-border: #e2e8f0;
             --shadow-sm: 0 1px 3px 0 rgba(0,0,0,0.06);
             --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05);
             --shadow-hover: 0 10px 15px -3px rgba(0,0,0,0.08);
-            --text-main: #0f172a; 
-            --text-muted: #64748b; 
+            --text-main: #0f172a;
+            --text-muted: #64748b;
             --radius: 12px;
         }
         * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding: 0; }
@@ -208,6 +207,15 @@
             border-bottom: 1px solid #f1f5f9;
         }
         #todayPresentList .present-item:last-child { border-bottom: none; }
+
+        /* ----- Themed sub-tabs ----- */
+        .admin-box.sub-reports { background: #f0fdf4; border-color: #bbf7d0; }
+        .admin-box.sub-attendance { background: #fefce8; border-color: #fef08a; }
+        .admin-box.sub-holiday { background: #fef2f2; border-color: #fecaca; }
+        .admin-box.sub-passcode { background: #eff6ff; border-color: #bfdbfe; }
+        .admin-box.sub-tools { background: #f5f3ff; border-color: #ddd6fe; }
+        .admin-box.sub-directory { background: #fce7f3; border-color: #fbcfe8; }
+        .admin-box { transition: background 0.3s, border-color 0.3s; }
     </style>
 </head>
 <body>
@@ -371,7 +379,6 @@
                 </div>
                 
                 <div id="markTab" class="tab-content-active">
-                    <!-- Only Full Day Attendance button (removed other two) -->
                     <button class="btn btn-primary" onclick="openFullDayPasscodePrompt()" style="padding:9px; font-size:10px;">
                         <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                         Mark Full Day Attendance
@@ -425,7 +432,8 @@
                         <div class="admin-nav-item" onclick="switchAdminSubTab('subDirectory')">Directory</div>
                     </div>
 
-                    <div id="subReports" class="admin-box tab-content-active">
+                    <!-- Each sub‑tab box gets a theme class -->
+                    <div id="subReports" class="admin-box sub-reports tab-content-active">
                         <span class="sub-section-title">📊 Export Excel Reports</span>
                         <select id="exportSelection" style="padding:8px; margin-bottom:6px; font-size:10px;">
                             <option value="ALL_SEMESTER">Full Semester (Jul-Dec 2026)</option>
@@ -443,7 +451,7 @@
                         </button>
                     </div>
 
-                    <div id="subAttendance" class="admin-box" style="display:none;">
+                    <div id="subAttendance" class="admin-box sub-attendance" style="display:none;">
                         <span class="sub-section-title">📝 Manual Backdate Attendance</span>
                         <input type="text" id="manualRoll" placeholder="Student Roll No (e.g. 24CSE14)" style="font-size:10px; padding:7px;">
                         <input type="date" id="manualDate" style="font-size:10px; padding:7px;" onchange="loadSubjectsForDay()">
@@ -471,7 +479,7 @@
                         </button>
                     </div>
                     
-                    <div id="subHoliday" class="admin-box" style="display:none;">
+                    <div id="subHoliday" class="admin-box sub-holiday" style="display:none;">
                         <span class="sub-section-title">📅 Declare Official Holiday</span>
                         <input type="date" id="holidayDate" style="font-size:10px; padding:7px;">
                         <input type="text" id="holidayReason" placeholder="Reason (e.g. Diwali/Rainy Day)" style="font-size:10px; padding:7px;">
@@ -479,7 +487,7 @@
                         <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">💡 Holiday reason will show to students</p>
                     </div>
 
-                    <div id="subPasscode" class="admin-box" style="display:none; text-align:center;">
+                    <div id="subPasscode" class="admin-box sub-passcode" style="display:none; text-align:center;">
                         <span class="sub-section-title">📱 Class Passcode</span>
                         <p style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Share this passcode with students. They enter it to mark attendance.</p>
                         <div class="passcode-display">
@@ -493,7 +501,7 @@
                         <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">Passcode auto-refreshes every 5 minutes</p>
                     </div>
 
-                    <div id="subTools" style="display:none;">
+                    <div id="subTools" class="admin-box sub-tools" style="display:none;">
                         <div class="tool-sub-card">
                             <span class="tool-title" style="color:var(--primary);">➕ Register New Student</span>
                             <input type="text" id="adminRegName" placeholder="Full Student Name" style="font-size:10px; padding:7px;">
@@ -538,7 +546,7 @@
                         </div>
                     </div>
                     
-                    <div id="subDirectory" style="display:none;">
+                    <div id="subDirectory" class="admin-box sub-directory" style="display:none;">
                         <div class="flex-buttons" style="margin-bottom:6px;">
                             <button class="btn btn-outline btn-sm" onclick="fetchAllStudents()" style="flex:1; padding:6px; font-size:9px;">
                                 <svg class="svg-icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -1101,6 +1109,7 @@
             } catch(e) { showMsg("Failed to load attendance", true); }
         }
 
+        // ----- Attendance Records with Delete button -----
         async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             try {
@@ -1110,14 +1119,55 @@
                 globalAllRecords = data;
                 document.getElementById('directoryTitle').innerHTML = `📊 Attendance Records (${data.length} entries) <button class="btn btn-outline btn-sm" onclick="fetchAllStudents()" style="padding:2px 8px; font-size:8px; width:auto;">⬅ Back</button>`;
                 const grouped = {};
-                data.forEach(r => { const key = `${r.rollNo}_${r.date}`; if (!grouped[key]) { grouped[key] = { rollNo:r.rollNo, name:r.studentName, date:r.date, count:0, ids:[] }; } grouped[key].count++; grouped[key].ids.push(r._id); });
+                data.forEach(r => { 
+                    const key = `${r.rollNo}_${r.date}`; 
+                    if (!grouped[key]) { 
+                        grouped[key] = { rollNo:r.rollNo, name:r.studentName, date:r.date, count:0, ids:[] }; 
+                    } 
+                    grouped[key].count++; 
+                    grouped[key].ids.push(r._id); 
+                });
                 groupedAdminRecords = grouped;
                 const sortedArray = Object.values(grouped).sort((a,b) => a.rollNo.localeCompare(b.rollNo));
                 const tbody = document.querySelector('#allHistoryTable tbody');
                 if (!tbody) return;
                 if (sortedArray.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px;">No records</td></tr>';
-                tbody.innerHTML = sortedArray.map(g => `<tr><td><b>${g.rollNo}</b></td><td>${g.name}</td><td>${g.date}</td><td><span class="badge badge-present">${g.count} Lectures</span></td></tr>`).join('');
+                tbody.innerHTML = sortedArray.map(g => `
+                    <tr>
+                        <td><b>${g.rollNo}</b></td>
+                        <td>${g.name}</td>
+                        <td>${g.date}</td>
+                        <td>
+                            <span class="badge badge-present">${g.count} Lectures</span>
+                            <button class="action-btn btn-del btn-sm" onclick="deleteDayGroup('${g.rollNo}','${g.date}')" style="padding:2px 6px; font-size:8px; margin-left:4px;" title="Delete all lectures for this day">
+                                <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
             } catch(e) { showMsg("Failed to connect to backend", true); }
+        }
+
+        // Delete all lectures for a student on a given date
+        async function deleteDayGroup(rollNo, date) {
+            const user = JSON.parse(localStorage.getItem('user'));
+            const key = `${rollNo}_${date}`;
+            const group = groupedAdminRecords[key];
+            if (!group) { showMsg('No records found!', true); return; }
+            if (!confirm(`Delete ${group.count} lectures for ${rollNo} on ${date}?`)) return;
+            let deletedCount = 0;
+            for (let id of group.ids) {
+                try { 
+                    const res = await fetch(`${API_BASE}/api/attendance/delete/${id}/${user.rollNo}`, { method:'DELETE' }); 
+                    if (res.ok) deletedCount++; 
+                } catch(e) {}
+            }
+            if (deletedCount > 0) { 
+                showMsg(`✅ ${deletedCount} records deleted for ${rollNo} on ${date}`); 
+                fetchAllAttendance(); 
+            } else { 
+                showMsg('Failed to delete records', true); 
+            }
         }
 
         // ============================================================
@@ -1240,7 +1290,6 @@
                     document.getElementById('workingDaysSoFar').innerText = data.workingDaysSoFar || 0;
                     document.getElementById('totalWorkingDaysSemester').innerText = data.totalWorkingDaysSemester || 0;
                     
-                    // Show today's present students
                     const presentList = document.getElementById('todayPresentList');
                     if (data.todayPresentStudents && data.todayPresentStudents.length > 0) {
                         presentList.innerHTML = data.todayPresentStudents.map(s => 
@@ -1319,7 +1368,11 @@
             const subTabs = ['subReports','subAttendance','subHoliday','subPasscode','subTools','subDirectory'];
             subTabs.forEach(id => {
                 const el = document.getElementById(id);
-                if (el) { el.style.display = (id === subId) ? 'block' : 'none'; el.classList.remove('tab-content-active'); if (id === subId) el.classList.add('tab-content-active'); }
+                if (el) { 
+                    el.style.display = (id === subId) ? 'block' : 'none'; 
+                    el.classList.remove('tab-content-active'); 
+                    if (id === subId) el.classList.add('tab-content-active'); 
+                }
             });
             const navItems = document.querySelectorAll('.admin-nav-item');
             navItems.forEach((item, idx) => { item.classList.toggle('active', subTabs[idx] === subId); });
@@ -1513,9 +1566,7 @@
             console.log('📥 Downloading:', fileName);
             showDownloadProgress('Preparing file...');
             
-            // Try Web fallback (Blob Download)
             try {
-                console.log('✅ Using web fallback (Blob)');
                 const blob = new Blob(['\uFEFF' + content], { type: `${mimeType};charset=utf-8;` });
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
@@ -1622,12 +1673,10 @@
         // INITIALIZATION
         // ============================================================
         
-        // Auto-login on page load
         if (localStorage.getItem('user')) {
             loadDashboard();
         }
         
-        // Modal toggle for Excel range
         document.getElementById('studentExcelRange')?.addEventListener('change', function() {
             const wrapper = document.getElementById('selectedMonthWrapper');
             if (wrapper) { wrapper.style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none'; }
@@ -1636,7 +1685,6 @@
         console.log('✅ BM Group ERP Portal loaded successfully! (Simplified Security)');
         console.log('📱 College Location:', '28.4509370, 76.7688120');
         console.log('📱 College Radius:', '500 meters');
-        console.log('📱 API Base:', API_BASE);
         console.log('📅 Semester starts: 15 July 2026');
     </script>
 </body>
