@@ -20,6 +20,8 @@ const ADMIN_ROLL_NUMBERS = ['24CSE48'];
 const COLLEGE_LAT = 28.4509370;
 const COLLEGE_LNG = 76.7688120;
 const COLLEGE_RADIUS = 500;
+const SEMESTER_START = new Date(2026, 6, 15); // 15 July 2026
+const SEMESTER_END = new Date(2026, 11, 31); // 31 Dec 2026
 
 if (!MONGO_URI) {
   console.error('❌ FATAL: MONGO_URI environment variable is not set!');
@@ -105,10 +107,17 @@ const noticeSchema = new mongoose.Schema({
   date: { type: Date, default: Date.now }
 });
 
+// ----- Passcode Schema (replaces QR) -----
+const passcodeSchema = new mongoose.Schema({
+  passcode: { type: String, required: true, unique: true },
+  expiresAt: { type: Date, required: true }
+}, { timestamps: true });
+
 const User = mongoose.model('User', userSchema);
 const Attendance = mongoose.model('Attendance', attendanceSchema);
 const Holiday = mongoose.model('Holiday', holidaySchema);
 const Notice = mongoose.model('Notice', noticeSchema);
+const Passcode = mongoose.model('Passcode', passcodeSchema);
 
 // ---------- Helper: Check if date is holiday or weekend ----------
 async function checkDateStatus(dateStr) {
@@ -138,6 +147,24 @@ async function checkDateStatus(dateStr) {
   }
   
   return { isBlocked: false, dayName };
+}
+
+// ---------- Helper: Get Working Days (excluding weekends & holidays) ----------
+async function getWorkingDays(startDate, endDate) {
+  let workingDays = 0;
+  const holidays = await Holiday.find({ date: { $gte: startDate, $lte: endDate } });
+  const holidaySet = new Set(holidays.map(h => h.date));
+  let current = new Date(startDate);
+  while (current <= endDate) {
+    const dateStr = current.toISOString().split('T')[0];
+    const dayOfWeek = current.getDay();
+    const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+    if (!isWeekend && !holidaySet.has(dateStr)) {
+      workingDays++;
+    }
+    current.setDate(current.getDate() + 1);
+  }
+  return workingDays;
 }
 
 // ---------- Helper Functions ----------
@@ -215,7 +242,6 @@ app.post('/api/auth/register', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- FIXED: Login Route - Admin excluded from device binding -----
 app.post('/api/auth/login', async (req, res) => {
   try {
     const parseResult = loginSchema.safeParse(req.body);
@@ -230,11 +256,10 @@ app.post('/api/auth/login', async (req, res) => {
     user.failedAttempts = 0;
     user.blockUntil = null;
     
-    // 🔥 FIX: Device binding ONLY for students, NOT for admin
+    // Device binding ONLY for students, NOT for admin
     const isAdmin = ADMIN_ROLL_NUMBERS.includes(cleanRoll);
     
     if (!isAdmin && user.role === 'student') {
-      // Only students get device binding
       if (!user.boundDeviceId && deviceId) { 
         user.boundDeviceId = deviceId; 
         await user.save(); 
@@ -243,7 +268,7 @@ app.post('/api/auth/login', async (req, res) => {
         return res.status(403).json({ error: 'Unauthorized Device! Account bound to another phone.' });
       }
     }
-    // Admin ke liye koi device binding check nahi hai - freely login on any device
+    // Admin and faculty can login from any device
     
     const token = jwt.sign({ id: user._id, rollNo: user.rollNo, name: user.name, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     user.activeSession = token;
@@ -343,8 +368,13 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
   try {
     const { requesterRollNo } = req.body;
     if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    
+    // Delete old passcodes
+    await Passcode.deleteMany({});
+    
     const passcode = Math.floor(1000 + Math.random() * 9000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+    await Passcode.create({ passcode, expiresAt });
     res.json({ message: 'Passcode generated!', passcode, expiresAt });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -353,10 +383,17 @@ app.post('/api/auth/verify-passcode', async (req, res) => {
   try {
     const { passcode } = req.body;
     if (!passcode) return res.status(400).json({ error: 'Passcode required!' });
-    if (passcode === '9842') {
-      return res.json({ message: 'Passcode verified!', verified: true });
+    
+    const record = await Passcode.findOne({ passcode });
+    if (!record) {
+      return res.status(400).json({ error: 'Invalid passcode!' });
     }
-    return res.status(400).json({ error: 'Invalid passcode!' });
+    if (record.expiresAt < new Date()) {
+      await Passcode.deleteOne({ _id: record._id });
+      return res.status(400).json({ error: 'Passcode expired! Please refresh.' });
+    }
+    // Valid - return success
+    res.json({ message: 'Passcode verified!', verified: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -387,8 +424,13 @@ app.post('/api/admin/holiday', async (req, res) => {
     const { requesterRollNo, date, reason } = req.body;
     if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     
+    // Check if date >= SEMESTER_START
     const parts = date.split('-');
     const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    if (dateObj < SEMESTER_START) {
+      return res.status(400).json({ error: 'Cannot declare holiday before 15 July 2026!' });
+    }
+    
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayName = days[dateObj.getDay()];
     if (dayName === 'Saturday' || dayName === 'Sunday') {
@@ -414,17 +456,19 @@ app.get('/api/date-status/:date', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Admin Dashboard Stats -----
+// ----- Admin Dashboard Stats (with Working Days) -----
 app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
   try {
     if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const totalStudents = await User.countDocuments({ role: 'student' });
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date();
+    const todayDate = today.toISOString().split('T')[0];
     
-    const todayPresentStudents = await Attendance.distinct('rollNo', { date: today, status: 'Present' });
+    // Today's attendance
+    const todayPresentStudents = await Attendance.distinct('rollNo', { date: todayDate, status: 'Present' });
     const todayPresent = todayPresentStudents.length;
     
-    const presentStudentDetails = await Attendance.find({ date: today, status: 'Present' })
+    const presentStudentDetails = await Attendance.find({ date: todayDate, status: 'Present' })
       .select('rollNo studentName')
       .lean();
     const uniquePresent = {};
@@ -444,7 +488,23 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
     const totalAttendance = await Attendance.countDocuments();
     const presentCount = await Attendance.countDocuments({ status: 'Present' });
     const overallPct = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : 0;
-    res.json({ totalStudents, todayPresent, todayAbsent, overallAttendance: totalAttendance, overallPct, todayPresentStudents: presentList });
+    
+    // Working days calculation
+    const semesterStartStr = SEMESTER_START.toISOString().split('T')[0];
+    const todayStr = today.toISOString().split('T')[0];
+    const workingDaysSoFar = await getWorkingDays(semesterStartStr, todayStr);
+    const totalWorkingDaysSemester = await getWorkingDays(semesterStartStr, SEMESTER_END.toISOString().split('T')[0]);
+    
+    res.json({ 
+      totalStudents, 
+      todayPresent, 
+      todayAbsent, 
+      overallAttendance: totalAttendance, 
+      overallPct, 
+      todayPresentStudents: presentList,
+      workingDaysSoFar,
+      totalWorkingDaysSemester
+    });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -458,7 +518,7 @@ app.get('/api/admin/all-students/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Attendance Marking -----
+// ----- Attendance Marking (Simplified) -----
 app.post('/api/attendance/mark', async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude } = req.body;
@@ -512,7 +572,7 @@ app.post('/api/attendance/mark', async (req, res) => {
   }
 });
 
-// ----- Full Day Attendance -----
+// ----- Full Day Attendance (Simplified) -----
 app.post('/api/attendance/mark-fullday', async (req, res) => {
   try {
     const { rollNo, name, latitude, longitude } = req.body;
@@ -570,11 +630,18 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Admin Manual Attendance -----
+// ----- Admin Manual Attendance (with semester start check) -----
 app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNo, date, subjects, status } = req.body;
     if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    
+    // Check if date is before semester start
+    const parts = date.split('-');
+    const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    if (dateObj < SEMESTER_START) {
+      return res.status(400).json({ error: 'Cannot mark attendance before 15 July 2026! College was closed.' });
+    }
     
     const dateStatus = await checkDateStatus(date);
     if (dateStatus.isBlocked) {
