@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BM Group of Institutions - Enterprise ERP Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- html2pdf for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <style>
         :root {
             --bg-body: #f0f4f8;
@@ -217,6 +219,48 @@
         .admin-box.sub-tools { background: #f5f3ff; border-color: #ddd6fe; }
         .admin-box.sub-directory { background: #fce7f3; border-color: #fbcfe8; }
         .admin-box { transition: background 0.3s, border-color 0.3s; }
+
+        /* Student summary card */
+        .summary-card {
+            background: var(--bg-body);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            border: 1px solid var(--card-border);
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .summary-item {
+            background: var(--card-bg);
+            padding: 6px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .summary-item .num {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--primary);
+        }
+        .summary-item .label {
+            font-size: 9px;
+            color: var(--text-muted);
+        }
+        .subject-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 4px;
+        }
+        .subject-chip {
+            background: var(--card-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--card-border);
+            font-size: 8px;
+        }
     </style>
 </head>
 <body>
@@ -1102,7 +1146,6 @@
                 .then(res => res.json())
                 .then(data => {
                     select.innerHTML = '<option value="">Select Student...</option>';
-                    // Add current user (admin) first if present
                     const adminSelf = data.find(s => s.rollNo === user.rollNo);
                     if (adminSelf) {
                         select.innerHTML += `<option value="${adminSelf.rollNo}">${adminSelf.rollNo} - ${adminSelf.name} (Admin)</option>`;
@@ -1193,18 +1236,214 @@
             } catch(e) { showMsg("Server error!", true); }
         }
 
+        // ============================================================
+        // 🆕 UPDATED: showStudentAttendance with Summary & Export
+        // ============================================================
         async function showStudentAttendance(rollNo) {
             try {
-                const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
-                const data = await res.json();
-                if (!res.ok) return showMsg("Failed to load attendance", true);
-                const total = data.length, present = data.filter(r => r.status === 'Present').length, pct = total > 0 ? Math.round((present/total)*100) : 0;
+                const token = localStorage.getItem('token') || '';
+                // Fetch summary
+                const summaryRes = await fetch(`${API_BASE}/api/student/summary/${rollNo}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const summaryData = await summaryRes.json();
+
+                // Fetch history
+                const historyRes = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const historyData = await historyRes.json();
+
+                if (!historyRes.ok) return showMsg("Failed to load attendance", true);
+
+                const total = historyData.length;
+                const present = historyData.filter(r => r.status === 'Present').length;
+                const pct = total > 0 ? Math.round((present/total)*100) : 0;
+
                 const tbody = document.querySelector('#allHistoryTable tbody');
                 if (!tbody) return;
-                document.getElementById('directoryTitle').innerHTML = `📊 ${rollNo}: ${present}/${total} present (${pct}%) <button class="btn btn-outline btn-sm" onclick="fetchAllStudents()" style="padding:2px 8px; font-size:8px; width:auto;">⬅ Back</button>`;
-                if (data.length === 0) { tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px;">No records for ${rollNo}</td></tr>`; return; }
-                tbody.innerHTML = data.slice(0,30).map(r => `<tr><td><b>${r.date}</b></td><td>${r.subject || 'N/A'}</td><td><span class="badge badge-present">${r.status}</span></td><td style="font-size:8px; color:var(--text-muted);">${r.ipAddress || 'N/A'}</td></tr>`).join('');
-            } catch(e) { showMsg("Failed to load attendance", true); }
+
+                // Build summary card
+                let summaryHtml = '';
+                if (summaryRes.ok && summaryData) {
+                    const s = summaryData;
+                    const color = s.attendancePercentage >= 75 ? 'var(--success)' : 'var(--danger)';
+                    summaryHtml = `
+                        <div class="summary-card">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <span style="font-weight:700; font-size:12px;">📊 Attendance Summary</span>
+                                <div style="display:flex; gap:4px;">
+                                    <button class="btn btn-primary btn-sm" onclick="downloadStudentPDF('${rollNo}')" style="padding:2px 6px; font-size:8px;">PDF</button>
+                                    <button class="btn btn-success btn-sm" onclick="downloadStudentExcel('${rollNo}')" style="padding:2px 6px; font-size:8px;">Excel</button>
+                                </div>
+                            </div>
+                            <div class="summary-grid">
+                                <div class="summary-item"><div class="num" style="color:${color};">${s.attendancePercentage || 0}%</div><div class="label">Attendance</div></div>
+                                <div class="summary-item"><div class="num">${s.totalAcademicLectures || 0}</div><div class="label">Lectures Attended</div></div>
+                                <div class="summary-item"><div class="num">${s.totalConductedLectures || 0}</div><div class="label">Conducted</div></div>
+                                <div class="summary-item"><div class="num" style="color:var(--success);">${s.daysPresent || 0}</div><div class="label">Days Present</div></div>
+                                <div class="summary-item"><div class="num" style="color:var(--danger);">${s.daysAbsent || 0}</div><div class="label">Days Absent</div></div>
+                                <div class="summary-item"><div class="num">${s.workingDaysSoFar || 0}</div><div class="label">Working Days</div></div>
+                            </div>
+                            ${s.subjectStats ? `
+                                <div style="margin-top:6px; font-size:9px; font-weight:600; color:var(--text-muted);">Subject-wise:</div>
+                                <div class="subject-chips">
+                                    ${Object.entries(s.subjectStats).map(([sub, st]) => `
+                                        <span class="subject-chip">${sub.substring(0,15)}: ${st.percentage}% (${st.present}/${st.total})</span>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                } else {
+                    summaryHtml = `<div style="background:var(--bg-body); padding:8px; border-radius:8px; margin-bottom:10px; text-align:center; color:var(--text-muted);">Summary not available</div>`;
+                }
+
+                document.getElementById('directoryTitle').innerHTML = `
+                    📊 ${rollNo}: ${present}/${total} present (${pct}%) 
+                    <button class="btn btn-outline btn-sm" onclick="fetchAllStudents()" style="padding:2px 8px; font-size:8px; width:auto;">⬅ Back</button>
+                `;
+
+                if (historyData.length === 0) {
+                    tbody.innerHTML = summaryHtml + `<tr><td colspan="4" style="text-align:center; padding:12px;">No records for ${rollNo}</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = summaryHtml + `
+                    ${historyData.slice(0,30).map(r => `
+                        <tr>
+                            <td><b>${r.date}</b></td>
+                            <td>${r.subject || 'N/A'}</td>
+                            <td><span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span></td>
+                            <td style="font-size:8px; color:var(--text-muted);">${r.ipAddress || 'N/A'}</td>
+                        </tr>
+                    `).join('')}
+                `;
+            } catch(e) {
+                showMsg("Failed to load student data", true);
+            }
+        }
+
+        // ============================================================
+        // 🆕 DOWNLOAD FUNCTIONS FOR STUDENT
+        // ============================================================
+
+        // Download PDF report for a student
+        async function downloadStudentPDF(rollNo) {
+            const token = localStorage.getItem('token') || '';
+            try {
+                const summaryRes = await fetch(`${API_BASE}/api/student/summary/${rollNo}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const summary = await summaryRes.json();
+                const historyRes = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const history = await historyRes.json();
+
+                if (!summaryRes.ok || !historyRes.ok) {
+                    showMsg('Failed to fetch data for PDF', true);
+                    return;
+                }
+
+                const name = history.length > 0 ? history[0].studentName : rollNo;
+                // Build HTML content for PDF
+                const content = `
+                    <div style="font-family: Arial, sans-serif; padding: 20px;">
+                        <h1 style="color: #2563eb;">BM Group of Institutions</h1>
+                        <h2>Attendance Report – ${name} (${rollNo})</h2>
+                        <p>Generated: ${new Date().toLocaleString()}</p>
+                        <hr>
+                        <h3>Summary</h3>
+                        <table style="width:100%; border-collapse:collapse; margin:10px 0;">
+                            <tr><td><strong>Attendance %</strong></td><td>${summary.attendancePercentage || 0}%</td></tr>
+                            <tr><td><strong>Lectures Attended</strong></td><td>${summary.totalAcademicLectures || 0}</td></tr>
+                            <tr><td><strong>Total Conducted</strong></td><td>${summary.totalConductedLectures || 0}</td></tr>
+                            <tr><td><strong>Days Present</strong></td><td>${summary.daysPresent || 0}</td></tr>
+                            <tr><td><strong>Days Absent</strong></td><td>${summary.daysAbsent || 0}</td></tr>
+                            <tr><td><strong>Working Days</strong></td><td>${summary.workingDaysSoFar || 0}</td></tr>
+                        </table>
+                        <h3>Subject-wise</h3>
+                        <ul>
+                            ${Object.entries(summary.subjectStats || {}).map(([sub, st]) => `
+                                <li>${sub}: ${st.percentage}% (${st.present}/${st.total})</li>
+                            `).join('')}
+                        </ul>
+                        <hr>
+                        <h3>Attendance History</h3>
+                        <table style="width:100%; border-collapse:collapse; border:1px solid #ccc;">
+                            <thead><tr style="background:#f0f0f0;"><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
+                            <tbody>
+                                ${history.slice(0,50).map(r => `
+                                    <tr><td>${r.date}</td><td>${r.subject}</td><td>${r.status}</td></tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        <p style="margin-top:20px; font-size:10px; color:#999;">This is a computer-generated report.</p>
+                    </div>
+                `;
+
+                const win = window.open('', '_blank');
+                if (!win) {
+                    showMsg('Please allow popups to download PDF', true);
+                    return;
+                }
+                win.document.write(`
+                    <html><head><title>${rollNo} Attendance Report</title>
+                    <style>body{font-family:Arial;padding:20px;}</style></head>
+                    <body>${content}</body></html>
+                `);
+                win.document.close();
+                win.print();
+                showMsg('✅ PDF download started');
+            } catch(e) {
+                showMsg('Failed to generate PDF', true);
+            }
+        }
+
+        // Download Excel (CSV) for a student
+        async function downloadStudentExcel(rollNo) {
+            const token = localStorage.getItem('token') || '';
+            try {
+                const summaryRes = await fetch(`${API_BASE}/api/student/summary/${rollNo}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const summary = await summaryRes.json();
+                const historyRes = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const history = await historyRes.json();
+
+                if (!summaryRes.ok || !historyRes.ok) {
+                    showMsg('Failed to fetch data for Excel', true);
+                    return;
+                }
+
+                const name = history.length > 0 ? history[0].studentName : rollNo;
+                let csv = `Student Attendance Report\n`;
+                csv += `Student: ${name} (${rollNo})\n`;
+                csv += `Generated: ${new Date().toLocaleString()}\n\n`;
+                csv += `Attendance %,${summary.attendancePercentage || 0}\n`;
+                csv += `Lectures Attended,${summary.totalAcademicLectures || 0}\n`;
+                csv += `Total Conducted,${summary.totalConductedLectures || 0}\n`;
+                csv += `Days Present,${summary.daysPresent || 0}\n`;
+                csv += `Days Absent,${summary.daysAbsent || 0}\n`;
+                csv += `Working Days,${summary.workingDaysSoFar || 0}\n\n`;
+                csv += `Subject,Present,Total,Percentage\n`;
+                Object.entries(summary.subjectStats || {}).forEach(([sub, st]) => {
+                    csv += `"${sub}",${st.present},${st.total},${st.percentage}%\n`;
+                });
+                csv += `\nDate,Subject,Status,Location,IP Address\n`;
+                history.forEach(r => {
+                    const loc = r.location ? `(${r.location.latitude}, ${r.location.longitude})` : 'N/A';
+                    csv += `"${r.date}","${r.subject}","${r.status}","${loc}","${r.ipAddress || 'N/A'}"\n`;
+                });
+
+                downloadFile(csv, `Attendance_${rollNo}_${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
+                showMsg('✅ Excel download started');
+            } catch(e) {
+                showMsg('Failed to generate Excel', true);
+            }
         }
 
         // ----- Attendance Records with Delete button -----
@@ -1291,7 +1530,6 @@
             }
             const DEFAULT_DAILY_ACADEMIC_LECTURES = 6;
             const totalConductedLectures = totalWorkingDays * DEFAULT_DAILY_ACADEMIC_LECTURES;
-            // Filter out Library, Sports, etc.
             const academicAttendedLectures = globalMyRecords.filter(r => { 
                 const sub = r.subject || ""; 
                 return !sub.includes("LIB") && !sub.includes("Sports") && !sub.includes("Library"); 
