@@ -6,6 +6,7 @@
     <title>BM Group of Institutions - Enterprise ERP Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        /* (All CSS remains same as previous version with themed sub-tabs) */
         :root {
             --bg-body: #f0f4f8;
             --primary: #2563eb;
@@ -439,7 +440,8 @@
                     </div>
 
                     <div id="subReports" class="admin-box sub-reports tab-content-active">
-                        <span class="sub-section-title">📊 Export Excel Reports</span>
+                        <span class="sub-section-title">📊 Export Reports</span>
+                        <!-- Existing full export -->
                         <select id="exportSelection" style="padding:8px; margin-bottom:6px; font-size:10px;">
                             <option value="ALL_SEMESTER">Full Semester (Jul-Dec 2026)</option>
                             <option value="6">July 2026</option>
@@ -453,6 +455,32 @@
                         <button class="btn btn-accent btn-sm" onclick="downloadGoogleSheetsExport()" style="padding:8px; margin:4px 0 0 0;">
                             <svg class="svg-icon" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="12" x2="12" y1="4" y2="20"/></svg>
                             Export to Google Sheets (CSV)
+                        </button>
+
+                        <!-- New: Single Student Export -->
+                        <hr style="margin:12px 0; border-color:var(--card-border);">
+                        <span class="sub-section-title">👤 Single Student Attendance</span>
+                        <select id="singleStudentSelect" style="padding:8px; margin-bottom:6px; font-size:10px;">
+                            <option value="">Select Student...</option>
+                        </select>
+                        <select id="singleStudentRange" style="padding:8px; margin-bottom:6px; font-size:10px;">
+                            <option value="CURRENT_MONTH">Current Month</option>
+                            <option value="SELECTED_MONTH">Selected Month</option>
+                            <option value="FULL_SEMESTER">Full Semester</option>
+                        </select>
+                        <div id="singleStudentMonthWrapper" style="display:none; margin-bottom:6px;">
+                            <select id="singleStudentMonth" style="padding:8px; font-size:10px;">
+                                <option value="6">July 2026</option>
+                                <option value="7">August 2026</option>
+                                <option value="8">September 2026</option>
+                                <option value="9">October 2026</option>
+                                <option value="10">November 2026</option>
+                                <option value="11">December 2026</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="downloadSingleStudentAttendance()" style="padding:8px; margin:0;">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                            Download Student CSV
                         </button>
                     </div>
 
@@ -638,7 +666,7 @@
         }
 
         // ============================================================
-        // TIMETABLE & PERIOD TRACKER (Updated for Monday: Library as last)
+        // TIMETABLE & PERIOD TRACKER (Corrected Monday: Library last)
         // ============================================================
         const WEEKLY_SCHEDULE = {
             1: [
@@ -649,7 +677,7 @@
                 { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
                 { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
                 { start: "13:50", end: "14:35", subject: "CN - Computer Network", period: "P7" },
-                { start: "14:35", end: "15:20", subject: "LIB - Library", period: "P8" }  // ← Library (does not count)
+                { start: "14:35", end: "15:20", subject: "LIB - Library", period: "P8" }
             ],
             2: [
                 { start: "09:20", end: "10:05", subject: "WT - Web Technology", period: "P1" },
@@ -688,6 +716,15 @@
                 { start: "13:05", end: "14:35", subject: "WT LAB - Web Technology Lab", period: "P6-P7" },
                 { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
             ]
+        };
+
+        // ----- Subject list for manual attendance (exclude Library from default list) -----
+        const DAY_SUBJECTS = {
+            'Monday': ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'DAA - Design & Analysis of Algorithm', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'CN - Computer Network', 'LIB - Library'],
+            'Tuesday': ['WT - Web Technology', 'ECO - Economics for Engineers', 'Internet Lab (Ms. Geeta)', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'BDA - Big Data Analytics'],
+            'Wednesday': ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'FLA - Formal Language & Automata', 'WT - Web Technology', 'CN LAB - Computer Network Lab'],
+            'Thursday': ['BDA - Big Data Analytics', 'WT - Web Technology', 'CN - Computer Network', 'DAA - Design & Analysis of Algorithm', 'DAA LAB - Algorithm Lab', 'HRM - Human Resource Mgmt'],
+            'Friday': ['DAA - Design & Analysis of Algorithm', 'CN - Computer Network', 'FLA - Formal Language & Automata', 'BDA - Big Data Analytics', 'WT LAB - Web Technology Lab']
         };
 
         async function updatePeriodTrackerWidget() {
@@ -880,6 +917,7 @@
         // ADMIN FUNCTIONS
         // ============================================================
 
+        // ----- Load subjects for manual attendance (exclude Library from default selection) -----
         function loadSubjectsForDay() {
             const date = document.getElementById('manualDate').value;
             if (!date) return;
@@ -887,14 +925,7 @@
             const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
             const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             const dayName = days[dateObj.getDay()];
-            const timetable = {
-                'Monday': ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'DAA - Design & Analysis of Algorithm', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'CN - Computer Network', 'LIB - Library'],
-                'Tuesday': ['WT - Web Technology', 'ECO - Economics for Engineers', 'Internet Lab (Ms. Geeta)', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'BDA - Big Data Analytics'],
-                'Wednesday': ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'FLA - Formal Language & Automata', 'WT - Web Technology', 'CN LAB - Computer Network Lab'],
-                'Thursday': ['BDA - Big Data Analytics', 'WT - Web Technology', 'CN - Computer Network', 'DAA - Design & Analysis of Algorithm', 'DAA LAB - Algorithm Lab', 'HRM - Human Resource Mgmt'],
-                'Friday': ['DAA - Design & Analysis of Algorithm', 'CN - Computer Network', 'FLA - Formal Language & Automata', 'BDA - Big Data Analytics', 'WT LAB - Web Technology Lab']
-            };
-            const subjects = timetable[dayName] || ['General Class'];
+            const subjects = DAY_SUBJECTS[dayName] || ['General Class'];
             const container = document.getElementById('subjectCheckboxContainer');
             container.innerHTML = `<label class="select-all"><input type="checkbox" id="selectAllSubjects" onchange="toggleAllSubjects()"> Select All (${subjects.length} subjects)</label>`;
             subjects.forEach(sub => { container.innerHTML += `<label><input type="checkbox" class="subject-checkbox" value="${sub}"> ${sub}</label>`; });
@@ -994,7 +1025,7 @@
                     body: JSON.stringify({ name, rollNo: validation.cleanRoll, password })
                 });
                 const data = await res.json();
-                if (res.ok) { showMsg(`Student ${name} Registered!`); document.getElementById('adminRegName').value = ''; document.getElementById('adminRegRoll').value = ''; document.getElementById('adminRegPass').value = ''; fetchAllStudents(); }
+                if (res.ok) { showMsg(`Student ${name} Registered!`); document.getElementById('adminRegName').value = ''; document.getElementById('adminRegRoll').value = ''; document.getElementById('adminRegPass').value = ''; fetchAllStudents(); populateStudentSelect(); }
                 else { showMsg(data.error || "Registration failed", true); }
             } catch(e) { showMsg("Server error!", true); }
         }
@@ -1058,11 +1089,57 @@
                     body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo: targetRoll })
                 });
                 const data = await res.json();
-                if (res.ok) { showMsg(data.message || `Account ${targetRoll} deleted!`); document.getElementById('deleteStudentRoll').value = ''; fetchAllStudents(); }
+                if (res.ok) { showMsg(data.message || `Account ${targetRoll} deleted!`); document.getElementById('deleteStudentRoll').value = ''; fetchAllStudents(); populateStudentSelect(); }
                 else { showMsg(data.error || "Failed", true); }
             } catch(e) { showMsg("Server error!", true); }
         }
 
+        // ----- Populate student dropdown for single export -----
+        function populateStudentSelect() {
+            const select = document.getElementById('singleStudentSelect');
+            if (!select) return;
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'admin') return;
+            fetch(`${API_BASE}/api/admin/all-students/${user.rollNo}`)
+                .then(res => res.json())
+                .then(data => {
+                    select.innerHTML = '<option value="">Select Student...</option>';
+                    data.forEach(s => {
+                        select.innerHTML += `<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`;
+                    });
+                })
+                .catch(() => {});
+        }
+
+        // ----- Single Student Export -----
+        async function downloadSingleStudentAttendance() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
+            const studentRoll = document.getElementById('singleStudentSelect').value;
+            if (!studentRoll) return showMsg('Select a student!', true);
+            const range = document.getElementById('singleStudentRange').value;
+            let month = '';
+            if (range === 'SELECTED_MONTH') {
+                month = document.getElementById('singleStudentMonth').value;
+            }
+            showDownloadProgress('Generating student report...');
+            try {
+                const url = `${API_BASE}/api/export/student-attendance/${user.rollNo}?studentRollNo=${studentRoll}&range=${range}&month=${month}`;
+                const res = await fetch(url);
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || 'Failed to fetch');
+                }
+                const csv = await res.text();
+                const fileName = `Attendance_${studentRoll}_${range}_${new Date().toISOString().split('T')[0]}.csv`;
+                downloadFile(csv, fileName, 'text/csv');
+            } catch(e) {
+                hideDownloadProgress();
+                showMsg(e.message || 'Failed to download', true);
+            }
+        }
+
+        // ----- Fetch all students (for directory) -----
         async function fetchAllStudents() {
             const user = JSON.parse(localStorage.getItem('user'));
             try {
@@ -1096,7 +1173,7 @@
             try {
                 const res = await fetch(`${API_BASE}/api/admin/delete-student`, { method:'DELETE', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ requesterRollNo:user.rollNo, targetRollNo:rollNo }) });
                 const data = await res.json();
-                if (res.ok) { showMsg(data.message || `Account ${rollNo} deleted!`); fetchAllStudents(); } else { showMsg(data.error || "Failed", true); }
+                if (res.ok) { showMsg(data.message || `Account ${rollNo} deleted!`); fetchAllStudents(); populateStudentSelect(); } else { showMsg(data.error || "Failed", true); }
             } catch(e) { showMsg("Server error!", true); }
         }
 
@@ -1387,7 +1464,8 @@
             const navItems = document.querySelectorAll('.admin-nav-item');
             navItems.forEach((item, idx) => { item.classList.toggle('active', subTabs[idx] === subId); });
             if (subId === 'subPasscode') generatePasscode();
-            if (subId === 'subDirectory') fetchAllStudents();
+            if (subId === 'subDirectory') { fetchAllStudents(); populateStudentSelect(); }
+            if (subId === 'subReports') { populateStudentSelect(); }
         }
 
         function openStudentExcelModal() {
@@ -1665,6 +1743,7 @@
                 document.getElementById('adminLiveDashboard').style.display = 'block';
                 loadDashboardStats();
                 setInterval(loadDashboardStats, 60000);
+                populateStudentSelect();
             } else {
                 document.getElementById('adminTabHeader').style.display = 'none';
                 document.getElementById('adminLiveDashboard').style.display = 'none';
@@ -1678,6 +1757,14 @@
             updatePeriodTrackerWidget();
             setInterval(updatePeriodTrackerWidget, 30000);
         }
+
+        // ----- Range change handler for single student export -----
+        document.getElementById('singleStudentRange')?.addEventListener('change', function() {
+            const wrapper = document.getElementById('singleStudentMonthWrapper');
+            if (wrapper) {
+                wrapper.style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none';
+            }
+        });
 
         // ============================================================
         // INITIALIZATION
