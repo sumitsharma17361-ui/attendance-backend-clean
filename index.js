@@ -150,7 +150,6 @@ async function checkDateStatus(dateStr) {
 
 // ---------- Helper: Get Working Days (excluding weekends & holidays) ----------
 async function getWorkingDays(startDate, endDate) {
-  // Convert string dates to Date objects if needed
   const start = typeof startDate === 'string' ? new Date(startDate) : startDate;
   const end = typeof endDate === 'string' ? new Date(endDate) : endDate;
   
@@ -455,7 +454,7 @@ app.get('/api/date-status/:date', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Admin Dashboard Stats (FIXED) -----
+// ----- Admin Dashboard Stats -----
 app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
   try {
     if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
@@ -465,11 +464,9 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
     const todayDate = today.toISOString().split('T')[0];
     console.log(`📊 Dashboard stats for ${todayDate}`);
     
-    // Today's attendance
     const todayPresentStudents = await Attendance.distinct('rollNo', { date: todayDate, status: 'Present' });
     const todayPresent = todayPresentStudents.length;
     
-    // Get details of present students (for list)
     const presentStudentDetails = await Attendance.find({ date: todayDate, status: 'Present' })
       .select('rollNo studentName')
       .lean();
@@ -491,7 +488,6 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
     const presentCount = await Attendance.countDocuments({ status: 'Present' });
     const overallPct = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : 0;
     
-    // Working days calculation
     const semesterStartStr = SEMESTER_START.toISOString().split('T')[0];
     const todayStr = today.toISOString().split('T')[0];
     const workingDaysSoFar = await getWorkingDays(semesterStartStr, todayStr);
@@ -521,7 +517,6 @@ app.get('/api/admin/all-students/:requesterRollNo', async (req, res) => {
     const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
     if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo)) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const students = await User.find({ role: 'student' }).select('name rollNo role boundDeviceId createdAt email phone semester branch profilePic').sort({ rollNo: 1 });
-    // Also add the admin himself to the list (for self‑download)
     const admin = await User.findOne({ rollNo: requesterRollNo }).select('name rollNo');
     if (admin) {
       students.unshift({ ...admin._doc, role: 'admin' });
@@ -555,7 +550,6 @@ app.post('/api/attendance/mark', async (req, res) => {
     const user = await User.findOne({ rollNo: cleanRoll });
     if (!user) return res.status(404).json({ error: 'Student not found!' });
     
-    // Check if subject is Library/Sports - we still allow marking but won't count in attendance percentage
     const isLab = subject.includes("LAB") || subject.includes("Lab");
     const todayEntries = await Attendance.find({ rollNo: cleanRoll, subject, date: todayDate });
     if (isLab && todayEntries.length >= 1) return res.status(400).json({ error: `Already marked for ${subject} today! (Lab - 1 lecture only)` });
@@ -614,7 +608,6 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     const dayName = days[today.getDay()];
     const allSubjects = TIME_TABLE[dayName] || ['General Class'];
     
-    // Filter out Library, Sports, etc.
     const academicSubjects = allSubjects.filter(sub => 
       !sub.includes("LIB") && !sub.includes("Library") && !sub.includes("Sports")
     );
@@ -648,7 +641,7 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Admin Manual Attendance (with semester start check) -----
+// ----- Admin Manual Attendance -----
 app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNo, date, subjects, status } = req.body;
@@ -747,8 +740,105 @@ app.get('/api/analytics/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ====== 🆕 STUDENT SUMMARY ROUTE (for admin) ======
+app.get('/api/student/summary/:rollNo', async (req, res) => {
+  try {
+    const cleanRoll = req.params.rollNo.trim().toUpperCase();
+    const user = await User.findOne({ rollNo: cleanRoll });
+    if (!user) return res.status(404).json({ error: 'Student not found!' });
+
+    const allRecords = await Attendance.find({ rollNo: cleanRoll });
+    const holidays = await Holiday.find({});
+    const holidaySet = new Set(holidays.map(h => h.date));
+
+    // Calculate total conducted academic lectures since semester start
+    const today = new Date();
+    const semesterStart = new Date(2026, 6, 15);
+    let current = new Date(semesterStart);
+    let totalConductedAcademicSubjects = 0;
+    const academicDaysSet = new Set();
+    const presentDaysSet = new Set();
+    const subjectStats = {};
+
+    while (current <= today) {
+      const dateStr = current.toISOString().split('T')[0];
+      const dayOfWeek = current.getDay();
+      const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+      const isHoliday = holidaySet.has(dateStr);
+
+      if (!isWeekend && !isHoliday) {
+        academicDaysSet.add(dateStr);
+        const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][dayOfWeek];
+        const daySubjects = TIME_TABLE[dayName] || [];
+        const academicSubjects = daySubjects.filter(sub => 
+          !sub.includes("LIB") && !sub.includes("Library") && !sub.includes("Sports")
+        );
+        totalConductedAcademicSubjects += academicSubjects.length;
+
+        // Check student's attendance for each academic subject on this day
+        let hasPresent = false;
+        for (let sub of academicSubjects) {
+          const record = await Attendance.findOne({ rollNo: cleanRoll, subject: sub, date: dateStr, status: 'Present' });
+          if (!subjectStats[sub]) {
+            subjectStats[sub] = { total: 0, present: 0 };
+          }
+          subjectStats[sub].total = (subjectStats[sub].total || 0) + 1;
+          if (record) {
+            subjectStats[sub].present = (subjectStats[sub].present || 0) + 1;
+            hasPresent = true;
+          }
+        }
+        if (hasPresent) {
+          presentDaysSet.add(dateStr);
+        }
+      }
+      current.setDate(current.getDate() + 1);
+    }
+
+    // Count actual attended academic records
+    const academicAttendedRecords = allRecords.filter(r => 
+      r.status === 'Present' && 
+      !r.subject.includes("LIB") && 
+      !r.subject.includes("Library") && 
+      !r.subject.includes("Sports")
+    );
+    const totalAcademicLecturesAttended = academicAttendedRecords.length;
+
+    const pct = totalConductedAcademicSubjects > 0 
+      ? Math.round((totalAcademicLecturesAttended / totalConductedAcademicSubjects) * 100) 
+      : 0;
+
+    const daysPresent = presentDaysSet.size;
+    const totalWorkingDays = academicDaysSet.size;
+    const daysAbsent = totalWorkingDays - daysPresent;
+
+    // Subject-wise percentages
+    const subjectStatsFinal = {};
+    for (let [sub, stats] of Object.entries(subjectStats)) {
+      subjectStatsFinal[sub] = {
+        present: stats.present,
+        total: stats.total,
+        percentage: stats.total > 0 ? Math.round((stats.present / stats.total) * 100) : 0
+      };
+    }
+
+    res.json({
+      totalAcademicLectures: totalAcademicLecturesAttended,
+      totalConductedLectures: totalConductedAcademicSubjects,
+      attendancePercentage: pct,
+      daysPresent,
+      daysAbsent,
+      workingDaysSoFar: totalWorkingDays,
+      subjectStats: subjectStatsFinal
+    });
+
+  } catch (err) {
+    console.error('Summary error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ----- Export Routes -----
-// 1. Full export (all students)
 app.get('/api/export/google-sheets/:requesterRollNo', async (req, res) => {
   try {
     if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
@@ -764,7 +854,6 @@ app.get('/api/export/google-sheets/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// 2. Single student export by range (FIXED)
 app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) => {
   try {
     const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
