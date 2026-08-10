@@ -5,57 +5,17 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const { z } = require('zod');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-const crypto = require('crypto');
-const helmet = require('helmet');
 
 process.env.TZ = 'Asia/Kolkata';
 console.log(`🕐 Server Timezone set to: ${process.env.TZ}`);
 
 const app = express();
-
-// ---------- Security Headers ----------
-app.use(helmet());
-
-// ---------- CORS ----------
-app.use(cors({
-  origin: true,
-  credentials: true
-}));
-
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-// ---------- File Upload Setup ----------
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const unique = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, unique + path.extname(file.originalname));
-  }
-});
-
-const upload = multer({ 
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
-    cb(null, allowed.includes(file.mimetype));
-  }
-});
+app.use(express.json({ limit: '10mb' }));
+app.use(cors());
 
 // ---------- Environment Variables ----------
 const MONGO_URI = process.env.MONGO_URI;
-const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString('hex');
+const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
 const ADMIN_ROLL_NUMBERS = ['24CSE48'];
 const COLLEGE_LAT = 28.4509370;
 const COLLEGE_LNG = 76.7688120;
@@ -80,8 +40,7 @@ const registerSchema = z.object({
   name: z.string().min(2, "Name too short").max(50),
   rollNo: z.string().regex(/^\d{2}(CSE|AIDS)\d{2}$/, "Invalid Roll No format"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  deviceId: z.string().optional(),
-  role: z.enum(['student', 'faculty']).optional().default('student')
+  deviceId: z.string().optional()
 });
 
 const loginSchema = z.object({
@@ -113,7 +72,7 @@ const userSchema = new mongoose.Schema({
   rollNo: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   phone: { type: String, default: null },
-  role: { type: String, enum: ['student', 'faculty', 'admin'], default: 'student' },
+  role: { type: String, enum: ['student', 'admin'], default: 'student' },
   boundDeviceId: { type: String, default: null },
   lastAttendanceTime: { type: Date, default: null },
   lastAttendanceLocation: { latitude: Number, longitude: Number },
@@ -121,11 +80,9 @@ const userSchema = new mongoose.Schema({
   blockUntil: { type: Date, default: null },
   email: { type: String, default: null },
   profilePic: { type: String, default: null },
-  profilePicPath: { type: String, default: null },
   semester: { type: String, default: '5th' },
   branch: { type: String, default: 'CSE' },
-  activeSession: { type: String, default: null },
-  refreshToken: { type: String, default: null }
+  activeSession: { type: String, default: null }
 }, { timestamps: true });
 
 const attendanceSchema = new mongoose.Schema({
@@ -133,19 +90,10 @@ const attendanceSchema = new mongoose.Schema({
   studentName: { type: String, required: true },
   subject: { type: String, required: true },
   date: { type: String, required: true },
-  status: { type: String, enum: ['Present', 'Absent', 'Duty Leave', 'Holiday', 'Leave Requested', 'Leave Approved', 'Leave Rejected'], default: 'Present' },
+  status: { type: String, enum: ['Present', 'Absent', 'Duty Leave', 'Holiday'], default: 'Present' },
   location: { latitude: Number, longitude: Number },
   ipAddress: { type: String, default: null },
-  isVerified: { type: Boolean, default: false },
-  markedBy: { type: String, default: 'student' },
-  leaveReason: { type: String, default: null },
-  correctionLog: [{ 
-    changedBy: String,
-    oldStatus: String,
-    newStatus: String,
-    reason: String,
-    timestamp: { type: Date, default: Date.now }
-  }]
+  isVerified: { type: Boolean, default: false }
 }, { timestamps: true });
 
 const holidaySchema = new mongoose.Schema({
@@ -156,8 +104,7 @@ const holidaySchema = new mongoose.Schema({
 const noticeSchema = new mongoose.Schema({
   title: String,
   message: String,
-  date: { type: Date, default: Date.now },
-  target: { type: String, enum: ['all', 'students', 'faculty', 'admin'], default: 'all' }
+  date: { type: Date, default: Date.now }
 });
 
 const passcodeSchema = new mongoose.Schema({
@@ -165,30 +112,11 @@ const passcodeSchema = new mongoose.Schema({
   expiresAt: { type: Date, required: true }
 }, { timestamps: true });
 
-const auditLogSchema = new mongoose.Schema({
-  rollNo: String,
-  action: String,
-  details: String,
-  ipAddress: String,
-  timestamp: { type: Date, default: Date.now }
-});
-
-const messageSchema = new mongoose.Schema({
-  from: { type: String, required: true },
-  to: { type: String, required: true },
-  subject: String,
-  message: { type: String, required: true },
-  isRead: { type: Boolean, default: false },
-  createdAt: { type: Date, default: Date.now }
-});
-
 const User = mongoose.model('User', userSchema);
 const Attendance = mongoose.model('Attendance', attendanceSchema);
 const Holiday = mongoose.model('Holiday', holidaySchema);
 const Notice = mongoose.model('Notice', noticeSchema);
 const Passcode = mongoose.model('Passcode', passcodeSchema);
-const AuditLog = mongoose.model('AuditLog', auditLogSchema);
-const Message = mongoose.model('Message', messageSchema);
 
 // ---------- Helper: Check if date is holiday or weekend ----------
 async function checkDateStatus(dateStr) {
@@ -269,23 +197,10 @@ async function incrementFailedAttempts(rollNo) {
   user.failedAttempts = (user.failedAttempts || 0) + 1;
   if (user.failedAttempts >= 5) {
     user.blockUntil = new Date(Date.now() + 60 * 60 * 1000);
-    await AuditLog.create({ rollNo, action: 'ACCOUNT_BLOCKED', details: 'Blocked for 1 hour due to 5 failed attempts' });
     console.log(`🚫 ${rollNo} blocked for 1 hour`);
   }
   await user.save();
 }
-
-// ---------- RBAC Middleware ----------
-const verifyRole = (roles) => (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) return res.status(401).json({ error: "Access Denied" });
-  try {
-    const verified = jwt.verify(token, JWT_SECRET);
-    if (!roles.includes(verified.role)) return res.status(403).json({ error: "Unauthorized Role!" });
-    req.user = verified;
-    next();
-  } catch (err) { res.status(400).json({ error: "Invalid Token" }); }
-};
 
 // ---------- Routes ----------
 app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active!'));
@@ -295,14 +210,13 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const parseResult = registerSchema.safeParse(req.body);
     if (!parseResult.success) return res.status(400).json({ error: parseResult.error.errors[0].message });
-    const { name, rollNo, password, deviceId, role } = parseResult.data;
+    const { name, rollNo, password, deviceId } = parseResult.data;
     const cleanRoll = rollNo.trim().toUpperCase();
     let user = await User.findOne({ rollNo: cleanRoll });
     if (user) return res.status(400).json({ error: 'Roll number already registered!' });
     const hashedPassword = await bcrypt.hash(password, 10);
-    const finalRole = ADMIN_ROLL_NUMBERS.includes(cleanRoll) ? 'admin' : role || 'student';
-    await new User({ name, rollNo: cleanRoll, password: hashedPassword, role: finalRole, boundDeviceId: deviceId || null }).save();
-    await AuditLog.create({ rollNo: cleanRoll, action: 'REGISTER', details: `New ${finalRole} registered` });
+    const role = ADMIN_ROLL_NUMBERS.includes(cleanRoll) ? 'admin' : 'student';
+    await new User({ name, rollNo: cleanRoll, password: hashedPassword, role, boundDeviceId: deviceId || null }).save();
     res.status(201).json({ message: 'Registration successful! Please login.' });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -322,8 +236,6 @@ app.post('/api/auth/login', async (req, res) => {
     user.blockUntil = null;
     
     const isAdmin = ADMIN_ROLL_NUMBERS.includes(cleanRoll);
-    
-    // Device binding only for students (not admin, not faculty)
     if (!isAdmin && user.role === 'student') {
       if (!user.boundDeviceId && deviceId) { 
         user.boundDeviceId = deviceId; 
@@ -337,14 +249,7 @@ app.post('/api/auth/login', async (req, res) => {
     const token = jwt.sign({ id: user._id, rollNo: user.rollNo, name: user.name, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     user.activeSession = token;
     await user.save();
-    
-    await AuditLog.create({ rollNo: cleanRoll, action: 'LOGIN', details: `Login from ${req.ip}` });
-    
-    res.json({ 
-      message: 'Login successful!', 
-      token,
-      user: { name: user.name, rollNo: user.rollNo, role: user.role, email: user.email, profilePic: user.profilePic || user.profilePicPath }
-    });
+    res.json({ message: 'Login successful!', token, user: { name: user.name, rollNo: user.rollNo, role: user.role } });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -353,30 +258,13 @@ app.post('/api/auth/logout', async (req, res) => {
     const token = req.headers.authorization?.split(" ")[1];
     if (token) {
       const decoded = jwt.decode(token);
-      if (decoded) {
-        await User.findOneAndUpdate({ rollNo: decoded.rollNo }, { activeSession: null });
-        await AuditLog.create({ rollNo: decoded.rollNo, action: 'LOGOUT', details: 'Logout' });
-      }
+      if (decoded) await User.findOneAndUpdate({ rollNo: decoded.rollNo }, { activeSession: null });
     }
     res.json({ message: 'Logged out successfully!' });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Admin Reset Password (without email) -----
-app.post('/api/admin/reset-password', async (req, res) => {
-  try {
-    const { requesterRollNo, targetRollNo, newPassword } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
-    const cleanRoll = targetRollNo.trim().toUpperCase();
-    const hashedPassword = await bcrypt.hash(newPassword || '123456', 10);
-    const updated = await User.findOneAndUpdate({ rollNo: cleanRoll }, { password: hashedPassword });
-    if (!updated) return res.status(404).json({ error: 'Student Roll No not found!' });
-    await AuditLog.create({ rollNo: cleanRoll, action: 'PASSWORD_RESET', details: `Reset by ${requesterRollNo}` });
-    res.json({ message: `Password reset for ${cleanRoll}!` });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// ----- Student Profile (with file upload) -----
+// ----- Student Profile (simple) -----
 app.get('/api/student/profile/:rollNo', async (req, res) => {
   try {
     const cleanRoll = req.params.rollNo.trim().toUpperCase();
@@ -388,7 +276,7 @@ app.get('/api/student/profile/:rollNo', async (req, res) => {
 
 app.put('/api/student/profile', async (req, res) => {
   try {
-    const { rollNo, email, phone, semester, branch } = req.body;
+    const { rollNo, email, phone, semester, branch, profilePic } = req.body;
     const cleanRoll = rollNo.trim().toUpperCase();
     const user = await User.findOne({ rollNo: cleanRoll });
     if (!user) return res.status(404).json({ error: 'Student not found!' });
@@ -396,41 +284,25 @@ app.put('/api/student/profile', async (req, res) => {
     if (phone) user.phone = phone;
     if (semester) user.semester = semester;
     if (branch) user.branch = branch;
+    if (profilePic) user.profilePic = profilePic;
     await user.save();
-    await AuditLog.create({ rollNo: cleanRoll, action: 'PROFILE_UPDATE', details: 'Profile updated' });
-    res.json({ message: 'Profile updated successfully!', user: { name: user.name, rollNo: user.rollNo, email: user.email, phone: user.phone, semester: user.semester, branch: user.branch, profilePic: user.profilePic || user.profilePicPath } });
+    res.json({ message: 'Profile updated successfully!', user: { name: user.name, rollNo: user.rollNo, email: user.email, phone: user.phone, semester: user.semester, branch: user.branch, profilePic: user.profilePic } });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/student/profile-pic', upload.single('profilePic'), async (req, res) => {
-  try {
-    const { rollNo } = req.body;
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    const cleanRoll = rollNo.trim().toUpperCase();
-    const user = await User.findOne({ rollNo: cleanRoll });
-    if (!user) return res.status(404).json({ error: 'Student not found!' });
-    if (user.profilePicPath) {
-      const oldPath = path.join(__dirname, user.profilePicPath);
-      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-    }
-    const filePath = `uploads/${req.file.filename}`;
-    user.profilePicPath = filePath;
-    user.profilePic = `/api/student/profile-pic/${req.file.filename}`;
-    await user.save();
-    res.json({ message: 'Profile picture updated!', profilePic: user.profilePic });
-  } catch(err) { res.status(500).json({ error: err.message }); }
-});
-
-app.get('/api/student/profile-pic/:filename', (req, res) => {
-  const filePath = path.join(uploadDir, req.params.filename);
-  if (fs.existsSync(filePath)) {
-    res.sendFile(filePath);
-  } else {
-    res.status(404).json({ error: 'File not found' });
-  }
-});
-
 // ----- Admin Routes -----
+app.post('/api/admin/reset-password', async (req, res) => {
+  try {
+    const { requesterRollNo, targetRollNo, newPassword } = req.body;
+    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const cleanRoll = targetRollNo.trim().toUpperCase();
+    const hashedPassword = await bcrypt.hash(newPassword || '123456', 10);
+    const updated = await User.findOneAndUpdate({ rollNo: cleanRoll }, { password: hashedPassword });
+    if (!updated) return res.status(404).json({ error: 'Student Roll No not found!' });
+    res.json({ message: `Password reset for ${cleanRoll}!` });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.post('/api/admin/reset-device', async (req, res) => {
   try {
     const { requesterRollNo, targetRollNo } = req.body;
@@ -440,7 +312,6 @@ app.post('/api/admin/reset-device', async (req, res) => {
     if (!user) return res.status(404).json({ error: `Student ${cleanRoll} not found!` });
     user.boundDeviceId = null;
     await user.save();
-    await AuditLog.create({ rollNo: cleanRoll, action: 'DEVICE_RESET', details: `Reset by ${requesterRollNo}` });
     res.json({ message: `✅ Device binding reset for ${cleanRoll}!` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -453,7 +324,6 @@ app.post('/api/admin/update-rollno', async (req, res) => {
     const cleanNew = newRoll.trim().toUpperCase();
     await User.findOneAndUpdate({ rollNo: cleanOld }, { rollNo: cleanNew });
     await Attendance.updateMany({ rollNo: cleanOld }, { rollNo: cleanNew });
-    await AuditLog.create({ rollNo: cleanNew, action: 'ROLL_UPDATE', details: `Updated from ${cleanOld} to ${cleanNew}` });
     res.json({ message: `Roll Number updated from ${cleanOld} to ${cleanNew}!` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -463,44 +333,10 @@ app.delete('/api/admin/delete-student', async (req, res) => {
     const { requesterRollNo, targetRollNo } = req.body;
     if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const cleanTarget = targetRollNo.trim().toUpperCase();
-    const user = await User.findOne({ rollNo: cleanTarget });
-    if (user && user.profilePicPath) {
-      const oldPath = path.join(__dirname, user.profilePicPath);
-      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-    }
     await User.findOneAndDelete({ rollNo: cleanTarget });
     await Attendance.deleteMany({ rollNo: cleanTarget });
-    await AuditLog.create({ rollNo: cleanTarget, action: 'ACCOUNT_DELETED', details: `Deleted by ${requesterRollNo}` });
     res.json({ message: `Account and records deleted for ${cleanTarget}!` });
   } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// ----- Bulk Import Students -----
-app.post('/api/admin/bulk-import', async (req, res) => {
-  try {
-    const { requesterRollNo, students } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
-    if (!Array.isArray(students) || students.length === 0) {
-      return res.status(400).json({ error: 'Students array required' });
-    }
-    let imported = 0, failed = 0, errors = [];
-    for (const s of students) {
-      try {
-        const cleanRoll = s.rollNo.toUpperCase().replace(/[^A-Z0-9]/g, '');
-        if (!/^\d{2}(CSE|AIDS)\d{2}$/.test(cleanRoll)) {
-          failed++; errors.push(`Invalid roll: ${s.rollNo}`);
-          continue;
-        }
-        const exists = await User.findOne({ rollNo: cleanRoll });
-        if (exists) { failed++; errors.push(`Already exists: ${cleanRoll}`); continue; }
-        const hashedPassword = await bcrypt.hash(s.password || '123456', 10);
-        await new User({ name: s.name, rollNo: cleanRoll, password: hashedPassword, role: s.role || 'student', email: s.email || null, phone: s.phone || null, semester: s.semester || '5th', branch: s.branch || 'CSE' }).save();
-        imported++;
-      } catch(e) { failed++; errors.push(e.message); }
-    }
-    await AuditLog.create({ rollNo: requesterRollNo, action: 'BULK_IMPORT', details: `Imported ${imported}, Failed ${failed}` });
-    res.json({ message: `Imported ${imported} students, Failed ${failed}`, imported, failed, errors });
-  } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
 // ----- Passcode Routes -----
@@ -533,22 +369,20 @@ app.post('/api/auth/verify-passcode', async (req, res) => {
 // ----- Notices -----
 app.get('/api/notices', async (req, res) => {
   try {
-    const { role } = req.query;
-    const filter = role ? { $or: [{ target: 'all' }, { target: role }] } : {};
-    const notices = await Notice.find(filter).sort({ date: -1 }).limit(10);
+    const notices = await Notice.find().sort({ date: -1 }).limit(10);
     res.json(notices);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/api/admin/notice', async (req, res) => {
   try {
-    const { requesterRollNo, title, message, target } = req.body;
+    const { requesterRollNo, title, message } = req.body;
     if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     if (!message || message.trim() === "") {
       await Notice.deleteMany({});
       return res.json({ message: 'Notices cleared!' });
     }
-    const newNotice = await new Notice({ title: title || 'Announcement', message, target: target || 'all' }).save();
+    const newNotice = await new Notice({ title: title || 'Announcement', message }).save();
     res.status(201).json({ message: 'Notice published!', notice: newNotice });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -565,7 +399,6 @@ app.post('/api/admin/holiday', async (req, res) => {
     const dayName = days[dateObj.getDay()];
     if (dayName === 'Saturday' || dayName === 'Sunday') return res.status(400).json({ error: 'Cannot declare holiday on weekend!' });
     await Holiday.findOneAndUpdate({ date }, { date, reason: reason || 'College Holiday' }, { upsert: true, new: true });
-    await AuditLog.create({ rollNo: requesterRollNo, action: 'HOLIDAY_DECLARED', details: `${date}: ${reason}` });
     res.json({ message: `✅ Holiday declared for ${date}: ${reason || 'College Holiday'}` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -588,25 +421,15 @@ app.get('/api/date-status/:date', async (req, res) => {
 app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
   try {
     if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
-    
     const totalStudents = await User.countDocuments({ role: 'student' });
-    const totalFaculty = await User.countDocuments({ role: 'faculty' });
     const today = new Date();
     const todayDate = today.toISOString().split('T')[0];
     
-    const todayPresentStudents = await Attendance.distinct('rollNo', { 
-      date: todayDate, 
-      status: 'Present',
-      rollNo: { $nin: ADMIN_ROLL_NUMBERS } 
-    });
+    const todayPresentStudents = await Attendance.distinct('rollNo', { date: todayDate, status: 'Present', rollNo: { $nin: ADMIN_ROLL_NUMBERS } });
     const todayPresent = todayPresentStudents.length;
     
-    const presentStudentDetails = await Attendance.find({ 
-      date: todayDate, 
-      status: 'Present',
-      rollNo: { $nin: ADMIN_ROLL_NUMBERS }
-    }).select('rollNo studentName').lean();
-    
+    const presentStudentDetails = await Attendance.find({ date: todayDate, status: 'Present', rollNo: { $nin: ADMIN_ROLL_NUMBERS } })
+      .select('rollNo studentName').lean();
     const uniquePresent = {};
     presentStudentDetails.forEach(s => {
       if (!uniquePresent[s.rollNo]) uniquePresent[s.rollNo] = { rollNo: s.rollNo, name: s.studentName };
@@ -623,24 +446,16 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
     const presentCount = await Attendance.countDocuments({ status: 'Present', rollNo: { $nin: ADMIN_ROLL_NUMBERS } });
     const overallPct = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : 0;
     
-    const subjectStats = await Attendance.aggregate([
-      { $match: { rollNo: { $nin: ADMIN_ROLL_NUMBERS } } },
-      { $group: { _id: '$subject', total: { $sum: 1 }, present: { $sum: { $cond: [{ $eq: ['$status', 'Present'] }, 1, 0] } } } }
-    ]);
-    
     const semesterStartStr = SEMESTER_START.toISOString().split('T')[0];
     const todayStr = today.toISOString().split('T')[0];
     const workingDaysSoFar = await getWorkingDays(semesterStartStr, todayStr);
     const totalWorkingDaysSemester = await getWorkingDays(semesterStartStr, SEMESTER_END.toISOString().split('T')[0]);
     
-    const recentLogs = await AuditLog.find().sort({ timestamp: -1 }).limit(50);
-    
     res.json({ 
-      totalStudents, totalFaculty, todayPresent, todayAbsent, 
+      totalStudents, todayPresent, todayAbsent, 
       overallAttendance: totalAttendance, overallPct, 
       todayPresentStudents: presentList,
-      workingDaysSoFar, totalWorkingDaysSemester,
-      subjectStats, recentLogs
+      workingDaysSoFar, totalWorkingDaysSemester
     });
   } catch (err) { 
     console.error('Dashboard stats error:', err);
@@ -648,89 +463,17 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
   }
 });
 
-// ----- All Users -----
-app.get('/api/admin/all-users/:requesterRollNo', async (req, res) => {
+// ----- All Students for Admin -----
+app.get('/api/admin/all-students/:requesterRollNo', async (req, res) => {
   try {
     const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
     if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo)) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
-    const users = await User.find({ role: { $ne: 'admin' } }).select('name rollNo role boundDeviceId createdAt email phone semester branch profilePic').sort({ rollNo: 1 });
+    const students = await User.find({ role: 'student' }).select('name rollNo role boundDeviceId createdAt email phone semester branch profilePic').sort({ rollNo: 1 });
+    // Also include admin for export dropdown
     const admin = await User.findOne({ rollNo: requesterRollNo }).select('name rollNo');
-    if (admin) users.unshift({ ...admin._doc, role: 'admin' });
-    res.json(users);
+    if (admin) students.unshift({ ...admin._doc, role: 'admin' });
+    res.json(students);
   } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// ----- Internal Messaging -----
-app.post('/api/messages/send', async (req, res) => {
-  try {
-    const { from, to, subject, message } = req.body;
-    if (!from || !to || !message) return res.status(400).json({ error: 'From, To, and Message required' });
-    const msg = await new Message({ from, to, subject, message }).save();
-    res.status(201).json({ message: 'Message sent!', msg });
-  } catch(err) { res.status(500).json({ error: err.message }); }
-});
-
-app.get('/api/messages/:rollNo', async (req, res) => {
-  try {
-    const messages = await Message.find({ 
-      $or: [{ to: req.params.rollNo }, { from: req.params.rollNo }] 
-    }).sort({ createdAt: -1 });
-    res.json(messages);
-  } catch(err) { res.status(500).json({ error: err.message }); }
-});
-
-app.put('/api/messages/:id/read', async (req, res) => {
-  try {
-    await Message.findByIdAndUpdate(req.params.id, { isRead: true });
-    res.json({ message: 'Marked as read' });
-  } catch(err) { res.status(500).json({ error: err.message }); }
-});
-
-// ----- Leave Application -----
-app.post('/api/attendance/leave-request', async (req, res) => {
-  try {
-    const { rollNo, date, subject, reason } = req.body;
-    const cleanRoll = rollNo.trim().toUpperCase();
-    const user = await User.findOne({ rollNo: cleanRoll });
-    if (!user) return res.status(404).json({ error: 'User not found!' });
-    const record = await Attendance.findOne({ rollNo: cleanRoll, date, subject });
-    if (record) {
-      record.status = 'Leave Requested';
-      record.leaveReason = reason;
-      await record.save();
-    } else {
-      await new Attendance({
-        rollNo: cleanRoll,
-        studentName: user.name,
-        subject,
-        date,
-        status: 'Leave Requested',
-        leaveReason: reason,
-        isVerified: false,
-        markedBy: 'student'
-      }).save();
-    }
-    res.json({ message: 'Leave request submitted!' });
-  } catch(err) { res.status(500).json({ error: err.message }); }
-});
-
-app.post('/api/admin/leave-action', async (req, res) => {
-  try {
-    const { requesterRollNo, rollNo, date, subject, action } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
-    const record = await Attendance.findOne({ rollNo: rollNo.trim().toUpperCase(), date, subject });
-    if (!record) return res.status(404).json({ error: 'Record not found!' });
-    const newStatus = action === 'approve' ? 'Leave Approved' : 'Leave Rejected';
-    record.correctionLog.push({
-      changedBy: requesterRollNo,
-      oldStatus: record.status,
-      newStatus: newStatus,
-      reason: action === 'approve' ? 'Approved by admin' : 'Rejected by admin'
-    });
-    record.status = newStatus;
-    await record.save();
-    res.json({ message: `Leave ${action}ed successfully` });
-  } catch(err) { res.status(500).json({ error: err.message }); }
 });
 
 // ----- Attendance Marking -----
@@ -763,7 +506,7 @@ app.post('/api/attendance/mark', async (req, res) => {
     user.failedAttempts = 0;
     user.blockUntil = null;
     
-    const record = new Attendance({
+    await new Attendance({
       rollNo: cleanRoll,
       studentName: name,
       subject,
@@ -771,17 +514,12 @@ app.post('/api/attendance/mark', async (req, res) => {
       status: 'Present',
       location: { latitude, longitude },
       ipAddress: req.ip,
-      isVerified: true,
-      markedBy: 'student',
-      correctionLog: [{ changedBy: 'system', oldStatus: 'Absent', newStatus: 'Present', reason: 'Auto-marked' }]
-    });
-    await record.save();
+      isVerified: true
+    }).save();
     
     user.lastAttendanceTime = new Date();
     user.lastAttendanceLocation = { latitude, longitude };
     await user.save();
-    
-    await AuditLog.create({ rollNo: cleanRoll, action: 'ATTENDANCE_MARKED', details: `${subject} on ${todayDate}` });
     
     res.status(201).json({ message: `✅ Attendance Marked for ${subject}!` });
   } catch (err) { 
@@ -790,7 +528,7 @@ app.post('/api/attendance/mark', async (req, res) => {
   }
 });
 
-// ----- Full Day Attendance -----
+// ----- Full Day Attendance (skip Library) -----
 app.post('/api/attendance/mark-fullday', async (req, res) => {
   try {
     const { rollNo, name, latitude, longitude } = req.body;
@@ -830,8 +568,7 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
           status: 'Present',
           location: { latitude, longitude },
           ipAddress: req.ip,
-          isVerified: true,
-          markedBy: 'student'
+          isVerified: true
         }).save();
         markedCount++;
       }
@@ -844,7 +581,6 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     await user.save();
     
     if (markedCount === 0) return res.status(400).json({ error: 'All academic subjects already marked!' });
-    await AuditLog.create({ rollNo: cleanRoll, action: 'FULL_DAY_MARKED', details: `${markedCount} lectures on ${todayDate}` });
     res.status(201).json({ message: `✅ Full Day Marked (${markedCount} academic Lectures)!` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -870,7 +606,7 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
     for (let sub of subjects) {
       const exists = await Attendance.findOne({ rollNo: targetRoll, subject: sub, date });
       if (!exists) {
-        const record = new Attendance({
+        await new Attendance({
           rollNo: targetRoll,
           studentName: user.name,
           subject: sub,
@@ -878,20 +614,16 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
           status: status || 'Present',
           location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG },
           ipAddress: 'admin-manual',
-          isVerified: true,
-          markedBy: 'admin',
-          correctionLog: [{ changedBy: requesterRollNo, oldStatus: 'Absent', newStatus: status || 'Present', reason: 'Admin manual mark' }]
-        });
-        await record.save();
+          isVerified: true
+        }).save();
         markedCount++;
       }
     }
-    await AuditLog.create({ rollNo: targetRoll, action: 'MANUAL_ATTENDANCE', details: `${markedCount} lectures on ${date} by ${requesterRollNo}` });
     res.status(201).json({ message: `✅ Marked ${markedCount} lectures for ${user.name}` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- History -----
+// ----- History & Analytics -----
 app.get('/api/attendance/history/:rollNo', async (req, res) => {
   try {
     const history = await Attendance.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ date: -1 });
@@ -915,8 +647,7 @@ app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Subject-wise Analytics -----
-app.get('/api/analytics/subject/:rollNo', async (req, res) => {
+app.get('/api/analytics/:rollNo', async (req, res) => {
   try {
     const cleanRoll = req.params.rollNo.trim().toUpperCase();
     const records = await Attendance.find({ rollNo: cleanRoll });
@@ -929,18 +660,12 @@ app.get('/api/analytics/subject/:rollNo', async (req, res) => {
       'Internet Lab (Ms. Geeta)', 'LIB - Library'
     ];
     let subjectStats = {};
-    allSubjects.forEach(sub => { subjectStats[sub] = { present: 0, total: 0, percentage: 0 }; });
+    allSubjects.forEach(sub => { subjectStats[sub] = { present: 0, total: 0 }; });
     records.forEach(rec => {
       if (subjectStats[rec.subject]) {
         subjectStats[rec.subject].total += 1;
-        if (rec.status === 'Present' || rec.status === 'Leave Approved' || rec.status === 'Duty Leave') {
-          subjectStats[rec.subject].present += 1;
-        }
+        if (rec.status === 'Present') subjectStats[rec.subject].present += 1;
       }
-    });
-    Object.keys(subjectStats).forEach(key => {
-      const s = subjectStats[key];
-      s.percentage = s.total > 0 ? Math.round((s.present / s.total) * 100) : 0;
     });
     res.json(subjectStats);
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -994,34 +719,13 @@ app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) => {
       csv += `${r.date},${r.subject},${r.status},${loc},${r.ipAddress || 'N/A'}\n`;
     });
     const total = records.length;
-    const present = records.filter(r => r.status === 'Present' || r.status === 'Leave Approved' || r.status === 'Duty Leave').length;
+    const present = records.filter(r => r.status === 'Present' || r.status === 'Duty Leave').length;
     const pct = total > 0 ? Math.round((present / total) * 100) : 0;
     csv += `\nTotal: ${total}, Present: ${present}, Attendance: ${pct}%\n`;
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename=attendance_${cleanStudent}_${range}.csv`);
     res.send(csv);
   } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// ----- Audit Logs -----
-app.get('/api/admin/audit-logs/:requesterRollNo', async (req, res) => {
-  try {
-    if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
-    const { limit = 100, rollNo } = req.query;
-    const filter = rollNo ? { rollNo } : {};
-    const logs = await AuditLog.find(filter).sort({ timestamp: -1 }).limit(parseInt(limit));
-    res.json(logs);
-  } catch(err) { res.status(500).json({ error: err.message }); }
-});
-
-// ---------- Global Error Handlers ----------
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
-
-process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err);
-  process.exit(1);
 });
 
 // ---------- Start Server ----------
