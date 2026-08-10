@@ -49,9 +49,9 @@ const loginSchema = z.object({
   deviceId: z.string().optional()
 });
 
-// ---------- Timetable ----------
+// ---------- Timetable (Monday last lecture = LIB - Library) ----------
 const TIME_TABLE = {
-  Monday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'DAA - Design & Analysis of Algorithm', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'CN - Computer Network', 'WT - Web Technology'],
+  Monday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'DAA - Design & Analysis of Algorithm', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'CN - Computer Network', 'LIB - Library'],
   Tuesday: ['WT - Web Technology', 'ECO - Economics for Engineers', 'Internet Lab (Ms. Geeta)', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'BDA - Big Data Analytics'],
   Wednesday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'FLA - Formal Language & Automata', 'WT - Web Technology', 'CN LAB - Computer Network Lab'],
   Thursday: ['BDA - Big Data Analytics', 'WT - Web Technology', 'CN - Computer Network', 'DAA - Design & Analysis of Algorithm', 'DAA LAB - Algorithm Lab', 'HRM - Human Resource Mgmt'],
@@ -451,7 +451,7 @@ app.get('/api/date-status/:date', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ----- Admin Dashboard Stats (Fixed) -----
+// ----- Admin Dashboard Stats (FIXED) -----
 app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
   try {
     if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
@@ -465,6 +465,7 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
     const todayPresentStudents = await Attendance.distinct('rollNo', { date: todayDate, status: 'Present' });
     const todayPresent = todayPresentStudents.length;
     
+    // Get details of present students (for list)
     const presentStudentDetails = await Attendance.find({ date: todayDate, status: 'Present' })
       .select('rollNo studentName')
       .lean();
@@ -500,7 +501,7 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
       todayAbsent, 
       overallAttendance: totalAttendance, 
       overallPct, 
-      todayPresentStudents: presentList,
+      todayPresentStudents: presentList,  // 👈 list for admin
       workingDaysSoFar,
       totalWorkingDaysSemester
     });
@@ -545,6 +546,8 @@ app.post('/api/attendance/mark', async (req, res) => {
     const user = await User.findOne({ rollNo: cleanRoll });
     if (!user) return res.status(404).json({ error: 'Student not found!' });
     
+    // Check if subject is LIB - skip counting as attendance? But we still mark it as Present if they mark it.
+    // We'll allow marking but it won't count in attendance percentage because we filter out 'LIB' and 'Sports' etc.
     const isLab = subject.includes("LAB") || subject.includes("Lab");
     const todayEntries = await Attendance.find({ rollNo: cleanRoll, subject, date: todayDate });
     if (isLab && todayEntries.length >= 1) return res.status(400).json({ error: `Already marked for ${subject} today! (Lab - 1 lecture only)` });
@@ -717,7 +720,7 @@ app.get('/api/analytics/:rollNo', async (req, res) => {
       'HRM - Human Resource Mgmt', 'CN - Computer Network',
       'WT - Web Technology', 'CN LAB - Computer Network Lab',
       'DAA LAB - Algorithm Lab', 'WT LAB - Web Technology Lab',
-      'Internet Lab (Ms. Geeta)'
+      'Internet Lab (Ms. Geeta)', 'LIB - Library'
     ];
     let subjectStats = {};
     allSubjects.forEach(sub => { subjectStats[sub] = { present: 0, total: 0 }; });
