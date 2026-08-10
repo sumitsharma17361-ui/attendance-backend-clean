@@ -170,6 +170,7 @@
         .passcode-box .admin-only { font-size: 8px; color: var(--danger); font-weight: 700; background: rgba(254, 242, 242, 0.6); padding: 2px 10px; border-radius: 20px; border: 1px solid rgba(254, 202, 202, 0.4); }
         
         .enroll-status { font-size: 9px; color: var(--text-muted); font-weight: 600; margin-top: 4px; }
+        .session-error-msg { color: var(--danger); font-size: 11px; font-weight: 600; text-align: center; padding: 8px; background: rgba(254, 242, 242, 0.6); border-radius: 10px; margin-bottom: 10px; border: 1px solid rgba(254, 202, 202, 0.4); display: none; }
     </style>
 </head>
 <body>
@@ -221,6 +222,9 @@
             <div class="notice-marquee"><p id="noticeText">Loading announcements...</p></div>
         </div>
         <div class="app-body">
+            <!-- Session Error Message -->
+            <div id="sessionErrorMsg" class="session-error-msg">⛔ Session expired. Please login again.</div>
+
             <!-- Auth -->
             <div id="auth-box" class="tab-content-active">
                 <div id="register-fields" style="display:none;">
@@ -571,6 +575,8 @@
         let allStudentsData = [];
         let deviceFingerprintHash = '';
         let currentPasscode = "9842";
+        let isAdminUser = false;
+        let sessionCheckInterval = null;
 
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -727,6 +733,59 @@
         function hideDownloadProgress() { const el = document.getElementById('downloadProgress'); if (el) el.classList.remove('show'); }
 
         // ============================================================
+        // SESSION MANAGEMENT
+        // ============================================================
+        function handleSessionExpired() {
+            const errorMsg = document.getElementById('sessionErrorMsg');
+            if (errorMsg) {
+                errorMsg.style.display = 'block';
+                setTimeout(() => {
+                    errorMsg.style.display = 'none';
+                }, 5000);
+            }
+            // Clear local storage and redirect to login
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+            document.getElementById('auth-box').style.display = 'block';
+            document.getElementById('dash-box').style.display = 'none';
+            document.getElementById('headerAvatarBox').style.display = 'none';
+            if (sessionCheckInterval) {
+                clearInterval(sessionCheckInterval);
+                sessionCheckInterval = null;
+            }
+            showMsg('Session expired. Please login again.', true);
+        }
+
+        function validateSession() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                handleSessionExpired();
+                return false;
+            }
+            try {
+                // Decode token to check expiration
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                if (payload.exp && payload.exp * 1000 < Date.now()) {
+                    handleSessionExpired();
+                    return false;
+                }
+                return true;
+            } catch (e) {
+                handleSessionExpired();
+                return false;
+            }
+        }
+
+        function startSessionCheck() {
+            if (sessionCheckInterval) {
+                clearInterval(sessionCheckInterval);
+            }
+            sessionCheckInterval = setInterval(() => {
+                validateSession();
+            }, 60000); // Check every minute
+        }
+
+        // ============================================================
         // PASSCODE FUNCTIONS
         // ============================================================
         function generatePasscode() {
@@ -747,7 +806,6 @@
                 navigator.clipboard.writeText(code).then(() => {
                     showMsg('✅ Passcode copied to clipboard!');
                 }).catch(() => {
-                    // Fallback
                     const textarea = document.createElement('textarea');
                     textarea.value = code;
                     document.body.appendChild(textarea);
@@ -768,6 +826,9 @@
         }
 
         async function openFullDayPasscodePrompt() {
+            // Validate session first
+            if (!validateSession()) return;
+            
             const enteredPasscode = prompt(`Enter Class Passcode:`);
             if (!enteredPasscode) return;
             if (enteredPasscode.trim() === currentPasscode) {
@@ -862,6 +923,7 @@
         // ATTENDANCE MARKING
         // ============================================================
         function markActivePeriodAttendance() {
+            if (!validateSession()) return;
             if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
                 return showMsg("No active lecture!", true);
             }
@@ -869,6 +931,7 @@
         }
 
         function markWithFingerprint() {
+            if (!validateSession()) return;
             if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
                 return showMsg("No active lecture!", true);
             }
@@ -896,10 +959,12 @@
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 const user = JSON.parse(localStorage.getItem('user'));
                 const fingerprint = getDeviceFingerprint();
+                const token = localStorage.getItem('token');
+                if (!token) { handleSessionExpired(); return; }
                 try {
                     const res = await fetch(`${API_BASE}/api/attendance/mark`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                         body: JSON.stringify({
                             rollNo: user.rollNo,
                             name: user.name,
@@ -910,6 +975,10 @@
                             useFingerprint: useFingerprint
                         })
                     });
+                    if (res.status === 401) {
+                        handleSessionExpired();
+                        return;
+                    }
                     const data = await res.json();
                     if (res.ok) {
                         showMsg(`✅ Marked ${subject}!`);
@@ -926,16 +995,19 @@
         }
 
         function markFullDayAttendance() {
+            if (!validateSession()) return;
             if (!navigator.geolocation) {
                 return showMsg('Geolocation not supported!', true);
             }
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 const user = JSON.parse(localStorage.getItem('user'));
                 const fingerprint = getDeviceFingerprint();
+                const token = localStorage.getItem('token');
+                if (!token) { handleSessionExpired(); return; }
                 try {
                     const res = await fetch(`${API_BASE}/api/attendance/mark-fullday`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                         body: JSON.stringify({
                             rollNo: user.rollNo,
                             name: user.name,
@@ -944,6 +1016,10 @@
                             deviceFingerprint: fingerprint
                         })
                     });
+                    if (res.status === 401) {
+                        handleSessionExpired();
+                        return;
+                    }
                     const data = await res.json();
                     if (res.ok) {
                         showMsg(data.message || 'Full Day Marked!');
@@ -983,7 +1059,12 @@
                 return;
             }
             try {
-                const res = await fetch(`${API_BASE}/api/face/get/${user.rollNo}`);
+                const token = localStorage.getItem('token');
+                if (!token) { handleSessionExpired(); return; }
+                const res = await fetch(`${API_BASE}/api/face/get/${user.rollNo}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.status === 401) { handleSessionExpired(); return; }
                 const data = await res.json();
                 if (res.ok && data.enrolled) {
                     activeCloudFaceDescriptor = data.faceDescriptor;
@@ -1035,10 +1116,12 @@
             if (currentCamMode === 'ENROLL') {
                 localStorage.setItem(`FACE_MESH_${user.rollNo}`, JSON.stringify(currentDescriptor));
                 activeCloudFaceDescriptor = currentDescriptor;
+                const token = localStorage.getItem('token');
+                if (!token) { handleSessionExpired(); return; }
                 try {
                     await fetch(`${API_BASE}/api/face/enroll`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                         body: JSON.stringify({ rollNo: user.rollNo, faceDescriptor: currentDescriptor })
                     });
                 } catch (e) {}
@@ -1141,7 +1224,12 @@
             try { const hRes = await fetch(`${API_BASE}/api/holidays`); globalHolidays = await hRes.json(); } catch (e) { globalHolidays =
                 []; }
             try {
-                const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
+                const token = localStorage.getItem('token');
+                if (!token) { handleSessionExpired(); return; }
+                const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.status === 401) { handleSessionExpired(); return; }
                 const data = await res.json();
                 globalMyRecords = data || [];
                 const tbody = document.querySelector('#myHistoryTable tbody');
@@ -1185,8 +1273,13 @@
 
         async function loadDashboardStats() {
             const user = JSON.parse(localStorage.getItem('user'));
+            const token = localStorage.getItem('token');
+            if (!token) { handleSessionExpired(); return; }
             try {
-                const res = await fetch(`${API_BASE}/api/admin/dashboard-stats/${user.rollNo}`);
+                const res = await fetch(`${API_BASE}/api/admin/dashboard-stats/${user.rollNo}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.status === 401) { handleSessionExpired(); return; }
                 const data = await res.json();
                 if (res.ok) {
                     document.getElementById('liveTotalStudents').innerText = data.totalStudents || 0;
@@ -1200,6 +1293,10 @@
         function loadDashboard() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user) return;
+            
+            // Validate session
+            if (!validateSession()) return;
+            
             document.getElementById('auth-box').style.display = 'none';
             document.getElementById('dash-box').style.display = 'block';
             document.getElementById('headerAvatarBox').style.display = 'flex';
@@ -1207,7 +1304,7 @@
             const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 'ST';
             document.getElementById('userAvatarText').innerText = initials;
             const userRollClean = (user.rollNo || "").toUpperCase().replace(/[^A-Z0-9]/g, '');
-            const isAdmin = (user.role === 'admin' || userRollClean === '24CSE48' || userRollClean.includes('24CSE48'));
+            isAdminUser = (user.role === 'admin' || userRollClean === '24CSE48' || userRollClean.includes('24CSE48'));
             document.getElementById('roleLabel').innerText = "Roll";
             document.getElementById('userRoll').innerText = user.rollNo;
             document.getElementById('studentStatsGrid').style.display = 'grid';
@@ -1215,15 +1312,22 @@
             document.getElementById('simulatorBox').style.display = 'flex';
             document.getElementById('faceEnrollBox').style.display = 'block';
             document.getElementById('studentTabHeader').style.display = 'block';
-            if (isAdmin) {
+            
+            if (isAdminUser) {
                 document.getElementById('adminTabHeader').style.display = 'block';
                 document.getElementById('adminLiveDashboard').style.display = 'block';
                 loadDashboardStats();
                 setInterval(loadDashboardStats, 60000);
+                // Generate passcode for admin
+                generatePasscode();
             } else {
                 document.getElementById('adminTabHeader').style.display = 'none';
                 document.getElementById('adminLiveDashboard').style.display = 'none';
             }
+            
+            // Start session check
+            startSessionCheck();
+            
             switchTab('markTab');
             fetchHistory(user.rollNo);
             const todayISO = new Date().toISOString().split('T')[0];
@@ -1233,10 +1337,6 @@
             setInterval(updatePeriodTrackerWidget, 30000);
             fetchNotices();
             loadSubjectsForDay();
-            // Only generate passcode if admin
-            if (isAdmin) {
-                generatePasscode();
-            }
         }
 
         // ============================================================
@@ -1329,7 +1429,6 @@
             navItems.forEach((item, idx) => { item.classList.toggle('active', subTabs[idx] === subId); });
             if (subId === 'subDirectory') fetchAllStudents();
             if (subId === 'subPasscode') {
-                // Show current passcode
                 document.getElementById('liveClassPasscode').innerText = currentPasscode;
             }
         }
@@ -1561,8 +1660,13 @@
         // ============================================================
         async function fetchAllStudents() {
             const user = JSON.parse(localStorage.getItem('user'));
+            const token = localStorage.getItem('token');
+            if (!token) { handleSessionExpired(); return; }
             try {
-                const res = await fetch(`${API_BASE}/api/admin/all-students/${user.rollNo}`);
+                const res = await fetch(`${API_BASE}/api/admin/all-students/${user.rollNo}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.status === 401) { handleSessionExpired(); return; }
                 const data = await res.json();
                 if (!res.ok) return showMsg(data.error || "Failed", true);
                 allStudentsData = data;
@@ -1605,8 +1709,13 @@
         }
 
         async function showStudentAttendance(rollNo) {
+            const token = localStorage.getItem('token');
+            if (!token) { handleSessionExpired(); return; }
             try {
-                const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
+                const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.status === 401) { handleSessionExpired(); return; }
                 const data = await res.json();
                 if (!res.ok) return showMsg("Failed to load attendance", true);
                 const total = data.length,
@@ -1626,8 +1735,13 @@
 
         async function fetchAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
+            const token = localStorage.getItem('token');
+            if (!token) { handleSessionExpired(); return; }
             try {
-                const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
+                const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.status === 401) { handleSessionExpired(); return; }
                 const data = await res.json();
                 if (!res.ok) return showMsg(data.error || "Failed", true);
                 globalAllRecords = data;
@@ -1883,15 +1997,33 @@
                         body: JSON.stringify({ rollNo: validation.cleanRoll, password, deviceId })
                     });
                     const data = await res.json();
-                    if (res.ok) { localStorage.setItem('user', JSON.stringify(data.user));
+                    if (res.ok) {
+                        localStorage.setItem('user', JSON.stringify(data.user));
                         localStorage.setItem('token', data.token);
-                        loadDashboard(); } else { showMsg(data.error || 'Invalid credentials', true); }
+                        // Clear session error message
+                        document.getElementById('sessionErrorMsg').style.display = 'none';
+                        loadDashboard();
+                    } else {
+                        showMsg(data.error || 'Invalid credentials', true);
+                    }
                 }
             } catch (err) { showMsg('Connection timeout!', true); }
         }
 
         async function logout() {
-            try { const token = localStorage.getItem('token'); if (token) { await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }); } } catch (e) {}
+            try {
+                const token = localStorage.getItem('token');
+                if (token) {
+                    await fetch(`${API_BASE}/api/auth/logout`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                }
+            } catch (e) {}
+            if (sessionCheckInterval) {
+                clearInterval(sessionCheckInterval);
+                sessionCheckInterval = null;
+            }
             localStorage.removeItem('user');
             localStorage.removeItem('token');
             location.reload();
@@ -1900,12 +2032,21 @@
         // ============================================================
         // INIT
         // ============================================================
-        if (localStorage.getItem('user')) { loadDashboard(); }
+        if (localStorage.getItem('user') && localStorage.getItem('token')) {
+            if (validateSession()) {
+                loadDashboard();
+            } else {
+                // Session expired, show login
+                document.getElementById('sessionErrorMsg').style.display = 'block';
+            }
+        }
+
         document.getElementById('studentExcelRange')?.addEventListener('change', function() {
             const wrapper = document.getElementById('selectedMonthWrapper');
             if (wrapper) { wrapper.style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none'; }
         });
-        console.log('✅ Glass ERP Portal loaded (Passcode in Admin + Fingerprint + Face)');
+
+        console.log('✅ Glass ERP Portal loaded (Passcode in Admin + Session Fix)');
     </script>
 </body>
 </html>
