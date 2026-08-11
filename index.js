@@ -73,6 +73,17 @@ const SUBJECT_FACULTY_MAP = {
   'Sports / Project': 'Sports Dept'
 };
 
+// Get unique faculty names from timetable
+function getTimetableFaculty() {
+  const facultySet = new Set();
+  const allDays = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
+  allDays.forEach(day => {
+    CSE_TIME_TABLE[day].forEach(entry => facultySet.add(entry.faculty));
+    AIDS_TIME_TABLE[day].forEach(entry => facultySet.add(entry.faculty));
+  });
+  return [...facultySet].sort();
+}
+
 const SUBJECT_SHORT_TO_FULL = {
   'BDA': 'BDA - Big Data Analytics',
   'ECO': 'ECO - Economics for Engineers',
@@ -348,7 +359,6 @@ app.post('/api/auth/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     let branch = 'CSE';
     if (role === 'student' && cleanRoll.includes('AIDS')) branch = 'AIDS';
-    // Device binding only for students
     const boundDeviceId = (role === 'student') ? (deviceId || null) : null;
     await new User({ name, rollNo: cleanRoll, password: hashedPassword, role, boundDeviceId, branch }).save();
     res.status(201).json({ message: 'Registration successful! Please login.' });
@@ -367,7 +377,6 @@ app.post('/api/auth/login', async (req, res) => {
     if (!isMatch) return res.status(400).json({ error: 'Invalid password!' });
     user.failedAttempts = 0;
     user.blockUntil = null;
-    // Device binding only for students
     if (user.role === 'student') {
       if (!user.boundDeviceId && deviceId) { user.boundDeviceId = deviceId; await user.save(); }
       else if (user.boundDeviceId && user.boundDeviceId !== deviceId) {
@@ -519,6 +528,26 @@ app.get('/api/teacher/subjects/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ========== TEACHER GET STUDENTS (based on their subjects) ==========
+app.get('/api/teacher/students/:rollNo', async (req, res) => {
+  try {
+    const cleanRoll = req.params.rollNo.trim().toUpperCase();
+    const teacher = await User.findOne({ rollNo: cleanRoll, role: 'faculty' });
+    if (!teacher) return res.status(403).json({ error: 'Teacher not found!' });
+    const subjects = await TeacherSubject.find({ teacherRollNo: cleanRoll }).distinct('subject');
+    if (subjects.length === 0) {
+      return res.json([]);
+    }
+    // Get all attendance records for these subjects
+    const records = await Attendance.find({ subject: { $in: subjects } }).distinct('rollNo');
+    const studentRolls = records;
+    const students = await User.find({ rollNo: { $in: studentRolls }, role: 'student' }).select('name rollNo');
+    res.json(students);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ========== TEACHER MARK ATTENDANCE ==========
 app.post('/api/teacher/mark-attendance', async (req, res) => {
   try {
@@ -554,12 +583,20 @@ app.post('/api/teacher/mark-attendance', async (req, res) => {
   } catch (err) { console.error('Teacher attendance error:', err); res.status(500).json({ error: err.message }); }
 });
 
-// ========== PASSCODE ==========
+// ========== PASSCODE (Admin & Teacher) ==========
 app.post('/api/admin/generate-passcode', async (req, res) => {
   try {
     const { requesterRollNo, type } = req.body;
     const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
-    if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    if (!requester) return res.status(403).json({ error: 'User not found!' });
+    // Admin can generate both, teacher can only generate single_lecture
+    if (requester.role === 'admin') {
+      // allowed both
+    } else if (requester.role === 'faculty' && type === 'single_lecture') {
+      // allowed
+    } else {
+      return res.status(403).json({ error: 'Access Denied: Only admin can generate full_day, teacher can generate single_lecture.' });
+    }
     if (!type || !['full_day', 'single_lecture'].includes(type)) {
       return res.status(400).json({ error: 'Invalid passcode type.' });
     }
@@ -707,11 +744,24 @@ app.get('/api/attendance/student/:rollNo/:requesterRollNo', async (req, res) => 
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== DELETE ATTENDANCE RECORD (Admin only) ==========
+// ========== DELETE ATTENDANCE RECORD (Admin & Teacher) ==========
 app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
   try {
-    const requester = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
-    if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
+    const requester = await User.findOne({ rollNo: requesterRollNo });
+    if (!requester) return res.status(403).json({ error: 'Access Denied' });
+    const isAdmin = requester.role === 'admin';
+    const isTeacher = requester.role === 'faculty';
+    if (!isAdmin && !isTeacher) return res.status(403).json({ error: 'Access Denied: Admin or Teacher only!' });
+    const record = await Attendance.findById(req.params.id);
+    if (!record) return res.status(404).json({ error: 'Record not found' });
+    // If teacher, verify subject is assigned
+    if (isTeacher) {
+      const subjects = await TeacherSubject.find({ teacherRollNo: requesterRollNo }).distinct('subject');
+      if (!subjects.includes(record.subject)) {
+        return res.status(403).json({ error: 'Not authorized to delete this record.' });
+      }
+    }
     await Attendance.findByIdAndDelete(req.params.id);
     res.json({ message: 'Record deleted!' });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -1104,6 +1154,15 @@ app.get('/api/timetable/subjects', async (req, res) => {
     });
     const all = [...new Set([...cseSubjects, ...aidsSubjects])].sort();
     res.json(all);
+  } catch (err) {
+    res.status(500).json({ error: err.message }); }
+});
+
+// ========== TIMETABLE FACULTY LIST (for registration dropdown) ==========
+app.get('/api/timetable/faculty', async (req, res) => {
+  try {
+    const faculty = getTimetableFaculty();
+    res.json(faculty);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
