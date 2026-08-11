@@ -8,8 +8,23 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous">
     </script>
     <style>
-        /* ===== ROOT & RESET (same as before) ===== */
-        :root { --bg-body: #f0f4f8; --primary: #2563eb; --primary-hover: #1d4ed8; --success: #16a34a; --danger: #dc2626; --warning: #d97706; --card-bg: #ffffff; --card-border: #e2e8f0; --shadow-sm: 0 1px 3px 0 rgba(0,0,0,0.06); --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05); --shadow-hover: 0 10px 15px -3px rgba(0,0,0,0.08); --text-main: #0f172a; --text-muted: #64748b; --radius: 12px; }
+        /* ===== ROOT & RESET ===== */
+        :root {
+            --bg-body: #f0f4f8;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --warning: #d97706;
+            --card-bg: #ffffff;
+            --card-border: #e2e8f0;
+            --shadow-sm: 0 1px 3px 0 rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05);
+            --shadow-hover: 0 10px 15px -3px rgba(0,0,0,0.08);
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --radius: 12px;
+        }
         * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding: 0; }
         body { background: var(--bg-body); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 16px; }
 
@@ -609,15 +624,18 @@
                             <span class="tool-title" style="color:var(--primary);">➕ Register New User</span>
                             <input type="text" id="adminRegName" placeholder="Full Name" style="font-size:10px; padding:7px;" />
                             <input type="text" id="adminRegRoll" placeholder="Roll/ID" style="font-size:10px; padding:7px;" />
-                            <select id="adminRegRole" style="font-size:10px; padding:7px;" onchange="toggleFacultyNameDropdown()">
+                            <select id="adminRegRole" style="font-size:10px; padding:7px;" onchange="toggleFacultyRegistrationFields()">
                                 <option value="student">Student</option>
                                 <option value="faculty">Faculty</option>
                                 <option value="admin">Admin</option>
                             </select>
-                            <!-- Faculty name dropdown (hidden by default) -->
-                            <select id="facultyNameSelect" style="display:none; font-size:10px; padding:7px;">
-                                <option value="">Select Faculty from Timetable…</option>
-                            </select>
+                            <!-- Faculty specific fields -->
+                            <div id="facultyRegistrationFields" style="display:none; margin-top:6px;">
+                                <select id="facultySubjectSelect" style="font-size:10px; padding:7px; margin-bottom:6px;">
+                                    <option value="">Select Subject…</option>
+                                </select>
+                                <p style="font-size:8px; color:var(--text-muted);">ID will be auto-generated: e.g., BDA01, WT02, FLA03</p>
+                            </div>
                             <input type="text" id="adminRegPass" placeholder="Password (Default: 123456)" style="font-size:10px; padding:7px;" />
                             <button class="btn btn-primary btn-sm" onclick="adminRegisterUser()" style="padding:7px; margin:0;">Register</button>
                         </div>
@@ -1456,32 +1474,73 @@
             loadDashboard();
         }
 
-        // Faculty name dropdown toggle
-        async function toggleFacultyNameDropdown() {
+        // Faculty registration fields toggle
+        function toggleFacultyRegistrationFields() {
             const role = document.getElementById('adminRegRole').value;
-            const facultySelect = document.getElementById('facultyNameSelect');
-            const nameInput = document.getElementById('adminRegName');
+            const fields = document.getElementById('facultyRegistrationFields');
+            const rollInput = document.getElementById('adminRegRoll');
             if (role === 'faculty') {
-                facultySelect.style.display = 'block';
-                // Load faculty names from timetable
-                try {
-                    const res = await fetch(`${API_BASE}/api/timetable/faculty`);
-                    const data = await res.json();
-                    facultySelect.innerHTML = '<option value="">Select Faculty from Timetable…</option>';
-                    data.forEach(f => {
-                        facultySelect.innerHTML += `<option value="${f}">${f}</option>`;
-                    });
-                    // Auto-fill name when faculty selected
-                    facultySelect.onchange = function() {
-                        nameInput.value = this.value;
-                    };
-                } catch (e) {
-                    showMsg('Failed to load faculty list', true);
-                }
+                fields.style.display = 'block';
+                rollInput.placeholder = 'Auto-generated (e.g., BDA01)';
+                rollInput.value = 'AUTO';
+                rollInput.disabled = true;
+                populateFacultySubjectDropdown();
             } else {
-                facultySelect.style.display = 'none';
-                nameInput.value = '';
-                facultySelect.onchange = null;
+                fields.style.display = 'none';
+                rollInput.placeholder = 'Roll/ID';
+                rollInput.value = '';
+                rollInput.disabled = false;
+            }
+        }
+
+        async function populateFacultySubjectDropdown() {
+            try {
+                const res = await fetch(`${API_BASE}/api/timetable/subjects`);
+                const data = await res.json();
+                const select = document.getElementById('facultySubjectSelect');
+                select.innerHTML = '<option value="">Select Subject…</option>';
+                // Filter subjects that have faculty mapping
+                const facultySubjects = ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 
+                    'DAA - Design & Analysis of Algorithm', 'FLA - Formal Language & Automata',
+                    'HRM - Human Resource Mgmt', 'CN - Computer Network', 'WT - Web Technology',
+                    'Internet Lab (Ms. Geeta)', 'CN LAB - Computer Network Lab', 
+                    'DAA LAB - Algorithm Lab', 'WT LAB - Web Technology Lab',
+                    'PA - Predictive Analysis', 'ML - Machine Learning',
+                    'PA LAB - Predictive Analysis Lab', 'ML LAB - Machine Learning Lab',
+                    'BDA LAB - Big Data Analytics Lab'];
+                data.forEach(sub => {
+                    if (facultySubjects.includes(sub)) {
+                        select.innerHTML += `<option value="${sub}">${sub}</option>`;
+                    }
+                });
+                // Auto-fill name based on subject
+                select.onchange = function() {
+                    const nameInput = document.getElementById('adminRegName');
+                    const selected = this.value;
+                    const facultyMap = {
+                        'BDA - Big Data Analytics': 'Ms. Geeta',
+                        'ECO - Economics for Engineers': 'Ms. Sakshi Yadav',
+                        'DAA - Design & Analysis of Algorithm': 'Mr. Rajesh',
+                        'FLA - Formal Language & Automata': 'Ms. Nisha Yadav',
+                        'HRM - Human Resource Mgmt': 'Mr. Lokesh',
+                        'CN - Computer Network': 'Mr. Sunil',
+                        'WT - Web Technology': 'Mr. Avish Yadav',
+                        'Internet Lab (Ms. Geeta)': 'Ms. Geeta',
+                        'CN LAB - Computer Network Lab': 'Mr. Sunil',
+                        'DAA LAB - Algorithm Lab': 'Mr. Rajesh',
+                        'WT LAB - Web Technology Lab': 'Mr. Avish Yadav',
+                        'PA - Predictive Analysis': 'Ms. Pooja',
+                        'ML - Machine Learning': 'Mr. Harsh',
+                        'PA LAB - Predictive Analysis Lab': 'Ms. Pooja',
+                        'ML LAB - Machine Learning Lab': 'Mr. Harsh',
+                        'BDA LAB - Big Data Analytics Lab': 'Ms. Geeta'
+                    };
+                    if (facultyMap[selected]) {
+                        nameInput.value = facultyMap[selected];
+                    }
+                };
+            } catch (e) {
+                console.error('Failed to load subjects', e);
             }
         }
 
@@ -1489,20 +1548,49 @@
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
             const name = document.getElementById('adminRegName').value.trim();
-            const rawRoll = document.getElementById('adminRegRoll').value.trim();
+            let rawRoll = document.getElementById('adminRegRoll').value.trim();
             const password = document.getElementById('adminRegPass').value.trim() || '123456';
             const role = document.getElementById('adminRegRole').value;
+            let subject = null;
+            
+            if (role === 'faculty') {
+                subject = document.getElementById('facultySubjectSelect').value;
+                if (!subject) return showMsg('Please select a subject for faculty!', true);
+                rawRoll = 'AUTO';
+            }
+            
             const validation = sanitizeAndValidateRollNo(rawRoll);
-            if (!name || !validation.isValid) return showMsg('Valid Name and ID required!', true);
+            if (!name) return showMsg('Valid Name required!', true);
+            if (role !== 'faculty' && !validation.isValid) return showMsg('Valid ID required!', true);
+            
             try {
                 const res = await fetch(`${API_BASE}/api/auth/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, rollNo: validation.cleanRoll, password, role })
+                    body: JSON.stringify({ 
+                        name, 
+                        rollNo: rawRoll, 
+                        password, 
+                        role,
+                        subject 
+                    })
                 });
                 const data = await res.json();
-                if (res.ok) { showMsg(`${role} ${name} Registered!`); document.getElementById('adminRegName').value = ''; document.getElementById('adminRegRoll').value = ''; document.getElementById('adminRegPass').value = ''; fetchAllUsers(); populateStudentSelect(); populateTeacherSelect(); } else { showMsg(data.error || "Registration failed", true); }
-            } catch (e) { showMsg("Server error!", true); }
+                if (res.ok) { 
+                    showMsg(`${role} ${name} Registered! ID: ${data.rollNo || 'Auto-generated'}`); 
+                    document.getElementById('adminRegName').value = '';
+                    document.getElementById('adminRegRoll').value = '';
+                    document.getElementById('adminRegPass').value = '';
+                    document.getElementById('facultySubjectSelect').value = '';
+                    fetchAllUsers(); 
+                    populateStudentSelect(); 
+                    populateTeacherSelect(); 
+                } else { 
+                    showMsg(data.error || "Registration failed", true); 
+                }
+            } catch (e) { 
+                showMsg("Server error!", true); 
+            }
         }
 
         async function assignSubjectToTeacher() {
@@ -1864,8 +1952,7 @@
                 const data = await res.json();
                 if (res.ok) {
                     showMsg('Record deleted!');
-                    // Refresh the current view
-                    // If admin profile modal is open, close and reopen
+                    // Refresh views
                     const profileModal = document.getElementById('studentProfileModal');
                     if (profileModal) {
                         const currentRoll = currentStudentRecords.length > 0 ? currentStudentRecords[0].rollNo : '';
@@ -1873,7 +1960,6 @@
                         if (currentRoll) viewStudentProfile(currentRoll);
                         fetchAllUsers();
                     }
-                    // If teacher modal
                     const teacherModal = document.getElementById('teacherStudentModal');
                     if (teacherModal) {
                         const roll = document.querySelector('#teacherStudentModal .profile-modal h3')?.innerText?.replace('Attendance – ', '');
@@ -2318,7 +2404,7 @@
                 populateAdminStudentSelect();
                 populateSubjectDropdown();
                 // Load faculty dropdown if needed
-                toggleFacultyNameDropdown();
+                toggleFacultyRegistrationFields();
             } else if (isFaculty) {
                 document.getElementById('adminTabHeader').style.display = 'none';
                 document.getElementById('teacherTabHeader').style.display = 'block';
@@ -2417,7 +2503,7 @@
         console.log('👨‍🏫 Teacher module updated: passcode + student reports.');
         console.log('👑 Admin: Individual student report added.');
         console.log('📚 Subject assignment dropdown populated from timetable.');
-        console.log('👩‍🏫 Faculty registration: name can be selected from timetable.');
+        console.log('👩‍🏫 Faculty registration: auto-ID generation enabled.');
     </script>
 </body>
 </html>
