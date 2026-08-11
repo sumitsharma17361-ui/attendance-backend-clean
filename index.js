@@ -16,7 +16,7 @@ app.use(cors());
 // ---------- Environment Variables ----------
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
-const ADMIN_ROLL_NUMBERS = ['24CSE48']; // only these are admin
+const ADMIN_ROLL_NUMBERS = ['24CSE48'];
 const COLLEGE_LAT = 28.4509370;
 const COLLEGE_LNG = 76.7688120;
 const COLLEGE_RADIUS = 50;
@@ -336,7 +336,7 @@ async function incrementFailedAttempts(rollNo) {
 // ---------- Routes ----------
 app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active!'));
 
-// Auth
+// ========== AUTH ==========
 app.post('/api/auth/register', async (req, res) => {
   try {
     const parseResult = registerSchema.safeParse(req.body);
@@ -347,9 +347,7 @@ app.post('/api/auth/register', async (req, res) => {
     if (user) return res.status(400).json({ error: 'ID already registered!' });
     const hashedPassword = await bcrypt.hash(password, 10);
     let branch = 'CSE';
-    if (role === 'student') {
-      if (cleanRoll.includes('AIDS')) branch = 'AIDS';
-    }
+    if (role === 'student' && cleanRoll.includes('AIDS')) branch = 'AIDS';
     // Device binding only for students
     const boundDeviceId = (role === 'student') ? (deviceId || null) : null;
     await new User({ name, rollNo: cleanRoll, password: hashedPassword, role, boundDeviceId, branch }).save();
@@ -394,6 +392,7 @@ app.post('/api/auth/logout', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ========== PROFILE ==========
 app.post('/api/student/profile', async (req, res) => {
   try {
     const { rollNo, email, phone, profilePic, semester, branch } = req.body;
@@ -419,7 +418,7 @@ app.get('/api/student/profile/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Admin Routes
+// ========== ADMIN ROUTES ==========
 app.post('/api/admin/reset-password', async (req, res) => {
   try {
     const { requesterRollNo, targetRollNo, newPassword } = req.body;
@@ -485,7 +484,7 @@ app.post('/api/admin/login-as-student', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Teacher Subject Assignment
+// ========== TEACHER SUBJECT ASSIGNMENT ==========
 app.post('/api/admin/assign-subject', async (req, res) => {
   try {
     const { requesterRollNo, teacherRollNo, subject } = req.body;
@@ -520,6 +519,7 @@ app.get('/api/teacher/subjects/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ========== TEACHER MARK ATTENDANCE ==========
 app.post('/api/teacher/mark-attendance', async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude, studentRollNo } = req.body;
@@ -554,7 +554,7 @@ app.post('/api/teacher/mark-attendance', async (req, res) => {
   } catch (err) { console.error('Teacher attendance error:', err); res.status(500).json({ error: err.message }); }
 });
 
-// Passcode Routes
+// ========== PASSCODE ==========
 app.post('/api/admin/generate-passcode', async (req, res) => {
   try {
     const { requesterRollNo, type } = req.body;
@@ -584,7 +584,7 @@ app.post('/api/auth/verify-passcode', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Notices
+// ========== NOTICES ==========
 app.get('/api/notices', async (req, res) => {
   try {
     const notices = await Notice.find().sort({ date: -1 }).limit(10);
@@ -603,7 +603,7 @@ app.post('/api/admin/notice', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Holiday
+// ========== HOLIDAYS ==========
 app.post('/api/admin/holiday', async (req, res) => {
   try {
     const { requesterRollNo, date, reason } = req.body;
@@ -634,7 +634,7 @@ app.get('/api/date-status/:date', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Admin Dashboard Stats
+// ========== DASHBOARD STATS (Admin) ==========
 app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
   try {
     const requester = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
@@ -664,7 +664,7 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
   } catch (err) { console.error('Dashboard stats error:', err); res.status(500).json({ error: err.message }); }
 });
 
-// All Users
+// ========== ALL USERS (Admin) ==========
 app.get('/api/admin/all-users/:requesterRollNo', async (req, res) => {
   try {
     const requester = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
@@ -674,7 +674,7 @@ app.get('/api/admin/all-users/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// All Faculty
+// ========== ALL FACULTY (Admin) ==========
 app.get('/api/admin/faculty/:requesterRollNo', async (req, res) => {
   try {
     const requester = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
@@ -684,7 +684,7 @@ app.get('/api/admin/faculty/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Get student attendance
+// ========== STUDENT ATTENDANCE (Admin/Teacher view) ==========
 app.get('/api/attendance/student/:rollNo/:requesterRollNo', async (req, res) => {
   try {
     const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
@@ -707,7 +707,7 @@ app.get('/api/attendance/student/:rollNo/:requesterRollNo', async (req, res) => 
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Delete single attendance record
+// ========== DELETE ATTENDANCE RECORD (Admin only) ==========
 app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
   try {
     const requester = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
@@ -717,7 +717,7 @@ app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Student Monthly Summary (with percentage fix)
+// ========== STUDENT MONTHLY SUMMARY (Branch-aware) ==========
 app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
   try {
     const cleanRoll = req.params.rollNo.trim().toUpperCase();
@@ -786,8 +786,6 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
     Object.values(subjectStats).forEach(st => totalAttended += st.present);
     const pct = totalConducted > 0 ? Math.round((totalAttended / totalConducted) * 100) : 0;
     const presentDays = new Set(records.filter(r => r.status === 'Present' || r.status === 'Duty Leave').map(r => r.date));
-    
-    // Compute percentage per subject
     const subjectStatsWithPct = {};
     Object.keys(subjectStats).forEach(sub => {
       const st = subjectStats[sub];
@@ -797,7 +795,6 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
         percentage: st.total > 0 ? Math.round((st.present / st.total) * 100) : 0
       };
     });
-    
     res.json({
       totalConducted,
       totalAttended,
@@ -811,7 +808,7 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
   }
 });
 
-// Student Attendance Marking
+// ========== STUDENT ATTENDANCE MARKING ==========
 app.post('/api/attendance/mark', async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude } = req.body;
@@ -839,7 +836,7 @@ app.post('/api/attendance/mark', async (req, res) => {
   } catch (err) { console.error('Attendance error:', err); res.status(500).json({ error: err.message }); }
 });
 
-// Full Day Attendance
+// ========== FULL DAY ATTENDANCE (Branch-aware) ==========
 app.post('/api/attendance/mark-fullday', async (req, res) => {
   try {
     const { rollNo, name, latitude, longitude } = req.body;
@@ -879,7 +876,7 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Admin Manual Attendance
+// ========== MANUAL ATTENDANCE (Admin) ==========
 app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNo, date, subjects, status, branch } = req.body;
@@ -920,7 +917,7 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// History
+// ========== HISTORY (Student) ==========
 app.get('/api/attendance/history/:rollNo', async (req, res) => {
   try {
     const records = await Attendance.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ date: -1 });
@@ -932,7 +929,7 @@ app.get('/api/attendance/history/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// All Attendance
+// ========== ALL ATTENDANCE (Admin/Teacher) ==========
 app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
   try {
     const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
@@ -956,7 +953,7 @@ app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Student Summary
+// ========== STUDENT SUMMARY (Overall) ==========
 app.get('/api/student/summary/:rollNo', async (req, res) => {
   try {
     const cleanRoll = req.params.rollNo.trim().toUpperCase();
@@ -1038,7 +1035,7 @@ app.get('/api/student/summary/:rollNo', async (req, res) => {
   } catch (err) { console.error('Summary error:', err); res.status(500).json({ error: err.message }); }
 });
 
-// Export Routes
+// ========== EXPORT ROUTES ==========
 app.get('/api/export/google-sheets/:requesterRollNo', async (req, res) => {
   try {
     const requester = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
@@ -1093,6 +1090,23 @@ app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename=attendance_${cleanStudent}_${range}.csv`);
     res.send(csv);
   } catch (err) { console.error('Student export error:', err); res.status(500).json({ error: err.message }); }
+});
+
+// ========== SUBJECT DROPDOWN API (for admin assignment) ==========
+app.get('/api/timetable/subjects', async (req, res) => {
+  try {
+    const cseSubjects = new Set();
+    const aidsSubjects = new Set();
+    const allDays = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
+    allDays.forEach(day => {
+      CSE_TIME_TABLE[day].forEach(entry => cseSubjects.add(entry.subject));
+      AIDS_TIME_TABLE[day].forEach(entry => aidsSubjects.add(entry.subject));
+    });
+    const all = [...new Set([...cseSubjects, ...aidsSubjects])].sort();
+    res.json(all);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ---------- Global Error Handlers ----------
