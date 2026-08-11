@@ -944,6 +944,11 @@
             return CSE_SCHEDULE;
         }
 
+        // ---------- FIX: define getTimetableForBranch as alias ----------
+        function getTimetableForBranch(branch) {
+            return getBranchTimetable(branch);
+        }
+
         async function updatePeriodTrackerWidget() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'student') {
@@ -1173,7 +1178,7 @@
             if (modal) modal.remove();
         }
 
-        // ===== GENERATE TEACHER REPORT (Fixed: total from timetable) =====
+        // ===== GENERATE TEACHER REPORT (fixed) =====
         async function generateTeacherReport(format) {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'faculty') return showMsg('Teacher access required!', true);
@@ -1212,8 +1217,8 @@
                     if (!isWeekend && !isHoliday) {
                         const dayName = dayNameMap[dayOfWeek];
                         const subjects = timetable[dayName] || [];
-                        subjects.forEach(entry => {
-                            const sub = entry.subject;
+                        // FIX: subjects are strings, not objects
+                        subjects.forEach(sub => {
                             if (!sub.includes('Sports') && !sub.includes('LIB') && !sub.includes('Library')) {
                                 if (!subjectTotals[sub]) subjectTotals[sub] = 0;
                                 subjectTotals[sub]++;
@@ -1302,7 +1307,7 @@
         }
 
         // ============================================================
-        // STUDENT MONTHLY SUMMARY (with attended/total)
+        // STUDENT MONTHLY SUMMARY (with attended/total) - FIXED
         // ============================================================
         async function fetchMonthlySummary() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -1404,7 +1409,7 @@
         }
 
         // ============================================================
-        // ADMIN INDIVIDUAL STUDENT REPORT (with total from timetable)
+        // ADMIN INDIVIDUAL STUDENT REPORT (with total from timetable) - FIXED
         // ============================================================
         async function generateStudentReport(format) {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -1441,8 +1446,7 @@
                     if (!isWeekend && !isHoliday) {
                         const dayName = dayNameMap[dayOfWeek];
                         const subjects = timetable[dayName] || [];
-                        subjects.forEach(entry => {
-                            const sub = entry.subject;
+                        subjects.forEach(sub => {
                             if (!sub.includes('Sports') && !sub.includes('LIB') && !sub.includes('Library')) {
                                 if (!subjectTotals[sub]) subjectTotals[sub] = 0;
                                 subjectTotals[sub]++;
@@ -1527,7 +1531,7 @@
         }
 
         // ============================================================
-        // REST OF FUNCTIONS (complete)
+        // REST OF FUNCTIONS (unchanged)
         // ============================================================
 
         // -------------------- ADMIN DIRECTORY & PROFILE --------------------
