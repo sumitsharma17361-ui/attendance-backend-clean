@@ -5,10 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BM Group – ERP</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous">
-    </script>
     <style>
-        /* ===== ROOT & RESET ===== */
+        /* ===== ROOT ===== */
         :root {
             --bg-body: #f0f4f8;
             --primary: #2563eb;
@@ -64,7 +62,7 @@
         /* ===== BODY ===== */
         .app-body { padding: 14px; }
 
-        /* ===== FORM ELEMENTS ===== */
+        /* ===== FORM ===== */
         input, select { width: 100%; padding: 9px 12px; margin-bottom: 8px; background: #f8fafc; border: 1px solid var(--card-border); border-radius: 8px; font-size: 11px; font-weight: 600; color: var(--text-main); outline: none; transition: all 0.3s; }
         select option { background: #fff; color: #0f172a; }
         input::placeholder { color: #94a3b8; font-weight: 500; }
@@ -244,7 +242,7 @@
         <div class="app-header">
             <div class="app-header-title">
                 <h1>BM Group of Institutions</h1>
-                <p>B.Tech CSE / AIDS – 5th Semester (Room 203)</p>
+                <p>B.Tech CSE / AIDS – 5th Semester</p>
             </div>
             <div class="header-avatar-badge" id="headerAvatarBox" style="display:none;">
                 <div class="avatar-circle" id="userAvatarText">SS</div>
@@ -271,16 +269,24 @@
 
             <!-- ===== AUTH BOX ===== -->
             <div id="auth-box" class="tab-content-active">
+                <h3 style="font-size:14px; font-weight:800; margin-bottom:8px;">Sign In to Web Attendance System</h3>
+                <!-- Role Selection -->
+                <select id="loginRole" style="margin-bottom:8px;">
+                    <option value="student">Student</option>
+                    <option value="faculty">Faculty</option>
+                    <option value="admin">Admin</option>
+                </select>
                 <div id="register-fields" style="display:none;">
                     <input type="text" id="regName" placeholder="Full Name" />
                     <select id="regRole" style="display:block; margin-bottom:8px;">
                         <option value="student">Student</option>
                         <option value="faculty">Faculty</option>
+                        <option value="admin">Admin</option>
                     </select>
                 </div>
-                <input type="text" id="rollNo" placeholder="Roll Number (e.g. 24CSE48 or 24AIDS02)" />
+                <input type="text" id="rollNo" placeholder="Enter Username (Roll/ID)" />
                 <div class="password-wrapper">
-                    <input type="password" id="password" placeholder="Password" />
+                    <input type="password" id="password" placeholder="Enter Password" />
                     <span class="eye-icon" onclick="togglePassword()">
                         <svg class="svg-icon" viewBox="0 0 24 24">
                             <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
@@ -300,7 +306,7 @@
                     <div>
                         <h3 style="font-size:13px; font-weight:800;"><span id="welcomeMsg">Welcome!</span></h3>
                         <p style="font-size:10px; color:var(--text-muted); font-weight:600;">
-                            <span id="roleLabel">Roll</span>: <span id="userRoll" style="font-weight:700;"></span>
+                            <span id="roleLabel">ID</span>: <span id="userRoll" style="font-weight:700;"></span>
                             <span id="userRoleBadge" style="margin-left:6px; font-weight:700; color:var(--primary);"></span>
                             <span id="userBranchBadge" style="margin-left:6px; font-weight:600; color:var(--text-muted);"></span>
                         </p>
@@ -438,8 +444,8 @@
                         </div>
                         <div class="table-container" style="max-height:200px;">
                             <table id="myHistoryTable">
-                                <thead><tr><th>Date</th><th>Day</th><th>Lectures</th><th>Status</th></tr></thead>
-                                <tbody><tr><td colspan="4" style="text-align:center; padding:12px;">Loading…</td></tr></tbody>
+                                <thead><tr><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
+                                <tbody><tr><td colspan="3" style="text-align:center; padding:12px;">Loading…</td></tr></tbody>
                             </table>
                         </div>
                     </div>
@@ -464,7 +470,7 @@
                         </div>
                         <div class="table-container" style="max-height:300px;">
                             <table id="directoryTable">
-                                <thead><tr><th>Roll</th><th>Name</th><th>Role</th><th>Device</th><th>Action</th></tr></thead>
+                                <thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Device</th><th>Action</th></tr></thead>
                                 <tbody><tr><td colspan="5" style="text-align:center; padding:12px;">Loading users…</td></tr></tbody>
                             </table>
                         </div>
@@ -583,13 +589,14 @@
                         <div class="tool-sub-card">
                             <span class="tool-title" style="color:var(--primary);">➕ Register New User</span>
                             <input type="text" id="adminRegName" placeholder="Full Name" style="font-size:10px; padding:7px;" />
-                            <input type="text" id="adminRegRoll" placeholder="Roll Number" style="font-size:10px; padding:7px;" />
+                            <input type="text" id="adminRegRoll" placeholder="Roll/ID" style="font-size:10px; padding:7px;" />
                             <select id="adminRegRole" style="font-size:10px; padding:7px;">
                                 <option value="student">Student</option>
                                 <option value="faculty">Faculty</option>
+                                <option value="admin">Admin</option>
                             </select>
                             <input type="text" id="adminRegPass" placeholder="Password (Default: 123456)" style="font-size:10px; padding:7px;" />
-                            <button class="btn btn-primary btn-sm" onclick="adminRegisterStudent()" style="padding:7px; margin:0;">Register</button>
+                            <button class="btn btn-primary btn-sm" onclick="adminRegisterUser()" style="padding:7px; margin:0;">Register</button>
                         </div>
 
                         <div class="tool-sub-card">
@@ -621,22 +628,22 @@
 
                         <div class="tool-sub-card">
                             <span class="tool-title" style="color:var(--primary);">🔄 Update Roll Number</span>
-                            <input type="text" id="oldRollFormat" placeholder="Old Roll" style="font-size:10px; padding:7px;" />
-                            <input type="text" id="newRollFormat" placeholder="New Roll" style="font-size:10px; padding:7px;" />
+                            <input type="text" id="oldRollFormat" placeholder="Old ID" style="font-size:10px; padding:7px;" />
+                            <input type="text" id="newRollFormat" placeholder="New ID" style="font-size:10px; padding:7px;" />
                             <button class="btn btn-primary btn-sm" onclick="updateRollNumberFormat()" style="padding:7px; margin:0;">Update</button>
                         </div>
 
                         <div class="tool-sub-card">
                             <span class="tool-title" style="color:var(--warning);">🔑 Reset Password</span>
-                            <input type="text" id="resetRoll" placeholder="Roll No" style="font-size:10px; padding:7px;" />
+                            <input type="text" id="resetRoll" placeholder="ID" style="font-size:10px; padding:7px;" />
                             <input type="text" id="resetPass" placeholder="New Password" style="font-size:10px; padding:7px;" />
-                            <button class="btn btn-warning btn-sm" onclick="resetStudentPassword()" style="padding:7px; margin:0;">Reset</button>
+                            <button class="btn btn-warning btn-sm" onclick="resetUserPassword()" style="padding:7px; margin:0;">Reset</button>
                         </div>
 
                         <div class="tool-sub-card" style="border-color:#fecaca; background:#fef2f2;">
                             <span class="tool-title" style="color:#b91c1c;">🗑️ Delete Account</span>
-                            <input type="text" id="deleteStudentRoll" placeholder="Roll No to Delete" style="font-size:10px; padding:7px;" />
-                            <button class="btn btn-danger btn-sm" onclick="deleteEntireStudentAccount()" style="padding:7px; margin:0;">Delete Permanently</button>
+                            <input type="text" id="deleteUserRoll" placeholder="ID to Delete" style="font-size:10px; padding:7px;" />
+                            <button class="btn btn-danger btn-sm" onclick="deleteUserAccount()" style="padding:7px; margin:0;">Delete Permanently</button>
                         </div>
                     </div>
                 </div>
@@ -680,7 +687,7 @@
         // CONFIGURATION
         // ============================================================
         const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com";
-        const ADMIN_ROLL_NUMBERS = ['24CSE48'];
+        const ADMIN_ROLL_NUMBERS = ['ADMIN001']; // default admin
         let globalAllRecords = [],
             globalMyRecords = [],
             globalHolidays = [],
@@ -720,8 +727,8 @@
         function sanitizeAndValidateRollNo(rawRoll) {
             if (!rawRoll) return { isValid: false, cleanRoll: "" };
             let clean = rawRoll.toUpperCase().replace(/[^A-Z0-9]/g, '');
-            const strictRegex = /^\d{2}(CSE|AIDS)\d{2}$/;
-            return { isValid: strictRegex.test(clean), cleanRoll: clean };
+            // Allow any alphanumeric ID
+            return { isValid: clean.length >= 3, cleanRoll: clean };
         }
 
         function togglePassword() {
@@ -749,10 +756,8 @@
         // ============================================================
         // TIMETABLE & PERIOD TRACKER (branch-aware)
         // ============================================================
-        // We'll fetch the student's branch from profile, but for period tracking we need the current user's branch.
-        // We'll use the logged-in user's branch from localStorage.
         function getBranchTimetable(branch) {
-            // We'll hardcode both timetables here (same as backend).
+            // We'll use the same timetables as backend (hardcoded for frontend)
             const CSE = {
                 Monday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'DAA - Design & Analysis of Algorithm', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'CN - Computer Network', 'LIB - Library'],
                 Tuesday: ['WT - Web Technology', 'ECO - Economics for Engineers', 'Internet Lab (Ms. Geeta)', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'BDA - Big Data Analytics'],
@@ -771,10 +776,7 @@
             return CSE;
         }
 
-        // For period tracking, we need the schedule with timings. We'll keep the existing WEEKLY_SCHEDULE for CSE.
-        // For AIDS, we'll need to map timings to subjects. Since the user provided detailed timings, we'll create a separate schedule.
-        // We'll update the period tracker to use the correct schedule based on user branch.
-        // We'll create a combined schedule mapping.
+        // For period tracking, we use the same schedules as backend
         const CSE_SCHEDULE = {
             1: [
                 { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
@@ -825,7 +827,6 @@
             ]
         };
 
-        // AIDS schedule based on user's provided timings
         const AIDS_SCHEDULE = {
             1: [
                 { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
@@ -884,7 +885,6 @@
         async function updatePeriodTrackerWidget() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'student') {
-                // For teachers/admin, hide period or show generic
                 const labelEl = document.getElementById('periodTimeSlotLabel');
                 const nameEl = document.getElementById('activePeriodName');
                 const btn = document.getElementById('markPeriodBtn');
@@ -893,7 +893,6 @@
                 if (btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
                 return;
             }
-            // For student, get branch
             const branch = user.branch || 'CSE';
             const schedule = getScheduleForBranch(branch);
             const now = new Date();
@@ -965,7 +964,7 @@
 
         async function generatePasscode(type) {
             const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) {
+            if (!user || user.role !== 'admin') {
                 return showMsg('Admin access required!', true);
             }
             try {
@@ -1202,7 +1201,7 @@
         }
 
         // ============================================================
-        // ADMIN FUNCTIONS (Directory, Profile Modal, etc.)
+        // ADMIN FUNCTIONS
         // ============================================================
 
         function loadSubjectsForDay() {
@@ -1288,7 +1287,7 @@
         // ----- Admin Login as Student (Impersonate) -----
         async function adminLoginAsStudent() {
             const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) {
+            if (!user || user.role !== 'admin') {
                 return showMsg('Admin access required!', true);
             }
             const targetRoll = document.getElementById('impersonateRoll').value.trim();
@@ -1337,14 +1336,14 @@
             loadDashboard();
         }
 
-        // ----- Admin Register Student/Faculty -----
-        async function adminRegisterStudent() {
+        // ----- Admin Register User (Student/Faculty/Admin) -----
+        async function adminRegisterUser() {
             const name = document.getElementById('adminRegName').value.trim();
             const rawRoll = document.getElementById('adminRegRoll').value.trim();
             const password = document.getElementById('adminRegPass').value.trim() || '123456';
             const role = document.getElementById('adminRegRole').value;
             const validation = sanitizeAndValidateRollNo(rawRoll);
-            if (!name || !validation.isValid) return showMsg('Valid Name and Roll No required!', true);
+            if (!name || !validation.isValid) return showMsg('Valid Name and ID required!', true);
             try {
                 const res = await fetch(`${API_BASE}/api/auth/register`, {
                     method: 'POST',
@@ -1412,7 +1411,7 @@
             const oldRoll = document.getElementById('oldRollFormat').value.trim();
             const rawNewRoll = document.getElementById('newRollFormat').value.trim();
             const validation = sanitizeAndValidateRollNo(rawNewRoll);
-            if (!oldRoll || !validation.isValid) return showMsg('Valid New Roll No required!', true);
+            if (!oldRoll || !validation.isValid) return showMsg('Valid New ID required!', true);
             try {
                 const res = await fetch(`${API_BASE}/api/admin/update-rollno`, {
                     method: 'POST',
@@ -1420,16 +1419,16 @@
                     body: JSON.stringify({ requesterRollNo: user.rollNo, oldRoll, newRoll: validation.cleanRoll })
                 });
                 const data = await res.json();
-                if (res.ok) { showMsg("Roll Number updated!"); document.getElementById('oldRollFormat').value = ''; document.getElementById('newRollFormat').value = ''; } else { showMsg(data.error || "Failed", true); }
+                if (res.ok) { showMsg("ID updated!"); document.getElementById('oldRollFormat').value = ''; document.getElementById('newRollFormat').value = ''; } else { showMsg(data.error || "Failed", true); }
             } catch (e) { showMsg("Server error!", true); }
         }
 
         // ----- Reset Password -----
-        async function resetStudentPassword() {
+        async function resetUserPassword() {
             const user = JSON.parse(localStorage.getItem('user'));
             const targetRollNo = document.getElementById('resetRoll').value.trim();
             const newPassword = document.getElementById('resetPass').value.trim();
-            if (!targetRollNo) return showMsg('Roll number required!', true);
+            if (!targetRollNo) return showMsg('ID required!', true);
             try {
                 const res = await fetch(`${API_BASE}/api/admin/reset-password`, {
                     method: 'POST',
@@ -1442,20 +1441,20 @@
             } catch (e) { showMsg("Failed!", true); }
         }
 
-        // ----- Delete Student Account -----
-        async function deleteEntireStudentAccount() {
+        // ----- Delete User Account -----
+        async function deleteUserAccount() {
             const user = JSON.parse(localStorage.getItem('user'));
-            const targetRoll = document.getElementById('deleteStudentRoll').value.trim();
-            if (!targetRoll) return showMsg('Enter Roll Number!', true);
+            const targetRoll = document.getElementById('deleteUserRoll').value.trim();
+            if (!targetRoll) return showMsg('Enter ID!', true);
             if (!confirm(`Delete ${targetRoll} permanently?`)) return;
             try {
-                const res = await fetch(`${API_BASE}/api/admin/delete-student`, {
+                const res = await fetch(`${API_BASE}/api/admin/delete-user`, {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo: targetRoll })
                 });
                 const data = await res.json();
-                if (res.ok) { showMsg(data.message || `Account ${targetRoll} deleted!`); document.getElementById('deleteStudentRoll').value = ''; fetchAllUsers(); populateStudentSelect(); populateTeacherSelect(); } else { showMsg(data.error || "Failed", true); }
+                if (res.ok) { showMsg(data.message || `Account ${targetRoll} deleted!`); document.getElementById('deleteUserRoll').value = ''; fetchAllUsers(); populateStudentSelect(); populateTeacherSelect(); } else { showMsg(data.error || "Failed", true); }
             } catch (e) { showMsg("Server error!", true); }
         }
 
@@ -1466,7 +1465,7 @@
             const select = document.getElementById('singleStudentSelect');
             if (!select) return;
             const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) return;
+            if (!user || user.role !== 'admin') return;
             fetch(`${API_BASE}/api/admin/all-users/${user.rollNo}`)
                 .then(res => res.json())
                 .then(data => {
@@ -1481,7 +1480,7 @@
             const select = document.getElementById('teacherSelect');
             if (!select) return;
             const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) return;
+            if (!user || user.role !== 'admin') return;
             fetch(`${API_BASE}/api/admin/faculty/${user.rollNo}`)
                 .then(res => res.json())
                 .then(data => {
@@ -1502,7 +1501,7 @@
         // ============================================================
         async function downloadSingleStudentAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) {
+            if (!user || user.role !== 'admin') {
                 return showMsg('Admin access required!', true);
             }
             const studentRoll = document.getElementById('singleStudentSelect').value;
@@ -1526,6 +1525,7 @@
         // ============================================================
         async function fetchAllUsers() {
             const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
             try {
                 const res = await fetch(`${API_BASE}/api/admin/all-users/${user.rollNo}`);
                 const data = await res.json();
@@ -1560,7 +1560,7 @@
 
         async function viewStudentProfile(rollNo) {
             const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) return showMsg('Admin access required!', true);
+            if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
             try {
                 const res = await fetch(`${API_BASE}/api/attendance/student/${rollNo}/${user.rollNo}`);
                 const data = await res.json();
@@ -1750,8 +1750,6 @@
                 const data = await res.json();
                 globalMyRecords = data || [];
                 const tbody = document.querySelector('#myHistoryTable tbody');
-                const dateGrouped = {};
-                globalMyRecords.forEach(item => { if (!dateGrouped[item.date]) { dateGrouped[item.date] = { date: item.date, count: 0, status: item.status }; } dateGrouped[item.date].count++; });
                 const calc = calculateRealAttendancePercentage();
                 document.getElementById('totalDaysCount').innerText = calc.totalAttendedLectures;
                 const pctEl = document.getElementById('attendancePct');
@@ -1768,21 +1766,17 @@
                     }
                 }
                 renderAttendanceCalendar(globalMyRecords);
-                const sortedDates = Object.values(dateGrouped).sort((a, b) => b.date.localeCompare(a.date));
                 if (!tbody) return;
-                if (sortedDates.length === 0) return tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px;">No records</td></tr>';
-                tbody.innerHTML = sortedDates.map(i => {
-                    const parts = i.date.split('-');
-                    const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])).getDay();
-                    const dayStr = DAY_NAMES[dateObj];
-                    return `<tr><td><b>${i.date}</b></td><td><b>${dayStr}</b></td><td><span class="badge badge-present">${i.count} Lectures</span></td><td><span class="badge badge-present">${i.status}</span></td></tr>`;
+                if (data.length === 0) return tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px;">No records</td></tr>';
+                tbody.innerHTML = data.slice(0,50).map(r => {
+                    return `<tr><td><b>${r.date}</b></td><td>${r.subject}</td><td><span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span></td></tr>`;
                 }).join('');
             } catch (e) { showMsg("Failed to sync logs!", true); }
         }
 
         async function loadDashboardStats() {
             const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) return;
+            if (!user || user.role !== 'admin') return;
             try {
                 const res = await fetch(`${API_BASE}/api/admin/dashboard-stats/${user.rollNo}`);
                 const data = await res.json();
@@ -1959,7 +1953,7 @@
 
         function exportExcelGrid() {
             const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) { return showMsg("Admin access required!", true); }
+            if (!user || user.role !== 'admin') { return showMsg("Admin access required!", true); }
             if (globalAllRecords.length === 0) { showMsg("No records! Click 'Attendance Records' first.", true); return; }
             const selection = document.getElementById('exportSelection').value;
             showDownloadProgress('Generating master grid report…');
@@ -2030,7 +2024,7 @@
 
         function downloadGoogleSheetsExport() {
             const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || !ADMIN_ROLL_NUMBERS.includes(user.rollNo)) { return showMsg("Admin access required!", true); }
+            if (!user || user.role !== 'admin') { return showMsg("Admin access required!", true); }
             showDownloadProgress('Preparing Google Sheets export…');
             let csv = "Date,Roll No,Name,Subject,Status,Timestamp\n";
             const sortedRecords = [...globalAllRecords].sort((a, b) => { if (a.date !== b.date) return a.date.localeCompare(b.date); return a.rollNo.localeCompare(b.rollNo); });
@@ -2088,7 +2082,7 @@
             const password = document.getElementById('password').value.trim();
             const deviceId = getDeviceId();
             const validation = sanitizeAndValidateRollNo(rawRoll);
-            if (!validation.isValid) { return showMsg('Enter valid Roll No (e.g. 24CSE09 or 24AIDS02)!', true); }
+            if (!validation.isValid) { return showMsg('Enter valid ID!', true); }
             if (!password) { return showMsg('Enter your password!', true); }
             showMsg('Connecting…');
             try {
@@ -2137,11 +2131,10 @@
             document.getElementById('welcomeMsg').innerText = `Hello, ${user.name}!`;
             const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0,2) : 'ST';
             document.getElementById('userAvatarText').innerText = initials;
-            const userRollClean = (user.rollNo || "").toUpperCase().replace(/[^A-Z0-9]/g, '');
-            const isAdmin = ADMIN_ROLL_NUMBERS.includes(userRollClean);
+            const isAdmin = user.role === 'admin';
             const isFaculty = user.role === 'faculty';
             const branch = user.branch || 'CSE';
-            document.getElementById('roleLabel').innerText = "Roll";
+            document.getElementById('roleLabel').innerText = "ID";
             document.getElementById('userRoll').innerText = user.rollNo;
             document.getElementById('userRoleBadge').innerText = isAdmin ? '👑 Admin' : isFaculty ? '👨‍🏫 Faculty' : '🎓 Student';
             document.getElementById('userBranchBadge').innerText = `📚 ${branch}`;
