@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BM Group – ERP</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous">
+    </script>
     <style>
-        /* ===== ROOT ===== */
+        /* ===== ROOT & RESET ===== */
         :root {
             --bg-body: #f0f4f8;
             --primary: #2563eb;
@@ -235,6 +237,33 @@
         <span id="downloadStatus">Preparing file…</span>
     </div>
 
+    <!-- ===== STUDENT EXCEL MODAL ===== -->
+    <div id="studentExcelModal" class="modal-overlay" style="display:none;">
+        <div class="modal-card">
+            <h3 style="font-size:13px; font-weight:800; margin-bottom:4px;">Download Student Excel Sheet</h3>
+            <p style="font-size:10px; color:var(--text-muted); margin-bottom:10px; font-weight:600;">Select range:</p>
+            <select id="studentExcelRange" style="margin-top:3px;">
+                <option value="CURRENT_MONTH">Current Month</option>
+                <option value="SELECTED_MONTH">Selected Month</option>
+                <option value="FULL_SEMESTER">Full Semester (Jul–Dec 2026)</option>
+            </select>
+            <div id="selectedMonthWrapper" style="display:none; margin-top:3px;">
+                <select id="studentExcelMonth">
+                    <option value="6">July 2026</option>
+                    <option value="7">August 2026</option>
+                    <option value="8">September 2026</option>
+                    <option value="9">October 2026</option>
+                    <option value="10">November 2026</option>
+                    <option value="11">December 2026</option>
+                </select>
+            </div>
+            <div style="display:flex; gap:6px; margin-top:10px;">
+                <button class="btn btn-outline" style="flex:1; padding:6px;" onclick="closeStudentExcelModal()">Cancel</button>
+                <button class="btn btn-success" style="flex:1; padding:6px;" onclick="processStudentExcelDownload()">Download</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ===== MAIN APP ===== -->
     <div class="app-container">
 
@@ -270,7 +299,6 @@
             <!-- ===== AUTH BOX ===== -->
             <div id="auth-box" class="tab-content-active">
                 <h3 style="font-size:14px; font-weight:800; margin-bottom:8px;">Sign In to Web Attendance System</h3>
-                <!-- Role Selection - only visible in login mode, hidden in register mode -->
                 <select id="loginRole" style="margin-bottom:8px;">
                     <option value="student">Student</option>
                     <option value="faculty">Faculty</option>
@@ -278,7 +306,6 @@
                 </select>
                 <div id="register-fields" style="display:none;">
                     <input type="text" id="regName" placeholder="Full Name" />
-                    <!-- NO ROLE SELECTION HERE - registration is always student -->
                 </div>
                 <input type="text" id="rollNo" placeholder="Enter Username (Roll/ID)" />
                 <div class="password-wrapper">
@@ -521,6 +548,17 @@
                             Login as Student
                         </button>
                         <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">💡 Bypasses device binding – for admin assistance only.</p>
+
+                        <!-- NEW: Individual Student Report for Admin -->
+                        <hr style="margin:12px 0; border-color:var(--card-border);" />
+                        <span class="sub-section-title">📈 Individual Student Report (PDF/CSV)</span>
+                        <select id="adminStudentReportSelect" style="padding:8px; margin-bottom:6px; font-size:10px;">
+                            <option value="">Select Student…</option>
+                        </select>
+                        <div class="flex-buttons">
+                            <button class="btn btn-primary btn-sm" onclick="generateStudentReport('pdf')" style="padding:6px;">PDF</button>
+                            <button class="btn btn-success btn-sm" onclick="generateStudentReport('csv')" style="padding:6px;">CSV</button>
+                        </div>
                     </div>
 
                     <!-- SUB: Attendance Entry -->
@@ -600,7 +638,9 @@
                             <select id="teacherSelect" style="font-size:10px; padding:7px;">
                                 <option value="">Select Teacher…</option>
                             </select>
-                            <input type="text" id="subjectAssign" placeholder="Subject Name" style="font-size:10px; padding:7px;" />
+                            <select id="subjectAssignDropdown" style="font-size:10px; padding:7px;">
+                                <option value="">Select Subject…</option>
+                            </select>
                             <div class="flex-buttons">
                                 <button class="btn btn-primary btn-sm" onclick="assignSubjectToTeacher()" style="padding:6px;">Assign</button>
                                 <button class="btn btn-danger btn-sm" onclick="removeSubjectFromTeacher()" style="padding:6px;">Remove</button>
@@ -646,22 +686,43 @@
 
                 <!-- ===== TEACHER TAB ===== -->
                 <div id="teacherTab" style="display:none;">
+                    <!-- Teacher Passcode (Single Lecture only) -->
+                    <div style="background:#eff6ff; border-radius:8px; padding:10px; border:1px solid #bfdbfe; margin-bottom:10px; text-align:center;">
+                        <span class="sub-section-title" style="color:#1d4ed8;">📱 Single Lecture Passcode (4‑digit)</span>
+                        <div class="passcode-display" style="margin-top:4px;">
+                            <h2 id="teacherPasscodeDisplay">—</h2>
+                        </div>
+                        <button class="btn btn-success btn-sm" onclick="generateTeacherPasscode()" style="padding:4px 10px; width:auto; margin:0 auto;">Generate Passcode</button>
+                        <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">⏳ Expires after 5 minutes – for marking single lecture attendance.</p>
+                    </div>
+
+                    <!-- All Students (filtered by teacher's subjects) -->
                     <div style="margin-bottom:10px;">
-                        <h4 style="font-size:11px; font-weight:800;">Your Assigned Subjects</h4>
-                        <div id="teacherSubjectList" style="background:#f8fafc; border-radius:8px; padding:8px; border:1px solid var(--card-border); margin-top:4px;">
-                            <p style="font-size:10px; color:var(--text-muted);">Loading subjects…</p>
+                        <h4 style="font-size:11px; font-weight:800;">📋 Students (with your subjects)</h4>
+                        <button class="btn btn-outline btn-sm" onclick="fetchTeacherStudents()" style="padding:4px;">Refresh</button>
+                        <div class="table-container" style="max-height:200px;">
+                            <table id="teacherStudentTable">
+                                <thead><tr><th>Roll</th><th>Name</th><th>Action</th></tr></thead>
+                                <tbody><tr><td colspan="3" style="text-align:center; padding:8px;">Click Refresh</td></tr></tbody>
+                            </table>
                         </div>
                     </div>
+
+                    <!-- Individual Student Report (Teacher) -->
                     <div style="background:#f0fdf4; border-radius:8px; padding:10px; border:1px solid #bbf7d0; margin-bottom:10px;">
-                        <span style="font-size:10px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:6px;">📌 Mark Attendance for a Subject</span>
-                        <select id="teacherSubjectSelect" style="padding:7px; font-size:10px; margin-bottom:6px;">
-                            <option value="">Select Subject</option>
+                        <span class="sub-section-title">📈 Student Report (PDF/CSV)</span>
+                        <select id="teacherStudentReportSelect" style="padding:8px; margin-bottom:6px; font-size:10px;">
+                            <option value="">Select Student…</option>
                         </select>
-                        <input type="text" id="teacherStudentRoll" placeholder="Student Roll No" style="font-size:10px; padding:7px; margin-bottom:6px;" />
-                        <button class="btn btn-success btn-sm" onclick="markTeacherAttendance()" style="padding:7px; margin:0;">Mark Present</button>
+                        <div class="flex-buttons">
+                            <button class="btn btn-primary btn-sm" onclick="generateTeacherReport('pdf')" style="padding:6px;">PDF</button>
+                            <button class="btn btn-success btn-sm" onclick="generateTeacherReport('csv')" style="padding:6px;">CSV</button>
+                        </div>
                     </div>
+
+                    <!-- Recent Marks (Teacher) -->
                     <div>
-                        <h4 style="font-size:11px; font-weight:800;">Recent Marks (for your subjects)</h4>
+                        <h4 style="font-size:11px; font-weight:800;">Recent Marks</h4>
                         <div class="table-container" style="max-height:150px;">
                             <table id="teacherRecentTable">
                                 <thead><tr><th>Date</th><th>Student</th><th>Subject</th></tr></thead>
@@ -696,6 +757,8 @@
         let impersonating = false;
         let originalAdminToken = null;
         let originalAdminUser = null;
+        let teacherCurrentPasscode = "—";
+        let teacherPasscodeExpiry = null;
 
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -734,7 +797,6 @@
         function toggleMode() {
             isRegistering = !isRegistering;
             document.getElementById('register-fields').style.display = isRegistering ? 'block' : 'none';
-            // Hide role dropdown when registering
             document.getElementById('loginRole').style.display = isRegistering ? 'none' : 'block';
             document.getElementById('authBtn').innerText = isRegistering ? 'Register' : 'Sign In';
             document.getElementById('toggleLink').innerText = isRegistering ? 'Already registered? Sign In' : 'New Student? Register';
@@ -952,7 +1014,7 @@
         }
 
         // ============================================================
-        // PASSCODE FUNCTIONS
+        // PASSCODE FUNCTIONS (Admin)
         // ============================================================
         let currentFullDayPasscode = "—";
         let currentSingleLecturePasscode = "—";
@@ -987,133 +1049,30 @@
             }
         }
 
-        async function verifyPasscode(passcode, type, callback) {
+        // ============================================================
+        // TEACHER PASSCODE (Single Lecture only)
+        // ============================================================
+        async function generateTeacherPasscode() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'faculty') return showMsg('Teacher access required!', true);
             try {
-                const res = await fetch(`${API_BASE}/api/auth/verify-passcode`, {
+                const res = await fetch(`${API_BASE}/api/admin/generate-passcode`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ passcode: passcode.trim(), type })
+                    body: JSON.stringify({ requesterRollNo: user.rollNo, type: 'single_lecture' })
                 });
                 const data = await res.json();
-                if (res.ok && data.verified) {
-                    passcodeVerified = true;
-                    showMsg('✅ Passcode Verified!');
-                    if (callback) callback();
+                if (res.ok) {
+                    teacherCurrentPasscode = data.passcode;
+                    teacherPasscodeExpiry = new Date(Date.now() + 5 * 60 * 1000);
+                    document.getElementById('teacherPasscodeDisplay').innerText = teacherCurrentPasscode;
+                    showMsg('✅ Teacher passcode generated!');
                 } else {
-                    showMsg('❌ ' + (data.error || 'Invalid Passcode!'), true);
+                    showMsg(data.error || 'Failed', true);
                 }
             } catch (e) {
                 showMsg('Server error!', true);
             }
-        }
-
-        async function openFullDayPasscodePrompt() {
-            const enteredPasscode = prompt(`Enter Full Day Passcode (5‑digit):`);
-            if (!enteredPasscode) return;
-            if (enteredPasscode.length !== 5) {
-                return showMsg('Full Day passcode must be 5 digits!', true);
-            }
-            verifyPasscode(enteredPasscode, 'full_day', markFullDayAttendance);
-        }
-
-        function openPasscodePromptForSingle() {
-            if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
-                return showMsg("No active lecture to mark!", true);
-            }
-            const enteredPasscode = prompt(`Enter Single Lecture Passcode (4‑digit) for ${activeSubjectSubjectCode}:`);
-            if (!enteredPasscode) return;
-            if (enteredPasscode.length !== 4) {
-                return showMsg('Single Lecture passcode must be 4 digits!', true);
-            }
-            verifyPasscode(enteredPasscode, 'single_lecture', () => {
-                markSingleAttendance(activeSubjectSubjectCode);
-            });
-        }
-
-        // ============================================================
-        // ATTENDANCE FUNCTIONS (Student)
-        // ============================================================
-
-        function markActivePeriodAttendance() {
-            if (!activeSubjectSubjectCode || activeSubjectSubjectCode.includes("Off Hours") || activeSubjectSubjectCode.includes("Lunch")) {
-                return showMsg("No active class right now!", true);
-            }
-            if (!passcodeVerified) {
-                openPasscodePromptForSingle();
-                return;
-            }
-            markSingleAttendance(activeSubjectSubjectCode);
-        }
-
-        function markSingleAttendance(overrideSubject) {
-            const sub = overrideSubject || activeSubjectSubjectCode || "WT LAB";
-            if (!sub || sub.includes("Off Hours") || sub.includes("Lunch")) { return showMsg("No active lecture!", true); }
-
-            const todayISO = new Date().toISOString().split('T')[0];
-            const isLab = sub.includes("LAB") || sub.includes("Lab");
-            const todayEntries = globalMyRecords.filter(r => r.date === todayISO && r.subject === sub);
-            if (isLab && todayEntries.length >= 1) { return showMsg(`Already marked for ${sub} today! (Lab - 1 only)`, true); }
-            if (!isLab && todayEntries.length >= 1) { return showMsg(`Already marked for ${sub} today!`, true); }
-
-            if (!navigator.geolocation) { return showMsg('Geolocation not supported!', true); }
-
-            navigator.geolocation.getCurrentPosition(async (pos) => {
-                const user = JSON.parse(localStorage.getItem('user'));
-                try {
-                    const res = await fetch(`${API_BASE}/api/attendance/mark`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
-                        body: JSON.stringify({
-                            rollNo: user.rollNo,
-                            name: user.name,
-                            subject: sub,
-                            latitude: pos.coords.latitude,
-                            longitude: pos.coords.longitude
-                        })
-                    });
-                    const data = await res.json();
-                    passcodeVerified = false;
-                    if (res.ok) {
-                        showMsg(`✅ Marked ${sub}!`);
-                        fetchHistory(user.rollNo);
-                    } else {
-                        showMsg(data.error || "Failed", true);
-                    }
-                } catch (e) {
-                    showMsg("Network Error!", true);
-                }
-            }, () => showMsg('GPS Access Denied! Please enable GPS.', true));
-        }
-
-        function markFullDayAttendance() {
-            if (!passcodeVerified) { return showMsg('Verify passcode first!', true); }
-            if (!navigator.geolocation) { return showMsg('Geolocation not supported!', true); }
-
-            navigator.geolocation.getCurrentPosition(async (pos) => {
-                const user = JSON.parse(localStorage.getItem('user'));
-                try {
-                    const res = await fetch(`${API_BASE}/api/attendance/mark-fullday`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
-                        body: JSON.stringify({
-                            rollNo: user.rollNo,
-                            name: user.name,
-                            latitude: pos.coords.latitude,
-                            longitude: pos.coords.longitude
-                        })
-                    });
-                    const data = await res.json();
-                    passcodeVerified = false;
-                    if (res.ok) {
-                        showMsg(data.message);
-                        fetchHistory(user.rollNo);
-                    } else {
-                        showMsg(data.error || "Failed", true);
-                    }
-                } catch (e) {
-                    showMsg("Network Error!", true);
-                }
-            }, () => showMsg('GPS Access Denied!', true));
         }
 
         // ============================================================
@@ -1126,79 +1085,259 @@
                 const res = await fetch(`${API_BASE}/api/teacher/subjects/${user.rollNo}`);
                 const data = await res.json();
                 const list = document.getElementById('teacherSubjectList');
-                const select = document.getElementById('teacherSubjectSelect');
                 if (data.length === 0) {
                     list.innerHTML = '<p style="font-size:10px; color:var(--text-muted);">No subjects assigned yet.</p>';
-                    select.innerHTML = '<option value="">No subjects</option>';
                     return;
                 }
                 list.innerHTML = data.map(sub => `<span class="badge badge-active" style="margin-right:4px;">${sub}</span>`).join('');
-                select.innerHTML = '<option value="">Select Subject</option>' + data.map(sub => `<option value="${sub}">${sub}</option>`).join('');
             } catch (e) {
                 showMsg('Failed to load subjects', true);
             }
         }
 
-        async function markTeacherAttendance() {
+        async function fetchTeacherStudents() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'faculty') return showMsg('Teacher access required!', true);
-            const subject = document.getElementById('teacherSubjectSelect').value;
-            const studentRoll = document.getElementById('teacherStudentRoll').value.trim();
-            if (!subject) return showMsg('Select a subject!', true);
-            if (!studentRoll) return showMsg('Enter student roll number!', true);
-            const validation = sanitizeAndValidateRollNo(studentRoll);
-            if (!validation.isValid) return showMsg('Invalid student roll number!', true);
-
-            if (!navigator.geolocation) { return showMsg('Geolocation not supported!', true); }
-
-            navigator.geolocation.getCurrentPosition(async (pos) => {
-                try {
-                    const res = await fetch(`${API_BASE}/api/teacher/mark-attendance`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
-                        body: JSON.stringify({
-                            rollNo: user.rollNo,
-                            name: user.name,
-                            subject: subject,
-                            latitude: pos.coords.latitude,
-                            longitude: pos.coords.longitude,
-                            studentRollNo: validation.cleanRoll
-                        })
-                    });
-                    const data = await res.json();
-                    if (res.ok) {
-                        showMsg(data.message);
-                        document.getElementById('teacherStudentRoll').value = '';
-                        loadTeacherRecent();
-                    } else {
-                        showMsg(data.error || 'Failed', true);
-                    }
-                } catch (e) {
-                    showMsg('Network error!', true);
-                }
-            }, () => showMsg('GPS required!', true));
-        }
-
-        async function loadTeacherRecent() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || user.role !== 'faculty') return;
             try {
-                const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
+                const res = await fetch(`${API_BASE}/api/admin/all-users/${user.rollNo}`);
                 const data = await res.json();
-                const tbody = document.querySelector('#teacherRecentTable tbody');
-                if (!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:8px;">No records.</td></tr>';
+                const students = data.filter(u => u.role === 'student');
+                const tbody = document.querySelector('#teacherStudentTable tbody');
+                if (students.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:8px;">No students.</td></tr>';
                     return;
                 }
-                const recent = data.slice(0, 10);
-                tbody.innerHTML = recent.map(r => `<tr><td>${r.date}</td><td>${r.studentName}</td><td>${r.subject}</td></tr>`).join('');
-            } catch (e) {}
+                tbody.innerHTML = students.map(s => `
+                    <tr>
+                        <td><b>${s.rollNo}</b></td>
+                        <td>${s.name}</td>
+                        <td>
+                            <button class="btn-view btn-xs" onclick="viewTeacherStudent('${s.rollNo}')">View</button>
+                        </td>
+                    </tr>
+                `).join('');
+                const select = document.getElementById('teacherStudentReportSelect');
+                select.innerHTML = '<option value="">Select Student…</option>';
+                students.forEach(s => {
+                    select.innerHTML += `<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`;
+                });
+            } catch (e) {
+                showMsg('Failed to load students', true);
+            }
+        }
+
+        async function viewTeacherStudent(rollNo) {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'faculty') return showMsg('Teacher access required!', true);
+            try {
+                const res = await fetch(`${API_BASE}/api/attendance/student/${rollNo}/${user.rollNo}`);
+                const data = await res.json();
+                if (!res.ok) return showMsg(data.error || 'Failed', true);
+                const modal = document.createElement('div');
+                modal.className = 'modal-overlay';
+                modal.id = 'teacherStudentModal';
+                modal.innerHTML = `
+                    <div class="modal-card profile-modal">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <h3 style="font-size:14px; font-weight:800;">Attendance – ${rollNo}</h3>
+                            <button class="btn btn-danger btn-sm" onclick="closeTeacherStudentModal()" style="padding:2px 8px;">✕</button>
+                        </div>
+                        <div style="max-height:300px; overflow-y:auto;">
+                            ${data.length === 0 ? '<p style="text-align:center; color:var(--text-muted);">No records found.</p>' :
+                            data.map(r => `
+                                <div class="record-item">
+                                    <div>
+                                        <span style="font-weight:600;">${r.date}</span> – ${r.subject}
+                                        <span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button class="btn btn-outline btn-sm" onclick="closeTeacherStudentModal()" style="margin-top:8px;">Close</button>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            } catch (e) {
+                showMsg('Failed to load records', true);
+            }
+        }
+
+        function closeTeacherStudentModal() {
+            const modal = document.getElementById('teacherStudentModal');
+            if (modal) modal.remove();
+        }
+
+        // Teacher report (PDF/CSV)
+        async function generateTeacherReport(format) {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'faculty') return showMsg('Teacher access required!', true);
+            const studentRoll = document.getElementById('teacherStudentReportSelect').value;
+            if (!studentRoll) return showMsg('Select a student!', true);
+            try {
+                const res = await fetch(`${API_BASE}/api/attendance/student/${studentRoll}/${user.rollNo}`);
+                const data = await res.json();
+                if (!res.ok || data.length === 0) return showMsg('No records found for this student.', true);
+                const subjectStats = {};
+                data.forEach(r => {
+                    if (!subjectStats[r.subject]) subjectStats[r.subject] = { total: 0, present: 0 };
+                    subjectStats[r.subject].total++;
+                    if (r.status === 'Present') subjectStats[r.subject].present++;
+                });
+                const total = data.length;
+                const present = data.filter(r => r.status === 'Present').length;
+                const pct = total > 0 ? Math.round((present / total) * 100) : 0;
+
+                if (format === 'pdf') {
+                    const content = `
+                        <div style="font-family:Arial; padding:20px;">
+                            <h1 style="color:#2563eb;">BM Group of Institutions</h1>
+                            <h2>Student Attendance Report – ${studentRoll}</h2>
+                            <p>Teacher: ${user.name} (${user.rollNo})</p>
+                            <p>Generated: ${new Date().toLocaleString()}</p>
+                            <hr>
+                            <h3>Summary</h3>
+                            <p>Total Lectures: ${total}</p>
+                            <p>Present: ${present}</p>
+                            <p>Attendance %: ${pct}%</p>
+                            <h3>Subject-wise</h3>
+                            <ul>
+                                ${Object.entries(subjectStats).map(([sub, st]) => `
+                                    <li>${sub}: ${st.present}/${st.total} (${Math.round((st.present/st.total)*100)}%)</li>
+                                `).join('')}
+                            </ul>
+                            <hr>
+                            <h3>Detailed Records</h3>
+                            <table style="width:100%; border-collapse:collapse; border:1px solid #ccc;">
+                                <thead><tr style="background:#f0f0f0;"><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
+                                <tbody>
+                                    ${data.map(r => `
+                                        <tr><td>${r.date}</td><td>${r.subject}</td><td>${r.status}</td></tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    const win = window.open('', '_blank');
+                    if (!win) { showMsg('Allow popups!', true); return; }
+                    win.document.write(content);
+                    win.document.close();
+                    win.print();
+                } else {
+                    let csv = `Student Attendance Report\nStudent: ${studentRoll}\nTeacher: ${user.name}\nTotal Lectures: ${total}, Present: ${present}, %: ${pct}%\n\nSubject,Present,Total,Percentage\n`;
+                    Object.entries(subjectStats).forEach(([sub, st]) => {
+                        csv += `"${sub}",${st.present},${st.total},${Math.round((st.present/st.total)*100)}%\n`;
+                    });
+                    csv += `\nDate,Subject,Status\n`;
+                    data.forEach(r => {
+                        csv += `${r.date},${r.subject},${r.status}\n`;
+                    });
+                    downloadFile(csv, `Teacher_${studentRoll}_Attendance.csv`, 'text/csv');
+                    showMsg('✅ CSV downloaded!');
+                }
+            } catch (e) {
+                showMsg('Error generating report', true);
+            }
+        }
+
+        // ============================================================
+        // STUDENT MONTHLY SUMMARY
+        // ============================================================
+        async function fetchMonthlySummary() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'student') return;
+            const month = document.getElementById('monthSelector').value;
+            if (!month) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/student/monthly-summary/${user.rollNo}?month=${month}`);
+                const data = await res.json();
+                const container = document.getElementById('monthlySummaryContainer');
+                if (res.ok) {
+                    container.style.display = 'block';
+                    const pct = data.attendancePercentage || 0;
+                    const color = pct >= 75 ? 'var(--success)' : 'var(--danger)';
+                    let html = `
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                            <span style="font-weight:700; font-size:11px;">${MONTH_NAMES[parseInt(month)]} 2026</span>
+                            <span style="font-size:12px; font-weight:800; color:${color};">${pct}%</span>
+                        </div>
+                        <div style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">Attended ${data.totalAttended} / ${data.totalConducted} lectures</div>
+                        <div style="display:flex; flex-wrap:wrap; gap:4px; max-height:80px; overflow-y:auto;">
+                            ${Object.entries(data.subjectStats || {}).map(([sub, st]) => {
+                                const percentage = st.percentage !== undefined ? st.percentage : 0;
+                                return `<span class="subject-chip">${sub.substring(0,12)}: ${percentage}%</span>`;
+                            }).join('')}
+                        </div>
+                    `;
+                    container.innerHTML = html;
+                } else {
+                    container.style.display = 'none';
+                }
+            } catch (e) {
+                showMsg('Failed to load monthly summary', true);
+            }
+        }
+
+        // ============================================================
+        // STUDENT EXCEL EXPORT
+        // ============================================================
+        function openStudentExcelModal() {
+            document.getElementById('studentExcelModal').style.display = 'flex';
+            document.getElementById('studentExcelRange').onchange = function() {
+                document.getElementById('selectedMonthWrapper').style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none';
+            };
+        }
+
+        function closeStudentExcelModal() {
+            document.getElementById('studentExcelModal').style.display = 'none';
+        }
+
+        function processStudentExcelDownload() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user) { closeStudentExcelModal(); return showMsg("Please login first!", true); }
+            const range = document.getElementById('studentExcelRange').value;
+            const selectedMonth = document.getElementById('studentExcelMonth').value;
+            if (globalMyRecords.length === 0) { closeStudentExcelModal(); return showMsg("No records to export!", true); }
+            closeStudentExcelModal();
+            showDownloadProgress('Preparing attendance report…');
+            const today = new Date();
+            let filteredRecords = [];
+            if (range === 'CURRENT_MONTH') {
+                const currentMonthIdx = today.getMonth();
+                const currentYear = today.getFullYear();
+                filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); return parseInt(parts[0]) === currentYear && (parseInt(parts[1]) - 1) === currentMonthIdx; });
+            } else if (range === 'SELECTED_MONTH') {
+                const monthIdx = parseInt(selectedMonth);
+                filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); return parseInt(parts[0]) === 2026 && (parseInt(parts[1]) - 1) === monthIdx; });
+            } else {
+                filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); const m = parseInt(parts[1]) - 1; return parseInt(parts[0]) === 2026 && m >= 6 && m <= 11; });
+            }
+            if (filteredRecords.length === 0) { hideDownloadProgress(); return showMsg("No records for selected period!", true); }
+            const grouped = {};
+            filteredRecords.forEach(r => { if (!grouped[r.date]) grouped[r.date] = []; grouped[r.date].push(r); });
+            const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+            let csv = "Date,Day,Subject,Status\n";
+            const sortedDates = Object.keys(grouped).sort();
+            sortedDates.forEach(date => {
+                const parts = date.split('-');
+                const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                const dayName = dayNames[dateObj.getDay()];
+                grouped[date].forEach(record => {
+                    const status = record.status || 'Present';
+                    const subject = record.subject || 'General';
+                    csv += `"${date}","${dayName}","${subject}","${status}"\n`;
+                });
+            });
+            const totalDays = sortedDates.length;
+            const totalRecords = filteredRecords.length;
+            csv += `\n"Total Days: ${totalDays}","Total Lectures: ${totalRecords}"\n`;
+            csv += `"Student: ${user.name}","Roll No: ${user.rollNo}","Generated: ${new Date().toLocaleString()}"`;
+            const fileName = `Attendance_${range}_${new Date().toISOString().split('T')[0]}.csv`;
+            downloadFile(csv, fileName, 'text/csv');
         }
 
         // ============================================================
         // ADMIN FUNCTIONS
         // ============================================================
-
         function loadSubjectsForDay() {
             const date = document.getElementById('manualDate').value;
             const branch = document.getElementById('manualBranch').value;
@@ -1279,17 +1418,13 @@
             } catch (e) { showMsg("Network Error!", true); }
         }
 
-        // ----- Admin Login as Student (Impersonate) -----
         async function adminLoginAsStudent() {
             const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || user.role !== 'admin') {
-                return showMsg('Admin access required!', true);
-            }
+            if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
             const targetRoll = document.getElementById('impersonateRoll').value.trim();
             if (!targetRoll) return showMsg('Enter Student Roll Number!', true);
             const validation = sanitizeAndValidateRollNo(targetRoll);
             if (!validation.isValid) return showMsg('Invalid Roll Number format!', true);
-
             try {
                 const res = await fetch(`${API_BASE}/api/admin/login-as-student`, {
                     method: 'POST',
@@ -1331,7 +1466,6 @@
             loadDashboard();
         }
 
-        // ----- Admin Register User (Student/Faculty/Admin) -----
         async function adminRegisterUser() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
@@ -1352,13 +1486,12 @@
             } catch (e) { showMsg("Server error!", true); }
         }
 
-        // ----- Assign Subject to Teacher -----
         async function assignSubjectToTeacher() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
             const teacherRoll = document.getElementById('teacherSelect').value;
-            const subject = document.getElementById('subjectAssign').value.trim();
-            if (!teacherRoll || !subject) return showMsg('Select teacher and enter subject!', true);
+            const subject = document.getElementById('subjectAssignDropdown').value;
+            if (!teacherRoll || !subject) return showMsg('Select teacher and subject!', true);
             try {
                 const res = await fetch(`${API_BASE}/api/admin/assign-subject`, {
                     method: 'POST',
@@ -1366,7 +1499,7 @@
                     body: JSON.stringify({ requesterRollNo: user.rollNo, teacherRollNo: teacherRoll, subject })
                 });
                 const data = await res.json();
-                if (res.ok) { showMsg(data.message); document.getElementById('subjectAssign').value = ''; } else { showMsg(data.error || "Failed", true); }
+                if (res.ok) { showMsg(data.message); } else { showMsg(data.error || "Failed", true); }
             } catch (e) { showMsg('Server error!', true); }
         }
 
@@ -1374,7 +1507,7 @@
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
             const teacherRoll = document.getElementById('teacherSelect').value;
-            const subject = document.getElementById('subjectAssign').value.trim();
+            const subject = document.getElementById('subjectAssignDropdown').value;
             if (!teacherRoll || !subject) return showMsg('Select teacher and subject!', true);
             try {
                 const res = await fetch(`${API_BASE}/api/admin/remove-subject`, {
@@ -1383,11 +1516,10 @@
                     body: JSON.stringify({ requesterRollNo: user.rollNo, teacherRollNo: teacherRoll, subject })
                 });
                 const data = await res.json();
-                if (res.ok) { showMsg(data.message); document.getElementById('subjectAssign').value = ''; } else { showMsg(data.error || "Failed", true); }
+                if (res.ok) { showMsg(data.message); } else { showMsg(data.error || "Failed", true); }
             } catch (e) { showMsg('Server error!', true); }
         }
 
-        // ----- Reset Device Binding -----
         async function resetDeviceBinding() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
@@ -1405,7 +1537,6 @@
             } catch (e) { showMsg('Server error!', true); }
         }
 
-        // ----- Update Roll Number -----
         async function updateRollNumberFormat() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
@@ -1424,7 +1555,6 @@
             } catch (e) { showMsg("Server error!", true); }
         }
 
-        // ----- Reset Password -----
         async function resetUserPassword() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
@@ -1443,7 +1573,6 @@
             } catch (e) { showMsg("Failed!", true); }
         }
 
-        // ----- Delete User Account -----
         async function deleteUserAccount() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
@@ -1462,7 +1591,7 @@
         }
 
         // ============================================================
-        // STUDENT SELECT POPULATE
+        // POPULATE DROPDOWNS
         // ============================================================
         function populateStudentSelect() {
             const select = document.getElementById('singleStudentSelect');
@@ -1493,6 +1622,35 @@
                 .catch(() => {});
         }
 
+        async function populateSubjectDropdown() {
+            try {
+                const res = await fetch(`${API_BASE}/api/timetable/subjects`);
+                const data = await res.json();
+                const select = document.getElementById('subjectAssignDropdown');
+                select.innerHTML = '<option value="">Select Subject…</option>';
+                data.forEach(sub => {
+                    select.innerHTML += `<option value="${sub}">${sub}</option>`;
+                });
+            } catch (e) {
+                console.error('Failed to load subjects', e);
+            }
+        }
+
+        async function populateAdminStudentSelect() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'admin') return;
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/all-users/${user.rollNo}`);
+                const data = await res.json();
+                const students = data.filter(u => u.role === 'student');
+                const select = document.getElementById('adminStudentReportSelect');
+                select.innerHTML = '<option value="">Select Student…</option>';
+                students.forEach(s => {
+                    select.innerHTML += `<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`;
+                });
+            } catch (e) {}
+        }
+
         function toggleSingleMonthWrapper() {
             const range = document.getElementById('singleStudentRange').value;
             const wrapper = document.getElementById('singleStudentMonthWrapper');
@@ -1500,13 +1658,11 @@
         }
 
         // ============================================================
-        // SINGLE STUDENT EXPORT
+        // SINGLE STUDENT EXPORT (Admin)
         // ============================================================
         async function downloadSingleStudentAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || user.role !== 'admin') {
-                return showMsg('Admin access required!', true);
-            }
+            if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
             const studentRoll = document.getElementById('singleStudentSelect').value;
             if (!studentRoll) return showMsg('Select a student!', true);
             const range = document.getElementById('singleStudentRange').value;
@@ -1524,7 +1680,80 @@
         }
 
         // ============================================================
-        // DIRECTORY (All Users)
+        // ADMIN INDIVIDUAL STUDENT REPORT
+        // ============================================================
+        async function generateStudentReport(format) {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
+            const studentRoll = document.getElementById('adminStudentReportSelect').value;
+            if (!studentRoll) return showMsg('Select a student!', true);
+            try {
+                const res = await fetch(`${API_BASE}/api/attendance/student/${studentRoll}/${user.rollNo}`);
+                const data = await res.json();
+                if (!res.ok || data.length === 0) return showMsg('No records found.', true);
+                const subjectStats = {};
+                data.forEach(r => {
+                    if (!subjectStats[r.subject]) subjectStats[r.subject] = { total: 0, present: 0 };
+                    subjectStats[r.subject].total++;
+                    if (r.status === 'Present') subjectStats[r.subject].present++;
+                });
+                const total = data.length;
+                const present = data.filter(r => r.status === 'Present').length;
+                const pct = total > 0 ? Math.round((present / total) * 100) : 0;
+
+                if (format === 'pdf') {
+                    const content = `
+                        <div style="font-family:Arial; padding:20px;">
+                            <h1 style="color:#2563eb;">BM Group of Institutions</h1>
+                            <h2>Student Attendance Report – ${studentRoll}</h2>
+                            <p>Generated: ${new Date().toLocaleString()}</p>
+                            <hr>
+                            <h3>Summary</h3>
+                            <p>Total Lectures: ${total}</p>
+                            <p>Present: ${present}</p>
+                            <p>Attendance %: ${pct}%</p>
+                            <h3>Subject-wise</h3>
+                            <ul>
+                                ${Object.entries(subjectStats).map(([sub, st]) => `
+                                    <li>${sub}: ${st.present}/${st.total} (${Math.round((st.present/st.total)*100)}%)</li>
+                                `).join('')}
+                            </ul>
+                            <hr>
+                            <h3>Detailed Records</h3>
+                            <table style="width:100%; border-collapse:collapse; border:1px solid #ccc;">
+                                <thead><tr style="background:#f0f0f0;"><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
+                                <tbody>
+                                    ${data.map(r => `
+                                        <tr><td>${r.date}</td><td>${r.subject}</td><td>${r.status}</td></tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    const win = window.open('', '_blank');
+                    if (!win) { showMsg('Allow popups!', true); return; }
+                    win.document.write(content);
+                    win.document.close();
+                    win.print();
+                } else {
+                    let csv = `Student Attendance Report\nStudent: ${studentRoll}\nTotal Lectures: ${total}, Present: ${present}, %: ${pct}%\n\nSubject,Present,Total,Percentage\n`;
+                    Object.entries(subjectStats).forEach(([sub, st]) => {
+                        csv += `"${sub}",${st.present},${st.total},${Math.round((st.present/st.total)*100)}%\n`;
+                    });
+                    csv += `\nDate,Subject,Status\n`;
+                    data.forEach(r => {
+                        csv += `${r.date},${r.subject},${r.status}\n`;
+                    });
+                    downloadFile(csv, `Admin_${studentRoll}_Attendance.csv`, 'text/csv');
+                    showMsg('✅ CSV downloaded!');
+                }
+            } catch (e) {
+                showMsg('Error generating report', true);
+            }
+        }
+
+        // ============================================================
+        // DIRECTORY (All Users - Admin)
         // ============================================================
         async function fetchAllUsers() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -1557,7 +1786,7 @@
         }
 
         // ============================================================
-        // VIEW STUDENT PROFILE (Modal with records and delete)
+        // VIEW STUDENT PROFILE (Admin)
         // ============================================================
         let currentStudentRecords = [];
 
@@ -1569,7 +1798,6 @@
                 const data = await res.json();
                 if (!res.ok) return showMsg(data.error || 'Failed to load records', true);
                 currentStudentRecords = data;
-
                 const modal = document.createElement('div');
                 modal.className = 'modal-overlay';
                 modal.id = 'studentProfileModal';
@@ -1627,60 +1855,27 @@
         }
 
         // ============================================================
-        // FETCH ALL ATTENDANCE (Admin/Teacher)
+        // TEACHER RECENT MARKS
         // ============================================================
-        async function fetchAllAttendance() {
+        async function loadTeacherRecent() {
             const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'faculty') return;
             try {
                 const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
                 const data = await res.json();
-                if (!res.ok) return showMsg(data.error || "Failed", true);
-                globalAllRecords = data;
-            } catch (e) { showMsg("Failed to connect to backend", true); }
-        }
-
-        // ============================================================
-        // STUDENT MONTHLY SUMMARY (with percentage fix)
-        // ============================================================
-        async function fetchMonthlySummary() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || user.role !== 'student') return;
-            const month = document.getElementById('monthSelector').value;
-            if (!month) return;
-            try {
-                const res = await fetch(`${API_BASE}/api/student/monthly-summary/${user.rollNo}?month=${month}`);
-                const data = await res.json();
-                const container = document.getElementById('monthlySummaryContainer');
-                if (res.ok) {
-                    container.style.display = 'block';
-                    const pct = data.attendancePercentage || 0;
-                    const color = pct >= 75 ? 'var(--success)' : 'var(--danger)';
-                    let html = `
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                            <span style="font-weight:700; font-size:11px;">${MONTH_NAMES[parseInt(month)]} 2026</span>
-                            <span style="font-size:12px; font-weight:800; color:${color};">${pct}%</span>
-                        </div>
-                        <div style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">Attended ${data.totalAttended} / ${data.totalConducted} lectures</div>
-                        <div style="display:flex; flex-wrap:wrap; gap:4px; max-height:80px; overflow-y:auto;">
-                            ${Object.entries(data.subjectStats || {}).map(([sub, st]) => {
-                                const percentage = st.percentage !== undefined ? st.percentage : 0;
-                                return `<span class="subject-chip">${sub.substring(0,12)}: ${percentage}%</span>`;
-                            }).join('')}
-                        </div>
-                    `;
-                    container.innerHTML = html;
-                } else {
-                    container.style.display = 'none';
+                const tbody = document.querySelector('#teacherRecentTable tbody');
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:8px;">No records.</td></tr>';
+                    return;
                 }
-            } catch (e) {
-                showMsg('Failed to load monthly summary', true);
-            }
+                const recent = data.slice(0, 10);
+                tbody.innerHTML = recent.map(r => `<tr><td>${r.date}</td><td>${r.studentName}</td><td>${r.subject}</td></tr>`).join('');
+            } catch (e) {}
         }
 
         // ============================================================
         // DASHBOARD & HISTORY
         // ============================================================
-
         function calculateRealAttendancePercentage() {
             const startDate = new Date(2026, 6, 15);
             const today = new Date();
@@ -1805,9 +2000,8 @@
         }
 
         // ============================================================
-        // NOTICES, TABS, EXPORT & LOGOUT
+        // NOTICES
         // ============================================================
-
         async function fetchNotices() {
             if (localStorage.getItem("GLOBAL_NOTICE_CLEARED") === "true") {
                 document.getElementById('noticeBanner').style.display = 'none';
@@ -1867,99 +2061,9 @@
             } catch (err) {}
         }
 
-        function switchTab(tabId) {
-            const markTab = document.getElementById('markTab');
-            const adminTab = document.getElementById('adminTab');
-            const teacherTab = document.getElementById('teacherTab');
-            markTab.style.display = tabId === 'markTab' ? 'block' : 'none';
-            adminTab.style.display = tabId === 'adminTab' ? 'block' : 'none';
-            teacherTab.style.display = tabId === 'teacherTab' ? 'block' : 'none';
-            markTab.classList.remove('tab-content-active');
-            adminTab.classList.remove('tab-content-active');
-            teacherTab.classList.remove('tab-content-active');
-            if (tabId === 'markTab') markTab.classList.add('tab-content-active');
-            if (tabId === 'adminTab') adminTab.classList.add('tab-content-active');
-            if (tabId === 'teacherTab') teacherTab.classList.add('tab-content-active');
-            const tabs = document.querySelectorAll('.tab-bar .tab-item');
-            tabs.forEach(t => t.classList.remove('active'));
-            if (tabId === 'markTab') tabs[0].classList.add('active');
-            if (tabId === 'adminTab' && tabs[1]) tabs[1].classList.add('active');
-            if (tabId === 'teacherTab' && tabs[2]) tabs[2].classList.add('active');
-        }
-
-        function switchAdminSubTab(subId) {
-            const subTabs = ['subDirectory', 'subReports', 'subAttendance', 'subHoliday', 'subPasscode', 'subTools'];
-            subTabs.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) {
-                    el.style.display = (id === subId) ? 'block' : 'none';
-                    el.classList.remove('tab-content-active');
-                    if (id === subId) el.classList.add('tab-content-active');
-                }
-            });
-            const navItems = document.querySelectorAll('.admin-nav-item');
-            navItems.forEach((item, idx) => { item.classList.toggle('active', subTabs[idx] === subId); });
-            if (subId === 'subPasscode') { generatePasscode('full_day'); generatePasscode('single_lecture'); }
-            if (subId === 'subDirectory') { fetchAllUsers(); }
-            if (subId === 'subReports') { populateStudentSelect(); }
-            if (subId === 'subTools') { populateTeacherSelect(); }
-        }
-
-        function openStudentExcelModal() {
-            document.getElementById('studentExcelModal').style.display = 'flex';
-            document.getElementById('studentExcelRange').onchange = function() {
-                document.getElementById('selectedMonthWrapper').style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none';
-            };
-        }
-
-        function closeStudentExcelModal() {
-            document.getElementById('studentExcelModal').style.display = 'none';
-        }
-
-        function processStudentExcelDownload() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (!user) { closeStudentExcelModal(); return showMsg("Please login first!", true); }
-            const range = document.getElementById('studentExcelRange').value;
-            const selectedMonth = document.getElementById('studentExcelMonth').value;
-            if (globalMyRecords.length === 0) { closeStudentExcelModal(); return showMsg("No records to export!", true); }
-            closeStudentExcelModal();
-            showDownloadProgress('Preparing attendance report…');
-            const today = new Date();
-            let filteredRecords = [];
-            if (range === 'CURRENT_MONTH') {
-                const currentMonthIdx = today.getMonth();
-                const currentYear = today.getFullYear();
-                filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); return parseInt(parts[0]) === currentYear && (parseInt(parts[1]) - 1) === currentMonthIdx; });
-            } else if (range === 'SELECTED_MONTH') {
-                const monthIdx = parseInt(selectedMonth);
-                filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); return parseInt(parts[0]) === 2026 && (parseInt(parts[1]) - 1) === monthIdx; });
-            } else {
-                filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); const m = parseInt(parts[1]) - 1; return parseInt(parts[0]) === 2026 && m >= 6 && m <= 11; });
-            }
-            if (filteredRecords.length === 0) { hideDownloadProgress(); return showMsg("No records for selected period!", true); }
-            const grouped = {};
-            filteredRecords.forEach(r => { if (!grouped[r.date]) grouped[r.date] = []; grouped[r.date].push(r); });
-            const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-            let csv = "Date,Day,Subject,Status\n";
-            const sortedDates = Object.keys(grouped).sort();
-            sortedDates.forEach(date => {
-                const parts = date.split('-');
-                const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                const dayName = dayNames[dateObj.getDay()];
-                grouped[date].forEach(record => {
-                    const status = record.status || 'Present';
-                    const subject = record.subject || 'General';
-                    csv += `"${date}","${dayName}","${subject}","${status}"\n`;
-                });
-            });
-            const totalDays = sortedDates.length;
-            const totalRecords = filteredRecords.length;
-            csv += `\n"Total Days: ${totalDays}","Total Lectures: ${totalRecords}"\n`;
-            csv += `"Student: ${user.name}","Roll No: ${user.rollNo}","Generated: ${new Date().toLocaleString()}"`;
-            const fileName = `Attendance_${range}_${new Date().toISOString().split('T')[0]}.csv`;
-            downloadFile(csv, fileName, 'text/csv');
-        }
-
+        // ============================================================
+        // EXPORT (Admin)
+        // ============================================================
         function exportExcelGrid() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') { return showMsg("Admin access required!", true); }
@@ -2098,7 +2202,6 @@
                 if (isRegistering) {
                     const name = document.getElementById('regName').value.trim();
                     if (!name) return showMsg('Enter Full Name!', true);
-                    // Public registration ALWAYS creates student
                     const role = 'student';
                     const res = await fetch(`${API_BASE}/api/auth/register`, {
                         method: 'POST',
@@ -2108,7 +2211,6 @@
                     const data = await res.json();
                     if (res.ok) { showMsg('Registered! Login now.'); toggleMode(); } else { showMsg(data.error || 'Registration failed', true); }
                 } else {
-                    // Login - use selected role for validation
                     const selectedRole = document.getElementById('loginRole').value;
                     const res = await fetch(`${API_BASE}/api/auth/login`, {
                         method: 'POST',
@@ -2117,7 +2219,6 @@
                     });
                     const data = await res.json();
                     if (res.ok) {
-                        // Verify role matches selected
                         if (data.user.role !== selectedRole) {
                             return showMsg(`You are registered as ${data.user.role}, not ${selectedRole}. Please select correct role.`, true);
                         }
@@ -2138,6 +2239,9 @@
             location.reload();
         }
 
+        // ============================================================
+        // LOAD DASHBOARD
+        // ============================================================
         function loadDashboard() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user) return;
@@ -2176,12 +2280,16 @@
                 generatePasscode('full_day');
                 generatePasscode('single_lecture');
                 fetchAllUsers();
+                populateAdminStudentSelect();
+                populateSubjectDropdown();
             } else if (isFaculty) {
                 document.getElementById('adminTabHeader').style.display = 'none';
                 document.getElementById('teacherTabHeader').style.display = 'block';
                 document.getElementById('adminLiveDashboard').style.display = 'none';
                 loadTeacherSubjects();
                 loadTeacherRecent();
+                fetchTeacherStudents();
+                generateTeacherPasscode();
             } else {
                 document.getElementById('adminTabHeader').style.display = 'none';
                 document.getElementById('teacherTabHeader').style.display = 'none';
@@ -2201,49 +2309,77 @@
         }
 
         // ============================================================
-        // INIT - Set default month to current month (August = 7)
+        // TAB SWITCHING
+        // ============================================================
+        function switchTab(tabId) {
+            const markTab = document.getElementById('markTab');
+            const adminTab = document.getElementById('adminTab');
+            const teacherTab = document.getElementById('teacherTab');
+            markTab.style.display = tabId === 'markTab' ? 'block' : 'none';
+            adminTab.style.display = tabId === 'adminTab' ? 'block' : 'none';
+            teacherTab.style.display = tabId === 'teacherTab' ? 'block' : 'none';
+            markTab.classList.remove('tab-content-active');
+            adminTab.classList.remove('tab-content-active');
+            teacherTab.classList.remove('tab-content-active');
+            if (tabId === 'markTab') markTab.classList.add('tab-content-active');
+            if (tabId === 'adminTab') adminTab.classList.add('tab-content-active');
+            if (tabId === 'teacherTab') teacherTab.classList.add('tab-content-active');
+            const tabs = document.querySelectorAll('.tab-bar .tab-item');
+            tabs.forEach(t => t.classList.remove('active'));
+            if (tabId === 'markTab') tabs[0].classList.add('active');
+            if (tabId === 'adminTab' && tabs[1]) tabs[1].classList.add('active');
+            if (tabId === 'teacherTab' && tabs[2]) tabs[2].classList.add('active');
+        }
+
+        function switchAdminSubTab(subId) {
+            const subTabs = ['subDirectory', 'subReports', 'subAttendance', 'subHoliday', 'subPasscode', 'subTools'];
+            subTabs.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.style.display = (id === subId) ? 'block' : 'none';
+                    el.classList.remove('tab-content-active');
+                    if (id === subId) el.classList.add('tab-content-active');
+                }
+            });
+            const navItems = document.querySelectorAll('.admin-nav-item');
+            navItems.forEach((item, idx) => { item.classList.toggle('active', subTabs[idx] === subId); });
+            if (subId === 'subPasscode') { generatePasscode('full_day'); generatePasscode('single_lecture'); }
+            if (subId === 'subDirectory') { fetchAllUsers(); }
+            if (subId === 'subReports') { populateStudentSelect(); }
+            if (subId === 'subTools') { populateTeacherSelect(); }
+        }
+
+        // ============================================================
+        // INIT
         // ============================================================
         function initMonthSelector() {
             const now = new Date();
-            const currentMonth = now.getMonth(); // 0-11
-            // Only set if month is within Jul-Dec (6-11)
+            const currentMonth = now.getMonth();
             if (currentMonth >= 6 && currentMonth <= 11) {
                 const select = document.getElementById('monthSelector');
-                if (select) {
-                    select.value = currentMonth.toString();
-                }
+                if (select) select.value = currentMonth.toString();
             }
         }
 
-        // ============================================================
-        // START
-        // ============================================================
         if (localStorage.getItem('user')) {
             loadDashboard();
         }
-
-        // Set month selector to current month
         initMonthSelector();
 
         document.getElementById('studentExcelRange')?.addEventListener('change', function() {
             const wrapper = document.getElementById('selectedMonthWrapper');
-            if (wrapper) { wrapper.style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none'; }
+            if (wrapper) wrapper.style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none';
         });
-
         document.getElementById('singleStudentRange')?.addEventListener('change', function() {
             const wrapper = document.getElementById('singleStudentMonthWrapper');
-            if (wrapper) { wrapper.style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none'; }
+            if (wrapper) wrapper.style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none';
         });
 
         console.log('✅ BM Group ERP Portal loaded successfully!');
-        console.log('📱 College Location: 28.4509370, 76.7688120');
-        console.log('📅 Semester starts: 15 July 2026');
-        console.log('🔑 Two passcode types: Full Day (5‑digit) & Single Lecture (4‑digit)');
-        console.log('👤 Admin impersonation: Login as any student without password.');
-        console.log('👨‍🏫 Teacher module: Assign subjects via admin, mark attendance without passcode.');
-        console.log('📚 AIDS timetable integrated.');
-        console.log('🔐 Public registration only allows student role.');
         console.log('📆 Month selector default set to current month.');
+        console.log('👨‍🏫 Teacher module updated: passcode + student reports.');
+        console.log('👑 Admin: Individual student report added.');
+        console.log('📚 Subject assignment dropdown populated from timetable.');
     </script>
 </body>
 </html>
