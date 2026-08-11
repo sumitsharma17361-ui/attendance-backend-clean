@@ -16,7 +16,7 @@ app.use(cors());
 // ---------- Environment Variables ----------
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
-const ADMIN_ROLL_NUMBERS = ['24CSE48'];
+const ADMIN_ROLL_NUMBERS = ['ADMIN001']; // default admin
 const COLLEGE_LAT = 28.4509370;
 const COLLEGE_LNG = 76.7688120;
 const COLLEGE_RADIUS = 50;
@@ -38,38 +38,156 @@ app.use('/api/', apiLimiter);
 // ---------- Zod Validation Schemas ----------
 const registerSchema = z.object({
   name: z.string().min(2, "Name too short").max(50),
-  rollNo: z.string().regex(/^\d{2}(CSE|AIDS)\d{2}$/, "Invalid Roll No format"),
+  rollNo: z.string().min(3, "ID too short"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   deviceId: z.string().optional(),
-  role: z.enum(['student', 'faculty', 'admin']).optional().default('student')
+  role: z.enum(['student', 'faculty', 'admin']).default('student')
 });
 
 const loginSchema = z.object({
-  rollNo: z.string().min(1, "Roll No required"),
+  rollNo: z.string().min(1, "ID required"),
   password: z.string().min(1, "Password required"),
   deviceId: z.string().optional()
 });
 
-// ---------- Timetables ----------
+// ---------- Timetables with Faculty Names ----------
+// Full subject names with faculty
+const SUBJECT_FACULTY_MAP = {
+  'BDA - Big Data Analytics': 'Ms. Geeta',
+  'ECO - Economics for Engineers': 'Ms. Sakshi Yadav',
+  'DAA - Design & Analysis of Algorithm': 'Mr. Rajesh',
+  'FLA - Formal Language & Automata': 'Ms. Nisha Yadav',
+  'HRM - Human Resource Mgmt': 'Mr. Lokesh',
+  'CN - Computer Network': 'Mr. Sunil',
+  'WT - Web Technology': 'Mr. Avish Yadav',
+  'Internet Lab (Ms. Geeta)': 'Ms. Geeta',
+  'CN LAB - Computer Network Lab': 'Mr. Sunil',
+  'DAA LAB - Algorithm Lab': 'Mr. Rajesh',
+  'WT LAB - Web Technology Lab': 'Mr. Avish Yadav',
+  'LIB - Library': 'Library Staff',
+  'PA - Predictive Analysis': 'Ms. Pooja',
+  'ML - Machine Learning': 'Mr. Harsh',
+  'PA LAB - Predictive Analysis Lab': 'Ms. Pooja',
+  'ML LAB - Machine Learning Lab': 'Mr. Harsh',
+  'BDA LAB - Big Data Analytics Lab': 'Ms. Geeta',
+  'Sports': 'Sports Dept',
+  'Sports / Project': 'Sports Dept'
+};
+
+// Short name to full name mapping for backward compatibility
+const SUBJECT_SHORT_TO_FULL = {
+  'BDA': 'BDA - Big Data Analytics',
+  'ECO': 'ECO - Economics for Engineers',
+  'DAA': 'DAA - Design & Analysis of Algorithm',
+  'FLA': 'FLA - Formal Language & Automata',
+  'HRM': 'HRM - Human Resource Mgmt',
+  'CN': 'CN - Computer Network',
+  'WT': 'WT - Web Technology',
+  'CN LAB': 'CN LAB - Computer Network Lab',
+  'DAA LAB': 'DAA LAB - Algorithm Lab',
+  'WT LAB': 'WT LAB - Web Technology Lab',
+  'LIB': 'LIB - Library',
+  'PA': 'PA - Predictive Analysis',
+  'ML': 'ML - Machine Learning',
+  'PA LAB': 'PA LAB - Predictive Analysis Lab',
+  'ML LAB': 'ML LAB - Machine Learning Lab',
+  'BDA LAB': 'BDA LAB - Big Data Analytics Lab'
+};
+
+function getFullSubjectName(shortOrFull) {
+  return SUBJECT_SHORT_TO_FULL[shortOrFull] || shortOrFull;
+}
+
 const CSE_TIME_TABLE = {
-  Monday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'DAA - Design & Analysis of Algorithm', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'CN - Computer Network', 'LIB - Library'],
-  Tuesday: ['WT - Web Technology', 'ECO - Economics for Engineers', 'Internet Lab (Ms. Geeta)', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'BDA - Big Data Analytics'],
-  Wednesday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'FLA - Formal Language & Automata', 'WT - Web Technology', 'CN LAB - Computer Network Lab'],
-  Thursday: ['BDA - Big Data Analytics', 'WT - Web Technology', 'CN - Computer Network', 'DAA - Design & Analysis of Algorithm', 'DAA LAB - Algorithm Lab', 'HRM - Human Resource Mgmt'],
-  Friday: ['DAA - Design & Analysis of Algorithm', 'CN - Computer Network', 'FLA - Formal Language & Automata', 'BDA - Big Data Analytics', 'WT LAB - Web Technology Lab']
+  Monday: [
+    { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
+    { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' },
+    { subject: 'DAA - Design & Analysis of Algorithm', faculty: 'Mr. Rajesh' },
+    { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' },
+    { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' },
+    { subject: 'CN - Computer Network', faculty: 'Mr. Sunil' },
+    { subject: 'LIB - Library', faculty: 'Library Staff' }
+  ],
+  Tuesday: [
+    { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' },
+    { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' },
+    { subject: 'Internet Lab (Ms. Geeta)', faculty: 'Ms. Geeta' },
+    { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' },
+    { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' },
+    { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }
+  ],
+  Wednesday: [
+    { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
+    { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' },
+    { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' },
+    { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' },
+    { subject: 'CN LAB - Computer Network Lab', faculty: 'Mr. Sunil' }
+  ],
+  Thursday: [
+    { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
+    { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' },
+    { subject: 'CN - Computer Network', faculty: 'Mr. Sunil' },
+    { subject: 'DAA - Design & Analysis of Algorithm', faculty: 'Mr. Rajesh' },
+    { subject: 'DAA LAB - Algorithm Lab', faculty: 'Mr. Rajesh' },
+    { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }
+  ],
+  Friday: [
+    { subject: 'DAA - Design & Analysis of Algorithm', faculty: 'Mr. Rajesh' },
+    { subject: 'CN - Computer Network', faculty: 'Mr. Sunil' },
+    { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' },
+    { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
+    { subject: 'WT LAB - Web Technology Lab', faculty: 'Mr. Avish Yadav' }
+  ]
 };
 
 const AIDS_TIME_TABLE = {
-  Monday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'LIB - Library', 'FLA - Formal Language & Automata', 'PA - Predictive Analysis', 'PA - Predictive Analysis', 'Sports'],
-  Tuesday: ['WT - Web Technology', 'ECO - Economics for Engineers', 'PA - Predictive Analysis', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'BDA - Big Data Analytics', 'ML - Machine Learning'],
-  Wednesday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'FLA - Formal Language & Automata', 'Sports / Project', 'WT - Web Technology', 'PA LAB - Predictive Analysis Lab'],
-  Thursday: ['BDA - Big Data Analytics', 'WT - Web Technology', 'ML - Machine Learning', 'PA - Predictive Analysis', 'ML LAB - Machine Learning Lab', 'HRM - Human Resource Mgmt'],
-  Friday: ['ML - Machine Learning', 'LIB - Library', 'FLA - Formal Language & Automata', 'BDA - Big Data Analytics', 'BDA LAB - Big Data Analytics Lab', 'Sports']
+  Monday: [
+    { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
+    { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' },
+    { subject: 'LIB - Library', faculty: 'Library Staff' },
+    { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' },
+    { subject: 'PA - Predictive Analysis', faculty: 'Ms. Pooja' },
+    { subject: 'PA - Predictive Analysis', faculty: 'Ms. Pooja' },
+    { subject: 'Sports', faculty: 'Sports Dept' }
+  ],
+  Tuesday: [
+    { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' },
+    { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' },
+    { subject: 'PA - Predictive Analysis', faculty: 'Ms. Pooja' },
+    { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' },
+    { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' },
+    { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
+    { subject: 'ML - Machine Learning', faculty: 'Mr. Harsh' }
+  ],
+  Wednesday: [
+    { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
+    { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' },
+    { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' },
+    { subject: 'Sports / Project', faculty: 'Sports Dept' },
+    { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' },
+    { subject: 'PA LAB - Predictive Analysis Lab', faculty: 'Ms. Pooja' }
+  ],
+  Thursday: [
+    { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
+    { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' },
+    { subject: 'ML - Machine Learning', faculty: 'Mr. Harsh' },
+    { subject: 'PA - Predictive Analysis', faculty: 'Ms. Pooja' },
+    { subject: 'ML LAB - Machine Learning Lab', faculty: 'Mr. Harsh' },
+    { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }
+  ],
+  Friday: [
+    { subject: 'ML - Machine Learning', faculty: 'Mr. Harsh' },
+    { subject: 'LIB - Library', faculty: 'Library Staff' },
+    { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' },
+    { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
+    { subject: 'BDA LAB - Big Data Analytics Lab', faculty: 'Ms. Geeta' },
+    { subject: 'Sports', faculty: 'Sports Dept' }
+  ]
 };
 
 function getTimetableForBranch(branch) {
   if (branch && branch.toUpperCase() === 'AIDS') return AIDS_TIME_TABLE;
-  return CSE_TIME_TABLE; // default
+  return CSE_TIME_TABLE;
 }
 
 // ---------- MongoDB Connection ----------
@@ -217,18 +335,6 @@ async function incrementFailedAttempts(rollNo) {
   await user.save();
 }
 
-// ---------- RBAC Middleware ----------
-const verifyRole = (roles) => (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) return res.status(401).json({ error: "Access Denied" });
-  try {
-    const verified = jwt.verify(token, JWT_SECRET);
-    if (!roles.includes(verified.role)) return res.status(403).json({ error: "Unauthorized Role!" });
-    req.user = verified;
-    next();
-  } catch (err) { res.status(400).json({ error: "Invalid Token" }); }
-};
-
 // ---------- Routes ----------
 app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active!'));
 
@@ -240,12 +346,14 @@ app.post('/api/auth/register', async (req, res) => {
     const { name, rollNo, password, deviceId, role } = parseResult.data;
     const cleanRoll = rollNo.trim().toUpperCase();
     let user = await User.findOne({ rollNo: cleanRoll });
-    if (user) return res.status(400).json({ error: 'Roll number already registered!' });
+    if (user) return res.status(400).json({ error: 'ID already registered!' });
     const hashedPassword = await bcrypt.hash(password, 10);
-    const finalRole = (role && ['student','faculty'].includes(role)) ? role : 'student';
-    // Determine branch from roll number
-    const branch = cleanRoll.includes('AIDS') ? 'AIDS' : 'CSE';
-    await new User({ name, rollNo: cleanRoll, password: hashedPassword, role: finalRole, boundDeviceId: deviceId || null, branch }).save();
+    // Determine branch from roll number if student
+    let branch = 'CSE';
+    if (role === 'student') {
+      if (cleanRoll.includes('AIDS')) branch = 'AIDS';
+    }
+    await new User({ name, rollNo: cleanRoll, password: hashedPassword, role, boundDeviceId: deviceId || null, branch }).save();
     res.status(201).json({ message: 'Registration successful! Please login.' });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -262,9 +370,8 @@ app.post('/api/auth/login', async (req, res) => {
     if (!isMatch) return res.status(400).json({ error: 'Invalid password!' });
     user.failedAttempts = 0;
     user.blockUntil = null;
-    const isAdmin = ADMIN_ROLL_NUMBERS.includes(cleanRoll);
-    const isFaculty = user.role === 'faculty';
-    if (!isAdmin && user.role === 'student') {
+    // Device binding only for students
+    if (user.role === 'student') {
       if (!user.boundDeviceId && deviceId) { user.boundDeviceId = deviceId; await user.save(); }
       else if (user.boundDeviceId && user.boundDeviceId !== deviceId) {
         return res.status(403).json({ error: 'Unauthorized Device! Account bound to another phone.' });
@@ -273,7 +380,7 @@ app.post('/api/auth/login', async (req, res) => {
     const token = jwt.sign({ id: user._id, rollNo: user.rollNo, name: user.name, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     user.activeSession = token;
     await user.save();
-    res.json({ message: 'Login successful!', token, user: { name: user.name, rollNo: user.rollNo, role: user.role } });
+    res.json({ message: 'Login successful!', token, user: { name: user.name, rollNo: user.rollNo, role: user.role, branch: user.branch } });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -288,13 +395,13 @@ app.post('/api/auth/logout', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Student Profile
+// Profile
 app.post('/api/student/profile', async (req, res) => {
   try {
     const { rollNo, email, phone, profilePic, semester, branch } = req.body;
     const cleanRoll = rollNo.trim().toUpperCase();
     const user = await User.findOne({ rollNo: cleanRoll });
-    if (!user) return res.status(404).json({ error: 'Student not found!' });
+    if (!user) return res.status(404).json({ error: 'User not found!' });
     if (email) user.email = email;
     if (phone) user.phone = phone;
     if (profilePic) user.profilePic = profilePic;
@@ -309,7 +416,7 @@ app.get('/api/student/profile/:rollNo', async (req, res) => {
   try {
     const cleanRoll = req.params.rollNo.trim().toUpperCase();
     const user = await User.findOne({ rollNo: cleanRoll }).select('-password -activeSession');
-    if (!user) return res.status(404).json({ error: 'Student not found!' });
+    if (!user) return res.status(404).json({ error: 'User not found!' });
     res.json(user);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -318,11 +425,12 @@ app.get('/api/student/profile/:rollNo', async (req, res) => {
 app.post('/api/admin/reset-password', async (req, res) => {
   try {
     const { requesterRollNo, targetRollNo, newPassword } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+    if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const cleanRoll = targetRollNo.trim().toUpperCase();
     const hashedPassword = await bcrypt.hash(newPassword || '123456', 10);
     const updated = await User.findOneAndUpdate({ rollNo: cleanRoll }, { password: hashedPassword });
-    if (!updated) return res.status(404).json({ error: 'Student Roll No not found!' });
+    if (!updated) return res.status(404).json({ error: 'User not found!' });
     res.json({ message: `Password reset for ${cleanRoll}!` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -330,10 +438,11 @@ app.post('/api/admin/reset-password', async (req, res) => {
 app.post('/api/admin/reset-device', async (req, res) => {
   try {
     const { requesterRollNo, targetRollNo } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+    if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const cleanRoll = targetRollNo.trim().toUpperCase();
     const user = await User.findOne({ rollNo: cleanRoll });
-    if (!user) return res.status(404).json({ error: `Student ${cleanRoll} not found!` });
+    if (!user) return res.status(404).json({ error: `User ${cleanRoll} not found!` });
     user.boundDeviceId = null;
     await user.save();
     res.json({ message: `✅ Device binding reset for ${cleanRoll}!` });
@@ -343,7 +452,8 @@ app.post('/api/admin/reset-device', async (req, res) => {
 app.post('/api/admin/update-rollno', async (req, res) => {
   try {
     const { requesterRollNo, oldRoll, newRoll } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+    if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const cleanOld = oldRoll.trim().toUpperCase();
     const cleanNew = newRoll.trim().toUpperCase();
     await User.findOneAndUpdate({ rollNo: cleanOld }, { rollNo: cleanNew });
@@ -352,10 +462,11 @@ app.post('/api/admin/update-rollno', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.delete('/api/admin/delete-student', async (req, res) => {
+app.delete('/api/admin/delete-user', async (req, res) => {
   try {
     const { requesterRollNo, targetRollNo } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+    if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const cleanTarget = targetRollNo.trim().toUpperCase();
     await User.findOneAndDelete({ rollNo: cleanTarget });
     await Attendance.deleteMany({ rollNo: cleanTarget });
@@ -363,19 +474,17 @@ app.delete('/api/admin/delete-student', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Admin Login as Student
+// Admin Login as Student (Impersonate)
 app.post('/api/admin/login-as-student', async (req, res) => {
   try {
     const { requesterRollNo, targetRollNo } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) {
-      return res.status(403).json({ error: 'Access Denied: Admin Only!' });
-    }
+    const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+    if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const cleanTarget = targetRollNo.trim().toUpperCase();
     const student = await User.findOne({ rollNo: cleanTarget });
     if (!student) return res.status(404).json({ error: 'Student not found!' });
     const token = jwt.sign({ id: student._id, rollNo: student.rollNo, name: student.name, role: 'student' }, JWT_SECRET, { expiresIn: '1h' });
-    console.log(`🔑 Admin ${requesterRollNo} logged in as ${cleanTarget}`);
-    res.json({ message: `Logged in as ${student.name}`, token, user: { name: student.name, rollNo: student.rollNo, role: 'student' }, isImpersonating: true, adminRoll: requesterRollNo });
+    res.json({ message: `Logged in as ${student.name}`, token, user: { name: student.name, rollNo: student.rollNo, role: 'student' }, isImpersonating: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -383,7 +492,8 @@ app.post('/api/admin/login-as-student', async (req, res) => {
 app.post('/api/admin/assign-subject', async (req, res) => {
   try {
     const { requesterRollNo, teacherRollNo, subject } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+    if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const cleanTeacher = teacherRollNo.trim().toUpperCase();
     const teacher = await User.findOne({ rollNo: cleanTeacher, role: 'faculty' });
     if (!teacher) return res.status(404).json({ error: 'Faculty not found!' });
@@ -397,7 +507,8 @@ app.post('/api/admin/assign-subject', async (req, res) => {
 app.post('/api/admin/remove-subject', async (req, res) => {
   try {
     const { requesterRollNo, teacherRollNo, subject } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+    if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const cleanTeacher = teacherRollNo.trim().toUpperCase();
     await TeacherSubject.findOneAndDelete({ teacherRollNo: cleanTeacher, subject });
     res.json({ message: `Subject "${subject}" removed from ${cleanTeacher}` });
@@ -422,9 +533,9 @@ app.post('/api/teacher/mark-attendance', async (req, res) => {
     if (dateStatus.isBlocked) return res.status(400).json({ error: dateStatus.message });
     const cleanRoll = rollNo.trim().toUpperCase();
     const teacher = await User.findOne({ rollNo: cleanRoll, role: 'faculty' });
-    if (!teacher) return res.status(403).json({ error: 'Only faculty can mark attendance via this endpoint.' });
+    if (!teacher) return res.status(403).json({ error: 'Only faculty can mark attendance.' });
     const assignment = await TeacherSubject.findOne({ teacherRollNo: cleanRoll, subject });
-    if (!assignment) return res.status(403).json({ error: `You are not authorized to mark attendance for "${subject}".` });
+    if (!assignment) return res.status(403).json({ error: `Not authorized for "${subject}".` });
     const locCheck = checkLocation(latitude, longitude);
     if (!locCheck.isInside) return res.status(400).json({ error: `Outside College Boundary! (${locCheck.distance}m away)` });
     if (!studentRollNo) return res.status(400).json({ error: 'Student roll number required.' });
@@ -443,7 +554,7 @@ app.post('/api/teacher/mark-attendance', async (req, res) => {
       ipAddress: req.ip,
       isVerified: true
     }).save();
-    res.status(201).json({ message: `✅ Attendance marked for ${studentUser.name} (${subject})` });
+    res.status(201).json({ message: `✅ Marked ${studentUser.name} (${subject})` });
   } catch (err) { console.error('Teacher attendance error:', err); res.status(500).json({ error: err.message }); }
 });
 
@@ -451,7 +562,8 @@ app.post('/api/teacher/mark-attendance', async (req, res) => {
 app.post('/api/admin/generate-passcode', async (req, res) => {
   try {
     const { requesterRollNo, type } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+    if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     if (!type || !['full_day', 'single_lecture'].includes(type)) {
       return res.status(400).json({ error: 'Invalid passcode type.' });
     }
@@ -487,7 +599,8 @@ app.get('/api/notices', async (req, res) => {
 app.post('/api/admin/notice', async (req, res) => {
   try {
     const { requesterRollNo, title, message } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+    if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     if (!message || message.trim() === "") { await Notice.deleteMany({}); return res.json({ message: 'Notices cleared!' }); }
     const newNotice = await new Notice({ title: title || 'Announcement', message }).save();
     res.status(201).json({ message: 'Notice published!', notice: newNotice });
@@ -498,7 +611,8 @@ app.post('/api/admin/notice', async (req, res) => {
 app.post('/api/admin/holiday', async (req, res) => {
   try {
     const { requesterRollNo, date, reason } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+    if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const parts = date.split('-');
     const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
     if (dateObj < SEMESTER_START) return res.status(400).json({ error: 'Cannot declare holiday before 15 July 2026!' });
@@ -527,7 +641,8 @@ app.get('/api/date-status/:date', async (req, res) => {
 // Admin Dashboard Stats
 app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
   try {
-    if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const requester = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
+    if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const totalStudents = await User.countDocuments({ role: 'student' });
     const today = new Date();
     const todayDate = today.toISOString().split('T')[0];
@@ -553,33 +668,33 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
   } catch (err) { console.error('Dashboard stats error:', err); res.status(500).json({ error: err.message }); }
 });
 
-// All Students (including admin for directory)
+// All Users (for directory)
 app.get('/api/admin/all-users/:requesterRollNo', async (req, res) => {
   try {
-    const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo)) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const requester = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
+    if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const users = await User.find().select('name rollNo role boundDeviceId email phone semester branch profilePic').sort({ rollNo: 1 });
     res.json(users);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// All faculty (for dropdown)
+// All Faculty (for dropdown)
 app.get('/api/admin/faculty/:requesterRollNo', async (req, res) => {
   try {
-    const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo)) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const requester = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
+    if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const faculty = await User.find({ role: 'faculty' }).select('name rollNo email phone').sort({ rollNo: 1 });
     res.json(faculty);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Get student attendance by rollNo (for admin/teacher view)
+// Get student attendance (Admin can view any student, Teacher can view only their assigned subjects)
 app.get('/api/attendance/student/:rollNo/:requesterRollNo', async (req, res) => {
   try {
     const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
     const requester = await User.findOne({ rollNo: requesterRollNo });
     if (!requester) return res.status(403).json({ error: 'Access Denied' });
-    const isAdmin = ADMIN_ROLL_NUMBERS.includes(requesterRollNo);
+    const isAdmin = requester.role === 'admin';
     const isTeacher = requester.role === 'faculty';
     if (!isAdmin && !isTeacher) return res.status(403).json({ error: 'Access Denied' });
     const cleanRoll = req.params.rollNo.trim().toUpperCase();
@@ -589,6 +704,11 @@ app.get('/api/attendance/student/:rollNo/:requesterRollNo', async (req, res) => 
       const subjects = await TeacherSubject.find({ teacherRollNo: requesterRollNo }).distinct('subject');
       records = records.filter(r => subjects.includes(r.subject));
     }
+    // Map subject names to full names for consistency
+    records = records.map(r => {
+      r.subject = getFullSubjectName(r.subject);
+      return r;
+    });
     res.json(records);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -596,7 +716,8 @@ app.get('/api/attendance/student/:rollNo/:requesterRollNo', async (req, res) => 
 // Delete single attendance record (admin only)
 app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
   try {
-    if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const requester = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
+    if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     await Attendance.findByIdAndDelete(req.params.id);
     res.json({ message: 'Record deleted!' });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -620,12 +741,12 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
     const startStr = startDate.toISOString().split('T')[0];
     const endStr = endDate.toISOString().split('T')[0];
     const records = await Attendance.find({ rollNo: cleanRoll, date: { $gte: startStr, $lte: endStr } }).lean();
-    // Collect all subjects from timetable for that month
-    const allSubjects = new Set();
+    // Get all subjects from timetable for that month
+    const subjectSet = new Set();
+    let totalConducted = 0;
     let cur = new Date(startDate);
     const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const holidaySet = new Set((await Holiday.find({ date: { $gte: startStr, $lte: endStr } })).map(h => h.date));
-    let totalConducted = 0;
     while (cur <= endDate) {
       const dateStr = cur.toISOString().split('T')[0];
       const dayOfWeek = cur.getDay();
@@ -634,21 +755,20 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
       if (!isWeekend && !isHoliday) {
         const dayName = dayNameMap[dayOfWeek];
         const subjects = timetable[dayName] || [];
-        subjects.forEach(sub => {
+        subjects.forEach(entry => {
+          const sub = entry.subject;
           if (!sub.includes('Sports') && !sub.includes('LIB') && !sub.includes('Library')) {
-            allSubjects.add(sub);
+            subjectSet.add(sub);
             totalConducted++;
           }
         });
       }
       cur.setDate(cur.getDate() + 1);
     }
-    // Count present per subject
+    // Count per subject
     const subjectStats = {};
-    allSubjects.forEach(sub => { subjectStats[sub] = { total: 0, present: 0 }; });
-    // We need to count total occurrences per subject in the month (already counted totalConducted across all subjects)
-    // But we need per-subject total: we can compute by counting days where that subject appears.
-    // Simpler: iterate again over days and count per subject.
+    subjectSet.forEach(sub => { subjectStats[sub] = { total: 0, present: 0 }; });
+    // Count total occurrences per subject
     cur = new Date(startDate);
     while (cur <= endDate) {
       const dateStr = cur.toISOString().split('T')[0];
@@ -658,7 +778,8 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
       if (!isWeekend && !isHoliday) {
         const dayName = dayNameMap[dayOfWeek];
         const subjects = timetable[dayName] || [];
-        subjects.forEach(sub => {
+        subjects.forEach(entry => {
+          const sub = entry.subject;
           if (subjectStats[sub]) subjectStats[sub].total++;
         });
       }
@@ -666,21 +787,30 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
     }
     // Now count present
     records.forEach(rec => {
-      if (subjectStats[rec.subject] && (rec.status === 'Present' || rec.status === 'Duty Leave')) {
-        subjectStats[rec.subject].present++;
+      const fullSub = getFullSubjectName(rec.subject);
+      if (subjectStats[fullSub] && (rec.status === 'Present' || rec.status === 'Duty Leave')) {
+        subjectStats[fullSub].present++;
       }
     });
     let totalAttended = 0;
     Object.values(subjectStats).forEach(st => totalAttended += st.present);
     const pct = totalConducted > 0 ? Math.round((totalAttended / totalConducted) * 100) : 0;
-    res.json({ totalConducted, totalAttended, attendancePercentage: pct, subjectStats });
+    // Also compute days present
+    const presentDays = new Set(records.filter(r => r.status === 'Present' || r.status === 'Duty Leave').map(r => r.date));
+    res.json({
+      totalConducted,
+      totalAttended,
+      attendancePercentage: pct,
+      daysPresent: presentDays.size,
+      subjectStats
+    });
   } catch (err) {
     console.error('Monthly summary error:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// ------ Existing Attendance Marking (Student) ------
+// ----- Student Attendance Marking (with branch detection) -----
 app.post('/api/attendance/mark', async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude } = req.body;
@@ -727,10 +857,11 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     const timetable = getTimetableForBranch(branch);
     const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const dayName = days[today.getDay()];
-    const allSubjects = timetable[dayName] || ['General Class'];
-    const academicSubjects = allSubjects.filter(sub => !sub.includes("LIB") && !sub.includes("Library") && !sub.includes("Sports"));
+    const allSubjects = timetable[dayName] || [];
+    const academicSubjects = allSubjects.filter(entry => !entry.subject.includes("LIB") && !entry.subject.includes("Library") && !entry.subject.includes("Sports"));
     let markedCount = 0;
-    for (let sub of academicSubjects) {
+    for (let entry of academicSubjects) {
+      const sub = entry.subject;
       const exists = await Attendance.findOne({ rollNo: cleanRoll, subject: sub, date: todayDate });
       if (!exists) {
         await new Attendance({ rollNo: cleanRoll, studentName: name, subject: sub, date: todayDate, status: 'Present', location: { latitude, longitude }, ipAddress: req.ip, isVerified: true }).save();
@@ -751,10 +882,11 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
 app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNo, date, subjects, status, branch } = req.body;
-    if (!ADMIN_ROLL_NUMBERS.includes(requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+    if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const parts = date.split('-');
     const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-    if (dateObj < SEMESTER_START) return res.status(400).json({ error: 'Cannot mark attendance before 15 July 2026! College was closed.' });
+    if (dateObj < SEMESTER_START) return res.status(400).json({ error: 'Cannot mark attendance before 15 July 2026!' });
     const dateStatus = await checkDateStatus(date);
     if (dateStatus.isBlocked) return res.status(400).json({ error: `Cannot mark attendance on ${dateStatus.type}: ${dateStatus.message}` });
     const targetRoll = studentRollNo.trim().toUpperCase();
@@ -763,22 +895,22 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
     let markedCount = 0, markedSubjects = [], alreadyMarked = [];
     const actualBranch = branch || user.branch || 'CSE';
     const timetable = getTimetableForBranch(actualBranch);
-    // If subjects array not provided, use all academic subjects from that day's timetable
     let subjectsToMark = subjects;
     if (!subjectsToMark || subjectsToMark.length === 0) {
       const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
       const dayName = days[dateObj.getDay()];
       const allSubjects = timetable[dayName] || [];
-      subjectsToMark = allSubjects.filter(sub => !sub.includes("LIB") && !sub.includes("Library") && !sub.includes("Sports"));
+      subjectsToMark = allSubjects.filter(entry => !entry.subject.includes("LIB") && !entry.subject.includes("Library") && !entry.subject.includes("Sports")).map(entry => entry.subject);
     }
     for (let sub of subjectsToMark) {
-      const exists = await Attendance.findOne({ rollNo: targetRoll, subject: sub, date });
+      const fullSub = getFullSubjectName(sub);
+      const exists = await Attendance.findOne({ rollNo: targetRoll, subject: fullSub, date });
       if (!exists) {
-        await new Attendance({ rollNo: targetRoll, studentName: user.name, subject: sub, date, status: status || 'Present', location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG }, ipAddress: 'admin-manual', isVerified: true }).save();
+        await new Attendance({ rollNo: targetRoll, studentName: user.name, subject: fullSub, date, status: status || 'Present', location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG }, ipAddress: 'admin-manual', isVerified: true }).save();
         markedCount++;
-        markedSubjects.push(sub);
+        markedSubjects.push(fullSub);
       } else {
-        alreadyMarked.push(sub);
+        alreadyMarked.push(fullSub);
       }
     }
     let message = `✅ Marked ${markedCount} lectures for ${user.name} on ${date}`;
@@ -787,20 +919,26 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// History
+// History (Student)
 app.get('/api/attendance/history/:rollNo', async (req, res) => {
   try {
-    const history = await Attendance.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ date: -1 });
-    res.json(history);
+    const records = await Attendance.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ date: -1 });
+    // Map to full names
+    const mapped = records.map(r => {
+      r.subject = getFullSubjectName(r.subject);
+      return r;
+    });
+    res.json(mapped);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// All Attendance (Admin/Teacher)
 app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
   try {
     const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
     const requester = await User.findOne({ rollNo: requesterRollNo });
     if (!requester) return res.status(403).json({ error: 'Access Denied' });
-    const isAdmin = ADMIN_ROLL_NUMBERS.includes(requesterRollNo);
+    const isAdmin = requester.role === 'admin';
     const isTeacher = requester.role === 'faculty';
     if (!isAdmin && !isTeacher) return res.status(403).json({ error: 'Access Denied: Admin or Teacher only!' });
     let allRecords;
@@ -810,35 +948,12 @@ app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
     } else {
       allRecords = await Attendance.find().sort({ rollNo: 1, date: -1 });
     }
-    res.json(allRecords);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// Analytics (Student)
-app.get('/api/analytics/:rollNo', async (req, res) => {
-  try {
-    const cleanRoll = req.params.rollNo.trim().toUpperCase();
-    const records = await Attendance.find({ rollNo: cleanRoll });
-    const allSubjects = [
-      'BDA - Big Data Analytics', 'ECO - Economics for Engineers',
-      'DAA - Design & Analysis of Algorithm', 'FLA - Formal Language & Automata',
-      'HRM - Human Resource Mgmt', 'CN - Computer Network',
-      'WT - Web Technology', 'CN LAB - Computer Network Lab',
-      'DAA LAB - Algorithm Lab', 'WT LAB - Web Technology Lab',
-      'Internet Lab (Ms. Geeta)', 'LIB - Library',
-      'PA - Predictive Analysis', 'ML - Machine Learning',
-      'PA LAB - Predictive Analysis Lab', 'ML LAB - Machine Learning Lab',
-      'BDA LAB - Big Data Analytics Lab'
-    ];
-    let subjectStats = {};
-    allSubjects.forEach(sub => { subjectStats[sub] = { present: 0, total: 0 }; });
-    records.forEach(rec => {
-      if (subjectStats[rec.subject]) {
-        subjectStats[rec.subject].total += 1;
-        if (rec.status === 'Present') subjectStats[rec.subject].present += 1;
-      }
+    // Map subject names
+    allRecords = allRecords.map(r => {
+      r.subject = getFullSubjectName(r.subject);
+      return r;
     });
-    res.json(subjectStats);
+    res.json(allRecords);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -864,8 +979,8 @@ app.get('/api/student/summary/:rollNo', async (req, res) => {
     for (let d = 0; d < 7; d++) {
       const dayName = dayNameMap[d];
       const subjects = timetable[dayName] || [];
-      const academic = subjects.filter(sub => !sub.includes("LIB") && !sub.includes("Library") && !sub.includes("Sports"));
-      dayAcademicSubjects[dayName] = academic;
+      const academic = subjects.filter(entry => !entry.subject.includes("LIB") && !entry.subject.includes("Library") && !entry.subject.includes("Sports"));
+      dayAcademicSubjects[dayName] = academic.map(entry => entry.subject);
     }
     while (current <= today) {
       const dateStr = current.toISOString().split('T')[0];
@@ -887,7 +1002,7 @@ app.get('/api/student/summary/:rollNo', async (req, res) => {
     const presentDaysSet = new Set();
     const subjectPresentCount = {};
     allRecords.forEach(rec => {
-      const sub = rec.subject;
+      const sub = getFullSubjectName(rec.subject);
       if (sub.includes("LIB") || sub.includes("Library") || sub.includes("Sports")) return;
       if (rec.status === 'Present' || rec.status === 'Duty Leave') {
         if (!subjectPresentCount[sub]) subjectPresentCount[sub] = 0;
@@ -924,13 +1039,17 @@ app.get('/api/student/summary/:rollNo', async (req, res) => {
   } catch (err) { console.error('Summary error:', err); res.status(500).json({ error: err.message }); }
 });
 
-// Export Routes (existing)
+// Export Routes
 app.get('/api/export/google-sheets/:requesterRollNo', async (req, res) => {
   try {
-    if (!ADMIN_ROLL_NUMBERS.includes(req.params.requesterRollNo.trim().toUpperCase())) return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const requester = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
+    if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const records = await Attendance.find().sort({ rollNo: 1, date: -1 });
     let csv = 'Roll No,Student Name,Subject,Date,Status,IP Address,Location\n';
-    records.forEach(r => { const loc = r.location ? `(${r.location.latitude}, ${r.location.longitude})` : 'N/A'; csv += `${r.rollNo},${r.studentName},${r.subject},${r.date},${r.status},${r.ipAddress || 'N/A'},${loc}\n`; });
+    records.forEach(r => {
+      const loc = r.location ? `(${r.location.latitude}, ${r.location.longitude})` : 'N/A';
+      csv += `${r.rollNo},${r.studentName},${getFullSubjectName(r.subject)},${r.date},${r.status},${r.ipAddress || 'N/A'},${loc}\n`;
+    });
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename=attendance_export.csv');
     res.send(csv);
@@ -942,7 +1061,7 @@ app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) => {
     const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
     const requester = await User.findOne({ rollNo: requesterRollNo });
     if (!requester) return res.status(403).json({ error: 'Access Denied' });
-    const isAdmin = ADMIN_ROLL_NUMBERS.includes(requesterRollNo);
+    const isAdmin = requester.role === 'admin';
     const isTeacher = requester.role === 'faculty';
     if (!isAdmin && !isTeacher) return res.status(403).json({ error: 'Access Denied: Admin or Teacher only!' });
     const { studentRollNo, range, month } = req.query;
@@ -963,7 +1082,10 @@ app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) => {
     if (records.length === 0) return res.status(404).json({ error: 'No records found for this student in the selected range.' });
     const studentName = records[0].studentName || 'Unknown';
     let csv = `Student Attendance Report\nStudent: ${studentName} (${cleanStudent})\nRange: ${startStr} to ${endStr}\nGenerated: ${new Date().toLocaleString()}\n\nDate,Subject,Status,Location,IP Address\n`;
-    records.forEach(r => { const loc = r.location ? `(${r.location.latitude}, ${r.location.longitude})` : 'N/A'; csv += `${r.date},${r.subject},${r.status},${loc},${r.ipAddress || 'N/A'}\n`; });
+    records.forEach(r => {
+      const loc = r.location ? `(${r.location.latitude}, ${r.location.longitude})` : 'N/A';
+      csv += `${r.date},${getFullSubjectName(r.subject)},${r.status},${loc},${r.ipAddress || 'N/A'}\n`;
+    });
     const total = records.length;
     const present = records.filter(r => r.status === 'Present').length;
     const pct = total > 0 ? Math.round((present / total) * 100) : 0;
