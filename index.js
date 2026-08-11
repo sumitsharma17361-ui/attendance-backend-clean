@@ -222,105 +222,6 @@ function getTimetableForBranch(branch) {
   return CSE_TIME_TABLE;
 }
 
-// ---------- Get total conducted lectures for a student ----------
-function getTotalConductedForStudent(branch, startDate, endDate, holidaySet) {
-  const timetable = getTimetableForBranch(branch);
-  const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  let total = 0;
-  const subjectTotals = {};
-  let cur = new Date(startDate);
-  while (cur <= endDate) {
-    const dateStr = cur.toISOString().split('T')[0];
-    const dayOfWeek = cur.getDay();
-    const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-    const isHoliday = holidaySet.has(dateStr);
-    if (!isWeekend && !isHoliday) {
-      const dayName = dayNameMap[dayOfWeek];
-      const subjects = timetable[dayName] || [];
-      subjects.forEach(entry => {
-        const sub = entry.subject;
-        if (!sub.includes('Sports') && !sub.includes('LIB') && !sub.includes('Library')) {
-          if (!subjectTotals[sub]) subjectTotals[sub] = 0;
-          subjectTotals[sub]++;
-          total++;
-        }
-      });
-    }
-    cur.setDate(cur.getDate() + 1);
-  }
-  return { total, subjectTotals };
-}
-
-// ---------- MongoDB Connection ----------
-mongoose.connect(MONGO_URI)
-  .then(() => console.log('✅ MongoDB Connected Successfully!'))
-  .catch(err => {
-    console.error('❌ MongoDB Connection Error:', err.message);
-    process.exit(1);
-  });
-
-// ---------- Mongoose Schemas ----------
-const userSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  rollNo: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  phone: { type: String, default: null },
-  role: { type: String, enum: ['student', 'faculty', 'admin'], default: 'student' },
-  boundDeviceId: { type: String, default: null },
-  lastAttendanceTime: { type: Date, default: null },
-  lastAttendanceLocation: { latitude: Number, longitude: Number },
-  failedAttempts: { type: Number, default: 0 },
-  blockUntil: { type: Date, default: null },
-  email: { type: String, default: null },
-  profilePic: { type: String, default: null },
-  semester: { type: String, default: '5th' },
-  branch: { type: String, default: 'CSE' },
-  activeSession: { type: String, default: null },
-  facultySubject: { type: String, default: null }
-}, { timestamps: true });
-
-const attendanceSchema = new mongoose.Schema({
-  rollNo: { type: String, required: true },
-  studentName: { type: String, required: true },
-  subject: { type: String, required: true },
-  date: { type: String, required: true },
-  status: { type: String, enum: ['Present', 'Absent', 'Duty Leave', 'Holiday'], default: 'Present' },
-  location: { latitude: Number, longitude: Number },
-  ipAddress: { type: String, default: null },
-  isVerified: { type: Boolean, default: false }
-}, { timestamps: true });
-
-const holidaySchema = new mongoose.Schema({
-  date: { type: String, required: true, unique: true },
-  reason: { type: String, default: 'College Holiday' }
-}, { timestamps: true });
-
-const noticeSchema = new mongoose.Schema({
-  title: String,
-  message: String,
-  date: { type: Date, default: Date.now }
-});
-
-const passcodeSchema = new mongoose.Schema({
-  passcode: { type: String, required: true, unique: true },
-  type: { type: String, enum: ['full_day', 'single_lecture'], required: true },
-  expiresAt: { type: Date, required: true }
-}, { timestamps: true });
-
-const teacherSubjectSchema = new mongoose.Schema({
-  teacherRollNo: { type: String, required: true },
-  subject: { type: String, required: true },
-  assignedBy: { type: String, required: true },
-  createdAt: { type: Date, default: Date.now }
-}, { timestamps: true });
-
-const User = mongoose.model('User', userSchema);
-const Attendance = mongoose.model('Attendance', attendanceSchema);
-const Holiday = mongoose.model('Holiday', holidaySchema);
-const Notice = mongoose.model('Notice', noticeSchema);
-const Passcode = mongoose.model('Passcode', passcodeSchema);
-const TeacherSubject = mongoose.model('TeacherSubject', teacherSubjectSchema);
-
 // ---------- Helper Functions ----------
 async function checkDateStatus(dateStr) {
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -412,6 +313,76 @@ async function generateTeacherId(subject) {
   const newNum = String(maxNum + 1).padStart(2, '0');
   return `${code}${newNum}`;
 }
+
+// ---------- MongoDB Connection ----------
+mongoose.connect(MONGO_URI)
+  .then(() => console.log('✅ MongoDB Connected Successfully!'))
+  .catch(err => {
+    console.error('❌ MongoDB Connection Error:', err.message);
+    process.exit(1);
+  });
+
+// ---------- Mongoose Schemas ----------
+const userSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  rollNo: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  phone: { type: String, default: null },
+  role: { type: String, enum: ['student', 'faculty', 'admin'], default: 'student' },
+  boundDeviceId: { type: String, default: null },
+  lastAttendanceTime: { type: Date, default: null },
+  lastAttendanceLocation: { latitude: Number, longitude: Number },
+  failedAttempts: { type: Number, default: 0 },
+  blockUntil: { type: Date, default: null },
+  email: { type: String, default: null },
+  profilePic: { type: String, default: null },
+  semester: { type: String, default: '5th' },
+  branch: { type: String, default: 'CSE' },
+  activeSession: { type: String, default: null },
+  facultySubject: { type: String, default: null }
+}, { timestamps: true });
+
+const attendanceSchema = new mongoose.Schema({
+  rollNo: { type: String, required: true },
+  studentName: { type: String, required: true },
+  subject: { type: String, required: true },
+  date: { type: String, required: true },
+  status: { type: String, enum: ['Present', 'Absent', 'Duty Leave', 'Holiday'], default: 'Present' },
+  location: { latitude: Number, longitude: Number },
+  ipAddress: { type: String, default: null },
+  isVerified: { type: Boolean, default: false }
+}, { timestamps: true });
+
+const holidaySchema = new mongoose.Schema({
+  date: { type: String, required: true, unique: true },
+  reason: { type: String, default: 'College Holiday' }
+}, { timestamps: true });
+
+const noticeSchema = new mongoose.Schema({
+  title: String,
+  message: String,
+  date: { type: Date, default: Date.now }
+});
+
+const passcodeSchema = new mongoose.Schema({
+  passcode: { type: String, required: true, unique: true },
+  type: { type: String, enum: ['full_day', 'single_lecture'], required: true },
+  expiresAt: { type: Date, required: true }
+}, { timestamps: true });
+
+const teacherSubjectSchema = new mongoose.Schema({
+  teacherRollNo: { type: String, required: true },
+  subject: { type: String, required: true },
+  assignedBy: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now }
+}, { timestamps: true });
+
+const User = mongoose.model('User', userSchema);
+const Attendance = mongoose.model('Attendance', attendanceSchema);
+const Holiday = mongoose.model('Holiday', holidaySchema);
+const Notice = mongoose.model('Notice', noticeSchema);
+const Passcode = mongoose.model('Passcode', passcodeSchema);
+const TeacherSubject = mongoose.model('TeacherSubject', teacherSubjectSchema);
 
 // ---------- Routes ----------
 app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active!'));
@@ -867,7 +838,7 @@ app.delete('/api/attendance/delete-day/:rollNo/:date/:requesterRollNo', async (r
   try {
     const { rollNo, date, requesterRollNo } = req.params;
     const cleanRoll = rollNo.trim().toUpperCase();
-    const cleanDate = date.trim(); // expected YYYY-MM-DD
+    const cleanDate = date.trim();
     const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
     if (!requester) return res.status(403).json({ error: 'Access Denied' });
     const isAdmin = requester.role === 'admin';
@@ -1301,16 +1272,13 @@ app.get('/api/admin/class-attendance-report', async (req, res) => {
     const startStr = start.toISOString().split('T')[0];
     const endStr = end.toISOString().split('T')[0];
     
-    // Get all students
     const students = await User.find({ role: 'student' }).select('rollNo name branch');
     if (students.length === 0) return res.json({ students: [], totalLectures: 0 });
     
-    // Get holidays in range
     const holidays = await Holiday.find({ date: { $gte: startStr, $lte: endStr } });
     const holidaySet = new Set(holidays.map(h => h.date));
     const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     
-    // For each student, compute totalConducted and present count
     const resultStudents = await Promise.all(students.map(async (student) => {
       const branch = student.branch || 'CSE';
       const timetable = getTimetableForBranch(branch);
@@ -1334,12 +1302,11 @@ app.get('/api/admin/class-attendance-report', async (req, res) => {
         cur.setDate(cur.getDate() + 1);
       }
       
-      // Count present for this student in the period (only academic subjects)
       const presentCount = await Attendance.countDocuments({
         rollNo: student.rollNo,
         date: { $gte: startStr, $lte: endStr },
         status: { $in: ['Present', 'Duty Leave'] },
-        subject: { $nin: [/Sports/i, /LIB/i, /Library/i] } // exclude non-academic
+        subject: { $nin: [/Sports/i, /LIB/i, /Library/i] }
       });
       
       return {
@@ -1352,7 +1319,6 @@ app.get('/api/admin/class-attendance-report', async (req, res) => {
       };
     }));
     
-    // Overall total lectures (take from first student's total)
     let overallTotal = 0;
     if (resultStudents.length > 0) {
       overallTotal = resultStudents[0].totalLectures;
