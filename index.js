@@ -55,14 +55,14 @@ const loginSchema = z.object({
 const SUBJECT_FACULTY_MAP = {
   'BDA - Big Data Analytics': 'Ms. Geeta',
   'ECO - Economics for Engineers': 'Ms. Sakshi Yadav',
-  'DAA - Design & Analysis of Algorithm': 'Mr. Rajesh',
+  'DAA - Design & Analysis of Algorithm': 'Ms. Rashmi',
   'FLA - Formal Language & Automata': 'Ms. Nisha Yadav',
   'HRM - Human Resource Mgmt': 'Mr. Lokesh',
-  'CN - Computer Network': 'Mr. Sunil',
+  'CN - Computer Network': 'Mr. Chhetrapal',
   'WT - Web Technology': 'Mr. Avish Yadav',
   'Internet Lab (Ms. Geeta)': 'Ms. Geeta',
-  'CN LAB - Computer Network Lab': 'Mr. Sunil',
-  'DAA LAB - Algorithm Lab': 'Mr. Rajesh',
+  'CN LAB - Computer Network Lab': 'Mr. Chhetrapal',
+  'DAA LAB - Algorithm Lab': 'Ms. Rashmi',
   'WT LAB - Web Technology Lab': 'Mr. Avish Yadav',
   'LIB - Library': 'Library Staff',
   'PA - Predictive Analysis': 'Ms. Pooja',
@@ -134,10 +134,10 @@ const CSE_TIME_TABLE = {
   Monday: [
     { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
     { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' },
-    { subject: 'DAA - Design & Analysis of Algorithm', faculty: 'Mr. Rajesh' },
+    { subject: 'DAA - Design & Analysis of Algorithm', faculty: 'Ms. Rashmi' },
     { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' },
     { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' },
-    { subject: 'CN - Computer Network', faculty: 'Mr. Sunil' },
+    { subject: 'CN - Computer Network', faculty: 'Mr. Chhetrapal' },
     { subject: 'LIB - Library', faculty: 'Library Staff' }
   ],
   Tuesday: [
@@ -153,19 +153,19 @@ const CSE_TIME_TABLE = {
     { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' },
     { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' },
     { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' },
-    { subject: 'CN LAB - Computer Network Lab', faculty: 'Mr. Sunil' }
+    { subject: 'CN LAB - Computer Network Lab', faculty: 'Mr. Chhetrapal' }
   ],
   Thursday: [
     { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
     { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' },
-    { subject: 'CN - Computer Network', faculty: 'Mr. Sunil' },
-    { subject: 'DAA - Design & Analysis of Algorithm', faculty: 'Mr. Rajesh' },
-    { subject: 'DAA LAB - Algorithm Lab', faculty: 'Mr. Rajesh' },
+    { subject: 'CN - Computer Network', faculty: 'Mr. Chhetrapal' },
+    { subject: 'DAA - Design & Analysis of Algorithm', faculty: 'Ms. Rashmi' },
+    { subject: 'DAA LAB - Algorithm Lab', faculty: 'Ms. Rashmi' },
     { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }
   ],
   Friday: [
-    { subject: 'DAA - Design & Analysis of Algorithm', faculty: 'Mr. Rajesh' },
-    { subject: 'CN - Computer Network', faculty: 'Mr. Sunil' },
+    { subject: 'DAA - Design & Analysis of Algorithm', faculty: 'Ms. Rashmi' },
+    { subject: 'CN - Computer Network', faculty: 'Mr. Chhetrapal' },
     { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' },
     { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
     { subject: 'WT LAB - Web Technology Lab', faculty: 'Mr. Avish Yadav' }
