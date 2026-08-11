@@ -222,6 +222,35 @@ function getTimetableForBranch(branch) {
   return CSE_TIME_TABLE;
 }
 
+// ---------- Get total conducted lectures for a student ----------
+function getTotalConductedForStudent(branch, startDate, endDate, holidaySet) {
+  const timetable = getTimetableForBranch(branch);
+  const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  let total = 0;
+  const subjectTotals = {};
+  let cur = new Date(startDate);
+  while (cur <= endDate) {
+    const dateStr = cur.toISOString().split('T')[0];
+    const dayOfWeek = cur.getDay();
+    const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+    const isHoliday = holidaySet.has(dateStr);
+    if (!isWeekend && !isHoliday) {
+      const dayName = dayNameMap[dayOfWeek];
+      const subjects = timetable[dayName] || [];
+      subjects.forEach(entry => {
+        const sub = entry.subject;
+        if (!sub.includes('Sports') && !sub.includes('LIB') && !sub.includes('Library')) {
+          if (!subjectTotals[sub]) subjectTotals[sub] = 0;
+          subjectTotals[sub]++;
+          total++;
+        }
+      });
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+  return { total, subjectTotals };
+}
+
 // ---------- MongoDB Connection ----------
 mongoose.connect(MONGO_URI)
   .then(() => console.log('✅ MongoDB Connected Successfully!'))
@@ -395,7 +424,6 @@ app.post('/api/auth/register', async (req, res) => {
     let { name, rollNo, password, deviceId, role, subject } = parseResult.data;
     let cleanRoll = rollNo.trim().toUpperCase();
     
-    // If faculty and rollNo is "AUTO" or empty, generate one
     if (role === 'faculty' && (!cleanRoll || cleanRoll === 'AUTO' || cleanRoll === '')) {
       if (!subject) return res.status(400).json({ error: 'Subject required for faculty registration!' });
       cleanRoll = await generateTeacherId(subject);
@@ -409,7 +437,6 @@ app.post('/api/auth/register', async (req, res) => {
     if (role === 'student' && cleanRoll.includes('AIDS')) branch = 'AIDS';
     const boundDeviceId = (role === 'student') ? (deviceId || null) : null;
     
-    // Create user
     const newUser = new User({
       name,
       rollNo: cleanRoll,
@@ -421,12 +448,11 @@ app.post('/api/auth/register', async (req, res) => {
     });
     await newUser.save();
     
-    // If faculty, also create TeacherSubject entry
     if (role === 'faculty' && subject) {
       await TeacherSubject.create({
         teacherRollNo: cleanRoll,
         subject: subject,
-        assignedBy: cleanRoll // self-assigned during registration
+        assignedBy: cleanRoll
       });
     }
     
@@ -548,11 +574,8 @@ app.delete('/api/admin/delete-user', async (req, res) => {
     const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
     if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const cleanTarget = targetRollNo.trim().toUpperCase();
-    // Delete user
     await User.findOneAndDelete({ rollNo: cleanTarget });
-    // Delete attendance records
     await Attendance.deleteMany({ rollNo: cleanTarget });
-    // If faculty, delete TeacherSubject entries
     await TeacherSubject.deleteMany({ teacherRollNo: cleanTarget });
     res.json({ message: `Account and records deleted for ${cleanTarget}!` });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -613,13 +636,9 @@ app.get('/api/teacher/students/:rollNo', async (req, res) => {
     const teacher = await User.findOne({ rollNo: cleanRoll, role: 'faculty' });
     if (!teacher) return res.status(403).json({ error: 'Teacher not found!' });
     const subjects = await TeacherSubject.find({ teacherRollNo: cleanRoll }).distinct('subject');
-    if (subjects.length === 0) {
-      return res.json([]);
-    }
-    // Get all attendance records for these subjects
+    if (subjects.length === 0) return res.json([]);
     const records = await Attendance.find({ subject: { $in: subjects } }).distinct('rollNo');
-    const studentRolls = records;
-    const students = await User.find({ rollNo: { $in: studentRolls }, role: 'student' }).select('name rollNo');
+    const students = await User.find({ rollNo: { $in: records }, role: 'student' }).select('name rollNo');
     res.json(students);
   } catch (err) {
     res.status(500).json({ error: err.message });
