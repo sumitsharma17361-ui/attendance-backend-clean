@@ -418,7 +418,6 @@
 
                 <!-- ===== MARK TAB (Student) ===== -->
                 <div id="markTab" class="tab-content-active">
-                    <!-- Monthly view -->
                     <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">
                         <select id="monthSelector" style="flex:1; padding:6px; font-size:10px; margin:0;" onchange="fetchMonthlySummary()">
                             <option value="6">July 2026</option>
@@ -629,7 +628,6 @@
                                 <option value="faculty">Faculty</option>
                                 <option value="admin">Admin</option>
                             </select>
-                            <!-- Faculty specific fields -->
                             <div id="facultyRegistrationFields" style="display:none; margin-top:6px;">
                                 <select id="facultySubjectSelect" style="font-size:10px; padding:7px; margin-bottom:6px;">
                                     <option value="">Select Subject…</option>
@@ -683,6 +681,7 @@
                             <button class="btn btn-warning btn-sm" onclick="resetUserPassword()" style="padding:7px; margin:0;">Reset</button>
                         </div>
 
+                        <!-- ✅ DELETE ACCOUNT BUTTON – VISIBLE -->
                         <div class="tool-sub-card" style="border-color:#fecaca; background:#fef2f2;">
                             <span class="tool-title" style="color:#b91c1c;">🗑️ Delete Account</span>
                             <input type="text" id="deleteUserRoll" placeholder="ID to Delete" style="font-size:10px; padding:7px;" />
@@ -1499,7 +1498,6 @@
                 const data = await res.json();
                 const select = document.getElementById('facultySubjectSelect');
                 select.innerHTML = '<option value="">Select Subject…</option>';
-                // Filter subjects that have faculty mapping
                 const facultySubjects = ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 
                     'DAA - Design & Analysis of Algorithm', 'FLA - Formal Language & Automata',
                     'HRM - Human Resource Mgmt', 'CN - Computer Network', 'WT - Web Technology',
@@ -1513,7 +1511,6 @@
                         select.innerHTML += `<option value="${sub}">${sub}</option>`;
                     }
                 });
-                // Auto-fill name based on subject
                 select.onchange = function() {
                     const nameInput = document.getElementById('adminRegName');
                     const selected = this.value;
@@ -1680,12 +1677,13 @@
             } catch (e) { showMsg("Failed!", true); }
         }
 
+        // ===== DELETE ACCOUNT FUNCTION =====
         async function deleteUserAccount() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
             const targetRoll = document.getElementById('deleteUserRoll').value.trim();
-            if (!targetRoll) return showMsg('Enter ID!', true);
-            if (!confirm(`Delete ${targetRoll} permanently?`)) return;
+            if (!targetRoll) return showMsg('Enter ID to delete!', true);
+            if (!confirm(`⚠️ Are you sure you want to permanently delete account "${targetRoll}" and all associated records? This cannot be undone!`)) return;
             try {
                 const res = await fetch(`${API_BASE}/api/admin/delete-user`, {
                     method: 'DELETE',
@@ -1693,8 +1691,18 @@
                     body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo: targetRoll })
                 });
                 const data = await res.json();
-                if (res.ok) { showMsg(data.message || `Account ${targetRoll} deleted!`); document.getElementById('deleteUserRoll').value = ''; fetchAllUsers(); populateStudentSelect(); populateTeacherSelect(); } else { showMsg(data.error || "Failed", true); }
-            } catch (e) { showMsg("Server error!", true); }
+                if (res.ok) { 
+                    showMsg(`✅ ${data.message}`); 
+                    document.getElementById('deleteUserRoll').value = ''; 
+                    fetchAllUsers(); 
+                    populateStudentSelect(); 
+                    populateTeacherSelect(); 
+                } else { 
+                    showMsg(data.error || "Failed to delete account", true); 
+                }
+            } catch (e) { 
+                showMsg("Server error!", true); 
+            }
         }
 
         // ============================================================
@@ -1941,7 +1949,7 @@
         }
 
         // ============================================================
-        // DELETE RECORD (Admin & Teacher)
+        // DELETE RECORD (Admin & Teacher) – INDIVIDUAL RECORD DELETE
         // ============================================================
         async function deleteRecord(recordId) {
             if (!confirm('Delete this attendance record?')) return;
@@ -2403,7 +2411,6 @@
                 fetchAllUsers();
                 populateAdminStudentSelect();
                 populateSubjectDropdown();
-                // Load faculty dropdown if needed
                 toggleFacultyRegistrationFields();
             } else if (isFaculty) {
                 document.getElementById('adminTabHeader').style.display = 'none';
@@ -2500,10 +2507,12 @@
 
         console.log('✅ BM Group ERP Portal loaded successfully!');
         console.log('📆 Month selector default set to current month.');
-        console.log('👨‍🏫 Teacher module updated: passcode + student reports.');
+        console.log('👨‍🏫 Teacher module: passcode + student reports.');
         console.log('👑 Admin: Individual student report added.');
         console.log('📚 Subject assignment dropdown populated from timetable.');
         console.log('👩‍🏫 Faculty registration: auto-ID generation enabled.');
+        console.log('🗑️ Delete Account button is available in Admin → Tools.');
+        console.log('📝 Individual record delete available in student/teacher profile modals.');
     </script>
 </body>
 </html>
