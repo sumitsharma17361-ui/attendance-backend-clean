@@ -761,7 +761,7 @@
         // ============================================================
         // CONFIGURATION
         // ============================================================
-        const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com";
+        const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; // Change to your backend URL
         const ADMIN_ROLL_NUMBERS = ['24CSE48'];
         let globalAllRecords = [],
             globalMyRecords = [],
@@ -1175,11 +1175,9 @@
                 if (Object.keys(grouped).length === 0) {
                     html += `<p style="text-align:center; color:var(--text-muted);">No records found.</p>`;
                 } else {
-                    // Sort dates descending
                     const sortedDates = Object.keys(grouped).sort((a,b) => b.localeCompare(a));
                     sortedDates.forEach(date => {
                         const records = grouped[date];
-                        const first = records[0];
                         html += `
                             <div style="border-bottom:1px solid #e2e8f0; margin-bottom:6px; padding-bottom:6px;">
                                 <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -1585,7 +1583,7 @@
         }
 
         // ============================================================
-        // NEW: CLASS ATTENDANCE REPORT (PDF) for Admin
+        // CLASS ATTENDANCE REPORT (PDF) – FIXED
         // ============================================================
         async function generateClassAttendanceReport() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -1618,19 +1616,19 @@
                 const branchName = data.students[0]?.branch || 'CSE';
                 let tableRows = data.students.map((s, idx) => `
                     <tr>
-                        <td style="padding:4px 8px; border:1px solid #ccc;">${idx + 1}</td>
-                        <td style="padding:4px 8px; border:1px solid #ccc;">${s.rollNo}</td>
-                        <td style="padding:4px 8px; border:1px solid #ccc;">${s.name}</td>
+                        <td style="padding:4px 8px; border:1px solid #ccc; text-align:center;">${idx + 1}</td>
+                        <td style="padding:4px 8px; border:1px solid #ccc; text-align:left;">${s.rollNo}</td>
+                        <td style="padding:4px 8px; border:1px solid #ccc; text-align:left;">${s.name}</td>
                         <td style="padding:4px 8px; border:1px solid #ccc; text-align:center;">${s.totalPresent}</td>
                         <td style="padding:4px 8px; border:1px solid #ccc; text-align:center;">${s.percentage}%</td>
                     </tr>
                 `).join('');
 
                 const htmlContent = `
-                    <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 900px; margin: 0 auto;">
-                        <h1 style="color: #2563eb; text-align:center;">BM Group of Institutions</h1>
-                        <h2 style="text-align:center;">${branchName} – 5th Semester</h2>
-                        <p style="text-align:center;">Attendance from ${startDate} to ${endDate}</p>
+                    <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 900px; margin: 0 auto; background: #fff;">
+                        <h1 style="color: #2563eb; text-align:center; font-size:24px;">BM Group of Institutions</h1>
+                        <h2 style="text-align:center; font-size:18px;">${branchName} – 5th Semester</h2>
+                        <p style="text-align:center; font-size:14px;">Attendance from ${startDate} to ${endDate}</p>
                         <p style="text-align:center; font-size:12px; color:#666;">Total Lectures Conducted: ${totalLectures}</p>
                         <table style="width:100%; border-collapse:collapse; margin-top:20px; font-size:12px;">
                             <thead>
@@ -1650,30 +1648,36 @@
                     </div>
                 `;
 
+                // Create a temporary container for PDF generation
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = htmlContent;
-                tempDiv.style.position = 'absolute';
-                tempDiv.style.left = '-9999px';
-                tempDiv.style.top = '-9999px';
+                tempDiv.style.cssText = 'position: absolute; left: 0; top: 0; width: 100%; background: #fff; z-index: -1; opacity: 0; pointer-events: none;';
                 document.body.appendChild(tempDiv);
+
+                // Force reflow to ensure styles are applied
+                tempDiv.offsetHeight;
 
                 const opt = {
                     margin:        [0.5, 0.5, 0.5, 0.5],
                     filename:     `Class_Attendance_${startDate}_to_${endDate}.pdf`,
                     image:        { type: 'jpeg', quality: 0.98 },
-                    html2canvas:  { scale: 2, letterRendering: true },
+                    html2canvas:  { scale: 2, letterRendering: true, useCORS: true, scrollY: 0 },
                     jsPDF:        { unit: 'in', format: 'a4', orientation: 'landscape' }
                 };
-                html2pdf().set(opt).from(tempDiv).save().then(() => {
-                    document.body.removeChild(tempDiv);
-                    hideDownloadProgress();
-                    showMsg('✅ PDF Downloaded!');
-                }).catch(err => {
-                    document.body.removeChild(tempDiv);
-                    hideDownloadProgress();
-                    showMsg('PDF generation failed!', true);
-                    console.error(err);
-                });
+
+                // Generate PDF with a small delay to ensure rendering
+                setTimeout(() => {
+                    html2pdf().set(opt).from(tempDiv).save().then(() => {
+                        document.body.removeChild(tempDiv);
+                        hideDownloadProgress();
+                        showMsg('✅ PDF Downloaded!');
+                    }).catch(err => {
+                        document.body.removeChild(tempDiv);
+                        hideDownloadProgress();
+                        console.error('PDF Error:', err);
+                        showMsg('PDF generation failed! Please try again.', true);
+                    });
+                }, 300);
 
             } catch (e) {
                 hideDownloadProgress();
