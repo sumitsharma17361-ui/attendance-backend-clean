@@ -396,7 +396,7 @@
                         <select id="monthSelector" style="flex:1; padding:6px; font-size:10px; margin:0;" onchange="fetchMonthlySummary()">
                             <option value="6">July 2026</option>
                             <option value="7">August 2026</option>
-                            <option value="8" selected>September 2026</option>
+                            <option value="8">September 2026</option>
                             <option value="9">October 2026</option>
                             <option value="10">November 2026</option>
                             <option value="11">December 2026</option>
@@ -2201,11 +2201,29 @@
         }
 
         // ============================================================
-        // INIT
+        // INIT - Set default month to current month (August = 7)
+        // ============================================================
+        function initMonthSelector() {
+            const now = new Date();
+            const currentMonth = now.getMonth(); // 0-11
+            // Only set if month is within Jul-Dec (6-11)
+            if (currentMonth >= 6 && currentMonth <= 11) {
+                const select = document.getElementById('monthSelector');
+                if (select) {
+                    select.value = currentMonth.toString();
+                }
+            }
+        }
+
+        // ============================================================
+        // START
         // ============================================================
         if (localStorage.getItem('user')) {
             loadDashboard();
         }
+
+        // Set month selector to current month
+        initMonthSelector();
 
         document.getElementById('studentExcelRange')?.addEventListener('change', function() {
             const wrapper = document.getElementById('selectedMonthWrapper');
@@ -2225,6 +2243,7 @@
         console.log('👨‍🏫 Teacher module: Assign subjects via admin, mark attendance without passcode.');
         console.log('📚 AIDS timetable integrated.');
         console.log('🔐 Public registration only allows student role.');
+        console.log('📆 Month selector default set to current month.');
     </script>
 </body>
 </html>
