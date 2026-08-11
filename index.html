@@ -8,23 +8,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous">
     </script>
     <style>
-        /* ===== ROOT & RESET ===== */
-        :root {
-            --bg-body: #f0f4f8;
-            --primary: #2563eb;
-            --primary-hover: #1d4ed8;
-            --success: #16a34a;
-            --danger: #dc2626;
-            --warning: #d97706;
-            --card-bg: #ffffff;
-            --card-border: #e2e8f0;
-            --shadow-sm: 0 1px 3px 0 rgba(0,0,0,0.06);
-            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05);
-            --shadow-hover: 0 10px 15px -3px rgba(0,0,0,0.08);
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --radius: 12px;
-        }
+        /* ===== ROOT & RESET (same as before) ===== */
+        :root { --bg-body: #f0f4f8; --primary: #2563eb; --primary-hover: #1d4ed8; --success: #16a34a; --danger: #dc2626; --warning: #d97706; --card-bg: #ffffff; --card-border: #e2e8f0; --shadow-sm: 0 1px 3px 0 rgba(0,0,0,0.06); --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05); --shadow-hover: 0 10px 15px -3px rgba(0,0,0,0.08); --text-main: #0f172a; --text-muted: #64748b; --radius: 12px; }
         * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding: 0; }
         body { background: var(--bg-body); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 16px; }
 
@@ -549,7 +534,7 @@
                         </button>
                         <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">💡 Bypasses device binding – for admin assistance only.</p>
 
-                        <!-- NEW: Individual Student Report for Admin -->
+                        <!-- Individual Student Report for Admin -->
                         <hr style="margin:12px 0; border-color:var(--card-border);" />
                         <span class="sub-section-title">📈 Individual Student Report (PDF/CSV)</span>
                         <select id="adminStudentReportSelect" style="padding:8px; margin-bottom:6px; font-size:10px;">
@@ -624,10 +609,14 @@
                             <span class="tool-title" style="color:var(--primary);">➕ Register New User</span>
                             <input type="text" id="adminRegName" placeholder="Full Name" style="font-size:10px; padding:7px;" />
                             <input type="text" id="adminRegRoll" placeholder="Roll/ID" style="font-size:10px; padding:7px;" />
-                            <select id="adminRegRole" style="font-size:10px; padding:7px;">
+                            <select id="adminRegRole" style="font-size:10px; padding:7px;" onchange="toggleFacultyNameDropdown()">
                                 <option value="student">Student</option>
                                 <option value="faculty">Faculty</option>
                                 <option value="admin">Admin</option>
+                            </select>
+                            <!-- Faculty name dropdown (hidden by default) -->
+                            <select id="facultyNameSelect" style="display:none; font-size:10px; padding:7px;">
+                                <option value="">Select Faculty from Timetable…</option>
                             </select>
                             <input type="text" id="adminRegPass" placeholder="Password (Default: 123456)" style="font-size:10px; padding:7px;" />
                             <button class="btn btn-primary btn-sm" onclick="adminRegisterUser()" style="padding:7px; margin:0;">Register</button>
@@ -688,7 +677,7 @@
                 <div id="teacherTab" style="display:none;">
                     <!-- Teacher Passcode (Single Lecture only) -->
                     <div style="background:#eff6ff; border-radius:8px; padding:10px; border:1px solid #bfdbfe; margin-bottom:10px; text-align:center;">
-                        <span class="sub-section-title" style="color:#1d4ed8;">📱 Single Lecture Passcode (4‑digit)</span>
+                        <span class="sub-section-title" style="color:#1d4ed8;">🔒 Single Lecture Passcode (4‑digit)</span>
                         <div class="passcode-display" style="margin-top:4px;">
                             <h2 id="teacherPasscodeDisplay">—</h2>
                         </div>
@@ -1085,13 +1074,14 @@
                 const res = await fetch(`${API_BASE}/api/teacher/subjects/${user.rollNo}`);
                 const data = await res.json();
                 const list = document.getElementById('teacherSubjectList');
+                if (!list) return;
                 if (data.length === 0) {
                     list.innerHTML = '<p style="font-size:10px; color:var(--text-muted);">No subjects assigned yet.</p>';
                     return;
                 }
                 list.innerHTML = data.map(sub => `<span class="badge badge-active" style="margin-right:4px;">${sub}</span>`).join('');
             } catch (e) {
-                showMsg('Failed to load subjects', true);
+                console.error('Failed to load subjects', e);
             }
         }
 
@@ -1099,15 +1089,14 @@
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'faculty') return showMsg('Teacher access required!', true);
             try {
-                const res = await fetch(`${API_BASE}/api/admin/all-users/${user.rollNo}`);
+                const res = await fetch(`${API_BASE}/api/teacher/students/${user.rollNo}`);
                 const data = await res.json();
-                const students = data.filter(u => u.role === 'student');
                 const tbody = document.querySelector('#teacherStudentTable tbody');
-                if (students.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:8px;">No students.</td></tr>';
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:8px;">No students with your subjects.</td></tr>';
                     return;
                 }
-                tbody.innerHTML = students.map(s => `
+                tbody.innerHTML = data.map(s => `
                     <tr>
                         <td><b>${s.rollNo}</b></td>
                         <td>${s.name}</td>
@@ -1118,7 +1107,7 @@
                 `).join('');
                 const select = document.getElementById('teacherStudentReportSelect');
                 select.innerHTML = '<option value="">Select Student…</option>';
-                students.forEach(s => {
+                data.forEach(s => {
                     select.innerHTML += `<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`;
                 });
             } catch (e) {
@@ -1150,6 +1139,7 @@
                                         <span style="font-weight:600;">${r.date}</span> – ${r.subject}
                                         <span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span>
                                     </div>
+                                    <button class="btn btn-del btn-xs" onclick="deleteRecord('${r._id}')">Delete</button>
                                 </div>
                             `).join('')}
                         </div>
@@ -1464,6 +1454,35 @@
             originalAdminUser = null;
             showMsg('✅ Switched back to admin');
             loadDashboard();
+        }
+
+        // Faculty name dropdown toggle
+        async function toggleFacultyNameDropdown() {
+            const role = document.getElementById('adminRegRole').value;
+            const facultySelect = document.getElementById('facultyNameSelect');
+            const nameInput = document.getElementById('adminRegName');
+            if (role === 'faculty') {
+                facultySelect.style.display = 'block';
+                // Load faculty names from timetable
+                try {
+                    const res = await fetch(`${API_BASE}/api/timetable/faculty`);
+                    const data = await res.json();
+                    facultySelect.innerHTML = '<option value="">Select Faculty from Timetable…</option>';
+                    data.forEach(f => {
+                        facultySelect.innerHTML += `<option value="${f}">${f}</option>`;
+                    });
+                    // Auto-fill name when faculty selected
+                    facultySelect.onchange = function() {
+                        nameInput.value = this.value;
+                    };
+                } catch (e) {
+                    showMsg('Failed to load faculty list', true);
+                }
+            } else {
+                facultySelect.style.display = 'none';
+                nameInput.value = '';
+                facultySelect.onchange = null;
+            }
         }
 
         async function adminRegisterUser() {
@@ -1833,19 +1852,35 @@
             if (modal) modal.remove();
         }
 
+        // ============================================================
+        // DELETE RECORD (Admin & Teacher)
+        // ============================================================
         async function deleteRecord(recordId) {
             if (!confirm('Delete this attendance record?')) return;
             const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
+            if (!user || (user.role !== 'admin' && user.role !== 'faculty')) return showMsg('Access Denied!', true);
             try {
                 const res = await fetch(`${API_BASE}/api/attendance/delete/${recordId}/${user.rollNo}`, { method: 'DELETE' });
                 const data = await res.json();
                 if (res.ok) {
                     showMsg('Record deleted!');
-                    const currentRoll = currentStudentRecords.length > 0 ? currentStudentRecords[0].rollNo : '';
-                    closeProfileModal();
-                    if (currentRoll) viewStudentProfile(currentRoll);
-                    fetchAllUsers();
+                    // Refresh the current view
+                    // If admin profile modal is open, close and reopen
+                    const profileModal = document.getElementById('studentProfileModal');
+                    if (profileModal) {
+                        const currentRoll = currentStudentRecords.length > 0 ? currentStudentRecords[0].rollNo : '';
+                        closeProfileModal();
+                        if (currentRoll) viewStudentProfile(currentRoll);
+                        fetchAllUsers();
+                    }
+                    // If teacher modal
+                    const teacherModal = document.getElementById('teacherStudentModal');
+                    if (teacherModal) {
+                        const roll = document.querySelector('#teacherStudentModal .profile-modal h3')?.innerText?.replace('Attendance – ', '');
+                        closeTeacherStudentModal();
+                        if (roll) viewTeacherStudent(roll);
+                        fetchTeacherStudents();
+                    }
                 } else {
                     showMsg(data.error || 'Failed to delete', true);
                 }
@@ -2282,6 +2317,8 @@
                 fetchAllUsers();
                 populateAdminStudentSelect();
                 populateSubjectDropdown();
+                // Load faculty dropdown if needed
+                toggleFacultyNameDropdown();
             } else if (isFaculty) {
                 document.getElementById('adminTabHeader').style.display = 'none';
                 document.getElementById('teacherTabHeader').style.display = 'block';
@@ -2380,6 +2417,7 @@
         console.log('👨‍🏫 Teacher module updated: passcode + student reports.');
         console.log('👑 Admin: Individual student report added.');
         console.log('📚 Subject assignment dropdown populated from timetable.');
+        console.log('👩‍🏫 Faculty registration: name can be selected from timetable.');
     </script>
 </body>
 </html>
