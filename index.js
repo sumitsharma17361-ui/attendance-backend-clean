@@ -41,7 +41,8 @@ const registerSchema = z.object({
   rollNo: z.string().min(3, "ID too short"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   deviceId: z.string().optional(),
-  role: z.enum(['student', 'faculty', 'admin']).default('student')
+  role: z.enum(['student', 'faculty', 'admin']).default('student'),
+  subject: z.string().optional() // for faculty auto-ID
 });
 
 const loginSchema = z.object({
@@ -73,7 +74,29 @@ const SUBJECT_FACULTY_MAP = {
   'Sports / Project': 'Sports Dept'
 };
 
-// Get unique faculty names from timetable
+// Subject to code mapping for teacher ID
+const SUBJECT_CODE_MAP = {
+  'BDA - Big Data Analytics': 'BDA',
+  'ECO - Economics for Engineers': 'ECO',
+  'DAA - Design & Analysis of Algorithm': 'DAA',
+  'FLA - Formal Language & Automata': 'FLA',
+  'HRM - Human Resource Mgmt': 'HRM',
+  'CN - Computer Network': 'CN',
+  'WT - Web Technology': 'WT',
+  'Internet Lab (Ms. Geeta)': 'INT',
+  'CN LAB - Computer Network Lab': 'CNL',
+  'DAA LAB - Algorithm Lab': 'DAAL',
+  'WT LAB - Web Technology Lab': 'WTL',
+  'LIB - Library': 'LIB',
+  'PA - Predictive Analysis': 'PA',
+  'ML - Machine Learning': 'ML',
+  'PA LAB - Predictive Analysis Lab': 'PAL',
+  'ML LAB - Machine Learning Lab': 'MLL',
+  'BDA LAB - Big Data Analytics Lab': 'BDAL',
+  'Sports': 'SPT',
+  'Sports / Project': 'SPT'
+};
+
 function getTimetableFaculty() {
   const facultySet = new Set();
   const allDays = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
@@ -223,7 +246,8 @@ const userSchema = new mongoose.Schema({
   profilePic: { type: String, default: null },
   semester: { type: String, default: '5th' },
   branch: { type: String, default: 'CSE' },
-  activeSession: { type: String, default: null }
+  activeSession: { type: String, default: null },
+  facultySubject: { type: String, default: null } // subject taught by faculty
 }, { timestamps: true });
 
 const attendanceSchema = new mongoose.Schema({
@@ -344,6 +368,22 @@ async function incrementFailedAttempts(rollNo) {
   await user.save();
 }
 
+// ---------- Generate Teacher ID ----------
+async function generateTeacherId(subject) {
+  const code = SUBJECT_CODE_MAP[subject] || 'TCH';
+  const existing = await User.find({
+    rollNo: { $regex: `^${code}\\d{2}$` },
+    role: 'faculty'
+  });
+  let maxNum = 0;
+  existing.forEach(user => {
+    const num = parseInt(user.rollNo.replace(code, ''));
+    if (num > maxNum) maxNum = num;
+  });
+  const newNum = String(maxNum + 1).padStart(2, '0');
+  return `${code}${newNum}`;
+}
+
 // ---------- Routes ----------
 app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active!'));
 
@@ -352,17 +392,40 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const parseResult = registerSchema.safeParse(req.body);
     if (!parseResult.success) return res.status(400).json({ error: parseResult.error.errors[0].message });
-    const { name, rollNo, password, deviceId, role } = parseResult.data;
-    const cleanRoll = rollNo.trim().toUpperCase();
+    let { name, rollNo, password, deviceId, role, subject } = parseResult.data;
+    let cleanRoll = rollNo.trim().toUpperCase();
+    
+    // If faculty and rollNo is "AUTO" or empty, generate one
+    if (role === 'faculty' && (!cleanRoll || cleanRoll === 'AUTO' || cleanRoll === '')) {
+      if (!subject) return res.status(400).json({ error: 'Subject required for faculty registration!' });
+      cleanRoll = await generateTeacherId(subject);
+    }
+    
     let user = await User.findOne({ rollNo: cleanRoll });
     if (user) return res.status(400).json({ error: 'ID already registered!' });
+    
     const hashedPassword = await bcrypt.hash(password, 10);
     let branch = 'CSE';
     if (role === 'student' && cleanRoll.includes('AIDS')) branch = 'AIDS';
     const boundDeviceId = (role === 'student') ? (deviceId || null) : null;
-    await new User({ name, rollNo: cleanRoll, password: hashedPassword, role, boundDeviceId, branch }).save();
-    res.status(201).json({ message: 'Registration successful! Please login.' });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+    
+    await new User({
+      name,
+      rollNo: cleanRoll,
+      password: hashedPassword,
+      role,
+      boundDeviceId,
+      branch,
+      facultySubject: (role === 'faculty') ? subject : null
+    }).save();
+    
+    res.status(201).json({
+      message: `${role} ${name} Registered!`,
+      rollNo: cleanRoll
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/auth/login', async (req, res) => {
@@ -528,20 +591,16 @@ app.get('/api/teacher/subjects/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== TEACHER GET STUDENTS (based on their subjects) ==========
+// ========== TEACHER GET STUDENTS ==========
 app.get('/api/teacher/students/:rollNo', async (req, res) => {
   try {
     const cleanRoll = req.params.rollNo.trim().toUpperCase();
     const teacher = await User.findOne({ rollNo: cleanRoll, role: 'faculty' });
     if (!teacher) return res.status(403).json({ error: 'Teacher not found!' });
     const subjects = await TeacherSubject.find({ teacherRollNo: cleanRoll }).distinct('subject');
-    if (subjects.length === 0) {
-      return res.json([]);
-    }
-    // Get all attendance records for these subjects
+    if (subjects.length === 0) return res.json([]);
     const records = await Attendance.find({ subject: { $in: subjects } }).distinct('rollNo');
-    const studentRolls = records;
-    const students = await User.find({ rollNo: { $in: studentRolls }, role: 'student' }).select('name rollNo');
+    const students = await User.find({ rollNo: { $in: records }, role: 'student' }).select('name rollNo');
     res.json(students);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -589,7 +648,6 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
     const { requesterRollNo, type } = req.body;
     const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
     if (!requester) return res.status(403).json({ error: 'User not found!' });
-    // Admin can generate both, teacher can only generate single_lecture
     if (requester.role === 'admin') {
       // allowed both
     } else if (requester.role === 'faculty' && type === 'single_lecture') {
@@ -706,7 +764,7 @@ app.get('/api/admin/all-users/:requesterRollNo', async (req, res) => {
   try {
     const requester = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
     if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
-    const users = await User.find().select('name rollNo role boundDeviceId email phone semester branch profilePic').sort({ rollNo: 1 });
+    const users = await User.find().select('name rollNo role boundDeviceId email phone semester branch profilePic facultySubject').sort({ rollNo: 1 });
     res.json(users);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -716,7 +774,7 @@ app.get('/api/admin/faculty/:requesterRollNo', async (req, res) => {
   try {
     const requester = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
     if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
-    const faculty = await User.find({ role: 'faculty' }).select('name rollNo email phone').sort({ rollNo: 1 });
+    const faculty = await User.find({ role: 'faculty' }).select('name rollNo email phone facultySubject').sort({ rollNo: 1 });
     res.json(faculty);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -755,7 +813,6 @@ app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
     if (!isAdmin && !isTeacher) return res.status(403).json({ error: 'Access Denied: Admin or Teacher only!' });
     const record = await Attendance.findById(req.params.id);
     if (!record) return res.status(404).json({ error: 'Record not found' });
-    // If teacher, verify subject is assigned
     if (isTeacher) {
       const subjects = await TeacherSubject.find({ teacherRollNo: requesterRollNo }).distinct('subject');
       if (!subjects.includes(record.subject)) {
@@ -1142,7 +1199,7 @@ app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) => {
   } catch (err) { console.error('Student export error:', err); res.status(500).json({ error: err.message }); }
 });
 
-// ========== SUBJECT DROPDOWN API (for admin assignment) ==========
+// ========== SUBJECT DROPDOWN API ==========
 app.get('/api/timetable/subjects', async (req, res) => {
   try {
     const cseSubjects = new Set();
@@ -1155,10 +1212,11 @@ app.get('/api/timetable/subjects', async (req, res) => {
     const all = [...new Set([...cseSubjects, ...aidsSubjects])].sort();
     res.json(all);
   } catch (err) {
-    res.status(500).json({ error: err.message }); }
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// ========== TIMETABLE FACULTY LIST (for registration dropdown) ==========
+// ========== TIMETABLE FACULTY LIST ==========
 app.get('/api/timetable/faculty', async (req, res) => {
   try {
     const faculty = getTimetableFaculty();
