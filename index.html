@@ -270,7 +270,7 @@
             <!-- ===== AUTH BOX ===== -->
             <div id="auth-box" class="tab-content-active">
                 <h3 style="font-size:14px; font-weight:800; margin-bottom:8px;">Sign In to Web Attendance System</h3>
-                <!-- Role Selection (only for login, not registration) -->
+                <!-- Role Selection - only visible in login mode, hidden in register mode -->
                 <select id="loginRole" style="margin-bottom:8px;">
                     <option value="student">Student</option>
                     <option value="faculty">Faculty</option>
@@ -278,7 +278,7 @@
                 </select>
                 <div id="register-fields" style="display:none;">
                     <input type="text" id="regName" placeholder="Full Name" />
-                    <!-- REMOVED role selection from registration - only student -->
+                    <!-- NO ROLE SELECTION HERE - registration is always student -->
                 </div>
                 <input type="text" id="rollNo" placeholder="Enter Username (Roll/ID)" />
                 <div class="password-wrapper">
@@ -683,7 +683,7 @@
         // CONFIGURATION
         // ============================================================
         const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com";
-        const ADMIN_ROLL_NUMBERS = ['24CSE48']; // only this can be admin
+        const ADMIN_ROLL_NUMBERS = ['24CSE48'];
         let globalAllRecords = [],
             globalMyRecords = [],
             globalHolidays = [],
@@ -723,7 +723,6 @@
         function sanitizeAndValidateRollNo(rawRoll) {
             if (!rawRoll) return { isValid: false, cleanRoll: "" };
             let clean = rawRoll.toUpperCase().replace(/[^A-Z0-9]/g, '');
-            // Allow any alphanumeric ID
             return { isValid: clean.length >= 3, cleanRoll: clean };
         }
 
@@ -735,6 +734,8 @@
         function toggleMode() {
             isRegistering = !isRegistering;
             document.getElementById('register-fields').style.display = isRegistering ? 'block' : 'none';
+            // Hide role dropdown when registering
+            document.getElementById('loginRole').style.display = isRegistering ? 'none' : 'block';
             document.getElementById('authBtn').innerText = isRegistering ? 'Register' : 'Sign In';
             document.getElementById('toggleLink').innerText = isRegistering ? 'Already registered? Sign In' : 'New Student? Register';
         }
@@ -2107,6 +2108,8 @@
                     const data = await res.json();
                     if (res.ok) { showMsg('Registered! Login now.'); toggleMode(); } else { showMsg(data.error || 'Registration failed', true); }
                 } else {
+                    // Login - use selected role for validation
+                    const selectedRole = document.getElementById('loginRole').value;
                     const res = await fetch(`${API_BASE}/api/auth/login`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -2114,6 +2117,10 @@
                     });
                     const data = await res.json();
                     if (res.ok) {
+                        // Verify role matches selected
+                        if (data.user.role !== selectedRole) {
+                            return showMsg(`You are registered as ${data.user.role}, not ${selectedRole}. Please select correct role.`, true);
+                        }
                         localStorage.setItem('user', JSON.stringify(data.user));
                         localStorage.setItem('token', data.token);
                         loadDashboard();
