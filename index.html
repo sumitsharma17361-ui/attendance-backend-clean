@@ -558,6 +558,19 @@
                             <button class="btn btn-primary btn-sm" onclick="generateStudentReport('pdf')" style="padding:6px;">PDF</button>
                             <button class="btn btn-success btn-sm" onclick="generateStudentReport('csv')" style="padding:6px;">CSV</button>
                         </div>
+
+                        <!-- ===== NEW: Class Attendance Report (PDF) ===== -->
+                        <hr style="margin:12px 0; border-color:var(--card-border);" />
+                        <span class="sub-section-title">📋 Class Attendance Report (PDF)</span>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                            <input type="date" id="classReportStart" style="flex:1; padding:6px; font-size:10px; margin:0;" />
+                            <input type="date" id="classReportEnd" style="flex:1; padding:6px; font-size:10px; margin:0;" />
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="generateClassAttendanceReport()" style="padding:8px; margin-top:6px;">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                            Generate PDF
+                        </button>
+                        <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">Shows all registered students with total present and percentage.</p>
                     </div>
 
                     <!-- SUB: Attendance Entry -->
@@ -944,7 +957,6 @@
             return CSE_SCHEDULE;
         }
 
-        // ---------- FIX: define getTimetableForBranch as alias ----------
         function getTimetableForBranch(branch) {
             return getBranchTimetable(branch);
         }
@@ -1178,7 +1190,9 @@
             if (modal) modal.remove();
         }
 
-        // ===== GENERATE TEACHER REPORT (fixed) =====
+        // ============================================================
+        // TEACHER REPORT – FIXED: only count teacher's assigned subjects
+        // ============================================================
         async function generateTeacherReport(format) {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'faculty') return showMsg('Teacher access required!', true);
@@ -1186,18 +1200,30 @@
             if (!studentRoll) return showMsg('Select a student!', true);
 
             try {
-                // 1. Get student profile to know branch
+                // 1) Get teacher's assigned subjects
+                const subRes = await fetch(`${API_BASE}/api/teacher/subjects/${user.rollNo}`);
+                let teacherSubjects = await subRes.json();
+                if (!subRes.ok || !Array.isArray(teacherSubjects)) {
+                    return showMsg('Could not fetch your assigned subjects.', true);
+                }
+                if (teacherSubjects.length === 0) {
+                    return showMsg('You have no subjects assigned.', true);
+                }
+
+                // 2) Student profile (for branch)
                 const profileRes = await fetch(`${API_BASE}/api/student/profile/${studentRoll}`);
                 const profile = await profileRes.json();
                 if (!profileRes.ok) return showMsg('Student not found!', true);
                 const branch = profile.branch || 'CSE';
 
-                // 2. Get attendance records
+                // 3) Attendance records (already filtered by teacher's subjects via backend)
                 const attRes = await fetch(`${API_BASE}/api/attendance/student/${studentRoll}/${user.rollNo}`);
                 const records = await attRes.json();
-                if (!attRes.ok || records.length === 0) return showMsg('No records found for this student.', true);
+                if (!attRes.ok || records.length === 0) {
+                    return showMsg('No attendance records found for this student.', true);
+                }
 
-                // 3. Calculate total conducted lectures from timetable (15 July to today)
+                // 4) Calculate total conducted lectures for **only** teacher's subjects
                 const today = new Date();
                 const semesterStart = new Date(2026, 6, 15);
                 const holidayRes = await fetch(`${API_BASE}/api/holidays`);
@@ -1217,9 +1243,9 @@
                     if (!isWeekend && !isHoliday) {
                         const dayName = dayNameMap[dayOfWeek];
                         const subjects = timetable[dayName] || [];
-                        // FIX: subjects are strings, not objects
                         subjects.forEach(sub => {
-                            if (!sub.includes('Sports') && !sub.includes('LIB') && !sub.includes('Library')) {
+                            // Only count if subject is in teacher's assigned list
+                            if (teacherSubjects.includes(sub)) {
                                 if (!subjectTotals[sub]) subjectTotals[sub] = 0;
                                 subjectTotals[sub]++;
                                 totalConducted++;
@@ -1229,17 +1255,16 @@
                     cur.setDate(cur.getDate() + 1);
                 }
 
-                // 4. Count attended per subject
+                // 5) Count attended per subject (only those in teacherSubjects)
                 const attendedCounts = {};
                 records.forEach(r => {
-                    if (r.status === 'Present' || r.status === 'Duty Leave') {
+                    if ((r.status === 'Present' || r.status === 'Duty Leave') && teacherSubjects.includes(r.subject)) {
                         if (!attendedCounts[r.subject]) attendedCounts[r.subject] = 0;
                         attendedCounts[r.subject]++;
                     }
                 });
 
-                // 5. Build report
-                const totalAttended = records.filter(r => r.status === 'Present' || r.status === 'Duty Leave').length;
+                const totalAttended = Object.values(attendedCounts).reduce((a, b) => a + b, 0);
                 const pct = totalConducted > 0 ? Math.round((totalAttended / totalConducted) * 100) : 0;
 
                 const subjectStats = {};
@@ -1276,7 +1301,7 @@
                             <table style="width:100%; border-collapse:collapse; border:1px solid #ccc;">
                                 <thead><tr style="background:#f0f0f0;"><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
                                 <tbody>
-                                    ${records.map(r => `
+                                    ${records.filter(r => teacherSubjects.includes(r.subject)).map(r => `
                                         <tr><td>${r.date}</td><td>${r.subject}</td><td>${r.status}</td></tr>
                                     `).join('')}
                                 </tbody>
@@ -1289,12 +1314,13 @@
                     win.document.close();
                     win.print();
                 } else {
+                    // CSV
                     let csv = `Student Attendance Report\nStudent: ${studentRoll}\nTeacher: ${user.name}\nBranch: ${branch}\nRange: 15 July 2026 to ${today.toISOString().split('T')[0]}\nTotal Conducted: ${totalConducted}, Attended: ${totalAttended}, %: ${pct}%\n\nSubject,Attended,Total,Percentage\n`;
                     Object.entries(subjectStats).forEach(([sub, st]) => {
                         csv += `"${sub}",${st.present},${st.total},${st.percentage}%\n`;
                     });
                     csv += `\nDate,Subject,Status\n`;
-                    records.forEach(r => {
+                    records.filter(r => teacherSubjects.includes(r.subject)).forEach(r => {
                         csv += `${r.date},${r.subject},${r.status}\n`;
                     });
                     downloadFile(csv, `Teacher_${studentRoll}_Attendance.csv`, 'text/csv');
@@ -1307,7 +1333,7 @@
         }
 
         // ============================================================
-        // STUDENT MONTHLY SUMMARY (with attended/total) - FIXED
+        // STUDENT MONTHLY SUMMARY
         // ============================================================
         async function fetchMonthlySummary() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -1345,7 +1371,7 @@
         }
 
         // ============================================================
-        // FULL DAY ATTENDANCE - FIXED
+        // FULL DAY ATTENDANCE
         // ============================================================
         async function openFullDayPasscodePrompt() {
             const enteredPasscode = prompt(`Enter Full Day Passcode (5‑digit):`);
@@ -1409,7 +1435,7 @@
         }
 
         // ============================================================
-        // ADMIN INDIVIDUAL STUDENT REPORT (with total from timetable) - FIXED
+        // ADMIN INDIVIDUAL STUDENT REPORT
         // ============================================================
         async function generateStudentReport(format) {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -1531,6 +1557,103 @@
         }
 
         // ============================================================
+        // NEW: CLASS ATTENDANCE REPORT (PDF) for Admin
+        // ============================================================
+        async function generateClassAttendanceReport() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
+
+            let startDate = document.getElementById('classReportStart').value;
+            let endDate = document.getElementById('classReportEnd').value;
+            if (!startDate || !endDate) {
+                const today = new Date();
+                const start = new Date(2026, 6, 15);
+                startDate = start.toISOString().split('T')[0];
+                endDate = today.toISOString().split('T')[0];
+                document.getElementById('classReportStart').value = startDate;
+                document.getElementById('classReportEnd').value = endDate;
+            }
+            if (startDate > endDate) return showMsg('Start date cannot be after end date!', true);
+
+            showDownloadProgress('Generating class report…');
+            try {
+                const url = `${API_BASE}/api/admin/class-attendance-report?requesterRollNo=${user.rollNo}&startDate=${startDate}&endDate=${endDate}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to fetch report');
+                if (!data.students || data.students.length === 0) {
+                    hideDownloadProgress();
+                    return showMsg('No students found!', true);
+                }
+
+                const totalLectures = data.totalLectures || 0;
+                const branchName = data.students[0]?.branch || 'CSE';
+                let tableRows = data.students.map((s, idx) => `
+                    <tr>
+                        <td style="padding:4px 8px; border:1px solid #ccc;">${idx + 1}</td>
+                        <td style="padding:4px 8px; border:1px solid #ccc;">${s.rollNo}</td>
+                        <td style="padding:4px 8px; border:1px solid #ccc;">${s.name}</td>
+                        <td style="padding:4px 8px; border:1px solid #ccc; text-align:center;">${s.totalPresent}</td>
+                        <td style="padding:4px 8px; border:1px solid #ccc; text-align:center;">${s.percentage}%</td>
+                    </tr>
+                `).join('');
+
+                const htmlContent = `
+                    <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 900px; margin: 0 auto;">
+                        <h1 style="color: #2563eb; text-align:center;">BM Group of Institutions</h1>
+                        <h2 style="text-align:center;">${branchName} – 5th Semester</h2>
+                        <p style="text-align:center;">Attendance from ${startDate} to ${endDate}</p>
+                        <p style="text-align:center; font-size:12px; color:#666;">Total Lectures Conducted: ${totalLectures}</p>
+                        <table style="width:100%; border-collapse:collapse; margin-top:20px; font-size:12px;">
+                            <thead>
+                                <tr style="background:#f0f0f0;">
+                                    <th style="padding:6px 8px; border:1px solid #ccc; text-align:center;">S.No</th>
+                                    <th style="padding:6px 8px; border:1px solid #ccc; text-align:left;">Roll No</th>
+                                    <th style="padding:6px 8px; border:1px solid #ccc; text-align:left;">Name</th>
+                                    <th style="padding:6px 8px; border:1px solid #ccc; text-align:center;">Total Present</th>
+                                    <th style="padding:6px 8px; border:1px solid #ccc; text-align:center;">Percentage</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${tableRows}
+                            </tbody>
+                        </table>
+                        <p style="text-align:center; font-size:10px; color:#999; margin-top:20px;">Generated on ${new Date().toLocaleString()}</p>
+                    </div>
+                `;
+
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = htmlContent;
+                tempDiv.style.position = 'absolute';
+                tempDiv.style.left = '-9999px';
+                tempDiv.style.top = '-9999px';
+                document.body.appendChild(tempDiv);
+
+                const opt = {
+                    margin:        [0.5, 0.5, 0.5, 0.5],
+                    filename:     `Class_Attendance_${startDate}_to_${endDate}.pdf`,
+                    image:        { type: 'jpeg', quality: 0.98 },
+                    html2canvas:  { scale: 2, letterRendering: true },
+                    jsPDF:        { unit: 'in', format: 'a4', orientation: 'landscape' }
+                };
+                html2pdf().set(opt).from(tempDiv).save().then(() => {
+                    document.body.removeChild(tempDiv);
+                    hideDownloadProgress();
+                    showMsg('✅ PDF Downloaded!');
+                }).catch(err => {
+                    document.body.removeChild(tempDiv);
+                    hideDownloadProgress();
+                    showMsg('PDF generation failed!', true);
+                    console.error(err);
+                });
+
+            } catch (e) {
+                hideDownloadProgress();
+                showMsg(e.message || 'Failed to generate report', true);
+            }
+        }
+
+        // ============================================================
         // REST OF FUNCTIONS (unchanged)
         // ============================================================
 
@@ -1620,7 +1743,6 @@
                 const data = await res.json();
                 if (res.ok) {
                     showMsg('Record deleted!');
-                    // Refresh views
                     const profileModal = document.getElementById('studentProfileModal');
                     if (profileModal) {
                         const currentRoll = currentStudentRecords.length > 0 ? currentStudentRecords[0].rollNo : '';
