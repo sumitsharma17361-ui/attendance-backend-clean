@@ -862,6 +862,31 @@ app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ========== DELETE ALL ATTENDANCE FOR A DATE (Admin & Teacher) ==========
+app.delete('/api/attendance/delete-day/:rollNo/:date/:requesterRollNo', async (req, res) => {
+  try {
+    const { rollNo, date, requesterRollNo } = req.params;
+    const cleanRoll = rollNo.trim().toUpperCase();
+    const cleanDate = date.trim(); // expected YYYY-MM-DD
+    const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+    if (!requester) return res.status(403).json({ error: 'Access Denied' });
+    const isAdmin = requester.role === 'admin';
+    const isTeacher = requester.role === 'faculty';
+    if (!isAdmin && !isTeacher) return res.status(403).json({ error: 'Access Denied: Admin or Teacher only!' });
+
+    let query = { rollNo: cleanRoll, date: cleanDate };
+    if (isTeacher) {
+      const subjects = await TeacherSubject.find({ teacherRollNo: requesterRollNo }).distinct('subject');
+      query.subject = { $in: subjects };
+    }
+    const result = await Attendance.deleteMany(query);
+    if (result.deletedCount === 0) return res.status(404).json({ error: 'No records found for this date.' });
+    res.json({ message: `Deleted ${result.deletedCount} records for ${cleanRoll} on ${cleanDate}.` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ========== STUDENT MONTHLY SUMMARY (Branch-aware) ==========
 app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
   try {
@@ -1260,6 +1285,85 @@ app.get('/api/timetable/faculty', async (req, res) => {
     const faculty = getTimetableFaculty();
     res.json(faculty);
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ========== CLASS ATTENDANCE REPORT (Admin) ==========
+app.get('/api/admin/class-attendance-report', async (req, res) => {
+  try {
+    const { requesterRollNo, startDate, endDate } = req.query;
+    if (!requesterRollNo) return res.status(400).json({ error: 'requesterRollNo required' });
+    const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+    if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    const start = startDate ? new Date(startDate) : new Date(SEMESTER_START);
+    const end = endDate ? new Date(endDate) : new Date(SEMESTER_END);
+    const startStr = start.toISOString().split('T')[0];
+    const endStr = end.toISOString().split('T')[0];
+    
+    // Get all students
+    const students = await User.find({ role: 'student' }).select('rollNo name branch');
+    if (students.length === 0) return res.json({ students: [], totalLectures: 0 });
+    
+    // Get holidays in range
+    const holidays = await Holiday.find({ date: { $gte: startStr, $lte: endStr } });
+    const holidaySet = new Set(holidays.map(h => h.date));
+    const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    
+    // For each student, compute totalConducted and present count
+    const resultStudents = await Promise.all(students.map(async (student) => {
+      const branch = student.branch || 'CSE';
+      const timetable = getTimetableForBranch(branch);
+      let totalConducted = 0;
+      let cur = new Date(start);
+      while (cur <= end) {
+        const dateStr = cur.toISOString().split('T')[0];
+        const dayOfWeek = cur.getDay();
+        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+        const isHoliday = holidaySet.has(dateStr);
+        if (!isWeekend && !isHoliday) {
+          const dayName = dayNameMap[dayOfWeek];
+          const subjects = timetable[dayName] || [];
+          subjects.forEach(entry => {
+            const sub = entry.subject;
+            if (!sub.includes('Sports') && !sub.includes('LIB') && !sub.includes('Library')) {
+              totalConducted++;
+            }
+          });
+        }
+        cur.setDate(cur.getDate() + 1);
+      }
+      
+      // Count present for this student in the period (only academic subjects)
+      const presentCount = await Attendance.countDocuments({
+        rollNo: student.rollNo,
+        date: { $gte: startStr, $lte: endStr },
+        status: { $in: ['Present', 'Duty Leave'] },
+        subject: { $nin: [/Sports/i, /LIB/i, /Library/i] } // exclude non-academic
+      });
+      
+      return {
+        rollNo: student.rollNo,
+        name: student.name,
+        branch: branch,
+        totalPresent: presentCount,
+        totalLectures: totalConducted,
+        percentage: totalConducted > 0 ? Math.round((presentCount / totalConducted) * 100) : 0
+      };
+    }));
+    
+    // Overall total lectures (take from first student's total)
+    let overallTotal = 0;
+    if (resultStudents.length > 0) {
+      overallTotal = resultStudents[0].totalLectures;
+    }
+    
+    res.json({
+      students: resultStudents,
+      totalLectures: overallTotal
+    });
+  } catch (err) {
+    console.error('Class report error:', err);
     res.status(500).json({ error: err.message });
   }
 });
