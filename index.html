@@ -1155,30 +1155,58 @@
                 const res = await fetch(`${API_BASE}/api/attendance/student/${rollNo}/${user.rollNo}`);
                 const data = await res.json();
                 if (!res.ok) return showMsg(data.error || 'Failed', true);
+                // Group records by date
+                const grouped = {};
+                data.forEach(r => {
+                    if (!grouped[r.date]) grouped[r.date] = [];
+                    grouped[r.date].push(r);
+                });
                 const modal = document.createElement('div');
                 modal.className = 'modal-overlay';
                 modal.id = 'teacherStudentModal';
-                modal.innerHTML = `
+                let html = `
                     <div class="modal-card profile-modal">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                             <h3 style="font-size:14px; font-weight:800;">Attendance – ${rollNo}</h3>
                             <button class="btn btn-danger btn-sm" onclick="closeTeacherStudentModal()" style="padding:2px 8px;">✕</button>
                         </div>
                         <div style="max-height:300px; overflow-y:auto;">
-                            ${data.length === 0 ? '<p style="text-align:center; color:var(--text-muted);">No records found.</p>' :
-                            data.map(r => `
+                `;
+                if (Object.keys(grouped).length === 0) {
+                    html += `<p style="text-align:center; color:var(--text-muted);">No records found.</p>`;
+                } else {
+                    // Sort dates descending
+                    const sortedDates = Object.keys(grouped).sort((a,b) => b.localeCompare(a));
+                    sortedDates.forEach(date => {
+                        const records = grouped[date];
+                        const first = records[0];
+                        html += `
+                            <div style="border-bottom:1px solid #e2e8f0; margin-bottom:6px; padding-bottom:6px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <span style="font-weight:700; font-size:11px;">📅 ${date}</span>
+                                    <button class="btn btn-danger btn-xs" onclick="deleteAllForDate('${rollNo}','${date}')" style="padding:2px 6px;">Delete All</button>
+                                </div>
+                        `;
+                        records.forEach(r => {
+                            html += `
                                 <div class="record-item">
                                     <div>
-                                        <span style="font-weight:600;">${r.date}</span> – ${r.subject}
+                                        <span style="font-weight:600;">${r.subject}</span>
                                         <span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span>
                                     </div>
                                     <button class="btn btn-del btn-xs" onclick="deleteRecord('${r._id}')">Delete</button>
                                 </div>
-                            `).join('')}
+                            `;
+                        });
+                        html += `</div>`;
+                    });
+                }
+                html += `
                         </div>
                         <button class="btn btn-outline btn-sm" onclick="closeTeacherStudentModal()" style="margin-top:8px;">Close</button>
                     </div>
                 `;
+                modal.innerHTML = html;
                 document.body.appendChild(modal);
             } catch (e) {
                 showMsg('Failed to load records', true);
@@ -1654,6 +1682,45 @@
         }
 
         // ============================================================
+        // DELETE ALL FOR DATE
+        // ============================================================
+        async function deleteAllForDate(rollNo, date) {
+            if (!confirm(`Delete ALL attendance records for ${rollNo} on ${date}? This cannot be undone.`)) return;
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || (user.role !== 'admin' && user.role !== 'faculty')) {
+                return showMsg('Access Denied!', true);
+            }
+            try {
+                const res = await fetch(`${API_BASE}/api/attendance/delete-day/${rollNo}/${date}/${user.rollNo}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showMsg(data.message);
+                    // Refresh modal
+                    const modal = document.getElementById('studentProfileModal') || document.getElementById('teacherStudentModal');
+                    if (modal) {
+                        const roll = rollNo;
+                        // Close and reopen
+                        if (modal.id === 'studentProfileModal') {
+                            closeProfileModal();
+                            viewStudentProfile(roll);
+                        } else {
+                            closeTeacherStudentModal();
+                            viewTeacherStudent(roll);
+                        }
+                    }
+                    fetchAllUsers();
+                    fetchTeacherStudents();
+                } else {
+                    showMsg(data.error || 'Failed to delete', true);
+                }
+            } catch (e) {
+                showMsg('Server error!', true);
+            }
+        }
+
+        // ============================================================
         // REST OF FUNCTIONS (unchanged)
         // ============================================================
 
@@ -1698,30 +1765,56 @@
                 const data = await res.json();
                 if (!res.ok) return showMsg(data.error || 'Failed to load records', true);
                 currentStudentRecords = data;
+                // Group by date
+                const grouped = {};
+                data.forEach(r => {
+                    if (!grouped[r.date]) grouped[r.date] = [];
+                    grouped[r.date].push(r);
+                });
                 const modal = document.createElement('div');
                 modal.className = 'modal-overlay';
                 modal.id = 'studentProfileModal';
-                modal.innerHTML = `
+                let html = `
                     <div class="modal-card profile-modal">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                             <h3 style="font-size:14px; font-weight:800;">Attendance – ${rollNo}</h3>
                             <button class="btn btn-danger btn-sm" onclick="closeProfileModal()" style="padding:2px 8px;">✕</button>
                         </div>
                         <div style="max-height:300px; overflow-y:auto;">
-                            ${data.length === 0 ? '<p style="text-align:center; color:var(--text-muted);">No records found.</p>' :
-                            data.map(r => `
+                `;
+                if (Object.keys(grouped).length === 0) {
+                    html += `<p style="text-align:center; color:var(--text-muted);">No records found.</p>`;
+                } else {
+                    const sortedDates = Object.keys(grouped).sort((a,b) => b.localeCompare(a));
+                    sortedDates.forEach(date => {
+                        const records = grouped[date];
+                        html += `
+                            <div style="border-bottom:1px solid #e2e8f0; margin-bottom:6px; padding-bottom:6px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <span style="font-weight:700; font-size:11px;">📅 ${date}</span>
+                                    <button class="btn btn-danger btn-xs" onclick="deleteAllForDate('${rollNo}','${date}')" style="padding:2px 6px;">Delete All</button>
+                                </div>
+                        `;
+                        records.forEach(r => {
+                            html += `
                                 <div class="record-item">
                                     <div>
-                                        <span style="font-weight:600;">${r.date}</span> – ${r.subject}
+                                        <span style="font-weight:600;">${r.subject}</span>
                                         <span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span>
                                     </div>
                                     <button class="btn btn-del btn-xs" onclick="deleteRecord('${r._id}')">Delete</button>
                                 </div>
-                            `).join('')}
+                            `;
+                        });
+                        html += `</div>`;
+                    });
+                }
+                html += `
                         </div>
                         <button class="btn btn-outline btn-sm" onclick="closeProfileModal()" style="margin-top:8px;">Close</button>
                     </div>
                 `;
+                modal.innerHTML = html;
                 document.body.appendChild(modal);
             } catch (e) {
                 showMsg('Failed to load profile', true);
