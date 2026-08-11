@@ -42,7 +42,7 @@ const registerSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
   deviceId: z.string().optional(),
   role: z.enum(['student', 'faculty', 'admin']).default('student'),
-  subject: z.string().optional() // for faculty auto-ID
+  subject: z.string().optional()
 });
 
 const loginSchema = z.object({
@@ -247,7 +247,7 @@ const userSchema = new mongoose.Schema({
   semester: { type: String, default: '5th' },
   branch: { type: String, default: 'CSE' },
   activeSession: { type: String, default: null },
-  facultySubject: { type: String, default: null } // subject taught by faculty
+  facultySubject: { type: String, default: null }
 }, { timestamps: true });
 
 const attendanceSchema = new mongoose.Schema({
@@ -409,7 +409,8 @@ app.post('/api/auth/register', async (req, res) => {
     if (role === 'student' && cleanRoll.includes('AIDS')) branch = 'AIDS';
     const boundDeviceId = (role === 'student') ? (deviceId || null) : null;
     
-    await new User({
+    // Create user
+    const newUser = new User({
       name,
       rollNo: cleanRoll,
       password: hashedPassword,
@@ -417,7 +418,17 @@ app.post('/api/auth/register', async (req, res) => {
       boundDeviceId,
       branch,
       facultySubject: (role === 'faculty') ? subject : null
-    }).save();
+    });
+    await newUser.save();
+    
+    // If faculty, also create TeacherSubject entry
+    if (role === 'faculty' && subject) {
+      await TeacherSubject.create({
+        teacherRollNo: cleanRoll,
+        subject: subject,
+        assignedBy: cleanRoll // self-assigned during registration
+      });
+    }
     
     res.status(201).json({
       message: `${role} ${name} Registered!`,
@@ -537,8 +548,12 @@ app.delete('/api/admin/delete-user', async (req, res) => {
     const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
     if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const cleanTarget = targetRollNo.trim().toUpperCase();
+    // Delete user
     await User.findOneAndDelete({ rollNo: cleanTarget });
+    // Delete attendance records
     await Attendance.deleteMany({ rollNo: cleanTarget });
+    // If faculty, delete TeacherSubject entries
+    await TeacherSubject.deleteMany({ teacherRollNo: cleanTarget });
     res.json({ message: `Account and records deleted for ${cleanTarget}!` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -598,9 +613,13 @@ app.get('/api/teacher/students/:rollNo', async (req, res) => {
     const teacher = await User.findOne({ rollNo: cleanRoll, role: 'faculty' });
     if (!teacher) return res.status(403).json({ error: 'Teacher not found!' });
     const subjects = await TeacherSubject.find({ teacherRollNo: cleanRoll }).distinct('subject');
-    if (subjects.length === 0) return res.json([]);
+    if (subjects.length === 0) {
+      return res.json([]);
+    }
+    // Get all attendance records for these subjects
     const records = await Attendance.find({ subject: { $in: subjects } }).distinct('rollNo');
-    const students = await User.find({ rollNo: { $in: records }, role: 'student' }).select('name rollNo');
+    const studentRolls = records;
+    const students = await User.find({ rollNo: { $in: studentRolls }, role: 'student' }).select('name rollNo');
     res.json(students);
   } catch (err) {
     res.status(500).json({ error: err.message });
