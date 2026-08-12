@@ -136,9 +136,40 @@
         .tab-item.active { background: #fff; color: var(--primary); box-shadow: var(--shadow-sm); }
 
         /* ===== ADMIN NAV ===== */
-        .admin-nav { display: flex; gap: 2px; background: #f1f5f9; padding: 2px; border-radius: var(--radius-sm); margin-bottom: 10px; overflow-x: auto; flex-wrap: nowrap; }
-        .admin-nav-item { flex: 1; text-align: center; padding: 5px 3px; font-size: 8px; font-weight: 700; cursor: pointer; border-radius: 5px; color: var(--text-muted); transition: all 0.3s; white-space: nowrap; min-width: 50px; }
-        .admin-nav-item.active { background: #fff; color: var(--primary); box-shadow: var(--shadow-sm); }
+        .admin-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            background: #f1f5f9;
+            padding: 6px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 10px;
+        }
+        .admin-nav-item {
+            flex: 1 0 auto;
+            min-width: 60px;
+            text-align: center;
+            padding: 10px 6px;
+            font-size: 11px;
+            font-weight: 800;
+            cursor: pointer;
+            border-radius: 6px;
+            color: var(--text-muted);
+            transition: all 0.3s;
+            background: transparent;
+            border: 1px solid transparent;
+            line-height: 1.3;
+            letter-spacing: 0.3px;
+        }
+        .admin-nav-item:hover {
+            background: rgba(255,255,255,0.6);
+        }
+        .admin-nav-item.active {
+            background: #fff;
+            color: var(--primary);
+            box-shadow: var(--shadow-sm);
+            border-color: var(--card-border);
+        }
 
         /* ===== PERIOD CARD ===== */
         .period-card { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: var(--radius); padding: 10px; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; }
@@ -224,7 +255,7 @@
         .filter-row select, .filter-row input { flex: 1; min-width: 80px; padding: 6px 8px; font-size: 9px; margin: 0; }
 
         /* ===== RESPONSIVE ===== */
-        @media (max-width: 480px) { .app-container { border-radius: 12px; } .stats-grid { grid-template-columns: 1fr 1fr; gap: 6px; } .admin-nav { flex-wrap: nowrap; overflow-x: auto; } .admin-nav-item { min-width: 50px; font-size: 8px; padding: 4px 2px; } .filter-row select, .filter-row input { min-width: 60px; font-size: 8px; } .profile-modal { max-width: 100%; } }
+        @media (max-width: 480px) { .app-container { border-radius: 12px; } .stats-grid { grid-template-columns: 1fr 1fr; gap: 6px; } .admin-nav-item { min-width: 50px; font-size: 10px; padding: 8px 4px; } .filter-row select, .filter-row input { min-width: 60px; font-size: 8px; } .profile-modal { max-width: 100%; } }
     </style>
 </head>
 <body>
@@ -503,7 +534,7 @@
                 <div id="adminTab" style="display:none;">
                     <div class="admin-nav">
                         <div class="admin-nav-item active" onclick="switchAdminSubTab('subDirectory')">📋 Directory</div>
-                        <div class="admin-nav-item" onclick="switchAdminSubTab('subAllAttendance')">📊 All Attendance</div>
+                        <div class="admin-nav-item" onclick="switchAdminSubTab('subAllAttendance')">📊 All Attend</div>
                         <div class="admin-nav-item" onclick="switchAdminSubTab('subReports')">📤 Excel</div>
                         <div class="admin-nav-item" onclick="switchAdminSubTab('subAttendance')">✏️ Entry</div>
                         <div class="admin-nav-item" onclick="switchAdminSubTab('subHoliday')">🎉 Holiday</div>
@@ -609,6 +640,11 @@
                             <input type="date" id="classReportStart" style="flex:1; padding:6px; font-size:10px; margin:0;" />
                             <input type="date" id="classReportEnd" style="flex:1; padding:6px; font-size:10px; margin:0;" />
                         </div>
+                        <select id="classReportBranch" style="padding:6px; font-size:10px; margin:0 0 6px 0;">
+                            <option value="ALL">All Branches</option>
+                            <option value="CSE">CSE</option>
+                            <option value="AIDS">AIDS</option>
+                        </select>
                         <button class="btn btn-primary btn-sm" onclick="generateClassAttendanceReport()" style="padding:8px; margin-top:6px;">
                             <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                             Generate PDF
@@ -1639,7 +1675,7 @@
         }
 
         // ============================================================
-        // CLASS ATTENDANCE REPORT (PDF)
+        // CLASS ATTENDANCE REPORT (PDF) – with branch filter & sorting
         // ============================================================
         async function generateClassAttendanceReport() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -1657,9 +1693,11 @@
             }
             if (startDate > endDate) return showMsg('Start date cannot be after end date!', true);
 
+            const branchFilter = document.getElementById('classReportBranch').value;
+
             showDownloadProgress('Generating class report…');
             try {
-                const url = `${API_BASE}/api/admin/class-attendance-report?requesterRollNo=${user.rollNo}&startDate=${startDate}&endDate=${endDate}`;
+                const url = `${API_BASE}/api/admin/class-attendance-report?requesterRollNo=${user.rollNo}&startDate=${startDate}&endDate=${endDate}&branch=${branchFilter}`;
                 const res = await fetch(url);
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Failed to fetch report');
@@ -1668,9 +1706,13 @@
                     return showMsg('No students found!', true);
                 }
 
+                // Sort by roll number ascending
+                const students = data.students.sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }));
+
                 const totalLectures = data.totalLectures || 0;
-                const branchName = data.students[0]?.branch || 'CSE';
-                let tableRows = data.students.map((s, idx) => `
+                const branchName = branchFilter === 'ALL' ? 'All Branches' : branchFilter;
+
+                let tableRows = students.map((s, idx) => `
                     <tr>
                         <td style="padding:6px 8px; border:1px solid #ccc; text-align:center;">${idx + 1}</td>
                         <td style="padding:6px 8px; border:1px solid #ccc; text-align:left;">${s.rollNo || 'N/A'}</td>
@@ -1780,7 +1822,7 @@
         }
 
         // ============================================================
-        // ADMIN DIRECTORY & PROFILE
+        // ADMIN DIRECTORY & PROFILE (sort by roll number)
         // ============================================================
         async function fetchAllUsers() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -1796,7 +1838,8 @@
                     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:12px;">No users registered</td></tr>';
                     return;
                 }
-                const students = data.filter(u => u.role === 'student');
+                // Filter only students for attendance summary and sort by rollNo
+                const students = data.filter(u => u.role === 'student').sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }));
                 const summaryPromises = students.map(async (s) => {
                     try {
                         const res2 = await fetch(`${API_BASE}/api/student/summary/${s.rollNo}`);
@@ -1810,7 +1853,10 @@
                     if (item.summary) summaryMap[item.rollNo] = item.summary;
                 });
 
-                tbody.innerHTML = data.map(s => {
+                // Also include admins and faculty but they won't have attendance summary
+                const allUsersSorted = data.sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }));
+
+                tbody.innerHTML = allUsersSorted.map(s => {
                     const deviceStatus = s.boundDeviceId ? '✅ Bound' : '🔓 Unbound';
                     const roleBadge = s.role === 'admin' ? '👑 Admin' : s.role === 'faculty' ? '👨‍🏫 Faculty' : '🎓 Student';
                     let attendanceDisplay = '-';
@@ -2574,14 +2620,15 @@
             let subject = null;
             if (role === 'faculty') {
                 subject = document.getElementById('facultySubjectSelect').value;
-                if (!subject) return showMsg('Please select a subject for faculty!', true);
+                if (!subject) return showMsg('⚠️ Please select a subject for faculty!', true);
+                if (!name) return showMsg('⚠️ Faculty Name is required!', true);
                 rawRoll = 'AUTO';
             }
             
-            if (!name) return showMsg('Valid Name required!', true);
+            if (!name) return showMsg('⚠️ Name is required!', true);
             if (role !== 'faculty') {
                 const validation = sanitizeAndValidateRollNo(rawRoll);
-                if (!validation.isValid) return showMsg('Valid ID required! (min 3 characters)', true);
+                if (!validation.isValid) return showMsg('⚠️ Valid ID required! (min 3 characters)', true);
                 rawRoll = validation.cleanRoll;
             }
             
@@ -3198,6 +3245,7 @@
         console.log('👨‍🏫 Teacher module: fixed report totals from timetable.');
         console.log('👑 Admin UI optimized and professionalized.');
         console.log('📋 CSE & AIDS Bulk Update buttons added in Tools.');
+        console.log('🔍 Class Report: sorted by Roll No, branch filter added.');
     </script>
 </body>
 </html>
