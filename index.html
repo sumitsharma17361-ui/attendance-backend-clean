@@ -738,15 +738,26 @@
                             <button class="btn btn-warning btn-sm" onclick="resetUserPassword()" style="padding:7px; margin:0;">Reset</button>
                         </div>
 
-                        <!-- ===== BULK REGISTRATION & UPDATE ===== -->
+                        <!-- ===== CSE BULK UPDATE ===== -->
                         <div class="tool-sub-card" style="border-color:#60a5fa; background:#eff6ff;">
-                            <span class="tool-title" style="color:#1d4ed8;">📋 Bulk Register & Update Attendance</span>
-                            <p style="font-size:8px; color:var(--text-muted); margin-bottom:6px;">This will register all CSE students (15-30 July) and set their attendance as per official records. Password: 123456</p>
+                            <span class="tool-title" style="color:#1d4ed8;">📋 CSE Bulk Register & Update Attendance</span>
+                            <p style="font-size:8px; color:var(--text-muted); margin-bottom:6px;">Register all CSE students (15-30 July) & set attendance as per records. Password: 123456</p>
                             <button class="btn btn-primary btn-sm" onclick="triggerBulkUpdate()" style="padding:7px; margin:0;">
                                 <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 12v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                                ▶️ Run Bulk Update
+                                ▶️ Run CSE Bulk Update
                             </button>
-                            <p id="bulkStatus" style="font-size:8px; color:var(--text-muted); margin-top:4px;">⚠️ This will update/overwrite attendance for 15-30 July only.</p>
+                            <p id="bulkStatus" style="font-size:8px; color:var(--text-muted); margin-top:4px;">⚠️ Overwrites 15-30 July attendance.</p>
+                        </div>
+
+                        <!-- ===== AIDS BULK UPDATE ===== -->
+                        <div class="tool-sub-card" style="border-color:#a78bfa; background:#f5f3ff;">
+                            <span class="tool-title" style="color:#7c3aed;">📋 AIDS Bulk Register & Update Attendance</span>
+                            <p style="font-size:8px; color:var(--text-muted); margin-bottom:6px;">Register all AIDS students (15-30 July) & set attendance as per records. Password: 123456</p>
+                            <button class="btn btn-primary btn-sm" onclick="triggerAidsBulkUpdate()" style="padding:7px; margin:0; background:#7c3aed;">
+                                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 12v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                ▶️ Run AIDS Bulk Update
+                            </button>
+                            <p id="aidsBulkStatus" style="font-size:8px; color:var(--text-muted); margin-top:4px;">⚠️ Overwrites 15-30 July attendance.</p>
                         </div>
 
                         <div class="tool-sub-card" style="border-color:#fecaca; background:#fef2f2;">
@@ -2692,6 +2703,83 @@
             } catch (e) { showMsg("Failed!", true); }
         }
 
+        // ============================================================
+        // BULK REGISTRATION & UPDATE – CSE
+        // ============================================================
+        async function triggerBulkUpdate() {
+            if (!confirm('⚠️ This will register/update all CSE students and set attendance for 15-30 July.\n\nThis may overwrite existing attendance records for that period.\n\nAre you sure you want to continue?')) return;
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
+            
+            const btn = document.querySelector('[onclick="triggerBulkUpdate()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Processing...';
+            btn.disabled = true;
+            
+            showMsg('🔄 Starting CSE bulk update...');
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/bulk-register-and-update-attendance`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requesterRollNo: user.rollNo })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showMsg(`✅ Done! Registered ${data.totalRegistered} new CSE students, added ${data.totalAttendanceAdded} attendance records.`);
+                    document.getElementById('bulkStatus').innerHTML = `✅ Last run: ${new Date().toLocaleString()} – ${data.totalRegistered} registered, ${data.totalAttendanceAdded} records added.`;
+                    fetchAllUsers();
+                    loadAllAttendance();
+                } else {
+                    showMsg(data.error || 'Failed', true);
+                }
+            } catch (e) {
+                showMsg('Server error! ' + e.message, true);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // ============================================================
+        // BULK REGISTRATION & UPDATE – AIDS
+        // ============================================================
+        async function triggerAidsBulkUpdate() {
+            if (!confirm('⚠️ This will register/update all AIDS students and set attendance for 15-30 July.\n\nThis may overwrite existing attendance records for that period.\n\nAre you sure you want to continue?')) return;
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
+            
+            const btn = document.querySelector('[onclick="triggerAidsBulkUpdate()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Processing...';
+            btn.disabled = true;
+            
+            showMsg('🔄 Starting AIDS bulk update...');
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/bulk-register-and-update-attendance-aids`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requesterRollNo: user.rollNo })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showMsg(`✅ Done! Registered ${data.totalRegistered} new AIDS students, added ${data.totalAttendanceAdded} attendance records.`);
+                    document.getElementById('aidsBulkStatus').innerHTML = `✅ Last run: ${new Date().toLocaleString()} – ${data.totalRegistered} registered, ${data.totalAttendanceAdded} records added.`;
+                    fetchAllUsers();
+                    loadAllAttendance();
+                } else {
+                    showMsg(data.error || 'Failed', true);
+                }
+            } catch (e) {
+                showMsg('Server error! ' + e.message, true);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // ============================================================
+        // DELETE USER ACCOUNT
+        // ============================================================
         async function deleteUserAccount() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
@@ -2716,43 +2804,6 @@
                 }
             } catch (e) {
                 showMsg("Server error!", true);
-            }
-        }
-
-        // ============================================================
-        // BULK REGISTRATION & UPDATE – TRIGGER
-        // ============================================================
-        async function triggerBulkUpdate() {
-            if (!confirm('⚠️ This will register/update all CSE students and set attendance for 15-30 July.\n\nThis may overwrite existing attendance records for that period.\n\nAre you sure you want to continue?')) return;
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
-            
-            const btn = document.querySelector('[onclick="triggerBulkUpdate()"]');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '⏳ Processing...';
-            btn.disabled = true;
-            
-            showMsg('🔄 Starting bulk update...');
-            try {
-                const res = await fetch(`${API_BASE}/api/admin/bulk-register-and-update-attendance`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ requesterRollNo: user.rollNo })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    showMsg(`✅ Done! Registered ${data.totalRegistered} new students, added ${data.totalAttendanceAdded} attendance records.`);
-                    document.getElementById('bulkStatus').innerHTML = `✅ Last run: ${new Date().toLocaleString()} – ${data.totalRegistered} registered, ${data.totalAttendanceAdded} records added.`;
-                    fetchAllUsers();
-                    loadAllAttendance();
-                } else {
-                    showMsg(data.error || 'Failed', true);
-                }
-            } catch (e) {
-                showMsg('Server error! ' + e.message, true);
-            } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
             }
         }
 
@@ -3146,7 +3197,7 @@
         console.log('📊 All Attendance Management added with Edit/Delete.');
         console.log('👨‍🏫 Teacher module: fixed report totals from timetable.');
         console.log('👑 Admin UI optimized and professionalized.');
-        console.log('📋 Bulk Registration & Update button added in Tools.');
+        console.log('📋 CSE & AIDS Bulk Update buttons added in Tools.');
     </script>
 </body>
 </html>
