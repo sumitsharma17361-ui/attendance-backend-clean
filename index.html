@@ -24,6 +24,7 @@
             --text-main: #0f172a;
             --text-muted: #64748b;
             --radius: 12px;
+            --radius-sm: 8px;
         }
         * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding: 0; }
         body { background: var(--bg-body); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 16px; }
@@ -65,7 +66,7 @@
         .app-body { padding: 14px; }
 
         /* ===== FORM ===== */
-        input, select { width: 100%; padding: 9px 12px; margin-bottom: 8px; background: #f8fafc; border: 1px solid var(--card-border); border-radius: 8px; font-size: 11px; font-weight: 600; color: var(--text-main); outline: none; transition: all 0.3s; }
+        input, select { width: 100%; padding: 9px 12px; margin-bottom: 8px; background: #f8fafc; border: 1px solid var(--card-border); border-radius: var(--radius-sm); font-size: 11px; font-weight: 600; color: var(--text-main); outline: none; transition: all 0.3s; }
         select option { background: #fff; color: #0f172a; }
         input::placeholder { color: #94a3b8; font-weight: 500; }
         input:focus, select:focus { background: #fff; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.10); }
@@ -75,7 +76,7 @@
         .eye-icon:hover { color: var(--primary); }
 
         /* ===== BUTTONS ===== */
-        .btn { width: 100%; padding: 9px 12px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer; margin-top: 4px; transition: all 0.3s; border: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: var(--shadow-sm); }
+        .btn { width: 100%; padding: 9px 12px; border-radius: var(--radius-sm); font-weight: 700; font-size: 11px; cursor: pointer; margin-top: 4px; transition: all 0.3s; border: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: var(--shadow-sm); }
         .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-hover); }
         .btn:active { transform: scale(0.97) translateY(0); }
         .btn-primary { background: var(--primary); color: white; }
@@ -89,14 +90,17 @@
         .btn-danger:hover { background: #fee2e2; }
         .btn-sm { padding: 5px 10px; font-size: 10px; width: auto; margin: 0; }
         .btn-xs { padding: 3px 8px; font-size: 8px; width: auto; margin: 0; }
+        .btn-ghost { background: transparent; border: 1px solid transparent; color: var(--text-muted); box-shadow: none; }
+        .btn-ghost:hover { background: #f1f5f9; border-color: var(--card-border); transform: none; }
 
         /* ===== BADGES ===== */
-        .badge { padding: 2px 8px; border-radius: 4px; font-size: 9px; font-weight: 700; transition: all 0.3s; }
+        .badge { padding: 2px 8px; border-radius: 4px; font-size: 9px; font-weight: 700; transition: all 0.3s; display: inline-block; }
         .badge-present { background: #dcfce7; color: #15803d; }
         .badge-absent { background: #fee2e2; color: #991b1b; }
         .badge-active { background: #dbeafe; color: #1d4ed8; }
         .badge-role { background: #e2e8f0; color: #475569; }
         .badge-attendance { background: #e0e7ff; color: #1e40af; }
+        .badge-dl { background: #fef3c7; color: #92400e; }
 
         /* ===== STATS GRID ===== */
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
@@ -111,7 +115,7 @@
         /* ===== QUICK PORTALS ===== */
         .quick-portals-card { background: #fff; border: 1px solid var(--card-border); border-radius: var(--radius); padding: 10px; margin: 10px 0; }
         .portal-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 6px; }
-        .portal-btn { background: #f8fafc; border: 1px solid var(--card-border); border-radius: 8px; padding: 6px 4px; text-align: center; font-size: 9px; font-weight: 700; color: var(--text-main); cursor: pointer; transition: all 0.3s; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+        .portal-btn { background: #f8fafc; border: 1px solid var(--card-border); border-radius: var(--radius-sm); padding: 6px 4px; text-align: center; font-size: 9px; font-weight: 700; color: var(--text-main); cursor: pointer; transition: all 0.3s; display: flex; flex-direction: column; align-items: center; gap: 3px; }
         .portal-btn:hover { background: #fff; border-color: var(--primary); transform: translateY(-1px); box-shadow: var(--shadow-sm); color: var(--primary); }
 
         /* ===== CALENDAR ===== */
@@ -127,13 +131,13 @@
         .cal-off { background: #f1f5f9; color: #94a3b8; }
 
         /* ===== TABS ===== */
-        .tab-bar { display: flex; background: #f1f5f9; border-radius: 8px; padding: 2px; margin-bottom: 10px; }
+        .tab-bar { display: flex; background: #f1f5f9; border-radius: var(--radius-sm); padding: 2px; margin-bottom: 10px; }
         .tab-item { flex: 1; padding: 6px; text-align: center; font-size: 10px; font-weight: 700; cursor: pointer; color: var(--text-muted); border-radius: 6px; transition: all 0.3s; }
         .tab-item.active { background: #fff; color: var(--primary); box-shadow: var(--shadow-sm); }
 
         /* ===== ADMIN NAV ===== */
-        .admin-nav { display: flex; gap: 2px; background: #f1f5f9; padding: 2px; border-radius: 8px; margin-bottom: 10px; overflow-x: auto; flex-wrap: nowrap; }
-        .admin-nav-item { flex: 1; text-align: center; padding: 5px 3px; font-size: 9px; font-weight: 700; cursor: pointer; border-radius: 5px; color: var(--text-muted); transition: all 0.3s; white-space: nowrap; min-width: 40px; }
+        .admin-nav { display: flex; gap: 2px; background: #f1f5f9; padding: 2px; border-radius: var(--radius-sm); margin-bottom: 10px; overflow-x: auto; flex-wrap: nowrap; }
+        .admin-nav-item { flex: 1; text-align: center; padding: 5px 3px; font-size: 8px; font-weight: 700; cursor: pointer; border-radius: 5px; color: var(--text-muted); transition: all 0.3s; white-space: nowrap; min-width: 50px; }
         .admin-nav-item.active { background: #fff; color: var(--primary); box-shadow: var(--shadow-sm); }
 
         /* ===== PERIOD CARD ===== */
@@ -144,29 +148,33 @@
         .btn-del:hover { background: #fee2e2; }
         .btn-view { background: #eff6ff; color: #2563eb; border: 1px solid #dbeafe; }
         .btn-view:hover { background: #dbeafe; }
+        .btn-edit { background: #fefce8; color: #d97706; border: 1px solid #fde68a; }
+        .btn-edit:hover { background: #fef3c7; }
         .status-holiday { background: #fef3c7; color: #92400e; border-color: #fde68a; }
         .status-weekend { background: #e2e8f0; color: #475569; border-color: #cbd5e1; }
 
         /* ===== TABLES ===== */
-        .table-container { max-height: 280px; overflow-y: auto; border: 1px solid var(--card-border); border-radius: 8px; margin-top: 6px; background: #fff; }
-        table { width: 100%; border-collapse: collapse; font-size: 10px; }
-        th { background: #f8fafc; color: var(--text-muted); padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--card-border); position: sticky; top: 0; font-weight: 700; font-size: 9px; z-index: 2; }
-        td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; font-size: 10px; }
+        .table-container { max-height: 300px; overflow-y: auto; border: 1px solid var(--card-border); border-radius: var(--radius-sm); margin-top: 6px; background: #fff; }
+        .table-container table { width: 100%; border-collapse: collapse; font-size: 10px; }
+        .table-container th { background: #f8fafc; color: var(--text-muted); padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--card-border); position: sticky; top: 0; font-weight: 700; font-size: 9px; z-index: 2; }
+        .table-container td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; font-size: 10px; vertical-align: middle; }
+        .table-container tr:hover td { background: #f8fafc; }
 
         /* ===== ADMIN BOXES ===== */
-        .admin-box { background: #fff; padding: 10px; border-radius: var(--radius); border: 1px solid var(--card-border); animation: cardScaleUp 0.5s; margin-bottom: 8px; }
+        .admin-box { background: #fff; padding: 12px; border-radius: var(--radius); border: 1px solid var(--card-border); animation: cardScaleUp 0.5s; margin-bottom: 8px; }
         .admin-box.sub-reports { background: #f0fdf4; border-color: #bbf7d0; }
         .admin-box.sub-attendance { background: #fefce8; border-color: #fef08a; }
         .admin-box.sub-holiday { background: #fef2f2; border-color: #fecaca; }
         .admin-box.sub-passcode { background: #eff6ff; border-color: #bfdbfe; }
         .admin-box.sub-tools { background: #f5f3ff; border-color: #ddd6fe; }
         .admin-box.sub-directory { background: #fce7f3; border-color: #fbcfe8; }
+        .admin-box.sub-all-attendance { background: #ecfdf5; border-color: #a7f3d0; }
+        .admin-box.sub-bulk { background: #f0f9ff; border-color: #bae6fd; }
 
         .sub-section-title { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block; }
-        .student-count-badge { background: var(--primary); color: white; border-radius: 10px; padding: 1px 8px; font-size: 9px; font-weight: 700; }
 
         /* ===== SUBJECT CHECKBOXES ===== */
-        .subject-checkbox-container { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; max-height: 150px; overflow-y: auto; padding: 4px; background: #f8fafc; border-radius: 8px; border: 1px solid var(--card-border); }
+        .subject-checkbox-container { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; max-height: 150px; overflow-y: auto; padding: 4px; background: #f8fafc; border-radius: var(--radius-sm); border: 1px solid var(--card-border); }
         .subject-checkbox-container label { font-size: 9px; font-weight: 500; display: flex; align-items: center; gap: 4px; cursor: pointer; padding: 3px 6px; background: #fff; border-radius: 4px; border: 1px solid #e2e8f0; transition: all 0.2s; }
         .subject-checkbox-container label:hover { background: #eff6ff; border-color: var(--primary); }
         .subject-checkbox-container label input[type="checkbox"] { width: auto; margin: 0; }
@@ -174,21 +182,15 @@
         .subject-checkbox-container .select-all:hover { background: #cbd5e1; }
 
         /* ===== PASSCODE DISPLAY ===== */
-        .passcode-display { background: #f8fafc; padding: 8px; border-radius: 8px; margin-bottom: 6px; border: 1px solid var(--card-border); text-align: center; }
+        .passcode-display { background: #f8fafc; padding: 8px; border-radius: var(--radius-sm); margin-bottom: 6px; border: 1px solid var(--card-border); text-align: center; }
         .passcode-display h2 { font-size: 20px; font-weight: 900; color: var(--primary); letter-spacing: 4px; }
-        .passcode-type-label { font-size: 9px; font-weight: 700; color: var(--text-muted); background: #e2e8f0; padding: 2px 10px; border-radius: 12px; display: inline-block; margin-top: 2px; }
 
         /* ===== TODAY PRESENT LIST ===== */
         #todayPresentList { max-height: 120px; overflow-y: auto; font-size: 10px; margin: 6px 0; }
         #todayPresentList .present-item { display: flex; justify-content: space-between; padding: 3px 6px; border-bottom: 1px solid #f1f5f9; }
         #todayPresentList .present-item:last-child { border-bottom: none; }
 
-        /* ===== SUMMARY CARD ===== */
-        .summary-card { background: var(--bg-body); border-radius: 8px; padding: 12px; margin-bottom: 10px; border: 1px solid var(--card-border); }
-        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-        .summary-item { background: var(--card-bg); padding: 6px; border-radius: 6px; text-align: center; }
-        .summary-item .num { font-size: 18px; font-weight: 800; color: var(--primary); }
-        .summary-item .label { font-size: 9px; color: var(--text-muted); }
+        /* ===== SUBJECT CHIPS ===== */
         .subject-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
         .subject-chip { background: var(--card-bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--card-border); font-size: 8px; }
 
@@ -205,18 +207,24 @@
         /* ===== MODAL ===== */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 16px; }
         .modal-card { background: #fff; width: 100%; max-width: 340px; border-radius: 14px; padding: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border: 1px solid var(--card-border); animation: cardScaleUp 0.3s; }
+        .modal-card .modal-actions { display: flex; gap: 6px; margin-top: 10px; }
+        .modal-card .modal-actions .btn { flex: 1; }
         .profile-modal { max-width: 480px; max-height: 90vh; overflow-y: auto; }
         .profile-modal .record-item { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #f1f5f9; }
         .profile-modal .record-item:last-child { border-bottom: none; }
 
         /* ===== DOWNLOAD PROGRESS ===== */
-        .download-progress { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 10px 20px; border-radius: 8px; font-size: 12px; z-index: 99999; display: none; align-items: center; gap: 10px; max-width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .download-progress { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 10px 20px; border-radius: var(--radius-sm); font-size: 12px; z-index: 99999; display: none; align-items: center; gap: 10px; max-width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .download-progress.show { display: flex; }
         .download-progress .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top: 2px solid white; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
+        /* ===== FILTER ROW ===== */
+        .filter-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+        .filter-row select, .filter-row input { flex: 1; min-width: 80px; padding: 6px 8px; font-size: 9px; margin: 0; }
+
         /* ===== RESPONSIVE ===== */
-        @media (max-width: 480px) { .app-container { border-radius: 12px; } .stats-grid { grid-template-columns: 1fr 1fr; gap: 6px; } .admin-nav { flex-wrap: nowrap; overflow-x: auto; } .admin-nav-item { min-width: 50px; font-size: 8px; padding: 4px 2px; } .summary-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 480px) { .app-container { border-radius: 12px; } .stats-grid { grid-template-columns: 1fr 1fr; gap: 6px; } .admin-nav { flex-wrap: nowrap; overflow-x: auto; } .admin-nav-item { min-width: 50px; font-size: 8px; padding: 4px 2px; } .filter-row select, .filter-row input { min-width: 60px; font-size: 8px; } .profile-modal { max-width: 100%; } }
     </style>
 </head>
 <body>
@@ -258,9 +266,26 @@
                     <option value="11">December 2026</option>
                 </select>
             </div>
-            <div style="display:flex; gap:6px; margin-top:10px;">
-                <button class="btn btn-outline" style="flex:1; padding:6px;" onclick="closeStudentExcelModal()">Cancel</button>
-                <button class="btn btn-success" style="flex:1; padding:6px;" onclick="processStudentExcelDownload()">Download</button>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeStudentExcelModal()">Cancel</button>
+                <button class="btn btn-success" onclick="processStudentExcelDownload()">Download</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== EDIT ATTENDANCE MODAL ===== -->
+    <div id="editAttendanceModal" class="modal-overlay" style="display:none;">
+        <div class="modal-card">
+            <h3 style="font-size:13px; font-weight:800; margin-bottom:4px;">✏️ Edit Attendance</h3>
+            <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">Update status for <span id="editRecordStudent" style="font-weight:700;"></span></p>
+            <select id="editStatusSelect" style="padding:8px; font-size:11px;">
+                <option value="Present">Present</option>
+                <option value="Absent">Absent</option>
+                <option value="Duty Leave">Duty Leave</option>
+            </select>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeEditModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveEditAttendance()">Save</button>
             </div>
         </div>
     </div>
@@ -380,7 +405,7 @@
                         <div class="stat-card"><div class="value" id="liveTodayAbsent">0</div><div class="label">Absent Today</div></div>
                         <div class="stat-card"><div class="value" id="liveOverallPct">0%</div><div class="label">Overall %</div></div>
                     </div>
-                    <div style="background:#f8fafc; border-radius:8px; padding:8px; border:1px solid var(--card-border);">
+                    <div style="background:#f8fafc; border-radius:var(--radius-sm); padding:8px; border:1px solid var(--card-border);">
                         <span style="font-size:9px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">📋 Today's Present Students</span>
                         <div id="todayPresentList"></div>
                     </div>
@@ -430,7 +455,7 @@
                         </select>
                         <button class="btn btn-primary btn-sm" onclick="fetchMonthlySummary()" style="padding:4px 8px;">View Month</button>
                     </div>
-                    <div id="monthlySummaryContainer" style="background:#f8fafc; border-radius:8px; padding:8px; margin-bottom:8px; border:1px solid var(--card-border); display:none;"></div>
+                    <div id="monthlySummaryContainer" style="background:#f8fafc; border-radius:var(--radius-sm); padding:8px; margin-bottom:8px; border:1px solid var(--card-border); display:none;"></div>
 
                     <button class="btn btn-primary" onclick="openFullDayPasscodePrompt()" style="padding:9px; font-size:10px;">
                         <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
@@ -477,26 +502,43 @@
                 <!-- ===== ADMIN TAB ===== -->
                 <div id="adminTab" style="display:none;">
                     <div class="admin-nav">
-                        <div class="admin-nav-item active" onclick="switchAdminSubTab('subDirectory')">Directory</div>
-                        <div class="admin-nav-item" onclick="switchAdminSubTab('subReports')">Excel</div>
-                        <div class="admin-nav-item" onclick="switchAdminSubTab('subAttendance')">Entry</div>
-                        <div class="admin-nav-item" onclick="switchAdminSubTab('subHoliday')">Holiday</div>
-                        <div class="admin-nav-item" onclick="switchAdminSubTab('subPasscode')">Passcode</div>
-                        <div class="admin-nav-item" onclick="switchAdminSubTab('subTools')">Tools</div>
+                        <div class="admin-nav-item active" onclick="switchAdminSubTab('subDirectory')">📋 Directory</div>
+                        <div class="admin-nav-item" onclick="switchAdminSubTab('subAllAttendance')">📊 All Attendance</div>
+                        <div class="admin-nav-item" onclick="switchAdminSubTab('subReports')">📤 Excel</div>
+                        <div class="admin-nav-item" onclick="switchAdminSubTab('subAttendance')">✏️ Entry</div>
+                        <div class="admin-nav-item" onclick="switchAdminSubTab('subHoliday')">🎉 Holiday</div>
+                        <div class="admin-nav-item" onclick="switchAdminSubTab('subPasscode')">🔑 Passcode</div>
+                        <div class="admin-nav-item" onclick="switchAdminSubTab('subTools')">⚙️ Tools</div>
                     </div>
 
                     <!-- SUB: Directory (All Users) -->
                     <div id="subDirectory" class="admin-box sub-directory tab-content-active">
                         <span class="sub-section-title">👥 Directory – All Users</span>
-                        <div style="display:flex; gap:6px; margin-bottom:6px;">
-                            <button class="btn btn-outline btn-sm" onclick="fetchAllUsers()" style="flex:1; padding:4px;">Refresh</button>
-                        </div>
-                        <div class="table-container" style="max-height:400px;">
+                        <button class="btn btn-outline btn-sm" onclick="fetchAllUsers()" style="padding:4px; margin:0;">🔄 Refresh</button>
+                        <div class="table-container" style="max-height:350px; margin-top:6px;">
                             <table id="directoryTable">
                                 <thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Device</th><th>Attendance</th><th>Action</th></tr></thead>
                                 <tbody><tr><td colspan="6" style="text-align:center; padding:12px;">Loading users…</td></tr></tbody>
                             </table>
                         </div>
+                    </div>
+
+                    <!-- SUB: All Attendance Management -->
+                    <div id="subAllAttendance" class="admin-box sub-all-attendance" style="display:none;">
+                        <span class="sub-section-title">📊 All Attendance Records – Manage</span>
+                        <div class="filter-row">
+                            <input type="text" id="filterAttendanceRoll" placeholder="Filter by Roll No" style="flex:1; min-width:60px; padding:6px 8px; font-size:9px; margin:0;" oninput="loadAllAttendance()" />
+                            <input type="date" id="filterAttendanceDate" style="flex:1; min-width:80px; padding:6px 8px; font-size:9px; margin:0;" onchange="loadAllAttendance()" />
+                            <button class="btn btn-outline btn-sm" onclick="loadAllAttendance()" style="padding:4px 8px; margin:0;">Filter</button>
+                        </div>
+                        <button class="btn btn-outline btn-sm" onclick="loadAllAttendance()" style="padding:4px; margin:0 0 4px 0;">🔄 Refresh All</button>
+                        <div class="table-container" style="max-height:350px;">
+                            <table id="allAttendanceTable">
+                                <thead><tr><th>Date</th><th>Roll</th><th>Name</th><th>Subject</th><th>Status</th><th>Actions</th></tr></thead>
+                                <tbody><tr><td colspan="6" style="text-align:center; padding:12px;">Loading records…</td></tr></tbody>
+                            </table>
+                        </div>
+                        <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">💡 Click <strong>Edit</strong> to change status, <strong>Delete</strong> to remove record.</p>
                     </div>
 
                     <!-- SUB: Reports -->
@@ -560,7 +602,7 @@
                             <button class="btn btn-success btn-sm" onclick="generateStudentReport('csv')" style="padding:6px;">CSV</button>
                         </div>
 
-                        <!-- ===== Class Attendance Report (PDF) ===== -->
+                        <!-- Class Attendance Report (PDF) -->
                         <hr style="margin:12px 0; border-color:var(--card-border);" />
                         <span class="sub-section-title">📋 Class Attendance Report (PDF)</span>
                         <div style="display:flex; gap:6px; flex-wrap:wrap;">
@@ -577,7 +619,7 @@
                     <!-- SUB: Attendance Entry -->
                     <div id="subAttendance" class="admin-box sub-attendance" style="display:none;">
                         <span class="sub-section-title">📝 Manual Backdate Attendance</span>
-                        <input type="text" id="manualRoll" placeholder="Student Roll No" style="font-size:10px; padding:7px;" />
+                        <input type="text" id="manualRoll" placeholder="Student Roll No" style="font-size:10px; padding:7px;" onchange="validateStudentBranchForManual()" />
                         <input type="date" id="manualDate" style="font-size:10px; padding:7px;" onchange="loadSubjectsForManual()" />
                         <select id="manualBranch" style="font-size:10px; padding:7px;">
                             <option value="CSE">CSE</option>
@@ -599,6 +641,7 @@
                             <button class="btn btn-outline btn-sm" onclick="selectAllSubjects(false)" style="padding:7px; flex:1;">Clear</button>
                         </div>
                         <button class="btn btn-success btn-sm" onclick="markAllSubjectsForDay()" style="margin-top:4px; padding:6px; font-size:9px;">📚 Mark All Subjects for this Day</button>
+                        <p id="manualBranchWarning" style="font-size:8px; color:var(--danger); margin-top:4px; display:none;"></p>
                     </div>
 
                     <!-- SUB: Holiday -->
@@ -614,14 +657,14 @@
                     <div id="subPasscode" class="admin-box sub-passcode" style="display:none; text-align:center;">
                         <span class="sub-section-title">📱 Class Passcodes</span>
                         <p style="font-size:9px; color:var(--text-muted); margin-bottom:8px;">Generate passcodes for Full Day (5‑digit) or Single Lecture (4‑digit).</p>
-                        <div style="background:#f8fafc; border-radius:8px; padding:8px; margin-bottom:8px; border:1px solid var(--card-border);">
+                        <div style="background:#f8fafc; border-radius:var(--radius-sm); padding:8px; margin-bottom:8px; border:1px solid var(--card-border);">
                             <span style="font-size:9px; font-weight:700; color:var(--text-muted);">🔵 FULL DAY (5‑digit)</span>
                             <div class="passcode-display" style="margin-top:4px;">
                                 <h2 id="fullDayPasscodeDisplay">—</h2>
                             </div>
                             <button class="btn btn-primary btn-sm" onclick="generatePasscode('full_day')" style="padding:4px 10px; width:auto; margin:0 auto;">Generate Full Day Passcode</button>
                         </div>
-                        <div style="background:#f8fafc; border-radius:8px; padding:8px; margin-bottom:8px; border:1px solid var(--card-border);">
+                        <div style="background:#f8fafc; border-radius:var(--radius-sm); padding:8px; margin-bottom:8px; border:1px solid var(--card-border);">
                             <span style="font-size:9px; font-weight:700; color:var(--text-muted);">🟢 SINGLE LECTURE (4‑digit)</span>
                             <div class="passcode-display" style="margin-top:4px;">
                                 <h2 id="singleLecturePasscodeDisplay">—</h2>
@@ -695,6 +738,17 @@
                             <button class="btn btn-warning btn-sm" onclick="resetUserPassword()" style="padding:7px; margin:0;">Reset</button>
                         </div>
 
+                        <!-- ===== BULK REGISTRATION & UPDATE ===== -->
+                        <div class="tool-sub-card" style="border-color:#60a5fa; background:#eff6ff;">
+                            <span class="tool-title" style="color:#1d4ed8;">📋 Bulk Register & Update Attendance</span>
+                            <p style="font-size:8px; color:var(--text-muted); margin-bottom:6px;">This will register all CSE students (15-30 July) and set their attendance as per official records. Password: 123456</p>
+                            <button class="btn btn-primary btn-sm" onclick="triggerBulkUpdate()" style="padding:7px; margin:0;">
+                                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 12v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                ▶️ Run Bulk Update
+                            </button>
+                            <p id="bulkStatus" style="font-size:8px; color:var(--text-muted); margin-top:4px;">⚠️ This will update/overwrite attendance for 15-30 July only.</p>
+                        </div>
+
                         <div class="tool-sub-card" style="border-color:#fecaca; background:#fef2f2;">
                             <span class="tool-title" style="color:#b91c1c;">🗑️ Delete Account</span>
                             <input type="text" id="deleteUserRoll" placeholder="ID to Delete" style="font-size:10px; padding:7px;" />
@@ -705,8 +759,8 @@
 
                 <!-- ===== TEACHER TAB ===== -->
                 <div id="teacherTab" style="display:none;">
-                    <!-- Teacher Passcode (Single Lecture only) -->
-                    <div style="background:#eff6ff; border-radius:8px; padding:10px; border:1px solid #bfdbfe; margin-bottom:10px; text-align:center;">
+                    <!-- Teacher Passcode -->
+                    <div style="background:#eff6ff; border-radius:var(--radius-sm); padding:10px; border:1px solid #bfdbfe; margin-bottom:10px; text-align:center;">
                         <span class="sub-section-title" style="color:#1d4ed8;">🔒 Single Lecture Passcode (4‑digit)</span>
                         <div class="passcode-display" style="margin-top:4px;">
                             <h2 id="teacherPasscodeDisplay">—</h2>
@@ -715,7 +769,7 @@
                         <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">⏳ Expires after 5 minutes – for marking single lecture attendance.</p>
                     </div>
 
-                    <!-- All Students (filtered by teacher's subjects) -->
+                    <!-- Students -->
                     <div style="margin-bottom:10px;">
                         <h4 style="font-size:11px; font-weight:800;">📋 Students (with your subjects)</h4>
                         <button class="btn btn-outline btn-sm" onclick="fetchTeacherStudents()" style="padding:4px;">Refresh</button>
@@ -727,8 +781,8 @@
                         </div>
                     </div>
 
-                    <!-- Individual Student Report (Teacher) -->
-                    <div style="background:#f0fdf4; border-radius:8px; padding:10px; border:1px solid #bbf7d0; margin-bottom:10px;">
+                    <!-- Student Report -->
+                    <div style="background:#f0fdf4; border-radius:var(--radius-sm); padding:10px; border:1px solid #bbf7d0; margin-bottom:10px;">
                         <span class="sub-section-title">📈 Student Report (PDF/CSV)</span>
                         <select id="teacherStudentReportSelect" style="padding:8px; margin-bottom:6px; font-size:10px;">
                             <option value="">Select Student…</option>
@@ -739,7 +793,7 @@
                         </div>
                     </div>
 
-                    <!-- Recent Marks (Teacher) -->
+                    <!-- Recent Marks -->
                     <div>
                         <h4 style="font-size:11px; font-weight:800;">Recent Marks</h4>
                         <div class="table-container" style="max-height:150px;">
@@ -762,7 +816,7 @@
         // ============================================================
         // CONFIGURATION
         // ============================================================
-        const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; // Change to your backend URL
+        const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com";
         const ADMIN_ROLL_NUMBERS = ['24CSE48'];
         let globalAllRecords = [],
             globalMyRecords = [],
@@ -778,6 +832,7 @@
         let originalAdminUser = null;
         let teacherCurrentPasscode = "—";
         let teacherPasscodeExpiry = null;
+        let editRecordId = null;
 
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -1037,7 +1092,7 @@
         }
 
         // ============================================================
-        // PASSCODE FUNCTIONS (Admin)
+        // PASSCODE FUNCTIONS
         // ============================================================
         let currentFullDayPasscode = "—";
         let currentSingleLecturePasscode = "—";
@@ -1072,9 +1127,6 @@
             }
         }
 
-        // ============================================================
-        // TEACHER PASSCODE (Single Lecture only)
-        // ============================================================
         async function generateTeacherPasscode() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'faculty') return showMsg('Teacher access required!', true);
@@ -1717,7 +1769,7 @@
         }
 
         // ============================================================
-        // ADMIN DIRECTORY & PROFILE (with Attendance Column)
+        // ADMIN DIRECTORY & PROFILE
         // ============================================================
         async function fetchAllUsers() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -1733,7 +1785,6 @@
                     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:12px;">No users registered</td></tr>';
                     return;
                 }
-                // For each student, fetch attendance summary
                 const students = data.filter(u => u.role === 'student');
                 const summaryPromises = students.map(async (s) => {
                     try {
@@ -1869,11 +1920,115 @@
                         if (roll) viewTeacherStudent(roll);
                         fetchTeacherStudents();
                     }
+                    loadAllAttendance();
                 } else {
                     showMsg(data.error || 'Failed to delete', true);
                 }
             } catch (e) {
                 showMsg('Server error!', true);
+            }
+        }
+
+        // ============================================================
+        // ALL ATTENDANCE MANAGEMENT
+        // ============================================================
+        async function loadAllAttendance() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
+            const rollFilter = document.getElementById('filterAttendanceRoll').value.trim().toUpperCase();
+            const dateFilter = document.getElementById('filterAttendanceDate').value;
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to fetch');
+                globalAllRecords = data;
+                
+                let filtered = data;
+                if (rollFilter) {
+                    filtered = filtered.filter(r => r.rollNo.toUpperCase().includes(rollFilter));
+                }
+                if (dateFilter) {
+                    filtered = filtered.filter(r => r.date === dateFilter);
+                }
+                
+                const tbody = document.querySelector('#allAttendanceTable tbody');
+                if (filtered.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:12px;">No records found.</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = filtered.map(r => {
+                    const statusClass = r.status === 'Present' ? 'badge-present' : r.status === 'Duty Leave' ? 'badge-dl' : 'badge-absent';
+                    return `
+                        <tr>
+                            <td><b>${r.date}</b></td>
+                            <td>${r.rollNo}</td>
+                            <td>${r.studentName || r.name || 'Unknown'}</td>
+                            <td>${r.subject}</td>
+                            <td><span class="badge ${statusClass}">${r.status}</span></td>
+                            <td>
+                                <button class="btn-edit btn-xs" onclick="openEditModal('${r._id}','${r.rollNo}','${r.status}')" style="padding:2px 6px;">Edit</button>
+                                <button class="btn-del btn-xs" onclick="deleteRecord('${r._id}')" style="padding:2px 6px;">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (e) {
+                showMsg('Failed to load attendance', true);
+                console.error(e);
+            }
+        }
+
+        // ============================================================
+        // EDIT ATTENDANCE MODAL
+        // ============================================================
+        function openEditModal(recordId, rollNo, currentStatus) {
+            editRecordId = recordId;
+            document.getElementById('editRecordStudent').innerText = rollNo;
+            document.getElementById('editStatusSelect').value = currentStatus || 'Present';
+            document.getElementById('editAttendanceModal').style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editAttendanceModal').style.display = 'none';
+            editRecordId = null;
+        }
+
+        async function saveEditAttendance() {
+            if (!editRecordId) return showMsg('No record selected!', true);
+            const newStatus = document.getElementById('editStatusSelect').value;
+            const user = JSON.parse(localStorage.getItem('user'));
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
+                const data = await res.json();
+                const record = data.find(r => r._id === editRecordId);
+                if (!record) return showMsg('Record not found!', true);
+                
+                const delRes = await fetch(`${API_BASE}/api/attendance/delete/${editRecordId}/${user.rollNo}`, { method: 'DELETE' });
+                if (!delRes.ok) throw new Error('Failed to delete old record');
+                
+                const createRes = await fetch(`${API_BASE}/api/admin/manual-attendance-bulk`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        requesterRollNo: user.rollNo,
+                        studentRollNo: record.rollNo,
+                        date: record.date,
+                        subjects: [record.subject],
+                        status: newStatus,
+                        branch: record.branch || 'CSE'
+                    })
+                });
+                if (!createRes.ok) throw new Error('Failed to create updated record');
+                
+                closeEditModal();
+                showMsg('✅ Attendance updated!');
+                loadAllAttendance();
+                fetchAllUsers();
+            } catch (e) {
+                showMsg('Failed to update: ' + e.message, true);
             }
         }
 
@@ -2174,6 +2329,25 @@
         // ============================================================
         // ADMIN MANUAL ATTENDANCE – with branch validation
         // ============================================================
+        async function validateStudentBranchForManual() {
+            const rollNo = document.getElementById('manualRoll').value.trim();
+            const warningEl = document.getElementById('manualBranchWarning');
+            if (!rollNo) { warningEl.style.display = 'none'; return; }
+            try {
+                const res = await fetch(`${API_BASE}/api/student/profile/${rollNo}`);
+                if (!res.ok) { warningEl.style.display = 'none'; return; }
+                const data = await res.json();
+                const studentBranch = data.branch || 'CSE';
+                const selectedBranch = document.getElementById('manualBranch').value;
+                if (selectedBranch.toUpperCase() !== studentBranch.toUpperCase()) {
+                    warningEl.style.display = 'block';
+                    warningEl.innerText = `⚠️ Student is in ${studentBranch}, but selected ${selectedBranch}. Please select correct branch.`;
+                } else {
+                    warningEl.style.display = 'none';
+                }
+            } catch (e) { warningEl.style.display = 'none'; }
+        }
+
         function loadSubjectsForManual() {
             const date = document.getElementById('manualDate').value;
             const branch = document.getElementById('manualBranch').value;
@@ -2187,6 +2361,7 @@
             const container = document.getElementById('subjectCheckboxContainer');
             container.innerHTML = `<label class="select-all"><input type="checkbox" id="selectAllSubjects" onchange="toggleAllSubjects()"> Select All (${subjects.length} subjects)</label>`;
             subjects.forEach(sub => { container.innerHTML += `<label><input type="checkbox" class="subject-checkbox" value="${sub}"> ${sub}</label>`; });
+            validateStudentBranchForManual();
         }
 
         function toggleAllSubjects() {
@@ -2221,7 +2396,7 @@
                     body: JSON.stringify({ requesterRollNo: user.rollNo, studentRollNo, date, subjects, status, branch })
                 });
                 const data = await res.json();
-                if (res.ok) { showMsg(`✅ ${data.message}`); selectAllSubjects(false); } else { showMsg(data.error || "Failed", true); }
+                if (res.ok) { showMsg(`✅ ${data.message}`); selectAllSubjects(false); loadAllAttendance(); } else { showMsg(data.error || "Failed", true); }
             } catch (e) { showMsg("Network Error!", true); }
         }
 
@@ -2378,9 +2553,6 @@
             }
         }
 
-        // ============================================================
-        // ADMIN REGISTER USER – FIXED: subject: null → undefined
-        // ============================================================
         async function adminRegisterUser() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
@@ -2544,6 +2716,43 @@
                 }
             } catch (e) {
                 showMsg("Server error!", true);
+            }
+        }
+
+        // ============================================================
+        // BULK REGISTRATION & UPDATE – TRIGGER
+        // ============================================================
+        async function triggerBulkUpdate() {
+            if (!confirm('⚠️ This will register/update all CSE students and set attendance for 15-30 July.\n\nThis may overwrite existing attendance records for that period.\n\nAre you sure you want to continue?')) return;
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
+            
+            const btn = document.querySelector('[onclick="triggerBulkUpdate()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Processing...';
+            btn.disabled = true;
+            
+            showMsg('🔄 Starting bulk update...');
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/bulk-register-and-update-attendance`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requesterRollNo: user.rollNo })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showMsg(`✅ Done! Registered ${data.totalRegistered} new students, added ${data.totalAttendanceAdded} attendance records.`);
+                    document.getElementById('bulkStatus').innerHTML = `✅ Last run: ${new Date().toLocaleString()} – ${data.totalRegistered} registered, ${data.totalAttendanceAdded} records added.`;
+                    fetchAllUsers();
+                    loadAllAttendance();
+                } else {
+                    showMsg(data.error || 'Failed', true);
+                }
+            } catch (e) {
+                showMsg('Server error! ' + e.message, true);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
             }
         }
 
@@ -2829,6 +3038,7 @@
                 populateAdminStudentSelect();
                 populateSubjectDropdown();
                 toggleFacultyRegistrationFields();
+                loadAllAttendance();
             } else if (isFaculty) {
                 document.getElementById('adminTabHeader').style.display = 'none';
                 document.getElementById('teacherTabHeader').style.display = 'block';
@@ -2851,6 +3061,14 @@
             updatePeriodTrackerWidget();
             setInterval(updatePeriodTrackerWidget, 30000);
             if (!isAdmin && !isFaculty) {
+                fetchMonthlySummary();
+            }
+            
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            if (currentMonth >= 6 && currentMonth <= 11) {
+                const select = document.getElementById('monthSelector');
+                if (select) select.value = currentMonth.toString();
                 fetchMonthlySummary();
             }
         }
@@ -2879,7 +3097,7 @@
         }
 
         function switchAdminSubTab(subId) {
-            const subTabs = ['subDirectory', 'subReports', 'subAttendance', 'subHoliday', 'subPasscode', 'subTools'];
+            const subTabs = ['subDirectory', 'subAllAttendance', 'subReports', 'subAttendance', 'subHoliday', 'subPasscode', 'subTools'];
             subTabs.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
@@ -2894,6 +3112,7 @@
             if (subId === 'subDirectory') { fetchAllUsers(); }
             if (subId === 'subReports') { populateStudentSelect(); }
             if (subId === 'subTools') { populateTeacherSelect(); }
+            if (subId === 'subAllAttendance') { loadAllAttendance(); }
         }
 
         // ============================================================
@@ -2924,14 +3143,10 @@
 
         console.log('✅ BM Group ERP Portal loaded successfully!');
         console.log('📆 Month selector default set to current month.');
+        console.log('📊 All Attendance Management added with Edit/Delete.');
         console.log('👨‍🏫 Teacher module: fixed report totals from timetable.');
-        console.log('👑 Admin: Individual student report fixed.');
-        console.log('📊 Student view: attended/total shown with percentage.');
-        console.log('🔑 Full Day Attendance: passcode flow fixed.');
-        console.log('👨‍🏫 Updated teacher names: CN & CN LAB → Mr. Chhetrapal, DAA & DAA LAB → Ms. Rashmi');
-        console.log('🐛 Registration fix: subject: null → undefined');
-        console.log('📋 Directory added Attendance column');
-        console.log('🔒 Manual attendance branch validation added');
+        console.log('👑 Admin UI optimized and professionalized.');
+        console.log('📋 Bulk Registration & Update button added in Tools.');
     </script>
 </body>
 </html>
