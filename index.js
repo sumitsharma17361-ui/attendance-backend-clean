@@ -28,9 +28,9 @@ if (!MONGO_URI) {
   process.exit(1);
 }
 
-// ---------- Rate Limiting ----------
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { error: 'Too many attempts, try again after 15 minutes.' } });
-const apiLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 100, message: { error: 'Too many requests, please slow down.' } });
+// ---------- Rate Limiting - LESS RESTRICTIVE ----------
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { error: 'Too many attempts, try again after 15 minutes.' } });
+const apiLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 200, message: { error: 'Too many requests, please slow down.' } }); // Increased to 200
 
 app.use('/api/auth/', authLimiter);
 app.use('/api/', apiLimiter);
@@ -1314,7 +1314,6 @@ app.get('/api/admin/class-attendance-report', async (req, res) => {
     const startStr = start.toISOString().split('T')[0];
     const endStr = end.toISOString().split('T')[0];
     
-    // ✅ FIX: Filter students by branch if provided
     let query = { role: 'student' };
     if (branch && branch !== 'ALL' && branch !== 'undefined' && branch !== 'null') {
       query.branch = branch.toUpperCase();
@@ -1366,7 +1365,6 @@ app.get('/api/admin/class-attendance-report', async (req, res) => {
       };
     }));
     
-    // Sort by roll number ascending
     resultStudents.sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }));
     
     let overallTotal = 0;
