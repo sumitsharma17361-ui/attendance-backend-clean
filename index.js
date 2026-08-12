@@ -1032,7 +1032,7 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
     const user = await User.findOne({ rollNo: targetRoll });
     if (!user) return res.status(404).json({ error: `Roll No ${targetRoll} not registered!` });
     
-    // Validate branch: if branch is provided, must match student's branch
+    // Validate branch
     if (branch) {
       const studentBranch = user.branch || 'CSE';
       if (branch.toUpperCase() !== studentBranch.toUpperCase()) {
@@ -1339,6 +1339,170 @@ app.get('/api/admin/class-attendance-report', async (req, res) => {
     });
   } catch (err) {
     console.error('Class report error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ================================================================
+// ==================== BULK REGISTRATION & ATTENDANCE UPDATE =====
+// ================================================================
+app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
+  try {
+    const requester = await User.findOne({ rollNo: req.body.requesterRollNo?.trim().toUpperCase() || '' });
+    if (!requester || requester.role !== 'admin') {
+      return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    }
+
+    // Student list from screenshot (rollNo, name, presentCount)
+    const studentData = [
+      { rollNo: '24CSE01', name: 'AAKASH RAJ CHAUHAN', present: 35 },
+      { rollNo: '24CSE03', name: 'ABHISHEK VERMA', present: 0 },
+      { rollNo: '24CSE04', name: 'ANKIT KUMAR', present: 0 },
+      { rollNo: '24CSE06', name: 'ANSHIKA', present: 44 },
+      { rollNo: '24CSE08', name: 'ANUJ TIWARI', present: 0 },
+      { rollNo: '24CSE09', name: 'ASHISH KUMAR', present: 47 },
+      { rollNo: '24CSE11', name: 'B DEVIKA', present: 0 },
+      { rollNo: '24CSE14', name: 'GAUTAM', present: 35 },
+      { rollNo: '24CSE15', name: 'HARSH RAJ', present: 11 },
+      { rollNo: '24CSE16', name: 'HIMANSHI', present: 38 },
+      { rollNo: '24CSE18', name: 'HITESH YADAV', present: 0 },
+      { rollNo: '24CSE19', name: 'ISHANT KUMAR', present: 44 },
+      { rollNo: '24CSE20', name: 'JATIN', present: 0 },
+      { rollNo: '24CSE21', name: 'JATIN YADAV', present: 0 },
+      { rollNo: '24CSE22', name: 'JITIN YADAV', present: 0 },
+      { rollNo: '24CSE23', name: 'KAUSHAL KUMAR', present: 18 },
+      { rollNo: '24CSE24', name: 'KRISH BHARDWAJ', present: 1 },
+      { rollNo: '24CSE25', name: 'MANISH', present: 0 },
+      { rollNo: '24CSE27', name: 'MANMOHAN KUMAR', present: 0 },
+      { rollNo: '24CSE28', name: 'MANOJ', present: 5 },
+      { rollNo: '24CSE29', name: 'MAYANK', present: 0 },
+      { rollNo: '24CSE30', name: 'MD SAMIR ALAM', present: 0 },
+      { rollNo: '24CSE31', name: 'MUDIT BEDI', present: 8 },
+      { rollNo: '24CSE33', name: 'NEHA SHUKLA', present: 39 },
+      { rollNo: '24CSE35', name: 'PRASHANT', present: 0 },
+      { rollNo: '24CSE36', name: 'PREETI', present: 39 },
+      { rollNo: '24CSE37', name: 'PURAV RAO', present: 1 },
+      { rollNo: '24CSE38', name: 'RACHIT SINGH', present: 0 },
+      { rollNo: '24CSE39', name: 'RAHUL', present: 0 },
+      { rollNo: '24CSE40', name: 'RISHAV RAJ', present: 0 },
+      { rollNo: '24CSE41', name: 'RITU KUMARI', present: 18 },
+      { rollNo: '24CSE42', name: 'ROHIT SHRESTA', present: 43 },
+      { rollNo: '24CSE43', name: 'RUPESH KUMAR', present: 0 },
+      { rollNo: '24CSE44', name: 'SAHIL', present: 0 },
+      { rollNo: '24CSE45', name: 'SAIESH', present: 0 },
+      { rollNo: '24CSE46', name: 'SAKSHI KUMARI', present: 21 },
+      { rollNo: '24CSE47', name: 'SOURABH RAJPUT', present: 0 },
+      { rollNo: '24CSE48', name: 'SUMIT SHARMA', present: 12 },
+      { rollNo: '24CSE49', name: 'TUSHAR KUMAR', present: 44 },
+      { rollNo: '24CSE51', name: 'VIDHI BHARGAV', present: 22 },
+      { rollNo: '24CSE52', name: 'VINAY', present: 32 }
+    ];
+
+    const startDate = new Date(2026, 6, 15); // 15 July 2026
+    const endDate = new Date(2026, 6, 30);   // 30 July 2026
+    const startStr = startDate.toISOString().split('T')[0];
+    const endStr = endDate.toISOString().split('T')[0];
+
+    let totalRegistered = 0, totalAttendanceAdded = 0;
+
+    for (const item of studentData) {
+      const roll = item.rollNo;
+      const name = item.name;
+      const presentNeeded = item.present;
+
+      // --- 1. Register or update user ---
+      let user = await User.findOne({ rollNo: roll });
+      if (user) {
+        // Update name and ensure password is 123456
+        user.name = name;
+        user.branch = 'CSE';
+        user.password = await bcrypt.hash('123456', 10);
+        await user.save();
+      } else {
+        // Register new user
+        const hashedPassword = await bcrypt.hash('123456', 10);
+        const newUser = new User({
+          name: name,
+          rollNo: roll,
+          password: hashedPassword,
+          role: 'student',
+          branch: 'CSE',
+          boundDeviceId: null
+        });
+        await newUser.save();
+        user = newUser;
+        totalRegistered++;
+      }
+
+      // --- 2. Delete existing attendance for this student in the date range ---
+      await Attendance.deleteMany({
+        rollNo: roll,
+        date: { $gte: startStr, $lte: endStr }
+      });
+
+      // --- 3. Create new attendance records to match present count ---
+      if (presentNeeded === 0) continue; // no records needed
+
+      // Get all academic days and their subjects (CSE) in the date range
+      let days = [];
+      let cur = new Date(startDate);
+      while (cur <= endDate) {
+        const dateStr = cur.toISOString().split('T')[0];
+        const dayOfWeek = cur.getDay();
+        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+        const isHoliday = await Holiday.findOne({ date: dateStr });
+        if (!isWeekend && !isHoliday) {
+          const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][dayOfWeek];
+          const timetable = getTimetableForBranch('CSE');
+          const subjects = timetable[dayName] || [];
+          // filter out LIB/Sports
+          const academicSubjects = subjects
+            .map(s => s.subject)
+            .filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports'));
+          days.push({ date: dateStr, subjects: academicSubjects });
+        }
+        cur.setDate(cur.getDate() + 1);
+      }
+
+      // Flatten all subjects across days
+      let allAvailableSubjects = [];
+      for (const d of days) {
+        for (const sub of d.subjects) {
+          allAvailableSubjects.push({ date: d.date, subject: sub });
+        }
+      }
+
+      // Limit present count to total available subjects
+      const totalAvailable = allAvailableSubjects.length;
+      const toMark = Math.min(presentNeeded, totalAvailable);
+
+      // Mark present for the first `toMark` entries (or you can shuffle to distribute)
+      for (let i = 0; i < toMark; i++) {
+        const entry = allAvailableSubjects[i];
+        await new Attendance({
+          rollNo: roll,
+          studentName: name,
+          subject: entry.subject,
+          date: entry.date,
+          status: 'Present',
+          location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG },
+          ipAddress: 'bulk-update',
+          isVerified: true
+        }).save();
+        totalAttendanceAdded++;
+      }
+
+      // Optional: also mark Duty Leave if needed? Not required.
+    }
+
+    res.json({
+      message: 'Bulk registration and attendance update completed!',
+      totalRegistered,
+      totalAttendanceAdded
+    });
+
+  } catch (err) {
+    console.error('Bulk update error:', err);
     res.status(500).json({ error: err.message });
   }
 });
