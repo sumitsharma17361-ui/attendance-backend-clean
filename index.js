@@ -1032,7 +1032,6 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
     const user = await User.findOne({ rollNo: targetRoll });
     if (!user) return res.status(404).json({ error: `Roll No ${targetRoll} not registered!` });
     
-    // Validate branch
     if (branch) {
       const studentBranch = user.branch || 'CSE';
       if (branch.toUpperCase() !== studentBranch.toUpperCase()) {
@@ -1115,7 +1114,7 @@ app.get('/api/student/summary/:rollNo', async (req, res) => {
     const holidays = await Holiday.find({}).lean();
     const holidaySet = new Set(holidays.map(h => h.date));
     const today = new Date();
-    const semesterStart = new Date(2026, 6, 15);
+    const semesterStart = new Date(2026, 6, 15); // 15 July
     let current = new Date(semesterStart);
     let totalConductedAcademicSubjects = 0;
     const academicDaysSet = new Set();
@@ -1343,9 +1342,7 @@ app.get('/api/admin/class-attendance-report', async (req, res) => {
   }
 });
 
-// ================================================================
-// ==================== BULK REGISTRATION & ATTENDANCE UPDATE =====
-// ================================================================
+// ========== BULK REGISTRATION & ATTENDANCE – CSE ==========
 app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
   try {
     const requester = await User.findOne({ rollNo: req.body.requesterRollNo?.trim().toUpperCase() || '' });
@@ -1353,7 +1350,6 @@ app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
       return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     }
 
-    // Student list from screenshot (rollNo, name, presentCount)
     const studentData = [
       { rollNo: '24CSE01', name: 'AAKASH RAJ CHAUHAN', present: 35 },
       { rollNo: '24CSE03', name: 'ABHISHEK VERMA', present: 0 },
@@ -1398,8 +1394,8 @@ app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
       { rollNo: '24CSE52', name: 'VINAY', present: 32 }
     ];
 
-    const startDate = new Date(2026, 6, 15); // 15 July 2026
-    const endDate = new Date(2026, 6, 30);   // 30 July 2026
+    const startDate = new Date(2026, 6, 15);
+    const endDate = new Date(2026, 6, 30);
     const startStr = startDate.toISOString().split('T')[0];
     const endStr = endDate.toISOString().split('T')[0];
 
@@ -1410,16 +1406,13 @@ app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
       const name = item.name;
       const presentNeeded = item.present;
 
-      // --- 1. Register or update user ---
       let user = await User.findOne({ rollNo: roll });
       if (user) {
-        // Update name and ensure password is 123456
         user.name = name;
         user.branch = 'CSE';
         user.password = await bcrypt.hash('123456', 10);
         await user.save();
       } else {
-        // Register new user
         const hashedPassword = await bcrypt.hash('123456', 10);
         const newUser = new User({
           name: name,
@@ -1434,16 +1427,13 @@ app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
         totalRegistered++;
       }
 
-      // --- 2. Delete existing attendance for this student in the date range ---
       await Attendance.deleteMany({
         rollNo: roll,
         date: { $gte: startStr, $lte: endStr }
       });
 
-      // --- 3. Create new attendance records to match present count ---
-      if (presentNeeded === 0) continue; // no records needed
+      if (presentNeeded === 0) continue;
 
-      // Get all academic days and their subjects (CSE) in the date range
       let days = [];
       let cur = new Date(startDate);
       while (cur <= endDate) {
@@ -1455,7 +1445,6 @@ app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
           const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][dayOfWeek];
           const timetable = getTimetableForBranch('CSE');
           const subjects = timetable[dayName] || [];
-          // filter out LIB/Sports
           const academicSubjects = subjects
             .map(s => s.subject)
             .filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports'));
@@ -1464,7 +1453,6 @@ app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
         cur.setDate(cur.getDate() + 1);
       }
 
-      // Flatten all subjects across days
       let allAvailableSubjects = [];
       for (const d of days) {
         for (const sub of d.subjects) {
@@ -1472,11 +1460,7 @@ app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
         }
       }
 
-      // Limit present count to total available subjects
-      const totalAvailable = allAvailableSubjects.length;
-      const toMark = Math.min(presentNeeded, totalAvailable);
-
-      // Mark present for the first `toMark` entries (or you can shuffle to distribute)
+      const toMark = Math.min(presentNeeded, allAvailableSubjects.length);
       for (let i = 0; i < toMark; i++) {
         const entry = allAvailableSubjects[i];
         await new Attendance({
@@ -1491,18 +1475,137 @@ app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
         }).save();
         totalAttendanceAdded++;
       }
-
-      // Optional: also mark Duty Leave if needed? Not required.
     }
 
     res.json({
-      message: 'Bulk registration and attendance update completed!',
+      message: 'CSE Bulk registration and attendance update completed!',
       totalRegistered,
       totalAttendanceAdded
     });
 
   } catch (err) {
-    console.error('Bulk update error:', err);
+    console.error('CSE Bulk update error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ========== BULK REGISTRATION & ATTENDANCE – AIDS ==========
+app.post('/api/admin/bulk-register-and-update-attendance-aids', async (req, res) => {
+  try {
+    const requester = await User.findOne({ rollNo: req.body.requesterRollNo?.trim().toUpperCase() || '' });
+    if (!requester || requester.role !== 'admin') {
+      return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    }
+
+    const studentData = [
+      { rollNo: '24AIDS01', name: 'AKASH', present: 1 },
+      { rollNo: '24AIDS03', name: 'DAVANSH SINGH KARKI', present: 5 },
+      { rollNo: '24AIDS04', name: 'FAIZAN AHMAD', present: 40 },
+      { rollNo: '24AIDS05', name: 'GOPESH JHA', present: 0 },
+      { rollNo: '24AIDS06', name: 'HEMANT YADAV', present: 0 },
+      { rollNo: '24AIDS07', name: 'HUSNAIN AHMAD', present: 40 },
+      { rollNo: '24AIDS08', name: 'JANHVI', present: 0 },
+      { rollNo: '24AIDS09', name: 'JYOTI PUSHPA ROUT', present: 26 },
+      { rollNo: '24AIDS11', name: 'MAHIMA', present: 38 },
+      { rollNo: '24AIDS12', name: 'MOHAMMAD HAMID KHALIL', present: 0 },
+      { rollNo: '24AIDS13', name: 'PIYUSH KUMAR', present: 0 },
+      { rollNo: '24AIDS14', name: 'PRINCE KUMAR', present: 0 },
+      { rollNo: '24AIDS16', name: 'SACHIN', present: 0 },
+      { rollNo: '24AIDS17', name: 'SAHIL PRASAD', present: 5 },
+      { rollNo: '24AIDS19', name: 'VINAY', present: 38 }
+    ];
+
+    const startDate = new Date(2026, 6, 15);
+    const endDate = new Date(2026, 6, 30);
+    const startStr = startDate.toISOString().split('T')[0];
+    const endStr = endDate.toISOString().split('T')[0];
+
+    let totalRegistered = 0, totalAttendanceAdded = 0;
+
+    for (const item of studentData) {
+      const roll = item.rollNo;
+      const name = item.name;
+      const presentNeeded = item.present;
+
+      let user = await User.findOne({ rollNo: roll });
+      if (user) {
+        user.name = name;
+        user.branch = 'AIDS';
+        user.password = await bcrypt.hash('123456', 10);
+        await user.save();
+      } else {
+        const hashedPassword = await bcrypt.hash('123456', 10);
+        const newUser = new User({
+          name: name,
+          rollNo: roll,
+          password: hashedPassword,
+          role: 'student',
+          branch: 'AIDS',
+          boundDeviceId: null
+        });
+        await newUser.save();
+        user = newUser;
+        totalRegistered++;
+      }
+
+      await Attendance.deleteMany({
+        rollNo: roll,
+        date: { $gte: startStr, $lte: endStr }
+      });
+
+      if (presentNeeded === 0) continue;
+
+      let days = [];
+      let cur = new Date(startDate);
+      while (cur <= endDate) {
+        const dateStr = cur.toISOString().split('T')[0];
+        const dayOfWeek = cur.getDay();
+        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+        const isHoliday = await Holiday.findOne({ date: dateStr });
+        if (!isWeekend && !isHoliday) {
+          const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][dayOfWeek];
+          const timetable = getTimetableForBranch('AIDS');
+          const subjects = timetable[dayName] || [];
+          const academicSubjects = subjects
+            .map(s => s.subject)
+            .filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports'));
+          days.push({ date: dateStr, subjects: academicSubjects });
+        }
+        cur.setDate(cur.getDate() + 1);
+      }
+
+      let allAvailableSubjects = [];
+      for (const d of days) {
+        for (const sub of d.subjects) {
+          allAvailableSubjects.push({ date: d.date, subject: sub });
+        }
+      }
+
+      const toMark = Math.min(presentNeeded, allAvailableSubjects.length);
+      for (let i = 0; i < toMark; i++) {
+        const entry = allAvailableSubjects[i];
+        await new Attendance({
+          rollNo: roll,
+          studentName: name,
+          subject: entry.subject,
+          date: entry.date,
+          status: 'Present',
+          location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG },
+          ipAddress: 'bulk-update',
+          isVerified: true
+        }).save();
+        totalAttendanceAdded++;
+      }
+    }
+
+    res.json({
+      message: 'AIDS Bulk registration and attendance update completed!',
+      totalRegistered,
+      totalAttendanceAdded
+    });
+
+  } catch (err) {
+    console.error('AIDS Bulk update error:', err);
     res.status(500).json({ error: err.message });
   }
 });
