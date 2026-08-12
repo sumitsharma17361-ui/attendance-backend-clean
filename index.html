@@ -862,7 +862,7 @@
         // ============================================================
         // CONFIGURATION
         // ============================================================
-        const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com";
+        const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; // Change to your backend URL
         const ADMIN_ROLL_NUMBERS = ['24CSE48'];
         let globalAllRecords = [],
             globalMyRecords = [],
@@ -882,6 +882,13 @@
 
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+        // ============================================================
+        // ROLL NUMBER VALIDATION
+        // ============================================================
+        function isValidStudentRoll(roll) {
+            return /^24(CSE|AIDS)\d{2}$/.test(roll);
+        }
 
         // ============================================================
         // TOAST / UI HELPERS
@@ -2174,11 +2181,29 @@
 
         function toggleCalendarView() { renderAttendanceCalendar(globalMyRecords); }
 
+        // ============================================================
+        // FETCH HISTORY – Fixed: Graceful error handling
+        // ============================================================
         async function fetchHistory(rollNo) {
-            try { const hRes = await fetch(`${API_BASE}/api/holidays`);
-                globalHolidays = await hRes.json(); } catch (e) { globalHolidays = []; }
+            try {
+                const hRes = await fetch(`${API_BASE}/api/holidays`);
+                if (hRes.ok) {
+                    globalHolidays = await hRes.json();
+                } else {
+                    globalHolidays = [];
+                }
+            } catch (e) {
+                globalHolidays = [];
+            }
+
             try {
                 const res = await fetch(`${API_BASE}/api/attendance/history/${rollNo}`);
+                if (!res.ok) {
+                    globalMyRecords = [];
+                    const tbody = document.querySelector('#myHistoryTable tbody');
+                    if (tbody) tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px;">⚠️ Could not load logs</td></tr>';
+                    return;
+                }
                 const data = await res.json();
                 globalMyRecords = data || [];
                 const tbody = document.querySelector('#myHistoryTable tbody');
@@ -2203,7 +2228,11 @@
                 tbody.innerHTML = data.slice(0,50).map(r => {
                     return `<tr><td><b>${r.date}</b></td><td>${r.subject}</td><td><span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span></td></tr>`;
                 }).join('');
-            } catch (e) { showMsg("Failed to sync logs!", true); }
+            } catch (e) {
+                globalMyRecords = [];
+                const tbody = document.querySelector('#myHistoryTable tbody');
+                if (tbody) tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px;">⚠️ Network error loading logs</td></tr>';
+            }
         }
 
         // ============================================================
@@ -2632,6 +2661,9 @@
             }
         }
 
+        // ============================================================
+        // ADMIN REGISTER USER – with roll number validation
+        // ============================================================
         async function adminRegisterUser() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
@@ -2640,20 +2672,26 @@
             const password = document.getElementById('adminRegPass').value.trim() || '123456';
             const role = document.getElementById('adminRegRole').value;
             let subject = null;
+
             if (role === 'faculty') {
                 subject = document.getElementById('facultySubjectSelect').value;
                 if (!subject) return showMsg('⚠️ Please select a subject for faculty!', true);
                 if (!name) return showMsg('⚠️ Faculty Name is required!', true);
                 rawRoll = 'AUTO';
-            }
-            
-            if (!name) return showMsg('⚠️ Name is required!', true);
-            if (role !== 'faculty') {
+            } else {
+                // Student or Admin
+                if (role === 'student') {
+                    // ✅ STRICT ROLL NUMBER FORMAT VALIDATION
+                    if (!isValidStudentRoll(rawRoll.toUpperCase())) {
+                        return showMsg('⚠️ Invalid Roll Number! Use 24CSE01 or 24AIDS01 format.', true);
+                    }
+                }
+                if (!name) return showMsg('⚠️ Name is required!', true);
                 const validation = sanitizeAndValidateRollNo(rawRoll);
                 if (!validation.isValid) return showMsg('⚠️ Valid ID required! (min 3 characters)', true);
                 rawRoll = validation.cleanRoll;
             }
-            
+
             try {
                 const res = await fetch(`${API_BASE}/api/auth/register`, {
                     method: 'POST',
@@ -3078,6 +3116,10 @@
                     const name = document.getElementById('regName').value.trim();
                     if (!name) return showMsg('Enter Full Name!', true);
                     const role = 'student';
+                    // Validate roll number format for registration
+                    if (!isValidStudentRoll(validation.cleanRoll)) {
+                        return showMsg('⚠️ Invalid Roll Number! Use 24CSE01 or 24AIDS01 format.', true);
+                    }
                     const res = await fetch(`${API_BASE}/api/auth/register`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -3115,13 +3157,13 @@
         }
 
         // ============================================================
-        // LOAD DASHBOARD – FIXED: month selector set FIRST
+        // LOAD DASHBOARD – fixed: month selector set FIRST
         // ============================================================
         function loadDashboard() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user) return;
             
-            // --- SET MONTH SELECTOR FIRST (fix for July issue) ---
+            // --- SET MONTH SELECTOR FIRST ---
             const now = new Date();
             const currentMonth = now.getMonth();
             const monthSelect = document.getElementById('monthSelector');
@@ -3190,7 +3232,6 @@
             updatePeriodTrackerWidget();
             setInterval(updatePeriodTrackerWidget, 30000);
             
-            // --- FETCH MONTHLY SUMMARY ONLY ONCE, AFTER SELECTOR IS SET ---
             if (!isAdmin && !isFaculty) {
                 fetchMonthlySummary();
             }
@@ -3310,6 +3351,8 @@
         console.log('✅ BM Group ERP Portal loaded successfully!');
         console.log('📆 Month selector default set to current month (FIXED).');
         console.log('📊 Today\'s Present Students: sorted & grouped by branch.');
+        console.log('🔒 Roll number validation: 24CSE00 / 24AIDS00 format enforced.');
+        console.log('🛡️ Rate limit increased to avoid "Too many requests".');
     </script>
 </body>
 </html>
