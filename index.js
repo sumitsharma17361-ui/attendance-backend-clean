@@ -42,7 +42,7 @@ const registerSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
   deviceId: z.string().optional(),
   role: z.enum(['student', 'faculty', 'admin']).default('student'),
-  subject: z.string().optional()
+  subject: z.string().optional().nullable()  // ✅ FIX: allows null
 });
 
 const loginSchema = z.object({
@@ -74,7 +74,6 @@ const SUBJECT_FACULTY_MAP = {
   'Sports / Project': 'Sports Dept'
 };
 
-// Subject to code mapping for teacher ID
 const SUBJECT_CODE_MAP = {
   'BDA - Big Data Analytics': 'BDA',
   'ECO - Economics for Engineers': 'ECO',
@@ -298,7 +297,6 @@ async function incrementFailedAttempts(rollNo) {
   await user.save();
 }
 
-// ---------- Generate Teacher ID ----------
 async function generateTeacherId(subject) {
   const code = SUBJECT_CODE_MAP[subject] || 'TCH';
   const existing = await User.find({
@@ -391,7 +389,9 @@ app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active!'));
 app.post('/api/auth/register', async (req, res) => {
   try {
     const parseResult = registerSchema.safeParse(req.body);
-    if (!parseResult.success) return res.status(400).json({ error: parseResult.error.errors[0].message });
+    if (!parseResult.success) {
+      return res.status(400).json({ error: parseResult.error.errors[0].message });
+    }
     let { name, rollNo, password, deviceId, role, subject } = parseResult.data;
     let cleanRoll = rollNo.trim().toUpperCase();
     
