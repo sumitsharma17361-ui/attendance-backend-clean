@@ -348,7 +348,8 @@ const attendanceSchema = new mongoose.Schema({
   status: { type: String, enum: ['Present', 'Absent', 'Duty Leave', 'Holiday'], default: 'Present' },
   location: { latitude: Number, longitude: Number },
   ipAddress: { type: String, default: null },
-  isVerified: { type: Boolean, default: false }
+  isVerified: { type: Boolean, default: false },
+  branch: { type: String, default: 'CSE' }
 }, { timestamps: true });
 
 const holidaySchema = new mongoose.Schema({
@@ -645,7 +646,8 @@ app.post('/api/teacher/mark-attendance', async (req, res) => {
       status: 'Present',
       location: { latitude, longitude },
       ipAddress: req.ip,
-      isVerified: true
+      isVerified: true,
+      branch: studentUser.branch || 'CSE'
     }).save();
     res.status(201).json({ message: `✅ Marked ${studentUser.name} (${subject})` });
   } catch (err) { console.error('Teacher attendance error:', err); res.status(500).json({ error: err.message }); }
@@ -969,7 +971,17 @@ app.post('/api/attendance/mark', async (req, res) => {
     if (isLab && todayEntries.length >= 1) return res.status(400).json({ error: `Already marked for ${subject} today! (Lab - 1 lecture only)` });
     user.failedAttempts = 0;
     user.blockUntil = null;
-    await new Attendance({ rollNo: cleanRoll, studentName: name, subject, date: todayDate, status: 'Present', location: { latitude, longitude }, ipAddress: req.ip, isVerified: true }).save();
+    await new Attendance({
+      rollNo: cleanRoll,
+      studentName: name,
+      subject,
+      date: todayDate,
+      status: 'Present',
+      location: { latitude, longitude },
+      ipAddress: req.ip,
+      isVerified: true,
+      branch: user.branch || 'CSE'
+    }).save();
     user.lastAttendanceTime = new Date();
     user.lastAttendanceLocation = { latitude, longitude };
     await user.save();
@@ -1003,7 +1015,17 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
       const sub = entry.subject;
       const exists = await Attendance.findOne({ rollNo: cleanRoll, subject: sub, date: todayDate });
       if (!exists) {
-        await new Attendance({ rollNo: cleanRoll, studentName: name, subject: sub, date: todayDate, status: 'Present', location: { latitude, longitude }, ipAddress: req.ip, isVerified: true }).save();
+        await new Attendance({
+          rollNo: cleanRoll,
+          studentName: name,
+          subject: sub,
+          date: todayDate,
+          status: 'Present',
+          location: { latitude, longitude },
+          ipAddress: req.ip,
+          isVerified: true,
+          branch: branch
+        }).save();
         markedCount++;
       }
     }
@@ -1053,7 +1075,17 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
       const fullSub = getFullSubjectName(sub);
       const exists = await Attendance.findOne({ rollNo: targetRoll, subject: fullSub, date });
       if (!exists) {
-        await new Attendance({ rollNo: targetRoll, studentName: user.name, subject: fullSub, date, status: status || 'Present', location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG }, ipAddress: 'admin-manual', isVerified: true }).save();
+        await new Attendance({
+          rollNo: targetRoll,
+          studentName: user.name,
+          subject: fullSub,
+          date,
+          status: status || 'Present',
+          location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG },
+          ipAddress: 'admin-manual',
+          isVerified: true,
+          branch: actualBranch
+        }).save();
         markedCount++;
         markedSubjects.push(fullSub);
       } else {
@@ -1114,7 +1146,7 @@ app.get('/api/student/summary/:rollNo', async (req, res) => {
     const holidays = await Holiday.find({}).lean();
     const holidaySet = new Set(holidays.map(h => h.date));
     const today = new Date();
-    const semesterStart = new Date(2026, 6, 15); // 15 July
+    const semesterStart = new Date(2026, 6, 15);
     let current = new Date(semesterStart);
     let totalConductedAcademicSubjects = 0;
     const academicDaysSet = new Set();
@@ -1268,10 +1300,12 @@ app.get('/api/timetable/faculty', async (req, res) => {
   }
 });
 
-// ========== CLASS ATTENDANCE REPORT (Admin) ==========
+// ================================================================
+// ========== CLASS ATTENDANCE REPORT (Admin) – WITH BRANCH FILTER ==========
+// ================================================================
 app.get('/api/admin/class-attendance-report', async (req, res) => {
   try {
-    const { requesterRollNo, startDate, endDate } = req.query;
+    const { requesterRollNo, startDate, endDate, branch } = req.query;
     if (!requesterRollNo) return res.status(400).json({ error: 'requesterRollNo required' });
     const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
     if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
@@ -1280,7 +1314,12 @@ app.get('/api/admin/class-attendance-report', async (req, res) => {
     const startStr = start.toISOString().split('T')[0];
     const endStr = end.toISOString().split('T')[0];
     
-    const students = await User.find({ role: 'student' }).select('rollNo name branch');
+    // ✅ FIX: Filter students by branch if provided
+    let query = { role: 'student' };
+    if (branch && branch !== 'ALL' && branch !== 'undefined' && branch !== 'null') {
+      query.branch = branch.toUpperCase();
+    }
+    const students = await User.find(query).select('rollNo name branch');
     if (students.length === 0) return res.json({ students: [], totalLectures: 0 });
     
     const holidays = await Holiday.find({ date: { $gte: startStr, $lte: endStr } });
@@ -1326,6 +1365,9 @@ app.get('/api/admin/class-attendance-report', async (req, res) => {
         percentage: totalConducted > 0 ? Math.round((presentCount / totalConducted) * 100) : 0
       };
     }));
+    
+    // Sort by roll number ascending
+    resultStudents.sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }));
     
     let overallTotal = 0;
     if (resultStudents.length > 0) {
@@ -1471,7 +1513,8 @@ app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
           status: 'Present',
           location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG },
           ipAddress: 'bulk-update',
-          isVerified: true
+          isVerified: true,
+          branch: 'CSE'
         }).save();
         totalAttendanceAdded++;
       }
@@ -1592,7 +1635,8 @@ app.post('/api/admin/bulk-register-and-update-attendance-aids', async (req, res)
           status: 'Present',
           location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG },
           ipAddress: 'bulk-update',
-          isVerified: true
+          isVerified: true,
+          branch: 'AIDS'
         }).save();
         totalAttendanceAdded++;
       }
