@@ -28,7 +28,7 @@ if (!MONGO_URI) {
   process.exit(1);
 }
 
-// ---------- Rate Limiting - LESS RESTRICTIVE ----------
+// ---------- Rate Limiting – LESS RESTRICTIVE ----------
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { error: 'Too many attempts, try again after 15 minutes.' } });
 const apiLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 200, message: { error: 'Too many requests, please slow down.' } }); // Increased to 200
 
@@ -395,6 +395,15 @@ app.post('/api/auth/register', async (req, res) => {
     }
     let { name, rollNo, password, deviceId, role, subject } = parseResult.data;
     let cleanRoll = rollNo.trim().toUpperCase();
+    
+    // ----- ROLL NUMBER FORMAT VALIDATION FOR STUDENTS -----
+    if (role === 'student') {
+      // Must match 24CSE01-99 or 24AIDS01-99
+      const validFormat = /^24(CSE|AIDS)\d{2}$/.test(cleanRoll);
+      if (!validFormat) {
+        return res.status(400).json({ error: 'Invalid Roll Number format! Use 24CSE01 or 24AIDS01 format.' });
+      }
+    }
     
     if (role === 'faculty' && (!cleanRoll || cleanRoll === 'AUTO' || cleanRoll === '')) {
       if (!subject) return res.status(400).json({ error: 'Subject required for faculty registration!' });
