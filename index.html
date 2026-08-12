@@ -101,6 +101,8 @@
         .badge-role { background: #e2e8f0; color: #475569; }
         .badge-attendance { background: #e0e7ff; color: #1e40af; }
         .badge-dl { background: #fef3c7; color: #92400e; }
+        .badge-cse { background: #dbeafe; color: #1e40af; }
+        .badge-aids { background: #fae8ff; color: #7c3aed; }
 
         /* ===== STATS GRID ===== */
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
@@ -161,15 +163,8 @@
             line-height: 1.3;
             letter-spacing: 0.3px;
         }
-        .admin-nav-item:hover {
-            background: rgba(255,255,255,0.6);
-        }
-        .admin-nav-item.active {
-            background: #fff;
-            color: var(--primary);
-            box-shadow: var(--shadow-sm);
-            border-color: var(--card-border);
-        }
+        .admin-nav-item:hover { background: rgba(255,255,255,0.6); }
+        .admin-nav-item.active { background: #fff; color: var(--primary); box-shadow: var(--shadow-sm); border-color: var(--card-border); }
 
         /* ===== PERIOD CARD ===== */
         .period-card { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: var(--radius); padding: 10px; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; }
@@ -217,9 +212,13 @@
         .passcode-display h2 { font-size: 20px; font-weight: 900; color: var(--primary); letter-spacing: 4px; }
 
         /* ===== TODAY PRESENT LIST ===== */
-        #todayPresentList { max-height: 120px; overflow-y: auto; font-size: 10px; margin: 6px 0; }
-        #todayPresentList .present-item { display: flex; justify-content: space-between; padding: 3px 6px; border-bottom: 1px solid #f1f5f9; }
-        #todayPresentList .present-item:last-child { border-bottom: none; }
+        #todayPresentList { max-height: 180px; overflow-y: auto; font-size: 10px; margin: 6px 0; }
+        .present-group { margin-bottom: 8px; }
+        .present-group .group-title { font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px; display: block; border-bottom: 1px solid var(--card-border); padding-bottom: 2px; }
+        .present-item { display: flex; justify-content: space-between; padding: 3px 6px; border-bottom: 1px solid #f1f5f9; }
+        .present-item:last-child { border-bottom: none; }
+        .present-item .roll { font-weight: 600; }
+        .present-item .name { color: var(--text-muted); }
 
         /* ===== SUBJECT CHIPS ===== */
         .subject-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
@@ -1675,7 +1674,7 @@
         }
 
         // ============================================================
-        // CLASS ATTENDANCE REPORT (PDF) – with branch filter & sorting
+        // CLASS ATTENDANCE REPORT (PDF)
         // ============================================================
         async function generateClassAttendanceReport() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -1706,9 +1705,7 @@
                     return showMsg('No students found!', true);
                 }
 
-                // Sort by roll number ascending
                 const students = data.students.sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }));
-
                 const totalLectures = data.totalLectures || 0;
                 const branchName = branchFilter === 'ALL' ? 'All Branches' : branchFilter;
 
@@ -1822,7 +1819,7 @@
         }
 
         // ============================================================
-        // ADMIN DIRECTORY & PROFILE (sort by roll number)
+        // ADMIN DIRECTORY & PROFILE
         // ============================================================
         async function fetchAllUsers() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -1838,7 +1835,6 @@
                     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:12px;">No users registered</td></tr>';
                     return;
                 }
-                // Filter only students for attendance summary and sort by rollNo
                 const students = data.filter(u => u.role === 'student').sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }));
                 const summaryPromises = students.map(async (s) => {
                     try {
@@ -1853,7 +1849,6 @@
                     if (item.summary) summaryMap[item.rollNo] = item.summary;
                 });
 
-                // Also include admins and faculty but they won't have attendance summary
                 const allUsersSorted = data.sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }));
 
                 tbody.innerHTML = allUsersSorted.map(s => {
@@ -2211,6 +2206,9 @@
             } catch (e) { showMsg("Failed to sync logs!", true); }
         }
 
+        // ============================================================
+        // LOAD DASHBOARD STATS – with sorted & grouped present students
+        // ============================================================
         async function loadDashboardStats() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return;
@@ -2224,9 +2222,33 @@
                     document.getElementById('liveOverallPct').innerText = (data.overallPct || 0) + '%';
                     document.getElementById('workingDaysSoFar').innerText = data.workingDaysSoFar || 0;
                     document.getElementById('totalWorkingDaysSemester').innerText = data.totalWorkingDaysSemester || 0;
+
                     const presentList = document.getElementById('todayPresentList');
                     if (data.todayPresentStudents && data.todayPresentStudents.length > 0) {
-                        presentList.innerHTML = data.todayPresentStudents.map(s => `<div class="present-item"><span>${s.rollNo}</span><span>${s.name}</span></div>`).join('');
+                        const sortedStudents = data.todayPresentStudents.sort((a, b) => 
+                            a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true })
+                        );
+                        const cseStudents = sortedStudents.filter(s => s.rollNo && !s.rollNo.includes('AIDS'));
+                        const aidsStudents = sortedStudents.filter(s => s.rollNo && s.rollNo.includes('AIDS'));
+                        let html = '';
+                        if (cseStudents.length > 0) {
+                            html += `<div class="present-group"><span class="group-title">🟦 CSE (${cseStudents.length})</span>`;
+                            cseStudents.forEach(s => {
+                                html += `<div class="present-item"><span class="roll">${s.rollNo}</span><span class="name">${s.name}</span></div>`;
+                            });
+                            html += `</div>`;
+                        }
+                        if (aidsStudents.length > 0) {
+                            html += `<div class="present-group"><span class="group-title">🟪 AIDS (${aidsStudents.length})</span>`;
+                            aidsStudents.forEach(s => {
+                                html += `<div class="present-item"><span class="roll">${s.rollNo}</span><span class="name">${s.name}</span></div>`;
+                            });
+                            html += `</div>`;
+                        }
+                        if (cseStudents.length === 0 && aidsStudents.length === 0) {
+                            html = '<div style="padding:8px; text-align:center; color:var(--text-muted);">No students present today.</div>';
+                        }
+                        presentList.innerHTML = html;
                     } else {
                         presentList.innerHTML = '<div style="padding:8px; text-align:center; color:var(--text-muted);">No students present yet today.</div>';
                     }
@@ -3093,11 +3115,20 @@
         }
 
         // ============================================================
-        // LOAD DASHBOARD
+        // LOAD DASHBOARD – FIXED: month selector set FIRST
         // ============================================================
         function loadDashboard() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user) return;
+            
+            // --- SET MONTH SELECTOR FIRST (fix for July issue) ---
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const monthSelect = document.getElementById('monthSelector');
+            if (monthSelect && currentMonth >= 6 && currentMonth <= 11) {
+                monthSelect.value = currentMonth.toString();
+            }
+            
             document.getElementById('auth-box').style.display = 'none';
             document.getElementById('dash-box').style.display = 'block';
             document.getElementById('headerAvatarBox').style.display = 'flex';
@@ -3158,15 +3189,9 @@
             loadSubjectsForManual();
             updatePeriodTrackerWidget();
             setInterval(updatePeriodTrackerWidget, 30000);
-            if (!isAdmin && !isFaculty) {
-                fetchMonthlySummary();
-            }
             
-            const now = new Date();
-            const currentMonth = now.getMonth();
-            if (currentMonth >= 6 && currentMonth <= 11) {
-                const select = document.getElementById('monthSelector');
-                if (select) select.value = currentMonth.toString();
+            // --- FETCH MONTHLY SUMMARY ONLY ONCE, AFTER SELECTOR IS SET ---
+            if (!isAdmin && !isFaculty) {
                 fetchMonthlySummary();
             }
         }
@@ -3214,6 +3239,49 @@
         }
 
         // ============================================================
+        // MARK ACTIVE PERIOD ATTENDANCE
+        // ============================================================
+        async function markActivePeriodAttendance() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'student') return showMsg('Student access required!', true);
+            if (!activeSubjectSubjectCode) return showMsg('No active period found!', true);
+            if (!navigator.geolocation) return showMsg('Geolocation not supported!', true);
+            
+            const enteredPasscode = prompt(`Enter Single Lecture Passcode (4‑digit) for "${activeSubjectSubjectCode}":`);
+            if (!enteredPasscode) return;
+            if (enteredPasscode.length !== 4) return showMsg('Passcode must be 4 digits!', true);
+            
+            passcodeVerified = false;
+            verifyPasscode(enteredPasscode, 'single_lecture', async () => {
+                navigator.geolocation.getCurrentPosition(async (pos) => {
+                    try {
+                        const res = await fetch(`${API_BASE}/api/attendance/mark`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
+                            body: JSON.stringify({
+                                rollNo: user.rollNo,
+                                name: user.name,
+                                subject: activeSubjectSubjectCode,
+                                latitude: pos.coords.latitude,
+                                longitude: pos.coords.longitude
+                            })
+                        });
+                        const data = await res.json();
+                        passcodeVerified = false;
+                        if (res.ok) {
+                            showMsg(data.message);
+                            fetchHistory(user.rollNo);
+                        } else {
+                            showMsg(data.error || "Failed", true);
+                        }
+                    } catch (e) {
+                        showMsg("Network Error!", true);
+                    }
+                }, () => showMsg('GPS Access Denied!', true));
+            });
+        }
+
+        // ============================================================
         // INIT
         // ============================================================
         function initMonthSelector() {
@@ -3240,12 +3308,8 @@
         });
 
         console.log('✅ BM Group ERP Portal loaded successfully!');
-        console.log('📆 Month selector default set to current month.');
-        console.log('📊 All Attendance Management added with Edit/Delete.');
-        console.log('👨‍🏫 Teacher module: fixed report totals from timetable.');
-        console.log('👑 Admin UI optimized and professionalized.');
-        console.log('📋 CSE & AIDS Bulk Update buttons added in Tools.');
-        console.log('🔍 Class Report: sorted by Roll No, branch filter added.');
+        console.log('📆 Month selector default set to current month (FIXED).');
+        console.log('📊 Today\'s Present Students: sorted & grouped by branch.');
     </script>
 </body>
 </html>
