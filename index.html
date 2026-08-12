@@ -96,6 +96,7 @@
         .badge-absent { background: #fee2e2; color: #991b1b; }
         .badge-active { background: #dbeafe; color: #1d4ed8; }
         .badge-role { background: #e2e8f0; color: #475569; }
+        .badge-attendance { background: #e0e7ff; color: #1e40af; }
 
         /* ===== STATS GRID ===== */
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
@@ -490,10 +491,10 @@
                         <div style="display:flex; gap:6px; margin-bottom:6px;">
                             <button class="btn btn-outline btn-sm" onclick="fetchAllUsers()" style="flex:1; padding:4px;">Refresh</button>
                         </div>
-                        <div class="table-container" style="max-height:300px;">
+                        <div class="table-container" style="max-height:400px;">
                             <table id="directoryTable">
-                                <thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Device</th><th>Action</th></tr></thead>
-                                <tbody><tr><td colspan="5" style="text-align:center; padding:12px;">Loading users…</td></tr></tbody>
+                                <thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Device</th><th>Attendance</th><th>Action</th></tr></thead>
+                                <tbody><tr><td colspan="6" style="text-align:center; padding:12px;">Loading users…</td></tr></tbody>
                             </table>
                         </div>
                     </div>
@@ -577,7 +578,7 @@
                     <div id="subAttendance" class="admin-box sub-attendance" style="display:none;">
                         <span class="sub-section-title">📝 Manual Backdate Attendance</span>
                         <input type="text" id="manualRoll" placeholder="Student Roll No" style="font-size:10px; padding:7px;" />
-                        <input type="date" id="manualDate" style="font-size:10px; padding:7px;" onchange="loadSubjectsForDay()" />
+                        <input type="date" id="manualDate" style="font-size:10px; padding:7px;" onchange="loadSubjectsForManual()" />
                         <select id="manualBranch" style="font-size:10px; padding:7px;">
                             <option value="CSE">CSE</option>
                             <option value="AIDS">AIDS</option>
@@ -1575,7 +1576,7 @@
         }
 
         // ============================================================
-        // CLASS ATTENDANCE REPORT (PDF) – window.open + print
+        // CLASS ATTENDANCE REPORT (PDF)
         // ============================================================
         async function generateClassAttendanceReport() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -1716,7 +1717,7 @@
         }
 
         // ============================================================
-        // ADMIN DIRECTORY & PROFILE
+        // ADMIN DIRECTORY & PROFILE (with Attendance Column)
         // ============================================================
         async function fetchAllUsers() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -1729,17 +1730,41 @@
                 const tbody = document.querySelector('#directoryTable tbody');
                 if (!tbody) return;
                 if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:12px;">No users registered</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:12px;">No users registered</td></tr>';
                     return;
                 }
+                // For each student, fetch attendance summary
+                const students = data.filter(u => u.role === 'student');
+                const summaryPromises = students.map(async (s) => {
+                    try {
+                        const res2 = await fetch(`${API_BASE}/api/student/summary/${s.rollNo}`);
+                        const summary = await res2.json();
+                        return { rollNo: s.rollNo, summary };
+                    } catch (e) { return { rollNo: s.rollNo, summary: null }; }
+                });
+                const summaries = await Promise.all(summaryPromises);
+                const summaryMap = {};
+                summaries.forEach(item => {
+                    if (item.summary) summaryMap[item.rollNo] = item.summary;
+                });
+
                 tbody.innerHTML = data.map(s => {
                     const deviceStatus = s.boundDeviceId ? '✅ Bound' : '🔓 Unbound';
                     const roleBadge = s.role === 'admin' ? '👑 Admin' : s.role === 'faculty' ? '👨‍🏫 Faculty' : '🎓 Student';
+                    let attendanceDisplay = '-';
+                    if (s.role === 'student' && summaryMap[s.rollNo]) {
+                        const sm = summaryMap[s.rollNo];
+                        const attended = sm.totalAcademicLectures || 0;
+                        const conducted = sm.totalConductedLectures || 0;
+                        const pct = sm.attendancePercentage || 0;
+                        attendanceDisplay = `${attended}/${conducted} (${pct}%)`;
+                    }
                     return `<tr>
                         <td><b>${s.rollNo || 'N/A'}</b></td>
                         <td>${s.name || 'Unknown'}</td>
                         <td><span class="badge badge-role">${roleBadge}</span></td>
                         <td><span class="badge ${s.boundDeviceId ? 'badge-active' : 'badge-present'}">${deviceStatus}</span></td>
+                        <td><span class="badge badge-attendance">${attendanceDisplay}</span></td>
                         <td>
                             ${s.role === 'student' ? `<button class="action-btn btn-view btn-sm" onclick="viewStudentProfile('${s.rollNo}')" style="padding:2px 6px; font-size:8px;"><svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>` : ''}
                         </td>
@@ -2147,9 +2172,9 @@
         }
 
         // ============================================================
-        // ADMIN MANUAL ATTENDANCE
+        // ADMIN MANUAL ATTENDANCE – with branch validation
         // ============================================================
-        function loadSubjectsForDay() {
+        function loadSubjectsForManual() {
             const date = document.getElementById('manualDate').value;
             const branch = document.getElementById('manualBranch').value;
             if (!date) return;
@@ -2386,7 +2411,7 @@
                         rollNo: rawRoll, 
                         password, 
                         role, 
-                        subject: subject || undefined  // ✅ FIX: null → undefined
+                        subject: subject || undefined
                     })
                 });
                 const data = await res.json();
@@ -2822,7 +2847,7 @@
             const todayISO = new Date().toISOString().split('T')[0];
             document.getElementById('manualDate').value = todayISO;
             fetchNotices();
-            loadSubjectsForDay();
+            loadSubjectsForManual();
             updatePeriodTrackerWidget();
             setInterval(updatePeriodTrackerWidget, 30000);
             if (!isAdmin && !isFaculty) {
@@ -2905,6 +2930,8 @@
         console.log('🔑 Full Day Attendance: passcode flow fixed.');
         console.log('👨‍🏫 Updated teacher names: CN & CN LAB → Mr. Chhetrapal, DAA & DAA LAB → Ms. Rashmi');
         console.log('🐛 Registration fix: subject: null → undefined');
+        console.log('📋 Directory added Attendance column');
+        console.log('🔒 Manual attendance branch validation added');
     </script>
 </body>
 </html>
