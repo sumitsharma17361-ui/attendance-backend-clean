@@ -559,7 +559,7 @@
                             <button class="btn btn-success btn-sm" onclick="generateStudentReport('csv')" style="padding:6px;">CSV</button>
                         </div>
 
-                        <!-- ===== NEW: Class Attendance Report (PDF) ===== -->
+                        <!-- ===== Class Attendance Report (PDF) ===== -->
                         <hr style="margin:12px 0; border-color:var(--card-border);" />
                         <span class="sub-section-title">📋 Class Attendance Report (PDF)</span>
                         <div style="display:flex; gap:6px; flex-wrap:wrap;">
@@ -789,7 +789,7 @@
             const toastMsg = document.getElementById('toast-msg');
             const toastIcon = document.getElementById('toast-icon');
             if (!toast || !toastMsg) return;
-            toastMsg.innerText = text;
+            toastMsg.innerText = text || (isError ? 'Something went wrong!' : 'Done!');
             toastIcon.setAttribute("viewBox", "0 0 24 24");
             if (isError) {
                 toastIcon.innerHTML = `<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>`;
@@ -1583,7 +1583,7 @@
         }
 
         // ============================================================
-        // CLASS ATTENDANCE REPORT (PDF) – FIXED
+        // CLASS ATTENDANCE REPORT (PDF) – FIXED: Using window.open + print
         // ============================================================
         async function generateClassAttendanceReport() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -1616,72 +1616,74 @@
                 const branchName = data.students[0]?.branch || 'CSE';
                 let tableRows = data.students.map((s, idx) => `
                     <tr>
-                        <td style="padding:4px 8px; border:1px solid #ccc; text-align:center;">${idx + 1}</td>
-                        <td style="padding:4px 8px; border:1px solid #ccc; text-align:left;">${s.rollNo}</td>
-                        <td style="padding:4px 8px; border:1px solid #ccc; text-align:left;">${s.name}</td>
-                        <td style="padding:4px 8px; border:1px solid #ccc; text-align:center;">${s.totalPresent}</td>
-                        <td style="padding:4px 8px; border:1px solid #ccc; text-align:center;">${s.percentage}%</td>
+                        <td style="padding:6px 8px; border:1px solid #ccc; text-align:center;">${idx + 1}</td>
+                        <td style="padding:6px 8px; border:1px solid #ccc; text-align:left;">${s.rollNo || 'N/A'}</td>
+                        <td style="padding:6px 8px; border:1px solid #ccc; text-align:left;">${s.name || 'Unknown'}</td>
+                        <td style="padding:6px 8px; border:1px solid #ccc; text-align:center;">${s.totalPresent || 0}</td>
+                        <td style="padding:6px 8px; border:1px solid #ccc; text-align:center;">${s.percentage || 0}%</td>
                     </tr>
                 `).join('');
 
                 const htmlContent = `
-                    <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 900px; margin: 0 auto; background: #fff;">
-                        <h1 style="color: #2563eb; text-align:center; font-size:24px;">BM Group of Institutions</h1>
-                        <h2 style="text-align:center; font-size:18px;">${branchName} – 5th Semester</h2>
-                        <p style="text-align:center; font-size:14px;">Attendance from ${startDate} to ${endDate}</p>
-                        <p style="text-align:center; font-size:12px; color:#666;">Total Lectures Conducted: ${totalLectures}</p>
-                        <table style="width:100%; border-collapse:collapse; margin-top:20px; font-size:12px;">
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>Class Attendance Report</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; padding: 20px; }
+                            h1 { color: #2563eb; text-align: center; }
+                            h2 { text-align: center; }
+                            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+                            th, td { padding: 6px 8px; border: 1px solid #ccc; }
+                            th { background: #f0f0f0; text-align: center; }
+                            td { text-align: left; }
+                            td.center { text-align: center; }
+                            .footer { text-align: center; font-size: 10px; color: #999; margin-top: 20px; }
+                            .summary { text-align: center; font-size: 14px; color: #666; }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>BM Group of Institutions</h1>
+                        <h2>${branchName} – 5th Semester</h2>
+                        <p style="text-align:center;">Attendance from ${startDate} to ${endDate}</p>
+                        <p class="summary">Total Lectures Conducted: ${totalLectures}</p>
+                        <table>
                             <thead>
-                                <tr style="background:#f0f0f0;">
-                                    <th style="padding:6px 8px; border:1px solid #ccc; text-align:center;">S.No</th>
-                                    <th style="padding:6px 8px; border:1px solid #ccc; text-align:left;">Roll No</th>
-                                    <th style="padding:6px 8px; border:1px solid #ccc; text-align:left;">Name</th>
-                                    <th style="padding:6px 8px; border:1px solid #ccc; text-align:center;">Total Present</th>
-                                    <th style="padding:6px 8px; border:1px solid #ccc; text-align:center;">Percentage</th>
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>Roll No</th>
+                                    <th>Name</th>
+                                    <th>Total Present</th>
+                                    <th>Percentage</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${tableRows}
                             </tbody>
                         </table>
-                        <p style="text-align:center; font-size:10px; color:#999; margin-top:20px;">Generated on ${new Date().toLocaleString()}</p>
-                    </div>
+                        <p class="footer">Generated on ${new Date().toLocaleString()}</p>
+                    </body>
+                    </html>
                 `;
 
-                // Create a temporary container for PDF generation
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = htmlContent;
-                tempDiv.style.cssText = 'position: absolute; left: 0; top: 0; width: 100%; background: #fff; z-index: -1; opacity: 0; pointer-events: none;';
-                document.body.appendChild(tempDiv);
+                // Use window.open + print (same as individual student report)
+                const win = window.open('', '_blank', 'width=900,height=700');
+                if (!win) {
+                    hideDownloadProgress();
+                    return showMsg('Please allow popups!', true);
+                }
+                win.document.write(htmlContent);
+                win.document.close();
+                win.focus();
+                win.print();
 
-                // Force reflow to ensure styles are applied
-                tempDiv.offsetHeight;
-
-                const opt = {
-                    margin:        [0.5, 0.5, 0.5, 0.5],
-                    filename:     `Class_Attendance_${startDate}_to_${endDate}.pdf`,
-                    image:        { type: 'jpeg', quality: 0.98 },
-                    html2canvas:  { scale: 2, letterRendering: true, useCORS: true, scrollY: 0 },
-                    jsPDF:        { unit: 'in', format: 'a4', orientation: 'landscape' }
-                };
-
-                // Generate PDF with a small delay to ensure rendering
-                setTimeout(() => {
-                    html2pdf().set(opt).from(tempDiv).save().then(() => {
-                        document.body.removeChild(tempDiv);
-                        hideDownloadProgress();
-                        showMsg('✅ PDF Downloaded!');
-                    }).catch(err => {
-                        document.body.removeChild(tempDiv);
-                        hideDownloadProgress();
-                        console.error('PDF Error:', err);
-                        showMsg('PDF generation failed! Please try again.', true);
-                    });
-                }, 300);
-
+                hideDownloadProgress();
+                showMsg('✅ PDF generated!');
             } catch (e) {
                 hideDownloadProgress();
                 showMsg(e.message || 'Failed to generate report', true);
+                console.error('Class report error:', e);
             }
         }
 
@@ -1747,8 +1749,8 @@
                     const deviceStatus = s.boundDeviceId ? '✅ Bound' : '🔓 Unbound';
                     const roleBadge = s.role === 'admin' ? '👑 Admin' : s.role === 'faculty' ? '👨‍🏫 Faculty' : '🎓 Student';
                     return `<tr>
-                        <td><b>${s.rollNo}</b></td>
-                        <td>${s.name}</td>
+                        <td><b>${s.rollNo || 'N/A'}</b></td>
+                        <td>${s.name || 'Unknown'}</td>
                         <td><span class="badge badge-role">${roleBadge}</span></td>
                         <td><span class="badge ${s.boundDeviceId ? 'badge-active' : 'badge-present'}">${deviceStatus}</span></td>
                         <td>
@@ -2360,9 +2362,15 @@
                 if (!subject) return showMsg('Please select a subject for faculty!', true);
                 rawRoll = 'AUTO';
             }
-            const validation = sanitizeAndValidateRollNo(rawRoll);
+            
+            // Validation
             if (!name) return showMsg('Valid Name required!', true);
-            if (role !== 'faculty' && !validation.isValid) return showMsg('Valid ID required!', true);
+            if (role !== 'faculty') {
+                const validation = sanitizeAndValidateRollNo(rawRoll);
+                if (!validation.isValid) return showMsg('Valid ID required! (min 3 characters)', true);
+                rawRoll = validation.cleanRoll;
+            }
+            
             try {
                 const res = await fetch(`${API_BASE}/api/auth/register`, {
                     method: 'POST',
@@ -2371,7 +2379,7 @@
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    showMsg(`${role} ${name} Registered! ID: ${data.rollNo || 'Auto-generated'}`);
+                    showMsg(`✅ ${role} ${name} Registered! ID: ${data.rollNo || 'Auto-generated'}`);
                     document.getElementById('adminRegName').value = '';
                     document.getElementById('adminRegRoll').value = '';
                     document.getElementById('adminRegPass').value = '';
@@ -2384,6 +2392,7 @@
                 }
             } catch (e) {
                 showMsg("Server error!", true);
+                console.error('Register error:', e);
             }
         }
 
