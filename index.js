@@ -42,7 +42,7 @@ const registerSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
   deviceId: z.string().optional(),
   role: z.enum(['student', 'faculty', 'admin']).default('student'),
-  subject: z.string().optional().nullable()  // ✅ FIX: allows null
+  subject: z.string().optional().nullable()
 });
 
 const loginSchema = z.object({
@@ -1017,7 +1017,7 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== MANUAL ATTENDANCE (Admin) ==========
+// ========== MANUAL ATTENDANCE (Admin) – with branch validation ==========
 app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNo, date, subjects, status, branch } = req.body;
@@ -1031,8 +1031,17 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
     const targetRoll = studentRollNo.trim().toUpperCase();
     const user = await User.findOne({ rollNo: targetRoll });
     if (!user) return res.status(404).json({ error: `Roll No ${targetRoll} not registered!` });
+    
+    // Validate branch: if branch is provided, must match student's branch
+    if (branch) {
+      const studentBranch = user.branch || 'CSE';
+      if (branch.toUpperCase() !== studentBranch.toUpperCase()) {
+        return res.status(400).json({ error: `Branch mismatch! Student is in ${studentBranch}, but selected ${branch}. Please select correct branch.` });
+      }
+    }
+    
     let markedCount = 0, markedSubjects = [], alreadyMarked = [];
-    const actualBranch = branch || user.branch || 'CSE';
+    const actualBranch = user.branch || 'CSE';
     const timetable = getTimetableForBranch(actualBranch);
     let subjectsToMark = subjects;
     if (!subjectsToMark || subjectsToMark.length === 0) {
