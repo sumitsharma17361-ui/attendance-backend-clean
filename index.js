@@ -1266,10 +1266,13 @@ app.post('/api/attendance/mark', async (req, res) => {
   } catch (err) { console.error('Attendance error:', err); res.status(500).json({ error: err.message }); }
 });
 
-// ========== FULL DAY ATTENDANCE (Branch-aware) ==========
+// ========== FULL DAY ATTENDANCE (Branch-aware) WITH PASSCODE ==========
 app.post('/api/attendance/mark-fullday', async (req, res) => {
   try {
-    const { rollNo, name, latitude, longitude } = req.body;
+    const { rollNo, name, latitude, longitude, passcode } = req.body;
+    if (!passcode) {
+      return res.status(400).json({ error: 'Full Day passcode required!' });
+    }
     const today = new Date();
     const todayDate = today.toISOString().split('T')[0];
     const dateStatus = await checkDateStatus(todayDate);
@@ -1278,9 +1281,23 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     const blockCheck = await checkStudentBlocked(cleanRoll);
     if (blockCheck.blocked) return res.status(403).json({ error: blockCheck.message });
     const locCheck = checkLocation(latitude, longitude);
-    if (!locCheck.isInside) { await incrementFailedAttempts(cleanRoll); return res.status(400).json({ error: `Outside College Boundary! (${locCheck.distance}m away)` }); }
+    if (!locCheck.isInside) {
+      await incrementFailedAttempts(cleanRoll);
+      return res.status(400).json({ error: `Outside College Boundary! (${locCheck.distance}m away)` });
+    }
     const user = await User.findOne({ rollNo: cleanRoll });
     if (!user) return res.status(404).json({ error: 'Student not found!' });
+    
+    // Verify full-day passcode
+    const passcodeDoc = await Passcode.findOne({
+      passcode: passcode.trim(),
+      type: 'full_day',
+      expiresAt: { $gt: new Date() }
+    });
+    if (!passcodeDoc) {
+      return res.status(400).json({ error: 'Invalid or expired Full Day passcode.' });
+    }
+
     const branch = user.branch || 'CSE';
     const timetable = getTimetableForBranch(branch);
     const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -1313,7 +1330,9 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     await user.save();
     if (markedCount === 0) return res.status(400).json({ error: 'All academic subjects already marked!' });
     res.status(201).json({ message: `✅ Full Day Marked (${markedCount} academic Lectures)!` });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ========== MANUAL ATTENDANCE (Admin) – with branch validation ==========
