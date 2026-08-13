@@ -474,7 +474,7 @@ const attendanceSchema = new mongoose.Schema({
   branch: { type: String, default: 'CSE' }
 }, { timestamps: true });
 
-// Unique index to prevent duplicates (fallback)
+// Unique index to prevent duplicates
 attendanceSchema.index({ rollNo: 1, subject: 1, date: 1 }, { unique: true });
 
 const holidaySchema = new mongoose.Schema({
@@ -963,24 +963,25 @@ app.post('/api/attendance/mark-lecture', async (req, res) => {
       return res.status(400).json({ error: `Outside College Boundary! (${locCheck.distance}m away)` });
     }
     
-    // Explicitly check existence
-    const existing = await Attendance.findOne({ rollNo: cleanRoll, subject, date: todayDate });
-    if (existing) {
-      return res.status(400).json({ error: `Already marked for ${subject} today.` });
+    try {
+      const attendance = new Attendance({
+        rollNo: cleanRoll,
+        studentName: user.name,
+        subject,
+        date: todayDate,
+        status: 'Present',
+        location: { latitude, longitude },
+        ipAddress: req.ip,
+        isVerified: true,
+        branch: branch
+      });
+      await attendance.save();
+    } catch (err) {
+      if (err.code === 11000) {
+        return res.status(400).json({ error: `Already marked for ${subject} today.` });
+      }
+      throw err;
     }
-    
-    const attendance = new Attendance({
-      rollNo: cleanRoll,
-      studentName: user.name,
-      subject,
-      date: todayDate,
-      status: 'Present',
-      location: { latitude, longitude },
-      ipAddress: req.ip,
-      isVerified: true,
-      branch: branch
-    });
-    await attendance.save();
     
     user.lastAttendanceTime = new Date();
     user.lastAttendanceLocation = { latitude, longitude };
@@ -2005,6 +2006,120 @@ app.post('/api/admin/bulk-register-and-update-attendance-aids', async (req, res)
 
   } catch (err) {
     console.error('AIDS Bulk update error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ========== NEW: BULK MARK ATTENDANCE (Admin) ==========
+app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
+  try {
+    const { requesterRollNo, studentRollNos, startDate, endDate, subjects } = req.body;
+    const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+    if (!requester || requester.role !== 'admin') {
+      return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    }
+    if (!studentRollNos || !Array.isArray(studentRollNos) || studentRollNos.length === 0) {
+      return res.status(400).json({ error: 'At least one student roll number required.' });
+    }
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'Start and end dates are required.' });
+    }
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (start > end) return res.status(400).json({ error: 'Start date cannot be after end date.' });
+    
+    // Get all students
+    const students = await User.find({ rollNo: { $in: studentRollNos } });
+    if (students.length === 0) return res.status(404).json({ error: 'No valid students found.' });
+
+    const results = [];
+    for (const student of students) {
+      const branch = student.branch || 'CSE';
+      const timetable = getTimetableForBranch(branch);
+      const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+      
+      // Get list of dates in range
+      let current = new Date(start);
+      const dates = [];
+      while (current <= end) {
+        const dateStr = current.toISOString().split('T')[0];
+        const dayOfWeek = current.getDay();
+        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+        if (!isWeekend) {
+          // Check if holiday
+          const holiday = await Holiday.findOne({ date: dateStr });
+          if (!holiday) {
+            dates.push(dateStr);
+          }
+        }
+        current.setDate(current.getDate() + 1);
+      }
+
+      let markedCount = 0;
+      let skippedCount = 0;
+      for (const date of dates) {
+        const dayName = dayNameMap[new Date(date).getDay()];
+        let daySubjects = timetable[dayName] || [];
+        let subjectsToMark = subjects && subjects.length > 0 ? subjects : daySubjects.map(s => s.subject);
+        // Remove duplicates and filter out non-academic
+        const uniqueSubjects = [...new Set(subjectsToMark.filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports')))];
+        for (const sub of uniqueSubjects) {
+          const exists = await Attendance.findOne({ rollNo: student.rollNo, subject: sub, date });
+          if (!exists) {
+            await new Attendance({
+              rollNo: student.rollNo,
+              studentName: student.name,
+              subject: sub,
+              date,
+              status: 'Present',
+              location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG },
+              ipAddress: 'bulk-mark',
+              isVerified: true,
+              branch: branch
+            }).save();
+            markedCount++;
+          } else {
+            skippedCount++;
+          }
+        }
+      }
+      results.push({ rollNo: student.rollNo, marked: markedCount, skipped: skippedCount });
+    }
+
+    const totalMarked = results.reduce((sum, r) => sum + r.marked, 0);
+    const totalSkipped = results.reduce((sum, r) => sum + r.skipped, 0);
+    res.json({ message: `✅ Bulk mark completed. Marked ${totalMarked} new records, skipped ${totalSkipped} existing.`, results });
+  } catch (err) {
+    console.error('Bulk mark error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ========== NEW: BULK DELETE ATTENDANCE (Admin) ==========
+app.delete('/api/admin/bulk-delete-attendance', async (req, res) => {
+  try {
+    const { requesterRollNo, studentRollNos, startDate, endDate } = req.body;
+    const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+    if (!requester || requester.role !== 'admin') {
+      return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    }
+    if (!studentRollNos || !Array.isArray(studentRollNos) || studentRollNos.length === 0) {
+      return res.status(400).json({ error: 'At least one student roll number required.' });
+    }
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'Start and end dates are required.' });
+    }
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (start > end) return res.status(400).json({ error: 'Start date cannot be after end date.' });
+
+    const result = await Attendance.deleteMany({
+      rollNo: { $in: studentRollNos },
+      date: { $gte: startDate, $lte: endDate }
+    });
+    res.json({ message: `✅ Deleted ${result.deletedCount} attendance records.` });
+  } catch (err) {
+    console.error('Bulk delete error:', err);
     res.status(500).json({ error: err.message });
   }
 });
