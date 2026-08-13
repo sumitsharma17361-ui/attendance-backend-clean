@@ -893,7 +893,7 @@ app.get('/api/admin/current-passcode/:type/:requesterRollNo', async (req, res) =
   }
 });
 
-// ========== NEW: STUDENT MARKS ATTENDANCE WITH PASSCODE ==========
+// ========== STUDENT MARKS ATTENDANCE WITH PASSCODE ==========
 app.post('/api/attendance/mark-lecture', async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude, passcode } = req.body;
