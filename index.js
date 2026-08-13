@@ -16,6 +16,7 @@ app.use(cors());
 // ---------- Environment Variables ----------
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
+const GROK_API_KEY = process.env.GROK_API_KEY; // ✅ NEW: API key for Grok
 const COLLEGE_LAT = 28.4509370;
 const COLLEGE_LNG = 76.7688120;
 const COLLEGE_RADIUS = 50;
@@ -2110,6 +2111,108 @@ app.delete('/api/admin/bulk-delete-attendance', async (req, res) => {
   } catch (err) {
     console.error('Bulk delete error:', err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ========== ✅ NEW: GROK AI CHATBOT ENDPOINT ==========
+app.post('/api/chat', async (req, res) => {
+  try {
+    const { message, rollNo, role, name, branch } = req.body;
+    if (!message) return res.status(400).json({ error: 'Message is required.' });
+
+    // Fetch user data if rollNo provided
+    let userData = null;
+    let attendanceSummary = null;
+    let workingDays = 0;
+    let holidays = [];
+    let timetable = {};
+    let currentPeriod = null;
+
+    if (rollNo) {
+      userData = await User.findOne({ rollNo: rollNo.trim().toUpperCase() });
+      if (userData) {
+        // Get attendance summary
+        const summaryRes = await fetch(`${req.protocol}://${req.get('host')}/api/student/summary/${userData.rollNo}`);
+        if (summaryRes.ok) {
+          attendanceSummary = await summaryRes.json();
+        }
+        // Get working days
+        const today = new Date();
+        const startStr = SEMESTER_START.toISOString().split('T')[0];
+        const todayStr = today.toISOString().split('T')[0];
+        workingDays = await getWorkingDays(startStr, todayStr);
+        // Get holidays
+        holidays = await Holiday.find({ date: { $gte: startStr, $lte: todayStr } });
+        // Get timetable for branch
+        const branchName = userData.branch || 'CSE';
+        timetable = getBranchTimetable(branchName);
+        // Get current period
+        currentPeriod = getCurrentPeriod(branchName);
+      }
+    }
+
+    // Build system prompt with all context
+    const systemPrompt = `You are an AI assistant for BM Group of Institutions attendance portal.
+You have access to the following data (if the user is logged in):
+- User: ${name || 'Guest'} (Roll: ${rollNo || 'N/A'}, Role: ${role || 'student'})
+- Attendance summary: ${attendanceSummary ? JSON.stringify(attendanceSummary, null, 2) : 'Not available'}
+- Working days so far (since 15 July 2026): ${workingDays}
+- Holidays: ${holidays.map(h => `${h.date} (${h.reason})`).join(', ') || 'None'}
+- Today's timetable (for ${branch || 'CSE'}): ${JSON.stringify(timetable, null, 2)}
+- Current lecture period: ${currentPeriod ? `${currentPeriod.subject} (${currentPeriod.start} - ${currentPeriod.end})` : 'No class now'}
+
+You must answer questions about attendance, schedule, holidays, working days, and college information.
+If the user asks for action (like marking attendance, updating records, etc.) and the user is Admin or Faculty, you may suggest the appropriate action or provide the exact API call needed, but you CANNOT execute actions directly. However, you can guide them to use the UI.
+For students, only answer queries; do not suggest actions.
+Be concise, friendly, and use the provided data to give accurate responses.
+If data is missing, say so.
+
+Reply in a clear, conversational tone.`;
+
+    // Call Grok API
+    if (!GROK_API_KEY) {
+      // Fallback: return a simple rule-based response if no API key
+      return res.json({ 
+        reply: `⚠️ Grok API key not configured. I'm a fallback bot. Here's what I know:\n\n- Working days: ${workingDays}\n- Holidays: ${holidays.map(h => `${h.date} (${h.reason})`).join(', ') || 'None'}\n- Your attendance: ${attendanceSummary ? `${attendanceSummary.attendancePercentage}% (${attendanceSummary.totalAcademicLectures} of ${attendanceSummary.totalConductedLectures} lectures)` : 'not available'}\n\nPlease set GROK_API_KEY for full AI capabilities.`
+      });
+    }
+
+    const grokPayload = {
+      model: 'grok-1', // or the correct model name from xAI
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: message }
+      ],
+      temperature: 0.7,
+      max_tokens: 800
+    };
+
+    const response = await fetch('https://api.x.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GROK_API_KEY}`
+      },
+      body: JSON.stringify(grokPayload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Grok API error:', errorText);
+      return res.status(500).json({ error: 'AI service temporarily unavailable.' });
+    }
+
+    const data = await response.json();
+    const reply = data.choices?.[0]?.message?.content || 'Sorry, I could not understand.';
+
+    // Optional: Parse reply for actions (e.g., if Admin/Faculty and they ask to mark attendance)
+    // We can check for keywords and return a structured action object, but for now we just return text.
+
+    res.json({ reply });
+
+  } catch (err) {
+    console.error('Chat error:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
