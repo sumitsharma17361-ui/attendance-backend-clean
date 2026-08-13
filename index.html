@@ -18,211 +18,1529 @@
             --warning: #d97706;
             --card-bg: #ffffff;
             --card-border: #e2e8f0;
-            --shadow-sm: 0 1px 3px 0 rgba(0,0,0,0.06);
-            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05);
-            --shadow-hover: 0 10px 15px -3px rgba(0,0,0,0.08);
+            --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
             --text-main: #0f172a;
             --text-muted: #64748b;
             --radius: 12px;
             --radius-sm: 8px;
+            --chat-bg: #f8fafc;
+            --chat-user: #2563eb;
+            --chat-bot: #e2e8f0;
         }
-        * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding: 0; }
-        body { background: var(--bg-body); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 16px; }
-        /* ===== TOAST ===== */
-        #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; width: 90%; max-width: 420px; pointer-events: none; }
-        .toast-card { padding: 12px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 600; text-align: center; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); border: 1px solid var(--card-border); display: flex; align-items: center; justify-content: center; gap: 10px; opacity: 0; transform: translateY(-16px) scale(0.96); transition: all 0.45s cubic-bezier(0.16,1,0.3,1); pointer-events: auto; }
-        .toast-card.show { opacity: 1; transform: translateY(0) scale(1); }
-        .toast-card.toast-success { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
-        .toast-card.toast-error { background: #fef2f2; color: #991b1b; border-color: #fecaca; animation: shake 0.4s ease-in-out; }
-        @keyframes shake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-4px); } 40%,80% { transform: translateX(4px); } }
-        /* ===== APP CONTAINER ===== */
-        .app-container { width: 100%; max-width: 480px; background: var(--card-bg); border-radius: 20px; box-shadow: var(--shadow-md); border: 1px solid var(--card-border); overflow: hidden; animation: cardScaleUp 0.75s cubic-bezier(0.16,1,0.3,1); }
-        @keyframes cardScaleUp { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        @keyframes fadeInSlide { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-        .tab-content-active { animation: fadeInSlide 0.5s cubic-bezier(0.16,1,0.3,1) forwards; }
-        /* ===== HEADER ===== */
-        .app-header { background: #fff; padding: 16px 18px; border-bottom: 1px solid var(--card-border); display: flex; align-items: center; justify-content: space-between; }
-        .app-header-title h1 { font-size: 15px; font-weight: 800; color: #0f172a; letter-spacing: -0.3px; }
-        .app-header-title p { font-size: 10px; font-weight: 600; color: var(--text-muted); margin-top: 1px; }
-        .header-avatar-badge { display: flex; align-items: center; gap: 8px; }
-        .avatar-circle { width: 32px; height: 32px; border-radius: 50%; background: #eff6ff; color: var(--primary); font-weight: 700; font-size: 11px; display: flex; align-items: center; justify-content: center; border: 1px solid #dbeafe; transition: all 0.3s; }
-        .avatar-circle:hover { transform: scale(1.05); }
-        /* ===== NOTICE BANNER ===== */
-        .notice-banner { background: #fffbeb; border-bottom: 1px solid #fef3c7; color: #92400e; font-size: 10px; padding: 6px 12px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-        .notice-marquee { overflow: hidden; white-space: nowrap; width: 100%; }
-        .notice-marquee p { display: inline-block; animation: marquee 16s linear infinite; }
-        @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-        /* ===== IMPERSONATION BANNER ===== */
-        .impersonation-banner { background: #fef3c7; border-bottom: 2px solid #f59e0b; color: #92400e; padding: 6px 14px; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-        .impersonation-banner .switch-back-btn { background: #dc2626; color: white; border: none; border-radius: 6px; padding: 4px 12px; font-size: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; }
-        .impersonation-banner .switch-back-btn:hover { background: #b91c1c; }
-        /* ===== BODY ===== */
-        .app-body { padding: 14px; }
-        /* ===== FORM ===== */
-        input, select { width: 100%; padding: 9px 12px; margin-bottom: 8px; background: #f8fafc; border: 1px solid var(--card-border); border-radius: var(--radius-sm); font-size: 11px; font-weight: 600; color: var(--text-main); outline: none; transition: all 0.3s; }
-        select option { background: #fff; color: #0f172a; }
-        input::placeholder { color: #94a3b8; font-weight: 500; }
-        input:focus, select:focus { background: #fff; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.10); }
-        .password-wrapper { position: relative; width: 100%; }
-        .password-wrapper input { padding-right: 36px; }
-        .eye-icon { position: absolute; right: 10px; top: 38%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); transition: color 0.3s; }
-        .eye-icon:hover { color: var(--primary); }
-        /* ===== BUTTONS ===== */
-        .btn { width: 100%; padding: 9px 12px; border-radius: var(--radius-sm); font-weight: 700; font-size: 11px; cursor: pointer; margin-top: 4px; transition: all 0.3s; border: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: var(--shadow-sm); }
-        .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-hover); }
-        .btn:active { transform: scale(0.97) translateY(0); }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: var(--primary-hover); }
-        .btn-success { background: var(--success); color: white; }
-        .btn-warning { background: var(--warning); color: white; }
-        .btn-accent { background: #0284c7; color: white; }
-        .btn-outline { background: #fff; border: 1px solid var(--card-border); color: var(--text-main); }
-        .btn-outline:hover { background: #f8fafc; border-color: #cbd5e1; }
-        .btn-danger { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
-        .btn-danger:hover { background: #fee2e2; }
-        .btn-sm { padding: 5px 10px; font-size: 10px; width: auto; margin: 0; }
-        .btn-xs { padding: 3px 8px; font-size: 8px; width: auto; margin: 0; }
-        .btn-ghost { background: transparent; border: 1px solid transparent; color: var(--text-muted); box-shadow: none; }
-        .btn-ghost:hover { background: #f1f5f9; border-color: var(--card-border); transform: none; }
-        /* ===== BADGES ===== */
-        .badge { padding: 2px 8px; border-radius: 4px; font-size: 9px; font-weight: 700; transition: all 0.3s; display: inline-block; }
-        .badge-present { background: #dcfce7; color: #15803d; }
-        .badge-absent { background: #fee2e2; color: #991b1b; }
-        .badge-active { background: #dbeafe; color: #1d4ed8; }
-        .badge-role { background: #e2e8f0; color: #475569; }
-        .badge-attendance { background: #e0e7ff; color: #1e40af; }
-        .badge-dl { background: #fef3c7; color: #92400e; }
-        .badge-cse { background: #dbeafe; color: #1e40af; }
-        .badge-aids { background: #fae8ff; color: #7c3aed; }
-        /* ===== STATS GRID ===== */
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
-        .stat-card { background: #f8fafc; padding: 10px; border-radius: var(--radius); text-align: center; border: 1px solid var(--card-border); transition: all 0.3s; }
-        .stat-card:hover { transform: translateY(-1px); border-color: #cbd5e1; box-shadow: var(--shadow-sm); }
-        .stat-card .value { font-size: 18px; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; }
-        .stat-card .label { font-size: 9px; color: var(--text-muted); font-weight: 700; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
-        /* ===== SIMULATOR CARD ===== */
-        .simulator-card { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: var(--radius); padding: 8px 12px; margin-bottom: 10px; font-size: 10px; color: #0369a1; display: flex; align-items: center; gap: 8px; }
-        /* ===== QUICK PORTALS ===== */
-        .quick-portals-card { background: #fff; border: 1px solid var(--card-border); border-radius: var(--radius); padding: 10px; margin: 10px 0; }
-        .portal-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 6px; }
-        .portal-btn { background: #f8fafc; border: 1px solid var(--card-border); border-radius: var(--radius-sm); padding: 6px 4px; text-align: center; font-size: 9px; font-weight: 700; color: var(--text-main); cursor: pointer; transition: all 0.3s; display: flex; flex-direction: column; align-items: center; gap: 3px; }
-        .portal-btn:hover { background: #fff; border-color: var(--primary); transform: translateY(-1px); box-shadow: var(--shadow-sm); color: var(--primary); }
-        /* ===== CALENDAR ===== */
-        .calendar-container { background: #fff; border: 1px solid var(--card-border); border-radius: var(--radius); padding: 10px; margin: 10px 0; }
-        .calendar-header { display: flex; justify-content: space-between; align-items: center; font-size: 10px; font-weight: 800; margin-bottom: 8px; color: var(--text-main); }
-        .calendar-header select { margin-top: 0; padding: 4px 6px; font-size: 10px; width: auto; }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; font-size: 9px; }
-        .cal-day-head { font-weight: 700; color: var(--text-muted); padding-bottom: 3px; font-size: 8px; }
-        .cal-date { padding: 4px 1px; border-radius: 4px; font-weight: 600; background: #f8fafc; border: 1px solid #f1f5f9; transition: all 0.2s; }
-        .cal-date:hover { transform: scale(1.05); z-index: 1; }
-        .cal-p { background: #dcfce7; color: #15803d; font-weight: 800; border-color: #bbf7d0; }
-        .cal-a { background: #fee2e2; color: #b91c1c; font-weight: 800; border-color: #fecaca; }
-        .cal-off { background: #f1f5f9; color: #94a3b8; }
-        /* ===== TABS ===== */
-        .tab-bar { display: flex; background: #f1f5f9; border-radius: var(--radius-sm); padding: 2px; margin-bottom: 10px; }
-        .tab-item { flex: 1; padding: 6px; text-align: center; font-size: 10px; font-weight: 700; cursor: pointer; color: var(--text-muted); border-radius: 6px; transition: all 0.3s; }
-        .tab-item.active { background: #fff; color: var(--primary); box-shadow: var(--shadow-sm); }
-        /* ===== ADMIN NAV ===== */
-        .admin-nav { display: flex; flex-wrap: wrap; gap: 4px; background: #f1f5f9; padding: 6px; border-radius: var(--radius-sm); margin-bottom: 10px; }
-        .admin-nav-item { flex: 1 0 auto; min-width: 60px; text-align: center; padding: 10px 6px; font-size: 11px; font-weight: 800; cursor: pointer; border-radius: 6px; color: var(--text-muted); transition: all 0.3s; background: transparent; border: 1px solid transparent; line-height: 1.3; letter-spacing: 0.3px; }
-        .admin-nav-item:hover { background: rgba(255,255,255,0.6); }
-        .admin-nav-item.active { background: #fff; color: var(--primary); box-shadow: var(--shadow-sm); border-color: var(--card-border); }
-        /* ===== PERIOD CARD ===== */
-        .period-card { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: var(--radius); padding: 10px; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; }
-        .action-btn { border: none; border-radius: 6px; padding: 5px 8px; font-size: 9px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s; }
-        .action-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-        .btn-del { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-        .btn-del:hover { background: #fee2e2; }
-        .btn-view { background: #eff6ff; color: #2563eb; border: 1px solid #dbeafe; }
-        .btn-view:hover { background: #dbeafe; }
-        .btn-edit { background: #fefce8; color: #d97706; border: 1px solid #fde68a; }
-        .btn-edit:hover { background: #fef3c7; }
-        .status-holiday { background: #fef3c7; color: #92400e; border-color: #fde68a; }
-        .status-weekend { background: #e2e8f0; color: #475569; border-color: #cbd5e1; }
-        /* ===== TABLES ===== */
-        .table-container { max-height: 300px; overflow-y: auto; border: 1px solid var(--card-border); border-radius: var(--radius-sm); margin-top: 6px; background: #fff; }
-        .table-container table { width: 100%; border-collapse: collapse; font-size: 10px; }
-        .table-container th { background: #f8fafc; color: var(--text-muted); padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--card-border); position: sticky; top: 0; font-weight: 700; font-size: 9px; z-index: 2; }
-        .table-container td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; font-size: 10px; vertical-align: middle; }
-        .table-container tr:hover td { background: #f8fafc; }
-        /* ===== ADMIN BOXES ===== */
-        .admin-box { background: #fff; padding: 12px; border-radius: var(--radius); border: 1px solid var(--card-border); animation: cardScaleUp 0.5s; margin-bottom: 8px; }
-        .admin-box.sub-reports { background: #f0fdf4; border-color: #bbf7d0; }
-        .admin-box.sub-attendance { background: #fefce8; border-color: #fef08a; }
-        .admin-box.sub-holiday { background: #fef2f2; border-color: #fecaca; }
-        .admin-box.sub-passcode { background: #eff6ff; border-color: #bfdbfe; }
-        .admin-box.sub-tools { background: #f5f3ff; border-color: #ddd6fe; }
-        .admin-box.sub-directory { background: #fce7f3; border-color: #fbcfe8; }
-        .admin-box.sub-all-attendance { background: #ecfdf5; border-color: #a7f3d0; }
-        .admin-box.sub-bulk { background: #f0f9ff; border-color: #bae6fd; }
-        .sub-section-title { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block; }
-        /* ===== SUBJECT CHECKBOXES ===== */
-        .subject-checkbox-container { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; max-height: 150px; overflow-y: auto; padding: 4px; background: #f8fafc; border-radius: var(--radius-sm); border: 1px solid var(--card-border); }
-        .subject-checkbox-container label { font-size: 9px; font-weight: 500; display: flex; align-items: center; gap: 4px; cursor: pointer; padding: 3px 6px; background: #fff; border-radius: 4px; border: 1px solid #e2e8f0; transition: all 0.2s; }
-        .subject-checkbox-container label:hover { background: #eff6ff; border-color: var(--primary); }
-        .subject-checkbox-container label input[type="checkbox"] { width: auto; margin: 0; }
-        .subject-checkbox-container .select-all { grid-column: span 2; background: #e2e8f0; padding: 4px 8px; font-weight: 700; border: none; }
-        .subject-checkbox-container .select-all:hover { background: #cbd5e1; }
-        /* ===== PASSCODE DISPLAY ===== */
-        .passcode-display { background: #f8fafc; padding: 8px; border-radius: var(--radius-sm); margin-bottom: 6px; border: 1px solid var(--card-border); text-align: center; }
-        .passcode-display h2 { font-size: 20px; font-weight: 900; color: var(--primary); letter-spacing: 4px; }
-        /* ===== TODAY PRESENT LIST ===== */
-        #todayPresentList { max-height: 180px; overflow-y: auto; font-size: 10px; margin: 6px 0; }
-        .present-group { margin-bottom: 8px; }
-        .present-group .group-title { font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px; display: block; border-bottom: 1px solid var(--card-border); padding-bottom: 2px; }
-        .present-item { display: flex; justify-content: space-between; padding: 3px 6px; border-bottom: 1px solid #f1f5f9; }
-        .present-item:last-child { border-bottom: none; }
-        .present-item .roll { font-weight: 600; }
-        .present-item .name { color: var(--text-muted); }
-        /* ===== SUBJECT CHIPS ===== */
-        .subject-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-        .subject-chip { background: var(--card-bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--card-border); font-size: 8px; }
-        /* ===== TOOL SUB CARD ===== */
-        .tool-sub-card { background: #f8fafc; border: 1px solid var(--card-border); border-radius: var(--radius); padding: 10px; margin-bottom: 8px; }
-        .tool-title { font-size: 10px; font-weight: 800; margin-bottom: 6px; display: block; }
-        .flex-buttons { display: flex; gap: 6px; }
-        .flex-buttons .btn { margin: 0; flex: 1; }
-        /* ===== SVG ICON ===== */
-        .svg-icon { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: inline-block; vertical-align: middle; transition: transform 0.3s; }
-        .svg-icon-sm { width: 12px; height: 12px; }
-        /* ===== MODAL ===== */
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 16px; }
-        .modal-card { background: #fff; width: 100%; max-width: 340px; border-radius: 14px; padding: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border: 1px solid var(--card-border); animation: cardScaleUp 0.3s; }
-        .modal-card .modal-actions { display: flex; gap: 6px; margin-top: 10px; }
-        .modal-card .modal-actions .btn { flex: 1; }
-        .profile-modal { max-width: 480px; max-height: 90vh; overflow-y: auto; }
-        .profile-modal .record-item { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #f1f5f9; }
-        .profile-modal .record-item:last-child { border-bottom: none; }
-        /* ===== DOWNLOAD PROGRESS ===== */
-        .download-progress { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 10px 20px; border-radius: var(--radius-sm); font-size: 12px; z-index: 99999; display: none; align-items: center; gap: 10px; max-width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        .download-progress.show { display: flex; }
-        .download-progress .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top: 2px solid white; border-radius: 50%; animation: spin 0.8s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        /* ===== FILTER ROW ===== */
-        .filter-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
-        .filter-row select, .filter-row input { flex: 1; min-width: 80px; padding: 6px 8px; font-size: 9px; margin: 0; }
-        /* ===== RESPONSIVE ===== */
-        @media (max-width: 480px) { .app-container { border-radius: 12px; } .stats-grid { grid-template-columns: 1fr 1fr; gap: 6px; } .admin-nav-item { min-width: 50px; font-size: 10px; padding: 8px 4px; } .filter-row select, .filter-row input { min-width: 60px; font-size: 8px; } .profile-modal { max-width: 100%; } }
-        /* ===== BULK STUDENT LIST ===== */
-        .bulk-student-list { max-height: 150px; overflow-y: auto; border: 1px solid var(--card-border); border-radius: var(--radius-sm); padding: 6px; background: #fff; margin-bottom: 6px; }
-        .bulk-student-list label { display: flex; align-items: center; gap: 6px; font-size: 10px; padding: 2px 4px; cursor: pointer; }
-        .bulk-student-list label:hover { background: #f1f5f9; }
-        .bulk-student-list .select-all-label { font-weight: 700; border-bottom: 1px solid var(--card-border); padding-bottom: 4px; margin-bottom: 4px; }
-        .bulk-date-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-        .bulk-date-chip { background: #e2e8f0; padding: 2px 8px; border-radius: 12px; font-size: 10px; display: flex; align-items: center; gap: 4px; }
-        .bulk-date-chip .remove-date { cursor: pointer; color: var(--danger); font-weight: 700; }
-        .bulk-date-chip .remove-date:hover { color: #b91c1c; }
-        .bulk-date-input-row { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
-        .bulk-date-input-row input[type="date"] { flex: 1; padding: 6px; font-size: 10px; margin: 0; }
-        .bulk-date-input-row button { padding: 6px 12px; font-size: 10px; margin: 0; }
+        * {
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: var(--bg-body);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
 
-        /* ===== CHAT WIDGET ===== */
-        #chatWindow { display: none; flex-direction: column; }
-        #chatWindow.open { display: flex !important; }
-        .chat-msg-user { text-align: right; margin: 4px 0; }
-        .chat-msg-user span { background: #2563eb; color: #fff; padding: 6px 12px; border-radius: 12px 12px 0 12px; display: inline-block; max-width: 80%; word-wrap: break-word; }
-        .chat-msg-bot { text-align: left; margin: 4px 0; }
-        .chat-msg-bot span { background: #e2e8f0; color: #0f172a; padding: 6px 12px; border-radius: 12px 12px 12px 0; display: inline-block; max-width: 80%; word-wrap: break-word; }
+        /* ===== TOAST ===== */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            width: 90%;
+            max-width: 420px;
+            pointer-events: none;
+        }
+        .toast-card {
+            padding: 12px 16px;
+            border-radius: var(--radius);
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--card-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            opacity: 0;
+            transform: translateY(-16px) scale(0.96);
+            transition: all 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: auto;
+        }
+        .toast-card.show {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+        .toast-card.toast-success {
+            background: #f0fdf4;
+            color: #166534;
+            border-color: #bbf7d0;
+        }
+        .toast-card.toast-error {
+            background: #fef2f2;
+            color: #991b1b;
+            border-color: #fecaca;
+            animation: shake 0.4s ease-in-out;
+        }
+        @keyframes shake {
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+            20%,
+            60% {
+                transform: translateX(-4px);
+            }
+            40%,
+            80% {
+                transform: translateX(4px);
+            }
+        }
+
+        /* ===== APP CONTAINER ===== */
+        .app-container {
+            width: 100%;
+            max-width: 480px;
+            background: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--card-border);
+            overflow: hidden;
+            animation: cardScaleUp 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+        }
+        @keyframes cardScaleUp {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        @keyframes fadeInSlide {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .tab-content-active {
+            animation: fadeInSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* ===== HEADER ===== */
+        .app-header {
+            background: #fff;
+            padding: 16px 18px;
+            border-bottom: 1px solid var(--card-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .app-header-title h1 {
+            font-size: 15px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.3px;
+        }
+        .app-header-title p {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-top: 1px;
+        }
+        .header-avatar-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .avatar-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #eff6ff;
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #dbeafe;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .avatar-circle:hover {
+            transform: scale(1.05);
+        }
+
+        /* ===== NOTICE BANNER ===== */
+        .notice-banner {
+            background: #fffbeb;
+            border-bottom: 1px solid #fef3c7;
+            color: #92400e;
+            font-size: 10px;
+            padding: 6px 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .notice-marquee {
+            overflow: hidden;
+            white-space: nowrap;
+            width: 100%;
+        }
+        .notice-marquee p {
+            display: inline-block;
+            animation: marquee 16s linear infinite;
+        }
+        @keyframes marquee {
+            0% {
+                transform: translateX(100%);
+            }
+            100% {
+                transform: translateX(-100%);
+            }
+        }
+
+        /* ===== IMPERSONATION BANNER ===== */
+        .impersonation-banner {
+            background: #fef3c7;
+            border-bottom: 2px solid #f59e0b;
+            color: #92400e;
+            padding: 6px 14px;
+            font-size: 11px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .impersonation-banner .switch-back-btn {
+            background: #dc2626;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 4px 12px;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .impersonation-banner .switch-back-btn:hover {
+            background: #b91c1c;
+        }
+
+        /* ===== BODY ===== */
+        .app-body {
+            padding: 14px;
+        }
+
+        /* ===== FORM ===== */
+        input,
+        select {
+            width: 100%;
+            padding: 9px 12px;
+            margin-bottom: 8px;
+            background: #f8fafc;
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-sm);
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-main);
+            outline: none;
+            transition: all 0.3s;
+        }
+        select option {
+            background: #fff;
+            color: #0f172a;
+        }
+        input::placeholder {
+            color: #94a3b8;
+            font-weight: 500;
+        }
+        input:focus,
+        select:focus {
+            background: #fff;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
+        }
+        .password-wrapper {
+            position: relative;
+            width: 100%;
+        }
+        .password-wrapper input {
+            padding-right: 36px;
+        }
+        .eye-icon {
+            position: absolute;
+            right: 10px;
+            top: 38%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: color 0.3s;
+        }
+        .eye-icon:hover {
+            color: var(--primary);
+        }
+
+        /* ===== BUTTONS ===== */
+        .btn {
+            width: 100%;
+            padding: 9px 12px;
+            border-radius: var(--radius-sm);
+            font-weight: 700;
+            font-size: 11px;
+            cursor: pointer;
+            margin-top: 4px;
+            transition: all 0.3s;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            box-shadow: var(--shadow-sm);
+        }
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-hover);
+        }
+        .btn:active {
+            transform: scale(0.97) translateY(0);
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        .btn-warning {
+            background: var(--warning);
+            color: white;
+        }
+        .btn-accent {
+            background: #0284c7;
+            color: white;
+        }
+        .btn-outline {
+            background: #fff;
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+        }
+        .btn-outline:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+        .btn-danger {
+            background: #fef2f2;
+            color: var(--danger);
+            border: 1px solid #fecaca;
+        }
+        .btn-danger:hover {
+            background: #fee2e2;
+        }
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 10px;
+            width: auto;
+            margin: 0;
+        }
+        .btn-xs {
+            padding: 3px 8px;
+            font-size: 8px;
+            width: auto;
+            margin: 0;
+        }
+        .btn-ghost {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            box-shadow: none;
+        }
+        .btn-ghost:hover {
+            background: #f1f5f9;
+            border-color: var(--card-border);
+            transform: none;
+        }
+
+        /* ===== BADGES ===== */
+        .badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 700;
+            transition: all 0.3s;
+            display: inline-block;
+        }
+        .badge-present {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        .badge-absent {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .badge-active {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+        .badge-role {
+            background: #e2e8f0;
+            color: #475569;
+        }
+        .badge-attendance {
+            background: #e0e7ff;
+            color: #1e40af;
+        }
+        .badge-dl {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .badge-cse {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        .badge-aids {
+            background: #fae8ff;
+            color: #7c3aed;
+        }
+
+        /* ===== STATS GRID ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin: 10px 0;
+        }
+        .stat-card {
+            background: #f8fafc;
+            padding: 10px;
+            border-radius: var(--radius);
+            text-align: center;
+            border: 1px solid var(--card-border);
+            transition: all 0.3s;
+        }
+        .stat-card:hover {
+            transform: translateY(-1px);
+            border-color: #cbd5e1;
+            box-shadow: var(--shadow-sm);
+        }
+        .stat-card .value {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+        }
+        .stat-card .label {
+            font-size: 9px;
+            color: var(--text-muted);
+            font-weight: 700;
+            margin-top: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* ===== SIMULATOR CARD ===== */
+        .simulator-card {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: var(--radius);
+            padding: 8px 12px;
+            margin-bottom: 10px;
+            font-size: 10px;
+            color: #0369a1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ===== QUICK PORTALS ===== */
+        .quick-portals-card {
+            background: #fff;
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius);
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .portal-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+            margin-top: 6px;
+        }
+        .portal-btn {
+            background: #f8fafc;
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-sm);
+            padding: 6px 4px;
+            text-align: center;
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+        }
+        .portal-btn:hover {
+            background: #fff;
+            border-color: var(--primary);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+            color: var(--primary);
+        }
+
+        /* ===== CALENDAR ===== */
+        .calendar-container {
+            background: #fff;
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius);
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            color: var(--text-main);
+        }
+        .calendar-header select {
+            margin-top: 0;
+            padding: 4px 6px;
+            font-size: 10px;
+            width: auto;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            text-align: center;
+            font-size: 9px;
+        }
+        .cal-day-head {
+            font-weight: 700;
+            color: var(--text-muted);
+            padding-bottom: 3px;
+            font-size: 8px;
+        }
+        .cal-date {
+            padding: 4px 1px;
+            border-radius: 4px;
+            font-weight: 600;
+            background: #f8fafc;
+            border: 1px solid #f1f5f9;
+            transition: all 0.2s;
+        }
+        .cal-date:hover {
+            transform: scale(1.05);
+            z-index: 1;
+        }
+        .cal-p {
+            background: #dcfce7;
+            color: #15803d;
+            font-weight: 800;
+            border-color: #bbf7d0;
+        }
+        .cal-a {
+            background: #fee2e2;
+            color: #b91c1c;
+            font-weight: 800;
+            border-color: #fecaca;
+        }
+        .cal-off {
+            background: #f1f5f9;
+            color: #94a3b8;
+        }
+
+        /* ===== TABS ===== */
+        .tab-bar {
+            display: flex;
+            background: #f1f5f9;
+            border-radius: var(--radius-sm);
+            padding: 2px;
+            margin-bottom: 10px;
+        }
+        .tab-item {
+            flex: 1;
+            padding: 6px;
+            text-align: center;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            color: var(--text-muted);
+            border-radius: 6px;
+            transition: all 0.3s;
+        }
+        .tab-item.active {
+            background: #fff;
+            color: var(--primary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* ===== ADMIN NAV ===== */
+        .admin-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            background: #f1f5f9;
+            padding: 6px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 10px;
+        }
+        .admin-nav-item {
+            flex: 1 0 auto;
+            min-width: 60px;
+            text-align: center;
+            padding: 10px 6px;
+            font-size: 11px;
+            font-weight: 800;
+            cursor: pointer;
+            border-radius: 6px;
+            color: var(--text-muted);
+            transition: all 0.3s;
+            background: transparent;
+            border: 1px solid transparent;
+            line-height: 1.3;
+            letter-spacing: 0.3px;
+        }
+        .admin-nav-item:hover {
+            background: rgba(255, 255, 255, 0.6);
+        }
+        .admin-nav-item.active {
+            background: #fff;
+            color: var(--primary);
+            box-shadow: var(--shadow-sm);
+            border-color: var(--card-border);
+        }
+
+        /* ===== PERIOD CARD ===== */
+        .period-card {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: var(--radius);
+            padding: 10px;
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .action-btn {
+            border: none;
+            border-radius: 6px;
+            padding: 5px 8px;
+            font-size: 9px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+        }
+        .action-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        .btn-del {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+        .btn-del:hover {
+            background: #fee2e2;
+        }
+        .btn-view {
+            background: #eff6ff;
+            color: #2563eb;
+            border: 1px solid #dbeafe;
+        }
+        .btn-view:hover {
+            background: #dbeafe;
+        }
+        .btn-edit {
+            background: #fefce8;
+            color: #d97706;
+            border: 1px solid #fde68a;
+        }
+        .btn-edit:hover {
+            background: #fef3c7;
+        }
+        .status-holiday {
+            background: #fef3c7;
+            color: #92400e;
+            border-color: #fde68a;
+        }
+        .status-weekend {
+            background: #e2e8f0;
+            color: #475569;
+            border-color: #cbd5e1;
+        }
+
+        /* ===== TABLES ===== */
+        .table-container {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-sm);
+            margin-top: 6px;
+            background: #fff;
+        }
+        .table-container table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+        }
+        .table-container th {
+            background: #f8fafc;
+            color: var(--text-muted);
+            padding: 6px 8px;
+            text-align: left;
+            border-bottom: 1px solid var(--card-border);
+            position: sticky;
+            top: 0;
+            font-weight: 700;
+            font-size: 9px;
+            z-index: 2;
+        }
+        .table-container td {
+            padding: 6px 8px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 10px;
+            vertical-align: middle;
+        }
+        .table-container tr:hover td {
+            background: #f8fafc;
+        }
+
+        /* ===== ADMIN BOXES ===== */
+        .admin-box {
+            background: #fff;
+            padding: 12px;
+            border-radius: var(--radius);
+            border: 1px solid var(--card-border);
+            animation: cardScaleUp 0.5s;
+            margin-bottom: 8px;
+        }
+        .admin-box.sub-reports {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+        }
+        .admin-box.sub-attendance {
+            background: #fefce8;
+            border-color: #fef08a;
+        }
+        .admin-box.sub-holiday {
+            background: #fef2f2;
+            border-color: #fecaca;
+        }
+        .admin-box.sub-passcode {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+        }
+        .admin-box.sub-tools {
+            background: #f5f3ff;
+            border-color: #ddd6fe;
+        }
+        .admin-box.sub-directory {
+            background: #fce7f3;
+            border-color: #fbcfe8;
+        }
+        .admin-box.sub-all-attendance {
+            background: #ecfdf5;
+            border-color: #a7f3d0;
+        }
+        .admin-box.sub-bulk {
+            background: #f0f9ff;
+            border-color: #bae6fd;
+        }
+        .sub-section-title {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        /* ===== SUBJECT CHECKBOXES ===== */
+        .subject-checkbox-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px;
+            max-height: 150px;
+            overflow-y: auto;
+            padding: 4px;
+            background: #f8fafc;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--card-border);
+        }
+        .subject-checkbox-container label {
+            font-size: 9px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            padding: 3px 6px;
+            background: #fff;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s;
+        }
+        .subject-checkbox-container label:hover {
+            background: #eff6ff;
+            border-color: var(--primary);
+        }
+        .subject-checkbox-container label input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+        .subject-checkbox-container .select-all {
+            grid-column: span 2;
+            background: #e2e8f0;
+            padding: 4px 8px;
+            font-weight: 700;
+            border: none;
+        }
+        .subject-checkbox-container .select-all:hover {
+            background: #cbd5e1;
+        }
+
+        /* ===== PASSCODE DISPLAY ===== */
+        .passcode-display {
+            background: #f8fafc;
+            padding: 8px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 6px;
+            border: 1px solid var(--card-border);
+            text-align: center;
+        }
+        .passcode-display h2 {
+            font-size: 20px;
+            font-weight: 900;
+            color: var(--primary);
+            letter-spacing: 4px;
+        }
+
+        /* ===== TODAY PRESENT LIST ===== */
+        #todayPresentList {
+            max-height: 180px;
+            overflow-y: auto;
+            font-size: 10px;
+            margin: 6px 0;
+        }
+        .present-group {
+            margin-bottom: 8px;
+        }
+        .present-group .group-title {
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 2px;
+            display: block;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 2px;
+        }
+        .present-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 6px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .present-item:last-child {
+            border-bottom: none;
+        }
+        .present-item .roll {
+            font-weight: 600;
+        }
+        .present-item .name {
+            color: var(--text-muted);
+        }
+
+        /* ===== SUBJECT CHIPS ===== */
+        .subject-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 4px;
+        }
+        .subject-chip {
+            background: var(--card-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--card-border);
+            font-size: 8px;
+        }
+
+        /* ===== TOOL SUB CARD ===== */
+        .tool-sub-card {
+            background: #f8fafc;
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius);
+            padding: 10px;
+            margin-bottom: 8px;
+        }
+        .tool-title {
+            font-size: 10px;
+            font-weight: 800;
+            margin-bottom: 6px;
+            display: block;
+        }
+        .flex-buttons {
+            display: flex;
+            gap: 6px;
+        }
+        .flex-buttons .btn {
+            margin: 0;
+            flex: 1;
+        }
+
+        /* ===== SVG ICON ===== */
+        .svg-icon {
+            width: 14px;
+            height: 14px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            display: inline-block;
+            vertical-align: middle;
+            transition: transform 0.3s;
+        }
+        .svg-icon-sm {
+            width: 12px;
+            height: 12px;
+        }
+
+        /* ===== MODAL ===== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .modal-card {
+            background: #fff;
+            width: 100%;
+            max-width: 340px;
+            border-radius: 14px;
+            padding: 16px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--card-border);
+            animation: cardScaleUp 0.3s;
+        }
+        .modal-card .modal-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 10px;
+        }
+        .modal-card .modal-actions .btn {
+            flex: 1;
+        }
+        .profile-modal {
+            max-width: 480px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .profile-modal .record-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .profile-modal .record-item:last-child {
+            border-bottom: none;
+        }
+
+        /* ===== DOWNLOAD PROGRESS ===== */
+        .download-progress {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e293b;
+            color: white;
+            padding: 10px 20px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            z-index: 99999;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            max-width: 90%;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+        .download-progress.show {
+            display: flex;
+        }
+        .download-progress .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ===== FILTER ROW ===== */
+        .filter-row {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 6px;
+        }
+        .filter-row select,
+        .filter-row input {
+            flex: 1;
+            min-width: 80px;
+            padding: 6px 8px;
+            font-size: 9px;
+            margin: 0;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 480px) {
+            .app-container {
+                border-radius: 12px;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+            }
+            .admin-nav-item {
+                min-width: 50px;
+                font-size: 10px;
+                padding: 8px 4px;
+            }
+            .filter-row select,
+            .filter-row input {
+                min-width: 60px;
+                font-size: 8px;
+            }
+            .profile-modal {
+                max-width: 100%;
+            }
+        }
+
+        /* ===== BULK STUDENT LIST ===== */
+        .bulk-student-list {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-sm);
+            padding: 6px;
+            background: #fff;
+            margin-bottom: 6px;
+        }
+        .bulk-student-list label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+            padding: 2px 4px;
+            cursor: pointer;
+        }
+        .bulk-student-list label:hover {
+            background: #f1f5f9;
+        }
+        .bulk-student-list .select-all-label {
+            font-weight: 700;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 4px;
+            margin-bottom: 4px;
+        }
+        .bulk-date-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 4px;
+        }
+        .bulk-date-chip {
+            background: #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .bulk-date-chip .remove-date {
+            cursor: pointer;
+            color: var(--danger);
+            font-weight: 700;
+        }
+        .bulk-date-chip .remove-date:hover {
+            color: #b91c1c;
+        }
+        .bulk-date-input-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        .bulk-date-input-row input[type="date"] {
+            flex: 1;
+            padding: 6px;
+            font-size: 10px;
+            margin: 0;
+        }
+        .bulk-date-input-row button {
+            padding: 6px 12px;
+            font-size: 10px;
+            margin: 0;
+        }
+
+        /* ===== CHAT WIDGET - GEMINI PRO STYLE ===== */
+        #chatWidget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 99999;
+            display: none;
+        }
+
+        #chatWidget .chat-toggle-btn {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 28px;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            position: relative;
+        }
+        #chatWidget .chat-toggle-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 24px rgba(37, 99, 235, 0.5);
+        }
+        #chatWidget .chat-toggle-btn .badge-dot {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 12px;
+            height: 12px;
+            background: #22c55e;
+            border-radius: 50%;
+            border: 2px solid #fff;
+        }
+
+        .chat-panel {
+            position: absolute;
+            bottom: 72px;
+            right: 0;
+            width: 420px;
+            max-width: 94vw;
+            height: 560px;
+            max-height: 80vh;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--card-border);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            animation: cardScaleUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .chat-panel.open {
+            display: flex !important;
+        }
+
+        .chat-panel .chat-header {
+            background: #fff;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--card-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .chat-panel .chat-header .chat-title {
+            font-weight: 800;
+            font-size: 14px;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .chat-panel .chat-header .chat-title .ai-badge {
+            background: #dbeafe;
+            color: var(--primary);
+            font-size: 8px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 700;
+        }
+        .chat-panel .chat-header .chat-close {
+            background: transparent;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 0 4px;
+            transition: 0.2s;
+        }
+        .chat-panel .chat-header .chat-close:hover {
+            color: var(--danger);
+        }
+
+        /* Chat body with side panel */
+        .chat-panel .chat-body {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            background: var(--chat-bg);
+        }
+
+        /* Sidebar - chat history */
+        .chat-panel .chat-sidebar {
+            width: 0;
+            overflow: hidden;
+            background: #f1f5f9;
+            border-right: 1px solid var(--card-border);
+            transition: width 0.3s ease;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-panel .chat-sidebar.open {
+            width: 180px;
+        }
+        .chat-panel .chat-sidebar .sidebar-header {
+            padding: 10px 12px;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--card-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .chat-panel .chat-sidebar .sidebar-header .new-chat-btn {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 2px 10px;
+            font-size: 9px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .chat-panel .chat-sidebar .sidebar-header .new-chat-btn:hover {
+            background: var(--primary-hover);
+        }
+        .chat-panel .chat-sidebar .sidebar-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px;
+        }
+        .chat-panel .chat-sidebar .sidebar-list .chat-item {
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border: 1px solid transparent;
+        }
+        .chat-panel .chat-sidebar .sidebar-list .chat-item:hover {
+            background: #fff;
+            border-color: var(--card-border);
+        }
+        .chat-panel .chat-sidebar .sidebar-list .chat-item.active {
+            background: #fff;
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .chat-panel .chat-sidebar .sidebar-list .chat-item .delete-chat {
+            float: right;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 12px;
+            padding: 0 4px;
+        }
+        .chat-panel .chat-sidebar .sidebar-list .chat-item .delete-chat:hover {
+            color: var(--danger);
+        }
+        .chat-panel .chat-sidebar .sidebar-list .empty-chats {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 10px;
+            padding: 20px 0;
+        }
+
+        /* Main chat area */
+        .chat-panel .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            background: #fff;
+        }
+
+        .chat-panel .chat-main .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 14px 16px;
+            font-size: 13px;
+            line-height: 1.6;
+            background: var(--chat-bg);
+        }
+        .chat-panel .chat-main .chat-messages .chat-msg {
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-panel .chat-main .chat-messages .chat-msg.user {
+            align-items: flex-end;
+        }
+        .chat-panel .chat-main .chat-messages .chat-msg.bot {
+            align-items: flex-start;
+        }
+        .chat-panel .chat-main .chat-messages .chat-msg .bubble {
+            max-width: 85%;
+            padding: 8px 14px;
+            border-radius: 14px;
+            word-wrap: break-word;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .chat-panel .chat-main .chat-messages .chat-msg.user .bubble {
+            background: var(--chat-user);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+        .chat-panel .chat-main .chat-messages .chat-msg.bot .bubble {
+            background: var(--chat-bot);
+            color: var(--text-main);
+            border-bottom-left-radius: 4px;
+        }
+        .chat-panel .chat-main .chat-messages .chat-msg .bubble .msg-time {
+            font-size: 8px;
+            color: var(--text-muted);
+            display: block;
+            text-align: right;
+            margin-top: 4px;
+            opacity: 0.7;
+        }
+        .chat-panel .chat-main .chat-messages .chat-msg.user .bubble .msg-time {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .chat-panel .chat-main .chat-messages .typing-indicator {
+            display: none;
+            padding: 8px 14px;
+            background: var(--chat-bot);
+            border-radius: 14px;
+            border-bottom-left-radius: 4px;
+            width: fit-content;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        .chat-panel .chat-main .chat-messages .typing-indicator .dots {
+            display: inline-block;
+            animation: typingDots 1.4s infinite;
+        }
+        @keyframes typingDots {
+            0% {
+                content: '.';
+            }
+            33% {
+                content: '..';
+            }
+            66% {
+                content: '...';
+            }
+        }
+
+        /* Quick suggestion chips */
+        .chat-panel .chat-main .quick-chips {
+            padding: 6px 12px 10px 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            border-top: 1px solid var(--card-border);
+            background: #fff;
+            flex-shrink: 0;
+        }
+        .chat-panel .chat-main .quick-chips .chip {
+            background: #f1f5f9;
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 4px 12px;
+            font-size: 9px;
+            font-weight: 600;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .chat-panel .chat-main .quick-chips .chip:hover {
+            background: #dbeafe;
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        /* Chat input */
+        .chat-panel .chat-main .chat-input-row {
+            display: flex;
+            border-top: 1px solid var(--card-border);
+            background: #fff;
+            flex-shrink: 0;
+            padding: 6px 10px;
+            gap: 6px;
+        }
+        .chat-panel .chat-main .chat-input-row input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            font-size: 12px;
+            outline: none;
+            background: #f8fafc;
+            margin: 0;
+            transition: 0.2s;
+        }
+        .chat-panel .chat-main .chat-input-row input:focus {
+            border-color: var(--primary);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+        }
+        .chat-panel .chat-main .chat-input-row .send-btn {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            transition: 0.2s;
+            flex-shrink: 0;
+        }
+        .chat-panel .chat-main .chat-input-row .send-btn:hover {
+            background: var(--primary-hover);
+            transform: scale(1.04);
+        }
+        .chat-panel .chat-main .chat-input-row .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Sidebar toggle button */
+        .chat-panel .chat-main .sidebar-toggle {
+            background: transparent;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 0 4px;
+            margin-right: 4px;
+            transition: 0.2s;
+        }
+        .chat-panel .chat-main .sidebar-toggle:hover {
+            color: var(--primary);
+        }
+
+        /* ===== WELCOME GREETING IN CHAT ===== */
+        .chat-panel .chat-main .chat-messages .welcome-greeting {
+            text-align: center;
+            padding: 20px 0;
+            color: var(--text-muted);
+            font-size: 13px;
+            line-height: 1.8;
+        }
+        .chat-panel .chat-main .chat-messages .welcome-greeting .greeting-emoji {
+            font-size: 32px;
+            display: block;
+            margin-bottom: 8px;
+        }
+        .chat-panel .chat-main .chat-messages .welcome-greeting .greeting-name {
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        @media (max-width: 500px) {
+            .chat-panel {
+                width: 100vw;
+                max-width: 100vw;
+                height: 100vh;
+                max-height: 100vh;
+                bottom: 0;
+                right: 0;
+                border-radius: 0;
+                border: none;
+            }
+            .chat-panel .chat-sidebar.open {
+                width: 140px;
+            }
+            #chatWidget .chat-toggle-btn {
+                width: 52px;
+                height: 52px;
+                font-size: 22px;
+            }
+            .chat-panel .chat-main .quick-chips .chip {
+                font-size: 8px;
+                padding: 3px 10px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -298,7 +1616,7 @@
                 <p>B.Tech CSE / AIDS – 5th Semester</p>
             </div>
             <div class="header-avatar-badge" id="headerAvatarBox" style="display:none;">
-                <div class="avatar-circle" id="userAvatarText">SS</div>
+                <div class="avatar-circle" id="userAvatarText" onclick="toggleChat()">SS</div>
             </div>
         </div>
 
@@ -875,6 +2193,72 @@
     </div>
 
     <!-- ========================================================== -->
+    <!-- CHAT WIDGET – GEMINI PRO STYLE                             -->
+    <!-- ========================================================== -->
+    <div id="chatWidget">
+        <button class="chat-toggle-btn" onclick="toggleChat()" id="chatToggleBtn">
+            💬
+            <span class="badge-dot"></span>
+        </button>
+
+        <div class="chat-panel" id="chatPanel">
+            <!-- Header -->
+            <div class="chat-header">
+                <div class="chat-title">
+                    🤖 BM Bot
+                    <span class="ai-badge">AI</span>
+                </div>
+                <button class="chat-close" onclick="toggleChat()">✕</button>
+            </div>
+
+            <!-- Body with sidebar -->
+            <div class="chat-body">
+                <!-- Sidebar -->
+                <div class="chat-sidebar" id="chatSidebar">
+                    <div class="sidebar-header">
+                        <span>📋 History</span>
+                        <button class="new-chat-btn" onclick="newChat()">+ New</button>
+                    </div>
+                    <div class="sidebar-list" id="chatHistoryList">
+                        <div class="empty-chats">No chats yet.</div>
+                    </div>
+                </div>
+
+                <!-- Main -->
+                <div class="chat-main">
+                    <!-- Messages -->
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="welcome-greeting" id="welcomeGreeting">
+                            <span class="greeting-emoji">👋</span>
+                            <div>Hello! I'm <strong>BM Bot</strong>, your AI assistant.</div>
+                            <div style="font-size:12px; color:var(--text-muted);">Ask me about attendance, schedule, holidays, or anything!</div>
+                        </div>
+                        <div class="typing-indicator" id="typingIndicator">
+                            <span class="dots">...</span>
+                        </div>
+                    </div>
+
+                    <!-- Quick Chips -->
+                    <div class="quick-chips" id="quickChips">
+                        <span class="chip" onclick="sendQuickQuestion('What is my attendance percentage?')">📊 My Attendance</span>
+                        <span class="chip" onclick="sendQuickQuestion('What is today\'s timetable?')">📅 Today's Schedule</span>
+                        <span class="chip" onclick="sendQuickQuestion('Are there any holidays this month?')">🎉 Holidays</span>
+                        <span class="chip" onclick="sendQuickQuestion('How many working days so far?')">📆 Working Days</span>
+                        <span class="chip" onclick="sendQuickQuestion('Give me notes for BDA')">📝 Notes</span>
+                    </div>
+
+                    <!-- Input -->
+                    <div class="chat-input-row">
+                        <button class="sidebar-toggle" onclick="toggleSidebar()" title="Chat History">☰</button>
+                        <input type="text" id="chatInput" placeholder="Ask me anything..." onkeydown="if(event.key==='Enter') sendChatMessage()" />
+                        <button class="send-btn" onclick="sendChatMessage()" id="chatSendBtn">➤</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================== -->
     <!-- JAVASCRIPT                                                  -->
     <!-- ========================================================== -->
     <script>
@@ -897,10 +2281,16 @@
         let teacherCurrentPasscode = "—";
         let teacherPasscodeExpiry = null;
         let editRecordId = null;
-        let selectedDates = []; // for bulk actions
+        let selectedDates = [];
+        let chatOpen = false;
+        let currentThreadId = null;
+        let chatHistory = [];
+        let sidebarOpen = false;
 
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-        const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November",
+            "December"
+        ];
 
         // ============================================================
         // ROLL NUMBER VALIDATION
@@ -963,18 +2353,39 @@
         // ============================================================
         function getBranchTimetable(branch) {
             const CSE = {
-                Monday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'DAA - Design & Analysis of Algorithm', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'CN - Computer Network', 'LIB - Library'],
-                Tuesday: ['WT - Web Technology', 'ECO - Economics for Engineers', 'Internet Lab (Ms. Geeta)', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'BDA - Big Data Analytics'],
-                Wednesday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'FLA - Formal Language & Automata', 'WT - Web Technology', 'CN LAB - Computer Network Lab'],
-                Thursday: ['BDA - Big Data Analytics', 'WT - Web Technology', 'CN - Computer Network', 'DAA - Design & Analysis of Algorithm', 'DAA LAB - Algorithm Lab', 'HRM - Human Resource Mgmt'],
-                Friday: ['DAA - Design & Analysis of Algorithm', 'CN - Computer Network', 'FLA - Formal Language & Automata', 'BDA - Big Data Analytics', 'WT LAB - Web Technology Lab']
+                Monday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'DAA - Design & Analysis of Algorithm',
+                    'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'CN - Computer Network', 'LIB - Library'
+                ],
+                Tuesday: ['WT - Web Technology', 'ECO - Economics for Engineers', 'Internet Lab (Ms. Geeta)',
+                    'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'BDA - Big Data Analytics'
+                ],
+                Wednesday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'FLA - Formal Language & Automata',
+                    'WT - Web Technology', 'CN LAB - Computer Network Lab'
+                ],
+                Thursday: ['BDA - Big Data Analytics', 'WT - Web Technology', 'CN - Computer Network',
+                    'DAA - Design & Analysis of Algorithm', 'DAA LAB - Algorithm Lab', 'HRM - Human Resource Mgmt'
+                ],
+                Friday: ['DAA - Design & Analysis of Algorithm', 'CN - Computer Network', 'FLA - Formal Language & Automata',
+                    'BDA - Big Data Analytics', 'WT LAB - Web Technology Lab'
+                ]
             };
             const AIDS = {
-                Monday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'LIB - Library', 'FLA - Formal Language & Automata', 'PA - Predictive Analysis', 'PA - Predictive Analysis', 'Sports'],
-                Tuesday: ['WT - Web Technology', 'ECO - Economics for Engineers', 'PA - Predictive Analysis', 'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'BDA - Big Data Analytics', 'ML - Machine Learning'],
-                Wednesday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'FLA - Formal Language & Automata', 'Sports / Project', 'WT - Web Technology', 'PA LAB - Predictive Analysis Lab'],
-                Thursday: ['BDA - Big Data Analytics', 'WT - Web Technology', 'ML - Machine Learning', 'PA - Predictive Analysis', 'ML LAB - Machine Learning Lab', 'HRM - Human Resource Mgmt'],
-                Friday: ['ML - Machine Learning', 'LIB - Library', 'FLA - Formal Language & Automata', 'BDA - Big Data Analytics', 'BDA LAB - Big Data Analytics Lab', 'Sports']
+                Monday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'LIB - Library',
+                    'FLA - Formal Language & Automata', 'PA - Predictive Analysis', 'PA - Predictive Analysis', 'Sports'
+                ],
+                Tuesday: ['WT - Web Technology', 'ECO - Economics for Engineers', 'PA - Predictive Analysis',
+                    'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'BDA - Big Data Analytics',
+                    'ML - Machine Learning'
+                ],
+                Wednesday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'FLA - Formal Language & Automata',
+                    'Sports / Project', 'WT - Web Technology', 'PA LAB - Predictive Analysis Lab'
+                ],
+                Thursday: ['BDA - Big Data Analytics', 'WT - Web Technology', 'ML - Machine Learning', 'PA - Predictive Analysis',
+                    'ML LAB - Machine Learning Lab', 'HRM - Human Resource Mgmt'
+                ],
+                Friday: ['ML - Machine Learning', 'LIB - Library', 'FLA - Formal Language & Automata',
+                    'BDA - Big Data Analytics', 'BDA LAB - Big Data Analytics Lab', 'Sports'
+                ]
             };
             if (branch && branch.toUpperCase() === 'AIDS') return AIDS;
             return CSE;
@@ -1097,7 +2508,8 @@
                 const btn = document.getElementById('markPeriodBtn');
                 if (labelEl) labelEl.innerText = "TEACHER MODE:";
                 if (nameEl) nameEl.innerText = "Use Teacher Tab";
-                if (btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
+                if (btn) { btn.disabled = true;
+                    btn.style.opacity = "0.5"; }
                 return;
             }
             const branch = user.branch || 'CSE';
@@ -1112,11 +2524,15 @@
                 const res = await fetch(`${API_BASE}/api/date-status/${todayDate}`);
                 const status = await res.json();
                 if (status.isBlocked) {
-                    if (labelEl) { labelEl.innerText = status.type + ":"; labelEl.style.color = status.type === 'HOLIDAY' ? '#d97706' : '#64748b'; }
-                    if (nameEl) { nameEl.innerText = status.message; nameEl.style.color = status.type === 'HOLIDAY' ? '#92400e' : '#475569'; }
-                    if (btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
+                    if (labelEl) { labelEl.innerText = status.type + ":"; labelEl.style.color = status.type === 'HOLIDAY' ?
+                            '#d97706' : '#64748b'; }
+                    if (nameEl) { nameEl.innerText = status.message; nameEl.style.color = status.type === 'HOLIDAY' ?
+                            '#92400e' : '#475569'; }
+                    if (btn) { btn.disabled = true;
+                        btn.style.opacity = "0.5"; }
                     activeSubjectSubjectCode = "";
-                    document.getElementById('periodCardBox').className = 'period-card ' + (status.type === 'HOLIDAY' ? 'status-holiday' : 'status-weekend');
+                    document.getElementById('periodCardBox').className = 'period-card ' + (status.type === 'HOLIDAY' ?
+                        'status-holiday' : 'status-weekend');
                     return;
                 }
             } catch (e) {}
@@ -1124,7 +2540,8 @@
             if (dayOfWeek === 0 || dayOfWeek === 6) {
                 if (labelEl) { labelEl.innerText = "WEEKEND:"; labelEl.style.color = '#64748b'; }
                 if (nameEl) { nameEl.innerText = "College Closed"; nameEl.style.color = '#475569'; }
-                if (btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
+                if (btn) { btn.disabled = true;
+                    btn.style.opacity = "0.5"; }
                 activeSubjectSubjectCode = "";
                 document.getElementById('periodCardBox').className = 'period-card status-weekend';
                 return;
@@ -1147,18 +2564,21 @@
                 if (foundSlot.period === "LUNCH") {
                     if (labelEl) labelEl.innerText = "LUNCH BREAK:";
                     if (nameEl) { nameEl.innerText = "Lunch Time"; nameEl.style.color = '#0f172a'; }
-                    if (btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
+                    if (btn) { btn.disabled = true;
+                        btn.style.opacity = "0.5"; }
                     activeSubjectSubjectCode = "";
                 } else {
                     if (labelEl) labelEl.innerText = `ACTIVE (${foundSlot.start} - ${foundSlot.end}):`;
                     if (nameEl) { nameEl.innerText = foundSlot.subject; nameEl.style.color = '#0f172a'; }
-                    if (btn) { btn.disabled = false; btn.style.opacity = "1"; }
+                    if (btn) { btn.disabled = false;
+                        btn.style.opacity = "1"; }
                     activeSubjectSubjectCode = foundSlot.subject;
                 }
             } else {
                 if (labelEl) labelEl.innerText = "COLLEGE STATUS:";
                 if (nameEl) { nameEl.innerText = "Off Hours / No Class"; nameEl.style.color = '#64748b'; }
-                if (btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
+                if (btn) { btn.disabled = true;
+                    btn.style.opacity = "0.5"; }
                 activeSubjectSubjectCode = "";
             }
         }
@@ -1226,7 +2646,7 @@
         }
 
         // ============================================================
-        // VERIFY PASSCODE – with verbose logging
+        // VERIFY PASSCODE
         // ============================================================
         async function verifyPasscode(passcode, type) {
             console.log(`🔍 Verifying ${type} passcode: ${passcode}`);
@@ -1285,14 +2705,14 @@
                     return;
                 }
                 tbody.innerHTML = data.map(s => `
-                    <tr>
-                        <td><b>${s.rollNo}</b></td>
-                        <td>${s.name}</td>
-                        <td>
-                            <button class="btn-view btn-xs" onclick="viewTeacherStudent('${s.rollNo}')">View</button>
-                        </td>
-                    </tr>
-                `).join('');
+                        <tr>
+                            <td><b>${s.rollNo}</b></td>
+                            <td>${s.name}</td>
+                            <td>
+                                <button class="btn-view btn-xs" onclick="viewTeacherStudent('${s.rollNo}')">View</button>
+                            </td>
+                        </tr>
+                    `).join('');
                 const select = document.getElementById('teacherStudentReportSelect');
                 select.innerHTML = '<option value="">Select Student…</option>';
                 data.forEach(s => {
@@ -1319,45 +2739,45 @@
                 modal.className = 'modal-overlay';
                 modal.id = 'teacherStudentModal';
                 let html = `
-                    <div class="modal-card profile-modal">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                            <h3 style="font-size:14px; font-weight:800;">Attendance – ${rollNo}</h3>
-                            <button class="btn btn-danger btn-sm" onclick="closeTeacherStudentModal()" style="padding:2px 8px;">✕</button>
-                        </div>
-                        <div style="max-height:300px; overflow-y:auto;">
-                `;
+                        <div class="modal-card profile-modal">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                <h3 style="font-size:14px; font-weight:800;">Attendance – ${rollNo}</h3>
+                                <button class="btn btn-danger btn-sm" onclick="closeTeacherStudentModal()" style="padding:2px 8px;">✕</button>
+                            </div>
+                            <div style="max-height:300px; overflow-y:auto;">
+                    `;
                 if (Object.keys(grouped).length === 0) {
                     html += `<p style="text-align:center; color:var(--text-muted);">No records found.</p>`;
                 } else {
-                    const sortedDates = Object.keys(grouped).sort((a,b) => b.localeCompare(a));
+                    const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
                     sortedDates.forEach(date => {
                         const records = grouped[date];
                         html += `
-                            <div style="border-bottom:1px solid #e2e8f0; margin-bottom:6px; padding-bottom:6px;">
-                                <div style="display:flex; justify-content:space-between; align-items:center;">
-                                    <span style="font-weight:700; font-size:11px;">📅 ${date}</span>
-                                    <button class="btn btn-danger btn-xs" onclick="deleteAllForDate('${rollNo}','${date}')" style="padding:2px 6px;">Delete All</button>
-                                </div>
-                        `;
+                                <div style="border-bottom:1px solid #e2e8f0; margin-bottom:6px; padding-bottom:6px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                                        <span style="font-weight:700; font-size:11px;">📅 ${date}</span>
+                                        <button class="btn btn-danger btn-xs" onclick="deleteAllForDate('${rollNo}','${date}')" style="padding:2px 6px;">Delete All</button>
+                                    </div>
+                            `;
                         records.forEach(r => {
                             html += `
-                                <div class="record-item">
-                                    <div>
-                                        <span style="font-weight:600;">${r.subject}</span>
-                                        <span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span>
+                                    <div class="record-item">
+                                        <div>
+                                            <span style="font-weight:600;">${r.subject}</span>
+                                            <span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span>
+                                        </div>
+                                        <button class="btn btn-del btn-xs" onclick="deleteRecord('${r._id}')">Delete</button>
                                     </div>
-                                    <button class="btn btn-del btn-xs" onclick="deleteRecord('${r._id}')">Delete</button>
-                                </div>
-                            `;
+                                `;
                         });
                         html += `</div>`;
                     });
                 }
                 html += `
+                            </div>
+                            <button class="btn btn-outline btn-sm" onclick="closeTeacherStudentModal()" style="margin-top:8px;">Close</button>
                         </div>
-                        <button class="btn btn-outline btn-sm" onclick="closeTeacherStudentModal()" style="margin-top:8px;">Close</button>
-                    </div>
-                `;
+                    `;
                 modal.innerHTML = html;
                 document.body.appendChild(modal);
             } catch (e) {
@@ -1375,7 +2795,8 @@
         // ============================================================
         function toggleTeacherReportRange() {
             const range = document.getElementById('teacherReportRange').value;
-            document.getElementById('teacherSelectedMonthWrapper').style.display = (range === 'SELECTED_MONTH') ? 'block' : 'none';
+            document.getElementById('teacherSelectedMonthWrapper').style.display = (range === 'SELECTED_MONTH') ? 'block' :
+            'none';
             document.getElementById('teacherCustomRangeWrapper').style.display = (range === 'CUSTOM') ? 'block' : 'none';
         }
 
@@ -1433,7 +2854,7 @@
                 const holidays = await holidayRes.json();
                 const holidaySet = new Set(holidays.map(h => h.date));
                 const timetable = getBranchTimetable(branch);
-                const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+                const dayNameMap = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
                 const subjectTotals = {};
                 let totalConducted = 0;
                 let cur = new Date(startDate);
@@ -1472,49 +2893,51 @@
                     subjectStats[sub] = {
                         total: subjectTotals[sub],
                         present: attendedCounts[sub] || 0,
-                        percentage: subjectTotals[sub] > 0 ? Math.round(((attendedCounts[sub] || 0) / subjectTotals[sub]) * 100) : 0
+                        percentage: subjectTotals[sub] > 0 ? Math.round(((attendedCounts[sub] || 0) / subjectTotals[
+                            sub]) * 100) : 0
                     };
                 });
 
                 if (format === 'pdf') {
                     const content = `
-                        <div style="font-family:Arial; padding:20px;">
-                            <h1 style="color:#2563eb;">BM Group of Institutions</h1>
-                            <h2>Student Attendance Report – ${studentRoll}</h2>
-                            <p>Teacher: ${user.name} (${user.rollNo})</p>
-                            <p>Generated: ${new Date().toLocaleString()}</p>
-                            <p>Branch: ${branch}</p>
-                            <p>Range: ${startStr} to ${endStr}</p>
-                            <hr>
-                            <h3>Summary</h3>
-                            <p><strong>Total Lectures Conducted:</strong> ${totalConducted}</p>
-                            <p><strong>Lectures Attended:</strong> ${totalAttended}</p>
-                            <p><strong>Attendance %:</strong> ${pct}%</p>
-                            <h3>Subject-wise</h3>
-                            <ul>
-                                ${Object.entries(subjectStats).map(([sub, st]) => `
-                                    <li>${sub}: ${st.present}/${st.total} (${st.percentage}%)</li>
-                                `).join('')}
-                            </ul>
-                            <hr>
-                            <h3>Detailed Records</h3>
-                            <table style="width:100%; border-collapse:collapse; border:1px solid #ccc;">
-                                <thead><tr style="background:#f0f0f0;"><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
-                                <tbody>
-                                    ${records.map(r => `
-                                        <tr><td>${r.date}</td><td>${r.subject}</td><td>${r.status}</td></tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    `;
+                            <div style="font-family:Arial; padding:20px;">
+                                <h1 style="color:#2563eb;">BM Group of Institutions</h1>
+                                <h2>Student Attendance Report – ${studentRoll}</h2>
+                                <p>Teacher: ${user.name} (${user.rollNo})</p>
+                                <p>Generated: ${new Date().toLocaleString()}</p>
+                                <p>Branch: ${branch}</p>
+                                <p>Range: ${startStr} to ${endStr}</p>
+                                <hr>
+                                <h3>Summary</h3>
+                                <p><strong>Total Lectures Conducted:</strong> ${totalConducted}</p>
+                                <p><strong>Lectures Attended:</strong> ${totalAttended}</p>
+                                <p><strong>Attendance %:</strong> ${pct}%</p>
+                                <h3>Subject-wise</h3>
+                                <ul>
+                                    ${Object.entries(subjectStats).map(([sub, st]) => `
+                                            <li>${sub}: ${st.present}/${st.total} (${st.percentage}%)</li>
+                                        `).join('')}
+                                </ul>
+                                <hr>
+                                <h3>Detailed Records</h3>
+                                <table style="width:100%; border-collapse:collapse; border:1px solid #ccc;">
+                                    <thead><tr style="background:#f0f0f0;"><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
+                                    <tbody>
+                                        ${records.map(r => `
+                                                <tr><td>${r.date}</td><td>${r.subject}</td><td>${r.status}</td></tr>
+                                            `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
                     const win = window.open('', '_blank');
                     if (!win) { showMsg('Allow popups!', true); return; }
                     win.document.write(content);
                     win.document.close();
                     win.print();
                 } else {
-                    let csv = `Student Attendance Report\nStudent: ${studentRoll}\nTeacher: ${user.name}\nBranch: ${branch}\nRange: ${startStr} to ${endStr}\nTotal Conducted: ${totalConducted}, Attended: ${totalAttended}, %: ${pct}%\n\nSubject,Attended,Total,Percentage\n`;
+                    let csv =
+                        `Student Attendance Report\nStudent: ${studentRoll}\nTeacher: ${user.name}\nBranch: ${branch}\nRange: ${startStr} to ${endStr}\nTotal Conducted: ${totalConducted}, Attended: ${totalAttended}, %: ${pct}%\n\nSubject,Attended,Total,Percentage\n`;
                     Object.entries(subjectStats).forEach(([sub, st]) => {
                         csv += `"${sub}",${st.present},${st.total},${st.percentage}%\n`;
                     });
@@ -1546,7 +2969,8 @@
                     return;
                 }
                 const recent = data.slice(0, 10);
-                tbody.innerHTML = recent.map(r => `<tr><td>${r.date}</td><td>${r.studentName}</td><td>${r.subject}</td></tr>`).join('');
+                tbody.innerHTML = recent.map(r =>
+                    `<tr><td>${r.date}</td><td>${r.studentName}</td><td>${r.subject}</td></tr>`).join('');
             } catch (e) {}
         }
 
@@ -1567,18 +2991,18 @@
                     const pct = data.attendancePercentage || 0;
                     const color = pct >= 75 ? 'var(--success)' : 'var(--danger)';
                     let html = `
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                            <span style="font-weight:700; font-size:11px;">${MONTH_NAMES[parseInt(month)]} 2026</span>
-                            <span style="font-size:12px; font-weight:800; color:${color};">${pct}%</span>
-                        </div>
-                        <div style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">Attended ${data.totalAttended} / ${data.totalConducted} lectures</div>
-                        <div style="display:flex; flex-wrap:wrap; gap:4px; max-height:80px; overflow-y:auto;">
-                            ${Object.entries(data.subjectStats || {}).map(([sub, st]) => {
-                                const percentage = st.percentage !== undefined ? st.percentage : 0;
-                                return `<span class="subject-chip">${sub.substring(0,12)}: ${percentage}% (${st.present}/${st.total})</span>`;
-                            }).join('')}
-                        </div>
-                    `;
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                <span style="font-weight:700; font-size:11px;">${MONTH_NAMES[parseInt(month)]} 2026</span>
+                                <span style="font-size:12px; font-weight:800; color:${color};">${pct}%</span>
+                            </div>
+                            <div style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">Attended ${data.totalAttended} / ${data.totalConducted} lectures</div>
+                            <div style="display:flex; flex-wrap:wrap; gap:4px; max-height:80px; overflow-y:auto;">
+                                ${Object.entries(data.subjectStats || {}).map(([sub, st]) => {
+                                    const percentage = st.percentage !== undefined ? st.percentage : 0;
+                                    return `<span class="subject-chip">${sub.substring(0,12)}: ${percentage}% (${st.present}/${st.total})</span>`;
+                                }).join('')}
+                            </div>
+                        `;
                     container.innerHTML = html;
                 } else {
                     container.style.display = 'none';
@@ -1589,7 +3013,7 @@
         }
 
         // ============================================================
-        // FIXED: MARK FULL DAY ATTENDANCE – with console logs
+        // MARK FULL DAY ATTENDANCE
         // ============================================================
         async function markFullDayAttendance() {
             console.log('🚀 markFullDayAttendance called');
@@ -1624,7 +3048,8 @@
                     try {
                         const res = await fetch(`${API_BASE}/api/attendance/mark-fullday`, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
+                            headers: { 'Content-Type': 'application/json', 'Authorization':
+                                    `Bearer ${localStorage.getItem('token') || ''}` },
                             body: JSON.stringify({
                                 rollNo: user.rollNo,
                                 name: user.name,
@@ -1655,7 +3080,7 @@
         }
 
         // ============================================================
-        // FIXED: MARK ACTIVE PERIOD ATTENDANCE – with console logs
+        // MARK ACTIVE PERIOD ATTENDANCE
         // ============================================================
         async function markActivePeriodAttendance() {
             console.log('🚀 markActivePeriodAttendance called');
@@ -1668,7 +3093,8 @@
                 showMsg('No active period found!', true);
                 return;
             }
-            const enteredPasscode = prompt(`Enter Single Lecture Passcode (4‑digit) for "${activeSubjectSubjectCode}":`);
+            const enteredPasscode = prompt(
+                `Enter Single Lecture Passcode (4‑digit) for "${activeSubjectSubjectCode}":`);
             if (!enteredPasscode) {
                 console.log('❌ No passcode entered');
                 return;
@@ -1694,7 +3120,8 @@
                     try {
                         const res = await fetch(`${API_BASE}/api/attendance/mark-lecture`, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
+                            headers: { 'Content-Type': 'application/json', 'Authorization':
+                                    `Bearer ${localStorage.getItem('token') || ''}` },
                             body: JSON.stringify({
                                 rollNo: user.rollNo,
                                 name: user.name,
@@ -1751,7 +3178,7 @@
                 const holidaySet = new Set(holidays.map(h => h.date));
 
                 const timetable = getBranchTimetable(branch);
-                const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+                const dayNameMap = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
                 const subjectTotals = {};
                 let totalConducted = 0;
                 let cur = new Date(semesterStart);
@@ -1790,48 +3217,50 @@
                     subjectStats[sub] = {
                         total: subjectTotals[sub],
                         present: attendedCounts[sub] || 0,
-                        percentage: subjectTotals[sub] > 0 ? Math.round(((attendedCounts[sub] || 0) / subjectTotals[sub]) * 100) : 0
+                        percentage: subjectTotals[sub] > 0 ? Math.round(((attendedCounts[sub] || 0) / subjectTotals[
+                            sub]) * 100) : 0
                     };
                 });
 
                 if (format === 'pdf') {
                     const content = `
-                        <div style="font-family:Arial; padding:20px;">
-                            <h1 style="color:#2563eb;">BM Group of Institutions</h1>
-                            <h2>Student Attendance Report – ${studentRoll}</h2>
-                            <p>Generated: ${new Date().toLocaleString()}</p>
-                            <p>Branch: ${branch}</p>
-                            <p>Range: 15 July 2026 to ${today.toISOString().split('T')[0]}</p>
-                            <hr>
-                            <h3>Summary</h3>
-                            <p><strong>Total Lectures Conducted:</strong> ${totalConducted}</p>
-                            <p><strong>Lectures Attended:</strong> ${totalAttended}</p>
-                            <p><strong>Attendance %:</strong> ${pct}%</p>
-                            <h3>Subject-wise</h3>
-                            <ul>
-                                ${Object.entries(subjectStats).map(([sub, st]) => `
-                                    <li>${sub}: ${st.present}/${st.total} (${st.percentage}%)</li>
-                                `).join('')}
-                            </ul>
-                            <hr>
-                            <h3>Detailed Records</h3>
-                            <table style="width:100%; border-collapse:collapse; border:1px solid #ccc;">
-                                <thead><tr style="background:#f0f0f0;"><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
-                                <tbody>
-                                    ${records.map(r => `
-                                        <tr><td>${r.date}</td><td>${r.subject}</td><td>${r.status}</td></tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    `;
+                            <div style="font-family:Arial; padding:20px;">
+                                <h1 style="color:#2563eb;">BM Group of Institutions</h1>
+                                <h2>Student Attendance Report – ${studentRoll}</h2>
+                                <p>Generated: ${new Date().toLocaleString()}</p>
+                                <p>Branch: ${branch}</p>
+                                <p>Range: 15 July 2026 to ${today.toISOString().split('T')[0]}</p>
+                                <hr>
+                                <h3>Summary</h3>
+                                <p><strong>Total Lectures Conducted:</strong> ${totalConducted}</p>
+                                <p><strong>Lectures Attended:</strong> ${totalAttended}</p>
+                                <p><strong>Attendance %:</strong> ${pct}%</p>
+                                <h3>Subject-wise</h3>
+                                <ul>
+                                    ${Object.entries(subjectStats).map(([sub, st]) => `
+                                            <li>${sub}: ${st.present}/${st.total} (${st.percentage}%)</li>
+                                        `).join('')}
+                                </ul>
+                                <hr>
+                                <h3>Detailed Records</h3>
+                                <table style="width:100%; border-collapse:collapse; border:1px solid #ccc;">
+                                    <thead><tr style="background:#f0f0f0;"><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
+                                    <tbody>
+                                        ${records.map(r => `
+                                                <tr><td>${r.date}</td><td>${r.subject}</td><td>${r.status}</td></tr>
+                                            `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
                     const win = window.open('', '_blank');
                     if (!win) { showMsg('Allow popups!', true); return; }
                     win.document.write(content);
                     win.document.close();
                     win.print();
                 } else {
-                    let csv = `Student Attendance Report\nStudent: ${studentRoll}\nBranch: ${branch}\nRange: 15 July 2026 to ${today.toISOString().split('T')[0]}\nTotal Conducted: ${totalConducted}, Attended: ${totalAttended}, %: ${pct}%\n\nSubject,Attended,Total,Percentage\n`;
+                    let csv =
+                        `Student Attendance Report\nStudent: ${studentRoll}\nBranch: ${branch}\nRange: 15 July 2026 to ${today.toISOString().split('T')[0]}\nTotal Conducted: ${totalConducted}, Attended: ${totalAttended}, %: ${pct}%\n\nSubject,Attended,Total,Percentage\n`;
                     Object.entries(subjectStats).forEach(([sub, st]) => {
                         csv += `"${sub}",${st.present},${st.total},${st.percentage}%\n`;
                     });
@@ -1870,7 +3299,8 @@
 
             showDownloadProgress('Generating class report…');
             try {
-                const url = `${API_BASE}/api/admin/class-attendance-report?requesterRollNo=${user.rollNo}&startDate=${startDate}&endDate=${endDate}&branch=${branchFilter}`;
+                const url =
+                    `${API_BASE}/api/admin/class-attendance-report?requesterRollNo=${user.rollNo}&startDate=${startDate}&endDate=${endDate}&branch=${branchFilter}`;
                 const res = await fetch(url);
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Failed to fetch report');
@@ -1884,57 +3314,57 @@
                 const branchName = branchFilter === 'ALL' ? 'All Branches' : branchFilter;
 
                 let tableRows = students.map((s, idx) => `
-                    <tr>
-                        <td style="padding:6px 8px; border:1px solid #ccc; text-align:center;">${idx + 1}</td>
-                        <td style="padding:6px 8px; border:1px solid #ccc; text-align:left;">${s.rollNo || 'N/A'}</td>
-                        <td style="padding:6px 8px; border:1px solid #ccc; text-align:left;">${s.name || 'Unknown'}</td>
-                        <td style="padding:6px 8px; border:1px solid #ccc; text-align:center;">${s.totalPresent || 0}</td>
-                        <td style="padding:6px 8px; border:1px solid #ccc; text-align:center;">${s.percentage || 0}%</td>
-                    </tr>
-                `).join('');
+                        <tr>
+                            <td style="padding:6px 8px; border:1px solid #ccc; text-align:center;">${idx + 1}</td>
+                            <td style="padding:6px 8px; border:1px solid #ccc; text-align:left;">${s.rollNo || 'N/A'}</td>
+                            <td style="padding:6px 8px; border:1px solid #ccc; text-align:left;">${s.name || 'Unknown'}</td>
+                            <td style="padding:6px 8px; border:1px solid #ccc; text-align:center;">${s.totalPresent || 0}</td>
+                            <td style="padding:6px 8px; border:1px solid #ccc; text-align:center;">${s.percentage || 0}%</td>
+                        </tr>
+                    `).join('');
 
                 const htmlContent = `
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <meta charset="UTF-8">
-                        <title>Class Attendance Report</title>
-                        <style>
-                            body { font-family: Arial, sans-serif; padding: 20px; }
-                            h1 { color: #2563eb; text-align: center; }
-                            h2 { text-align: center; }
-                            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
-                            th, td { padding: 6px 8px; border: 1px solid #ccc; }
-                            th { background: #f0f0f0; text-align: center; }
-                            td { text-align: left; }
-                            td.center { text-align: center; }
-                            .footer { text-align: center; font-size: 10px; color: #999; margin-top: 20px; }
-                            .summary { text-align: center; font-size: 14px; color: #666; }
-                        </style>
-                    </head>
-                    <body>
-                        <h1>BM Group of Institutions</h1>
-                        <h2>${branchName} – 5th Semester</h2>
-                        <p style="text-align:center;">Attendance from ${startDate} to ${endDate}</p>
-                        <p class="summary">Total Lectures Conducted: ${totalLectures}</p>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>S.No</th>
-                                    <th>Roll No</th>
-                                    <th>Name</th>
-                                    <th>Total Present</th>
-                                    <th>Percentage</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${tableRows}
-                            </tbody>
-                        </table>
-                        <p class="footer">Generated on ${new Date().toLocaleString()}</p>
-                    </body>
-                    </html>
-                `;
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <meta charset="UTF-8">
+                            <title>Class Attendance Report</title>
+                            <style>
+                                body { font-family: Arial, sans-serif; padding: 20px; }
+                                h1 { color: #2563eb; text-align: center; }
+                                h2 { text-align: center; }
+                                table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+                                th, td { padding: 6px 8px; border: 1px solid #ccc; }
+                                th { background: #f0f0f0; text-align: center; }
+                                td { text-align: left; }
+                                td.center { text-align: center; }
+                                .footer { text-align: center; font-size: 10px; color: #999; margin-top: 20px; }
+                                .summary { text-align: center; font-size: 14px; color: #666; }
+                            </style>
+                        </head>
+                        <body>
+                            <h1>BM Group of Institutions</h1>
+                            <h2>${branchName} – 5th Semester</h2>
+                            <p style="text-align:center;">Attendance from ${startDate} to ${endDate}</p>
+                            <p class="summary">Total Lectures Conducted: ${totalLectures}</p>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>S.No</th>
+                                        <th>Roll No</th>
+                                        <th>Name</th>
+                                        <th>Total Present</th>
+                                        <th>Percentage</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${tableRows}
+                                </tbody>
+                            </table>
+                            <p class="footer">Generated on ${new Date().toLocaleString()}</p>
+                        </body>
+                        </html>
+                    `;
 
                 const win = window.open('', '_blank', 'width=900,height=700');
                 if (!win) {
@@ -1956,7 +3386,7 @@
         }
 
         // ============================================================
-        // DELETE ALL FOR DATE – FIXED: always green on success
+        // DELETE ALL FOR DATE
         // ============================================================
         async function deleteAllForDate(rollNo, date) {
             if (!confirm(`Delete ALL attendance records for ${rollNo} on ${date}? This cannot be undone.`)) return;
@@ -1971,8 +3401,8 @@
                 const data = await res.json();
                 if (res.ok) {
                     showMsg(data.message || '✅ Records deleted successfully!');
-                    // refresh views
-                    const modal = document.getElementById('studentProfileModal') || document.getElementById('teacherStudentModal');
+                    const modal = document.getElementById('studentProfileModal') || document.getElementById(
+                    'teacherStudentModal');
                     if (modal) {
                         const roll = rollNo;
                         if (modal.id === 'studentProfileModal') {
@@ -1995,7 +3425,7 @@
         }
 
         // ============================================================
-        // DELETE RECORD – FIXED: always green on success
+        // DELETE RECORD
         // ============================================================
         async function deleteRecord(recordId) {
             if (!confirm('Delete this attendance record?')) return;
@@ -2006,7 +3436,6 @@
                 const data = await res.json();
                 if (res.ok) {
                     showMsg('✅ Record deleted!');
-                    // refresh views
                     const profileModal = document.getElementById('studentProfileModal');
                     if (profileModal) {
                         const currentRoll = currentStudentRecords.length > 0 ? currentStudentRecords[0].rollNo : '';
@@ -2016,7 +3445,8 @@
                     }
                     const teacherModal = document.getElementById('teacherStudentModal');
                     if (teacherModal) {
-                        const roll = document.querySelector('#teacherStudentModal .profile-modal h3')?.innerText?.replace('Attendance – ', '');
+                        const roll = document.querySelector('#teacherStudentModal .profile-modal h3')?.innerText?.replace(
+                            'Attendance – ', '');
                         closeTeacherStudentModal();
                         if (roll) viewTeacherStudent(roll);
                         fetchTeacherStudents();
@@ -2047,7 +3477,8 @@
                     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:12px;">No users registered</td></tr>';
                     return;
                 }
-                const students = data.filter(u => u.role === 'student').sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }));
+                const students = data.filter(u => u.role === 'student').sort((a, b) => a.rollNo.localeCompare(b.rollNo,
+                undefined, { numeric: true }));
                 const summaryPromises = students.map(async (s) => {
                     try {
                         const res2 = await fetch(`${API_BASE}/api/student/summary/${s.rollNo}`);
@@ -2065,7 +3496,8 @@
 
                 tbody.innerHTML = allUsersSorted.map(s => {
                     const deviceStatus = s.boundDeviceId ? '✅ Bound' : '🔓 Unbound';
-                    const roleBadge = s.role === 'admin' ? '👑 Admin' : s.role === 'faculty' ? '👨‍🏫 Faculty' : '🎓 Student';
+                    const roleBadge = s.role === 'admin' ? '👑 Admin' : s.role === 'faculty' ? '👨‍🏫 Faculty' :
+                        '🎓 Student';
                     let attendanceDisplay = '-';
                     if (s.role === 'student' && summaryMap[s.rollNo]) {
                         const sm = summaryMap[s.rollNo];
@@ -2075,15 +3507,15 @@
                         attendanceDisplay = `${attended}/${conducted} (${pct}%)`;
                     }
                     return `<tr>
-                        <td><b>${s.rollNo || 'N/A'}</b></td>
-                        <td>${s.name || 'Unknown'}</td>
-                        <td><span class="badge badge-role">${roleBadge}</span></td>
-                        <td><span class="badge ${s.boundDeviceId ? 'badge-active' : 'badge-present'}">${deviceStatus}</span></td>
-                        <td><span class="badge badge-attendance">${attendanceDisplay}</span></td>
-                        <td>
-                            ${s.role === 'student' ? `<button class="action-btn btn-view btn-sm" onclick="viewStudentProfile('${s.rollNo}')" style="padding:2px 6px; font-size:8px;"><svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>` : ''}
-                        </td>
-                    </tr>`;
+                            <td><b>${s.rollNo || 'N/A'}</b></td>
+                            <td>${s.name || 'Unknown'}</td>
+                            <td><span class="badge badge-role">${roleBadge}</span></td>
+                            <td><span class="badge ${s.boundDeviceId ? 'badge-active' : 'badge-present'}">${deviceStatus}</span></td>
+                            <td><span class="badge badge-attendance">${attendanceDisplay}</span></td>
+                            <td>
+                                ${s.role === 'student' ? `<button class="action-btn btn-view btn-sm" onclick="viewStudentProfile('${s.rollNo}')" style="padding:2px 6px; font-size:8px;"><svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>` : ''}
+                            </td>
+                        </tr>`;
                 }).join('');
             } catch (e) { showMsg("Failed to connect to backend", true); }
         }
@@ -2107,45 +3539,45 @@
                 modal.className = 'modal-overlay';
                 modal.id = 'studentProfileModal';
                 let html = `
-                    <div class="modal-card profile-modal">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                            <h3 style="font-size:14px; font-weight:800;">Attendance – ${rollNo}</h3>
-                            <button class="btn btn-danger btn-sm" onclick="closeProfileModal()" style="padding:2px 8px;">✕</button>
-                        </div>
-                        <div style="max-height:300px; overflow-y:auto;">
-                `;
+                        <div class="modal-card profile-modal">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                <h3 style="font-size:14px; font-weight:800;">Attendance – ${rollNo}</h3>
+                                <button class="btn btn-danger btn-sm" onclick="closeProfileModal()" style="padding:2px 8px;">✕</button>
+                            </div>
+                            <div style="max-height:300px; overflow-y:auto;">
+                    `;
                 if (Object.keys(grouped).length === 0) {
                     html += `<p style="text-align:center; color:var(--text-muted);">No records found.</p>`;
                 } else {
-                    const sortedDates = Object.keys(grouped).sort((a,b) => b.localeCompare(a));
+                    const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
                     sortedDates.forEach(date => {
                         const records = grouped[date];
                         html += `
-                            <div style="border-bottom:1px solid #e2e8f0; margin-bottom:6px; padding-bottom:6px;">
-                                <div style="display:flex; justify-content:space-between; align-items:center;">
-                                    <span style="font-weight:700; font-size:11px;">📅 ${date}</span>
-                                    <button class="btn btn-danger btn-xs" onclick="deleteAllForDate('${rollNo}','${date}')" style="padding:2px 6px;">Delete All</button>
-                                </div>
-                        `;
+                                <div style="border-bottom:1px solid #e2e8f0; margin-bottom:6px; padding-bottom:6px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                                        <span style="font-weight:700; font-size:11px;">📅 ${date}</span>
+                                        <button class="btn btn-danger btn-xs" onclick="deleteAllForDate('${rollNo}','${date}')" style="padding:2px 6px;">Delete All</button>
+                                    </div>
+                            `;
                         records.forEach(r => {
                             html += `
-                                <div class="record-item">
-                                    <div>
-                                        <span style="font-weight:600;">${r.subject}</span>
-                                        <span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span>
+                                    <div class="record-item">
+                                        <div>
+                                            <span style="font-weight:600;">${r.subject}</span>
+                                            <span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span>
+                                        </div>
+                                        <button class="btn btn-del btn-xs" onclick="deleteRecord('${r._id}')">Delete</button>
                                     </div>
-                                    <button class="btn btn-del btn-xs" onclick="deleteRecord('${r._id}')">Delete</button>
-                                </div>
-                            `;
+                                `;
                         });
                         html += `</div>`;
                     });
                 }
                 html += `
+                            </div>
+                            <button class="btn btn-outline btn-sm" onclick="closeProfileModal()" style="margin-top:8px;">Close</button>
                         </div>
-                        <button class="btn btn-outline btn-sm" onclick="closeProfileModal()" style="margin-top:8px;">Close</button>
-                    </div>
-                `;
+                    `;
                 modal.innerHTML = html;
                 document.body.appendChild(modal);
             } catch (e) {
@@ -2166,13 +3598,13 @@
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
             const rollFilter = document.getElementById('filterAttendanceRoll').value.trim().toUpperCase();
             const dateFilter = document.getElementById('filterAttendanceDate').value;
-            
+
             try {
                 const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Failed to fetch');
                 globalAllRecords = data;
-                
+
                 let filtered = data;
                 if (rollFilter) {
                     filtered = filtered.filter(r => r.rollNo.toUpperCase().includes(rollFilter));
@@ -2180,28 +3612,29 @@
                 if (dateFilter) {
                     filtered = filtered.filter(r => r.date === dateFilter);
                 }
-                
+
                 const tbody = document.querySelector('#allAttendanceTable tbody');
                 if (filtered.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:12px;">No records found.</td></tr>';
                     return;
                 }
-                
+
                 tbody.innerHTML = filtered.map(r => {
-                    const statusClass = r.status === 'Present' ? 'badge-present' : r.status === 'Duty Leave' ? 'badge-dl' : 'badge-absent';
+                    const statusClass = r.status === 'Present' ? 'badge-present' : r.status === 'Duty Leave' ?
+                        'badge-dl' : 'badge-absent';
                     return `
-                        <tr>
-                            <td><b>${r.date}</b></td>
-                            <td>${r.rollNo}</td>
-                            <td>${r.studentName || r.name || 'Unknown'}</td>
-                            <td>${r.subject}</td>
-                            <td><span class="badge ${statusClass}">${r.status}</span></td>
-                            <td>
-                                <button class="btn-edit btn-xs" onclick="openEditModal('${r._id}','${r.rollNo}','${r.status}')" style="padding:2px 6px;">Edit</button>
-                                <button class="btn-del btn-xs" onclick="deleteRecord('${r._id}')" style="padding:2px 6px;">Delete</button>
-                            </td>
-                        </tr>
-                    `;
+                            <tr>
+                                <td><b>${r.date}</b></td>
+                                <td>${r.rollNo}</td>
+                                <td>${r.studentName || r.name || 'Unknown'}</td>
+                                <td>${r.subject}</td>
+                                <td><span class="badge ${statusClass}">${r.status}</span></td>
+                                <td>
+                                    <button class="btn-edit btn-xs" onclick="openEditModal('${r._id}','${r.rollNo}','${r.status}')" style="padding:2px 6px;">Edit</button>
+                                    <button class="btn-del btn-xs" onclick="deleteRecord('${r._id}')" style="padding:2px 6px;">Delete</button>
+                                </td>
+                            </tr>
+                        `;
                 }).join('');
             } catch (e) {
                 showMsg('Failed to load attendance', true);
@@ -2228,16 +3661,16 @@
             if (!editRecordId) return showMsg('No record selected!', true);
             const newStatus = document.getElementById('editStatusSelect').value;
             const user = JSON.parse(localStorage.getItem('user'));
-            
+
             try {
                 const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
                 const data = await res.json();
                 const record = data.find(r => r._id === editRecordId);
                 if (!record) return showMsg('Record not found!', true);
-                
+
                 const delRes = await fetch(`${API_BASE}/api/attendance/delete/${editRecordId}/${user.rollNo}`, { method: 'DELETE' });
                 if (!delRes.ok) throw new Error('Failed to delete old record');
-                
+
                 const createRes = await fetch(`${API_BASE}/api/admin/manual-attendance-bulk`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -2251,7 +3684,7 @@
                     })
                 });
                 if (!createRes.ok) throw new Error('Failed to create updated record');
-                
+
                 closeEditModal();
                 showMsg('✅ Attendance updated!');
                 loadAllAttendance();
@@ -2287,7 +3720,8 @@
                 const sub = r.subject || "";
                 return !sub.includes("LIB") && !sub.includes("Sports") && !sub.includes("Library");
             }).length;
-            if (totalConductedLectures === 0) return { pct: 100, totalWorkingDays, totalConductedLectures, totalAttendedLectures: academicAttendedLectures };
+            if (totalConductedLectures === 0) return { pct: 100, totalWorkingDays, totalConductedLectures,
+            totalAttendedLectures: academicAttendedLectures };
             const pct = Math.min(100, ((academicAttendedLectures / totalConductedLectures) * 100)).toFixed(1);
             return { pct, totalWorkingDays, totalConductedLectures, totalAttendedLectures: academicAttendedLectures };
         }
@@ -2300,17 +3734,18 @@
             let monthsToRender = [];
             const today = new Date();
             const currentMonthIdx = today.getMonth();
-            if (mode === 'FULL_SEMESTER') { monthsToRender = [6,7,8,9,10,11]; } else { monthsToRender = [currentMonthIdx]; }
+            if (mode === 'FULL_SEMESTER') { monthsToRender = [6, 7, 8, 9, 10, 11]; } else { monthsToRender = [currentMonthIdx]; }
             let wrapperHtml = "";
             monthsToRender.forEach(mIdx => {
                 const year = 2026;
                 const monthName = MONTH_NAMES[mIdx];
                 const daysInMonth = new Date(year, mIdx + 1, 0).getDate();
                 const firstDayOfWeek = new Date(year, mIdx, 1).getDay();
-                let gridHtml = `<div style="margin-bottom:8px; border-bottom:1px solid var(--card-border); padding-bottom:6px;">
-                    <div style="font-size:10px; font-weight:800; color:var(--primary); margin-bottom:4px;">${monthName} ${year}</div>
-                    <div class="calendar-grid"><div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div>
-                    <div class="cal-day-head">W</div><div class="cal-day-head">T</div><div class="cal-day-head">F</div><div class="cal-day-head">S</div>`;
+                let gridHtml =
+                    `<div style="margin-bottom:8px; border-bottom:1px solid var(--card-border); padding-bottom:6px;">
+                        <div style="font-size:10px; font-weight:800; color:var(--primary); margin-bottom:4px;">${monthName} ${year}</div>
+                        <div class="calendar-grid"><div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div>
+                        <div class="cal-day-head">W</div><div class="cal-day-head">T</div><div class="cal-day-head">F</div><div class="cal-day-head">S</div>`;
                 for (let i = 0; i < firstDayOfWeek; i++) { gridHtml += `<div class="cal-date cal-off"></div>`; }
                 for (let d = 1; d <= daysInMonth; d++) {
                     const dateStr = `2026-${String(mIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -2318,11 +3753,11 @@
                     const dayOfWeek = dtObj.getDay();
                     const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
                     const isHoliday = holidayDatesSet.has(dateStr);
-                    if (isWeekend) { gridHtml += `<div class="cal-date cal-off">${d}</div>`; }
-                    else if (isHoliday) { gridHtml += `<div class="cal-date cal-off" style="background:#fef3c7; color:#92400e; font-weight:800; border-color:#fde68a;" title="Holiday">${d}</div>`; }
-                    else if (attendedDates.has(dateStr)) { gridHtml += `<div class="cal-date cal-p">${d}</div>`; }
-                    else if (dtObj <= today) { gridHtml += `<div class="cal-date cal-a">${d}</div>`; }
-                    else { gridHtml += `<div class="cal-date cal-off">${d}</div>`; }
+                    if (isWeekend) { gridHtml += `<div class="cal-date cal-off">${d}</div>`; } else if (isHoliday) { gridHtml +=
+                            `<div class="cal-date cal-off" style="background:#fef3c7; color:#92400e; font-weight:800; border-color:#fde68a;" title="Holiday">${d}</div>`; } else if (
+                        attendedDates.has(dateStr)) { gridHtml += `<div class="cal-date cal-p">${d}</div>`; } else if (dtObj <=
+                        today) { gridHtml += `<div class="cal-date cal-a">${d}</div>`; } else { gridHtml +=
+                            `<div class="cal-date cal-off">${d}</div>`; }
                 }
                 gridHtml += `</div></div>`;
                 wrapperHtml += gridHtml;
@@ -2352,7 +3787,8 @@
                 if (!res.ok) {
                     globalMyRecords = [];
                     const tbody = document.querySelector('#myHistoryTable tbody');
-                    if (tbody) tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px;">⚠️ Could not load logs</td></tr>';
+                    if (tbody) tbody.innerHTML =
+                    '<tr><td colspan="3" style="text-align:center; padding:12px;">⚠️ Could not load logs</td></tr>';
                     return;
                 }
                 const data = await res.json();
@@ -2361,7 +3797,8 @@
                 const calc = calculateRealAttendancePercentage();
                 document.getElementById('totalDaysCount').innerText = calc.totalAttendedLectures;
                 const pctEl = document.getElementById('attendancePct');
-                if (pctEl) { pctEl.innerText = `${calc.pct}%`; pctEl.style.color = calc.pct >= 75 ? 'var(--success)' : 'var(--danger)'; }
+                if (pctEl) { pctEl.innerText = `${calc.pct}%`;
+                    pctEl.style.color = calc.pct >= 75 ? 'var(--success)' : 'var(--danger)'; }
                 const advisorBox = document.getElementById('advisorText');
                 if (advisorBox) {
                     if (calc.pct >= 75) {
@@ -2370,19 +3807,22 @@
                         advisorBox.innerHTML = `Safe Zone (<b>${calc.pct}%</b>). Skip approx <b>${Math.max(0, safeDays)}</b> days safely.`;
                     } else {
                         const neededLectures = Math.ceil(0.75 * calc.totalConductedLectures - calc.totalAttendedLectures);
-                        advisorBox.innerHTML = `Low Attendance (<b>${calc.pct}%</b>). Need <b>${Math.max(0, neededLectures)}</b> more lectures.`;
+                        advisorBox.innerHTML =
+                            `Low Attendance (<b>${calc.pct}%</b>). Need <b>${Math.max(0, neededLectures)}</b> more lectures.`;
                     }
                 }
                 renderAttendanceCalendar(globalMyRecords);
                 if (!tbody) return;
-                if (data.length === 0) return tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px;">No records</td></tr>';
-                tbody.innerHTML = data.slice(0,50).map(r => {
+                if (data.length === 0) return tbody.innerHTML =
+                    '<tr><td colspan="3" style="text-align:center; padding:12px;">No records</td></tr>';
+                tbody.innerHTML = data.slice(0, 50).map(r => {
                     return `<tr><td><b>${r.date}</b></td><td>${r.subject}</td><td><span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span></td></tr>`;
                 }).join('');
             } catch (e) {
                 globalMyRecords = [];
                 const tbody = document.querySelector('#myHistoryTable tbody');
-                if (tbody) tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px;">⚠️ Network error loading logs</td></tr>';
+                if (tbody) tbody.innerHTML =
+                '<tr><td colspan="3" style="text-align:center; padding:12px;">⚠️ Network error loading logs</td></tr>';
             }
         }
 
@@ -2405,7 +3845,7 @@
 
                     const presentList = document.getElementById('todayPresentList');
                     if (data.todayPresentStudents && data.todayPresentStudents.length > 0) {
-                        const sortedStudents = data.todayPresentStudents.sort((a, b) => 
+                        const sortedStudents = data.todayPresentStudents.sort((a, b) =>
                             a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true })
                         );
                         const cseStudents = sortedStudents.filter(s => s.rollNo && !s.rollNo.includes('AIDS'));
@@ -2414,23 +3854,27 @@
                         if (cseStudents.length > 0) {
                             html += `<div class="present-group"><span class="group-title">🟦 CSE (${cseStudents.length})</span>`;
                             cseStudents.forEach(s => {
-                                html += `<div class="present-item"><span class="roll">${s.rollNo}</span><span class="name">${s.name}</span></div>`;
+                                html +=
+                                    `<div class="present-item"><span class="roll">${s.rollNo}</span><span class="name">${s.name}</span></div>`;
                             });
                             html += `</div>`;
                         }
                         if (aidsStudents.length > 0) {
                             html += `<div class="present-group"><span class="group-title">🟪 AIDS (${aidsStudents.length})</span>`;
                             aidsStudents.forEach(s => {
-                                html += `<div class="present-item"><span class="roll">${s.rollNo}</span><span class="name">${s.name}</span></div>`;
+                                html +=
+                                    `<div class="present-item"><span class="roll">${s.rollNo}</span><span class="name">${s.name}</span></div>`;
                             });
                             html += `</div>`;
                         }
                         if (cseStudents.length === 0 && aidsStudents.length === 0) {
-                            html = '<div style="padding:8px; text-align:center; color:var(--text-muted);">No students present today.</div>';
+                            html =
+                            '<div style="padding:8px; text-align:center; color:var(--text-muted);">No students present today.</div>';
                         }
                         presentList.innerHTML = html;
                     } else {
-                        presentList.innerHTML = '<div style="padding:8px; text-align:center; color:var(--text-muted);">No students present yet today.</div>';
+                        presentList.innerHTML =
+                            '<div style="padding:8px; text-align:center; color:var(--text-muted);">No students present yet today.</div>';
                     }
                 }
             } catch (e) { console.error('Dashboard stats failed:', e); }
@@ -2511,7 +3955,8 @@
             const studentsMap = {};
             globalAllRecords.forEach(r => {
                 const cleanRoll = r.rollNo.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                if (!studentsMap[cleanRoll]) { studentsMap[cleanRoll] = { name: r.studentName || r.name || 'Unknown', roll: cleanRoll, dates: {} }; }
+                if (!studentsMap[cleanRoll]) { studentsMap[cleanRoll] = { name: r.studentName || r.name || 'Unknown',
+                        roll: cleanRoll, dates: {} }; }
                 if (!studentsMap[cleanRoll].dates[r.date]) { studentsMap[cleanRoll].dates[r.date] = []; }
                 studentsMap[cleanRoll].dates[r.date].push(r.status || 'Present');
             });
@@ -2547,7 +3992,8 @@
                 csv += `,${parts[2]}/${parts[1]} (${dayName})`;
             });
             csv += ",Total Present\n";
-            const sortedStudents = Object.values(studentsMap).sort((a, b) => a.roll.localeCompare(b.roll, undefined, { numeric: true }));
+            const sortedStudents = Object.values(studentsMap).sort((a, b) => a.roll.localeCompare(b.roll, undefined,
+            { numeric: true }));
             sortedStudents.forEach(s => {
                 csv += `"${s.roll}","${s.name}"`;
                 let presentCount = 0;
@@ -2557,18 +4003,20 @@
                     const dayOfWeek = dtObj.getDay();
                     const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
                     const isHoliday = holidayDatesList.includes(dt);
-                    if (isWeekend) { csv += `,OFF`; }
-                    else if (isHoliday) { csv += `,H`; }
-                    else {
+                    if (isWeekend) { csv += `,OFF`; } else if (isHoliday) { csv += `,H`; } else {
                         const statuses = s.dates[dt] || [];
                         const isPresent = statuses.some(s => s === 'Present' || s === 'Duty Leave');
-                        if (isPresent) { csv += `,P`; presentCount++; } else { csv += `,A`; }
+                        if (isPresent) { csv += `,P`;
+                            presentCount++; } else { csv += `,A`; }
                     }
                 });
                 csv += `,${presentCount}\n`;
             });
-            const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-            const fileName = selection === 'ALL_SEMESTER' ? 'Full_Semester_Attendance_Grid_2026.csv' : `Attendance_Grid_${monthNames[parseInt(selection)]}_2026.csv`;
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
+                "November", "December"
+            ];
+            const fileName = selection === 'ALL_SEMESTER' ? 'Full_Semester_Attendance_Grid_2026.csv' :
+                `Attendance_Grid_${monthNames[parseInt(selection)]}_2026.csv`;
             downloadFile(csv, fileName, 'text/csv');
         }
 
@@ -2577,9 +4025,11 @@
             if (!user || user.role !== 'admin') { return showMsg("Admin access required!", true); }
             showDownloadProgress('Preparing Google Sheets export…');
             let csv = "Date,Roll No,Name,Subject,Status,Timestamp\n";
-            const sortedRecords = [...globalAllRecords].sort((a, b) => { if (a.date !== b.date) return a.date.localeCompare(b.date); return a.rollNo.localeCompare(b.rollNo); });
+            const sortedRecords = [...globalAllRecords].sort((a, b) => { if (a.date !== b.date) return a.date.localeCompare(b
+                .date); return a.rollNo.localeCompare(b.rollNo); });
             sortedRecords.forEach(r => {
-                csv += `"${r.date}","${r.rollNo}","${r.studentName || r.name || 'Unknown'}","${r.subject || 'General'}","${r.status || 'Present'}","${r.timestamp || ''}"\n`;
+                csv +=
+                    `"${r.date}","${r.rollNo}","${r.studentName || r.name || 'Unknown'}","${r.subject || 'General'}","${r.status || 'Present'}","${r.timestamp || ''}"\n`;
             });
             const fileName = `Google_Sheets_Export_${new Date().toISOString().split('T')[0]}.csv`;
             downloadFile(csv, fileName, 'text/csv');
@@ -2600,7 +4050,8 @@
                 const selectedBranch = document.getElementById('manualBranch').value;
                 if (selectedBranch.toUpperCase() !== studentBranch.toUpperCase()) {
                     warningEl.style.display = 'block';
-                    warningEl.innerText = `⚠️ Student is in ${studentBranch}, but selected ${selectedBranch}. Please select correct branch.`;
+                    warningEl.innerText =
+                        `⚠️ Student is in ${studentBranch}, but selected ${selectedBranch}. Please select correct branch.`;
                 } else {
                     warningEl.style.display = 'none';
                 }
@@ -2613,13 +4064,15 @@
             if (!date) return;
             const parts = date.split('-');
             const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-            const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             const dayName = days[dateObj.getDay()];
             const timetable = getBranchTimetable(branch);
             const subjects = timetable[dayName] || ['General Class'];
             const container = document.getElementById('subjectCheckboxContainer');
-            container.innerHTML = `<label class="select-all"><input type="checkbox" id="selectAllSubjects" onchange="toggleAllSubjects()"> Select All (${subjects.length} subjects)</label>`;
-            subjects.forEach(sub => { container.innerHTML += `<label><input type="checkbox" class="subject-checkbox" value="${sub}"> ${sub}</label>`; });
+            container.innerHTML =
+                `<label class="select-all"><input type="checkbox" id="selectAllSubjects" onchange="toggleAllSubjects()"> Select All (${subjects.length} subjects)</label>`;
+            subjects.forEach(sub => { container.innerHTML +=
+                    `<label><input type="checkbox" class="subject-checkbox" value="${sub}"> ${sub}</label>`; });
             validateStudentBranchForManual();
         }
 
@@ -2652,10 +4105,13 @@
                 const res = await fetch(`${API_BASE}/api/admin/manual-attendance-bulk`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ requesterRollNo: user.rollNo, studentRollNo, date, subjects, status, branch })
+                    body: JSON.stringify({ requesterRollNo: user.rollNo, studentRollNo, date, subjects, status,
+                        branch })
                 });
                 const data = await res.json();
-                if (res.ok) { showMsg(`✅ ${data.message}`); selectAllSubjects(false); loadAllAttendance(); } else { showMsg(data.error || "Failed", true); }
+                if (res.ok) { showMsg(`✅ ${data.message}`);
+                    selectAllSubjects(false);
+                    loadAllAttendance(); } else { showMsg(data.error || "Failed", true); }
             } catch (e) { showMsg("Network Error!", true); }
         }
 
@@ -2687,7 +4143,9 @@
                     body: JSON.stringify({ requesterRollNo: user.rollNo, date, reason })
                 });
                 const data = await res.json();
-                if (res.ok) { showMsg(`✅ ${data.message}`); document.getElementById('holidayDate').value = ''; document.getElementById('holidayReason').value = ''; } else { showMsg(data.error || "Failed", true); }
+                if (res.ok) { showMsg(`✅ ${data.message}`);
+                    document.getElementById('holidayDate').value = '';
+                    document.getElementById('holidayReason').value = ''; } else { showMsg(data.error || "Failed", true); }
             } catch (e) { showMsg("Network Error!", true); }
         }
 
@@ -2769,14 +4227,15 @@
                 const data = await res.json();
                 const select = document.getElementById('facultySubjectSelect');
                 select.innerHTML = '<option value="">Select Subject…</option>';
-                const facultySubjects = ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 
+                const facultySubjects = ['BDA - Big Data Analytics', 'ECO - Economics for Engineers',
                     'DAA - Design & Analysis of Algorithm', 'FLA - Formal Language & Automata',
                     'HRM - Human Resource Mgmt', 'CN - Computer Network', 'WT - Web Technology',
-                    'Internet Lab (Ms. Geeta)', 'CN LAB - Computer Network Lab', 
+                    'Internet Lab (Ms. Geeta)', 'CN LAB - Computer Network Lab',
                     'DAA LAB - Algorithm Lab', 'WT LAB - Web Technology Lab',
                     'PA - Predictive Analysis', 'ML - Machine Learning',
                     'PA LAB - Predictive Analysis Lab', 'ML LAB - Machine Learning Lab',
-                    'BDA LAB - Big Data Analytics Lab'];
+                    'BDA LAB - Big Data Analytics Lab'
+                ];
                 data.forEach(sub => {
                     if (facultySubjects.includes(sub)) {
                         select.innerHTML += `<option value="${sub}">${sub}</option>`;
@@ -2842,11 +4301,11 @@
                 const res = await fetch(`${API_BASE}/api/auth/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        name, 
-                        rollNo: rawRoll, 
-                        password, 
-                        role, 
+                    body: JSON.stringify({
+                        name,
+                        rollNo: rawRoll,
+                        password,
+                        role,
                         subject: subject || undefined
                     })
                 });
@@ -2916,7 +4375,8 @@
                     body: JSON.stringify({ requesterRollNo: user.rollNo, targetRollNo: targetRoll })
                 });
                 const data = await res.json();
-                if (res.ok) { showMsg(data.message); document.getElementById('resetDeviceRoll').value = ''; } else { showMsg(data.error || "Failed", true); }
+                if (res.ok) { showMsg(data.message);
+                    document.getElementById('resetDeviceRoll').value = ''; } else { showMsg(data.error || "Failed", true); }
             } catch (e) { showMsg('Server error!', true); }
         }
 
@@ -2934,7 +4394,9 @@
                     body: JSON.stringify({ requesterRollNo: user.rollNo, oldRoll, newRoll: validation.cleanRoll })
                 });
                 const data = await res.json();
-                if (res.ok) { showMsg("ID updated!"); document.getElementById('oldRollFormat').value = ''; document.getElementById('newRollFormat').value = ''; } else { showMsg(data.error || "Failed", true); }
+                if (res.ok) { showMsg("ID updated!");
+                    document.getElementById('oldRollFormat').value = '';
+                    document.getElementById('newRollFormat').value = ''; } else { showMsg(data.error || "Failed", true); }
             } catch (e) { showMsg("Server error!", true); }
         }
 
@@ -2960,15 +4422,17 @@
         // BULK REGISTRATION & UPDATE – CSE
         // ============================================================
         async function triggerBulkUpdate() {
-            if (!confirm('⚠️ This will register/update all CSE students and set attendance for 15-30 July.\n\nThis may overwrite existing attendance records for that period.\n\nAre you sure you want to continue?')) return;
+            if (!confirm(
+                    '⚠️ This will register/update all CSE students and set attendance for 15-30 July.\n\nThis may overwrite existing attendance records for that period.\n\nAre you sure you want to continue?'
+                    )) return;
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
-            
+
             const btn = document.querySelector('[onclick="triggerBulkUpdate()"]');
             const originalText = btn.innerHTML;
             btn.innerHTML = '⏳ Processing...';
             btn.disabled = true;
-            
+
             showMsg('🔄 Starting CSE bulk update...');
             try {
                 const res = await fetch(`${API_BASE}/api/admin/bulk-register-and-update-attendance`, {
@@ -2978,8 +4442,11 @@
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    showMsg(`✅ Done! Registered ${data.totalRegistered} new CSE students, added ${data.totalAttendanceAdded} attendance records.`);
-                    document.getElementById('bulkStatus').innerHTML = `✅ Last run: ${new Date().toLocaleString()} – ${data.totalRegistered} registered, ${data.totalAttendanceAdded} records added.`;
+                    showMsg(
+                        `✅ Done! Registered ${data.totalRegistered} new CSE students, added ${data.totalAttendanceAdded} attendance records.`
+                        );
+                    document.getElementById('bulkStatus').innerHTML =
+                        `✅ Last run: ${new Date().toLocaleString()} – ${data.totalRegistered} registered, ${data.totalAttendanceAdded} records added.`;
                     fetchAllUsers();
                     loadAllAttendance();
                 } else {
@@ -2997,15 +4464,17 @@
         // BULK REGISTRATION & UPDATE – AIDS
         // ============================================================
         async function triggerAidsBulkUpdate() {
-            if (!confirm('⚠️ This will register/update all AIDS students and set attendance for 15-30 July.\n\nThis may overwrite existing attendance records for that period.\n\nAre you sure you want to continue?')) return;
+            if (!confirm(
+                    '⚠️ This will register/update all AIDS students and set attendance for 15-30 July.\n\nThis may overwrite existing attendance records for that period.\n\nAre you sure you want to continue?'
+                    )) return;
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
-            
+
             const btn = document.querySelector('[onclick="triggerAidsBulkUpdate()"]');
             const originalText = btn.innerHTML;
             btn.innerHTML = '⏳ Processing...';
             btn.disabled = true;
-            
+
             showMsg('🔄 Starting AIDS bulk update...');
             try {
                 const res = await fetch(`${API_BASE}/api/admin/bulk-register-and-update-attendance-aids`, {
@@ -3015,8 +4484,11 @@
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    showMsg(`✅ Done! Registered ${data.totalRegistered} new AIDS students, added ${data.totalAttendanceAdded} attendance records.`);
-                    document.getElementById('aidsBulkStatus').innerHTML = `✅ Last run: ${new Date().toLocaleString()} – ${data.totalRegistered} registered, ${data.totalAttendanceAdded} records added.`;
+                    showMsg(
+                        `✅ Done! Registered ${data.totalRegistered} new AIDS students, added ${data.totalAttendanceAdded} attendance records.`
+                        );
+                    document.getElementById('aidsBulkStatus').innerHTML =
+                        `✅ Last run: ${new Date().toLocaleString()} – ${data.totalRegistered} registered, ${data.totalAttendanceAdded} records added.`;
                     fetchAllUsers();
                     loadAllAttendance();
                 } else {
@@ -3038,7 +4510,9 @@
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
             const targetRoll = document.getElementById('deleteUserRoll').value.trim();
             if (!targetRoll) return showMsg('Enter ID to delete!', true);
-            if (!confirm(`⚠️ Are you sure you want to permanently delete account "${targetRoll}" and all associated records? This cannot be undone!`)) return;
+            if (!confirm(
+                    `⚠️ Are you sure you want to permanently delete account "${targetRoll}" and all associated records? This cannot be undone!`
+                    )) return;
             try {
                 const res = await fetch(`${API_BASE}/api/admin/delete-user`, {
                     method: 'DELETE',
@@ -3140,13 +4614,16 @@
             if (range === 'SELECTED_MONTH') month = document.getElementById('singleStudentMonth').value;
             showDownloadProgress('Generating student report…');
             try {
-                const url = `${API_BASE}/api/export/student-attendance/${user.rollNo}?studentRollNo=${studentRoll}&range=${range}&month=${month}`;
+                const url =
+                    `${API_BASE}/api/export/student-attendance/${user.rollNo}?studentRollNo=${studentRoll}&range=${range}&month=${month}`;
                 const res = await fetch(url);
                 if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed to fetch'); }
                 const csv = await res.text();
-                const fileName = `Attendance_${studentRoll}_${range}_${new Date().toISOString().split('T')[0]}.csv`;
+                const fileName =
+                `Attendance_${studentRoll}_${range}_${new Date().toISOString().split('T')[0]}.csv`;
                 downloadFile(csv, fileName, 'text/csv');
-            } catch (e) { hideDownloadProgress(); showMsg(e.message || 'Failed to download', true); }
+            } catch (e) { hideDownloadProgress();
+                showMsg(e.message || 'Failed to download', true); }
         }
 
         // ============================================================
@@ -3155,7 +4632,8 @@
         function openStudentExcelModal() {
             document.getElementById('studentExcelModal').style.display = 'flex';
             document.getElementById('studentExcelRange').onchange = function() {
-                document.getElementById('selectedMonthWrapper').style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none';
+                document.getElementById('selectedMonthWrapper').style.display = (this.value === 'SELECTED_MONTH') ?
+                    'block' : 'none';
             };
         }
 
@@ -3176,17 +4654,21 @@
             if (range === 'CURRENT_MONTH') {
                 const currentMonthIdx = today.getMonth();
                 const currentYear = today.getFullYear();
-                filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); return parseInt(parts[0]) === currentYear && (parseInt(parts[1]) - 1) === currentMonthIdx; });
+                filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); return parseInt(parts[0]) ===
+                        currentYear && (parseInt(parts[1]) - 1) === currentMonthIdx; });
             } else if (range === 'SELECTED_MONTH') {
                 const monthIdx = parseInt(selectedMonth);
-                filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); return parseInt(parts[0]) === 2026 && (parseInt(parts[1]) - 1) === monthIdx; });
+                filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); return parseInt(parts[0]) ===
+                        2026 && (parseInt(parts[1]) - 1) === monthIdx; });
             } else {
-                filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); const m = parseInt(parts[1]) - 1; return parseInt(parts[0]) === 2026 && m >= 6 && m <= 11; });
+                filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); const m = parseInt(parts[
+                    1]) - 1; return parseInt(parts[0]) === 2026 && m >= 6 && m <= 11; });
             }
-            if (filteredRecords.length === 0) { hideDownloadProgress(); return showMsg("No records for selected period!", true); }
+            if (filteredRecords.length === 0) { hideDownloadProgress(); return showMsg("No records for selected period!",
+                true); }
             const grouped = {};
             filteredRecords.forEach(r => { if (!grouped[r.date]) grouped[r.date] = []; grouped[r.date].push(r); });
-            const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+            const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
             let csv = "Date,Day,Subject,Status\n";
             const sortedDates = Object.keys(grouped).sort();
             sortedDates.forEach(date => {
@@ -3223,7 +4705,8 @@
                 link.style.display = 'none';
                 document.body.appendChild(link);
                 link.click();
-                setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(url); }, 2000);
+                setTimeout(() => { document.body.removeChild(link);
+                    URL.revokeObjectURL(url); }, 2000);
                 hideDownloadProgress();
                 showMsg("✅ Download started!");
                 return true;
@@ -3238,7 +4721,8 @@
         function showDownloadProgress(message) {
             const el = document.getElementById('downloadProgress');
             const status = document.getElementById('downloadStatus');
-            if (el && status) { status.textContent = message || 'Preparing file…'; el.classList.add('show'); }
+            if (el && status) { status.textContent = message || 'Preparing file…';
+                el.classList.add('show'); }
         }
 
         function hideDownloadProgress() {
@@ -3271,7 +4755,8 @@
                         body: JSON.stringify({ name, rollNo: validation.cleanRoll, password, deviceId, role })
                     });
                     const data = await res.json();
-                    if (res.ok) { showMsg('Registered! Login now.'); toggleMode(); } else { showMsg(data.error || 'Registration failed', true); }
+                    if (res.ok) { showMsg('Registered! Login now.');
+                        toggleMode(); } else { showMsg(data.error || 'Registration failed', true); }
                 } else {
                     const selectedRole = document.getElementById('loginRole').value;
                     const res = await fetch(`${API_BASE}/api/auth/login`, {
@@ -3282,7 +4767,8 @@
                     const data = await res.json();
                     if (res.ok) {
                         if (data.user.role !== selectedRole) {
-                            return showMsg(`You are registered as ${data.user.role}, not ${selectedRole}. Please select correct role.`, true);
+                            return showMsg(`You are registered as ${data.user.role}, not ${selectedRole}. Please select correct role.`,
+                                true);
                         }
                         localStorage.setItem('user', JSON.stringify(data.user));
                         localStorage.setItem('token', data.token);
@@ -3293,7 +4779,8 @@
         }
 
         async function logout() {
-            try { const token = localStorage.getItem('token'); if (token) { await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }); } } catch (e) {}
+            try { const token = localStorage.getItem('token'); if (token) { await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` } }); } } catch (e) {}
             localStorage.removeItem('user');
             localStorage.removeItem('token');
             impersonating = false;
@@ -3307,19 +4794,19 @@
         function loadDashboard() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user) return;
-            
+
             const now = new Date();
             const currentMonth = now.getMonth();
             const monthSelect = document.getElementById('monthSelector');
             if (monthSelect && currentMonth >= 6 && currentMonth <= 11) {
                 monthSelect.value = currentMonth.toString();
             }
-            
+
             document.getElementById('auth-box').style.display = 'none';
             document.getElementById('dash-box').style.display = 'block';
             document.getElementById('headerAvatarBox').style.display = 'flex';
             document.getElementById('welcomeMsg').innerText = `Hello, ${user.name}!`;
-            const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0,2) : 'ST';
+            const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 'ST';
             document.getElementById('userAvatarText').innerText = initials;
             const isAdmin = user.role === 'admin';
             const isFaculty = user.role === 'faculty';
@@ -3377,13 +4864,15 @@
             loadSubjectsForManual();
             updatePeriodTrackerWidget();
             setInterval(updatePeriodTrackerWidget, 30000);
-            
+
             if (!isAdmin && !isFaculty) {
                 fetchMonthlySummary();
             }
 
             // Show chat widget
             document.getElementById('chatWidget').style.display = 'block';
+            // Load chat history
+            loadChatHistory(user.rollNo);
         }
 
         // ============================================================
@@ -3410,7 +4899,9 @@
         }
 
         function switchAdminSubTab(subId) {
-            const subTabs = ['subDirectory', 'subAllAttendance', 'subReports', 'subAttendance', 'subHoliday', 'subPasscode', 'subTools'];
+            const subTabs = ['subDirectory', 'subAllAttendance', 'subReports', 'subAttendance', 'subHoliday', 'subPasscode',
+                'subTools'
+            ];
             subTabs.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
@@ -3421,7 +4912,8 @@
             });
             const navItems = document.querySelectorAll('.admin-nav-item');
             navItems.forEach((item, idx) => { item.classList.toggle('active', subTabs[idx] === subId); });
-            if (subId === 'subPasscode') { generatePasscode('full_day'); generatePasscode('single_lecture'); }
+            if (subId === 'subPasscode') { generatePasscode('full_day');
+                generatePasscode('single_lecture'); }
             if (subId === 'subDirectory') { fetchAllUsers(); }
             if (subId === 'subReports') { populateStudentSelect(); }
             if (subId === 'subTools') { populateTeacherSelect(); }
@@ -3429,22 +4921,23 @@
         }
 
         // ============================================================
-        // BULK MARK & DELETE – NEW with student checkboxes and date chips
+        // BULK MARK & DELETE
         // ============================================================
-        // Populate the student list with checkboxes
         async function populateBulkStudentSelect() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return;
             try {
                 const res = await fetch(`${API_BASE}/api/admin/all-users/${user.rollNo}`);
                 const data = await res.json();
-                const students = data.filter(u => u.role === 'student').sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }));
+                const students = data.filter(u => u.role === 'student').sort((a, b) => a.rollNo.localeCompare(b.rollNo,
+                undefined, { numeric: true }));
                 const container = document.getElementById('bulkStudentList');
-                // Clear previous content except the "Select All" label
-                container.innerHTML = `<label class="select-all-label"><input type="checkbox" id="bulkSelectAllStudents" onchange="toggleAllBulkStudents()" /> Select All</label>`;
+                container.innerHTML =
+                    `<label class="select-all-label"><input type="checkbox" id="bulkSelectAllStudents" onchange="toggleAllBulkStudents()" /> Select All</label>`;
                 students.forEach(s => {
                     const label = document.createElement('label');
-                    label.innerHTML = `<input type="checkbox" class="bulk-student-checkbox" value="${s.rollNo}" /> ${s.rollNo} - ${s.name}`;
+                    label.innerHTML =
+                        `<input type="checkbox" class="bulk-student-checkbox" value="${s.rollNo}" /> ${s.rollNo} - ${s.name}`;
                     container.appendChild(label);
                 });
             } catch (e) {}
@@ -3455,7 +4948,6 @@
             document.querySelectorAll('.bulk-student-checkbox').forEach(cb => cb.checked = checked);
         }
 
-        // Date selection
         function addBulkDate() {
             const picker = document.getElementById('bulkDatePicker');
             const date = picker.value;
@@ -3478,14 +4970,13 @@
                 return;
             }
             container.innerHTML = selectedDates.map(d => `
-                <span class="bulk-date-chip">
-                    ${d}
-                    <span class="remove-date" onclick="removeBulkDate('${d}')">×</span>
-                </span>
-            `).join('');
+                    <span class="bulk-date-chip">
+                        ${d}
+                        <span class="remove-date" onclick="removeBulkDate('${d}')">×</span>
+                    </span>
+                `).join('');
         }
 
-        // Bulk Mark
         async function bulkMarkAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
@@ -3493,12 +4984,13 @@
             if (selectedStudents.length === 0) return showMsg('Please select at least one student.', true);
             if (selectedDates.length === 0) return showMsg('Please add at least one date.', true);
 
-            // Get selected subjects from the main subject checkboxes
             const subjectCheckboxes = document.querySelectorAll('.subject-checkbox:checked');
             const subjects = Array.from(subjectCheckboxes).map(cb => cb.value);
             if (subjects.length === 0) return showMsg('Please select at least one subject to mark (above).', true);
 
-            if (!confirm(`Mark ${subjects.length} subjects for ${selectedStudents.length} students on ${selectedDates.length} dates?`)) return;
+            if (!confirm(
+                    `Mark ${subjects.length} subjects for ${selectedStudents.length} students on ${selectedDates.length} dates?`
+                    )) return;
 
             try {
                 const res = await fetch(`${API_BASE}/api/admin/bulk-mark-attendance`, {
@@ -3522,7 +5014,6 @@
             }
         }
 
-        // Bulk Delete
         async function bulkDeleteAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
@@ -3530,7 +5021,9 @@
             if (selectedStudents.length === 0) return showMsg('Please select at least one student.', true);
             if (selectedDates.length === 0) return showMsg('Please add at least one date.', true);
 
-            if (!confirm(`Delete ALL attendance records for ${selectedStudents.length} students on ${selectedDates.length} dates?`)) return;
+            if (!confirm(
+                    `Delete ALL attendance records for ${selectedStudents.length} students on ${selectedDates.length} dates?`
+                    )) return;
 
             try {
                 const res = await fetch(`${API_BASE}/api/admin/bulk-delete-attendance`, {
@@ -3553,59 +5046,254 @@
             }
         }
 
-        // ===== CHAT WIDGET (NEW) =====
-        let chatOpen = false;
-
+        // ============================================================
+        // ===== CHAT WIDGET – GEMINI PRO STYLE =====
+        // ============================================================
         function toggleChat() {
             chatOpen = !chatOpen;
-            document.getElementById('chatWindow').classList.toggle('open', chatOpen);
-            if (chatOpen) document.getElementById('chatInput').focus();
+            document.getElementById('chatPanel').classList.toggle('open', chatOpen);
+            if (chatOpen) {
+                document.getElementById('chatInput').focus();
+                // Load chat history
+                const user = JSON.parse(localStorage.getItem('user'));
+                if (user) loadChatHistory(user.rollNo);
+                // Show welcome greeting
+                updateWelcomeGreeting();
+            }
         }
 
-        document.getElementById('chatToggle').addEventListener('click', toggleChat);
-        document.getElementById('chatClose').addEventListener('click', toggleChat);
+        function toggleSidebar() {
+            sidebarOpen = !sidebarOpen;
+            document.getElementById('chatSidebar').classList.toggle('open', sidebarOpen);
+        }
 
-        document.getElementById('chatSend').addEventListener('click', sendChatMessage);
-        document.getElementById('chatInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') sendChatMessage();
-        });
+        function updateWelcomeGreeting() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            const greetingEl = document.getElementById('welcomeGreeting');
+            if (!greetingEl) return;
+            const now = new Date();
+            const hour = now.getHours();
+            let greeting = 'Hello';
+            let emoji = '👋';
+            if (hour < 12) { greeting = 'Good morning';
+                emoji = '🌞'; } else if (hour < 17) { greeting = 'Good afternoon';
+                emoji = '🌤️'; } else { greeting = 'Good evening';
+                emoji = '🌙'; }
+            const name = user?.name || 'Guest';
+            greetingEl.innerHTML = `
+                    <span class="greeting-emoji">${emoji}</span>
+                    <div><strong>${greeting}, ${name}!</strong> I'm <strong>BM Bot</strong>, your AI assistant.</div>
+                    <div style="font-size:12px; color:var(--text-muted);">Ask me about attendance, schedule, holidays, or anything!</div>
+                    <div style="font-size:10px; color:var(--text-muted); margin-top:4px;">💡 Try: "What is my attendance?" or "Today's timetable"</div>
+                `;
+        }
+
+        async function loadChatHistory(rollNo) {
+            try {
+                const res = await fetch(`${API_BASE}/api/chats/${rollNo}`);
+                if (!res.ok) throw new Error('Failed to load chats');
+                const data = await res.json();
+                chatHistory = data;
+                renderChatHistory();
+            } catch (e) {
+                console.error('Failed to load chat history:', e);
+            }
+        }
+
+        function renderChatHistory() {
+            const list = document.getElementById('chatHistoryList');
+            if (!list) return;
+            if (chatHistory.length === 0) {
+                list.innerHTML = '<div class="empty-chats">No chats yet. Start a new conversation!</div>';
+                return;
+            }
+            list.innerHTML = chatHistory.map(chat => `
+                    <div class="chat-item ${chat.threadId === currentThreadId ? 'active' : ''}" onclick="loadChatThread('${chat.threadId}')">
+                        ${chat.title || 'Untitled'}
+                        <span class="delete-chat" onclick="event.stopPropagation(); deleteChatThread('${chat.threadId}')">✕</span>
+                    </div>
+                `).join('');
+        }
+
+        function newChat() {
+            currentThreadId = null;
+            const messagesDiv = document.getElementById('chatMessages');
+            // Clear messages but keep welcome greeting
+            messagesDiv.innerHTML = `
+                    <div class="welcome-greeting" id="welcomeGreeting">
+                        <span class="greeting-emoji">👋</span>
+                        <div><strong>Hello!</strong> I'm <strong>BM Bot</strong>, your AI assistant.</div>
+                        <div style="font-size:12px; color:var(--text-muted);">Ask me about attendance, schedule, holidays, or anything!</div>
+                    </div>
+                    <div class="typing-indicator" id="typingIndicator"><span class="dots">...</span></div>
+                `;
+            updateWelcomeGreeting();
+            // Update sidebar
+            document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
+            // Close sidebar on mobile
+            if (window.innerWidth < 500) toggleSidebar();
+            // Focus input
+            document.getElementById('chatInput').focus();
+        }
+
+        async function loadChatThread(threadId) {
+            try {
+                const user = JSON.parse(localStorage.getItem('user'));
+                if (!user) return;
+                const res = await fetch(`${API_BASE}/api/chats/${user.rollNo}`);
+                if (!res.ok) throw new Error('Failed to load chat');
+                const data = await res.json();
+                const chat = data.find(c => c.threadId === threadId);
+                if (!chat) return showMsg('Chat not found!', true);
+
+                currentThreadId = threadId;
+                const messagesDiv = document.getElementById('chatMessages');
+                messagesDiv.innerHTML = '';
+                // Add welcome greeting
+                const greetingDiv = document.createElement('div');
+                greetingDiv.className = 'welcome-greeting';
+                greetingDiv.id = 'welcomeGreeting';
+                greetingDiv.innerHTML = `
+                        <span class="greeting-emoji">💬</span>
+                        <div><strong>Continuing conversation...</strong></div>
+                        <div style="font-size:11px; color:var(--text-muted);">${chat.title || 'Chat'}</div>
+                    `;
+                messagesDiv.appendChild(greetingDiv);
+
+                chat.messages.forEach(msg => {
+                    const div = document.createElement('div');
+                    div.className = `chat-msg ${msg.role === 'user' ? 'user' : 'bot'}`;
+                    const time = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit',
+                        minute: '2-digit' });
+                    div.innerHTML = `<div class="bubble">${escapeHtml(msg.content)}<span class="msg-time">${time}</span></div>`;
+                    messagesDiv.appendChild(div);
+                });
+
+                // Add typing indicator
+                const typing = document.createElement('div');
+                typing.className = 'typing-indicator';
+                typing.id = 'typingIndicator';
+                typing.innerHTML = '<span class="dots">...</span>';
+                messagesDiv.appendChild(typing);
+
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+                // Update sidebar
+                document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
+                const items = document.querySelectorAll('.chat-item');
+                items.forEach(el => {
+                    if (el.textContent.includes(chat.title || '')) el.classList.add('active');
+                });
+
+                document.getElementById('chatInput').focus();
+            } catch (e) {
+                showMsg('Failed to load chat thread', true);
+            }
+        }
+
+        async function deleteChatThread(threadId) {
+            if (!confirm('Delete this chat permanently?')) return;
+            try {
+                const user = JSON.parse(localStorage.getItem('user'));
+                if (!user) return;
+                const res = await fetch(`${API_BASE}/api/chats/${threadId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rollNo: user.rollNo })
+                });
+                if (!res.ok) throw new Error('Failed to delete');
+                if (currentThreadId === threadId) newChat();
+                chatHistory = chatHistory.filter(c => c.threadId !== threadId);
+                renderChatHistory();
+                showMsg('✅ Chat deleted');
+            } catch (e) {
+                showMsg('Failed to delete chat', true);
+            }
+        }
 
         async function sendChatMessage() {
             const input = document.getElementById('chatInput');
             const msg = input.value.trim();
             if (!msg) return;
+
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user) { showMsg('Please login to chat!', true); return; }
+
             const messagesDiv = document.getElementById('chatMessages');
-            // Show user message
-            messagesDiv.innerHTML += `<div class="chat-msg-user"><span>${escapeHtml(msg)}</span></div>`;
+            // Remove welcome greeting if present
+            const welcome = document.getElementById('welcomeGreeting');
+            if (welcome) welcome.remove();
+
+            // Add user message
+            const userDiv = document.createElement('div');
+            userDiv.className = 'chat-msg user';
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            userDiv.innerHTML = `<div class="bubble">${escapeHtml(msg)}<span class="msg-time">${time}</span></div>`;
+            messagesDiv.appendChild(userDiv);
             input.value = '';
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
-            // Get user info
-            const user = JSON.parse(localStorage.getItem('user') || 'null');
-            const token = localStorage.getItem('token');
+            // Show typing indicator
+            const typing = document.getElementById('typingIndicator');
+            if (typing) typing.style.display = 'block';
+
+            const sendBtn = document.getElementById('chatSendBtn');
+            sendBtn.disabled = true;
 
             try {
+                const payload = {
+                    message: msg,
+                    rollNo: user.rollNo,
+                    role: user.role || 'student',
+                    name: user.name || '',
+                    branch: user.branch || 'CSE',
+                    threadId: currentThreadId
+                };
+
                 const res = await fetch(`${API_BASE}/api/chat`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': token ? `Bearer ${token}` : ''
-                    },
-                    body: JSON.stringify({
-                        message: msg,
-                        rollNo: user?.rollNo || '',
-                        role: user?.role || 'student',
-                        name: user?.name || '',
-                        branch: user?.branch || 'CSE'
-                    })
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
+                    body: JSON.stringify(payload)
                 });
+
                 const data = await res.json();
-                const reply = data.reply || 'Sorry, I could not process that.';
-                messagesDiv.innerHTML += `<div class="chat-msg-bot"><span>${escapeHtml(reply)}</span></div>`;
+                if (!res.ok) throw new Error(data.error || 'Failed to get response');
+
+                // Update thread ID
+                if (data.threadId) {
+                    currentThreadId = data.threadId;
+                    // Reload chat history
+                    loadChatHistory(user.rollNo);
+                }
+
+                // Hide typing
+                if (typing) typing.style.display = 'none';
+
+                // Add bot response
+                const botDiv = document.createElement('div');
+                botDiv.className = 'chat-msg bot';
+                const botTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                botDiv.innerHTML = `<div class="bubble">${escapeHtml(data.reply || 'Sorry, I could not process that.')}<span class="msg-time">${botTime}</span></div>`;
+                messagesDiv.appendChild(botDiv);
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
             } catch (e) {
-                messagesDiv.innerHTML += `<div class="chat-msg-bot"><span style="color:#b91c1c;">⚠️ Network error. Please try again.</span></div>`;
+                if (typing) typing.style.display = 'none';
+                const errDiv = document.createElement('div');
+                errDiv.className = 'chat-msg bot';
+                errDiv.innerHTML =
+                    `<div class="bubble" style="color:#b91c1c;">⚠️ ${e.message || 'Network error. Please try again.'}</div>`;
+                messagesDiv.appendChild(errDiv);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            } finally {
+                sendBtn.disabled = false;
+                document.getElementById('chatInput').focus();
             }
+        }
+
+        function sendQuickQuestion(q) {
+            document.getElementById('chatInput').value = q;
+            sendChatMessage();
         }
 
         function escapeHtml(text) {
@@ -3626,56 +5314,41 @@
             }
         }
 
-        if (localStorage.getItem('user')) {
-            loadDashboard();
-            populateBulkStudentSelect();
-            // Set default date in picker
+        // Check for saved user session on load
+        (function() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (user && localStorage.getItem('token')) {
+                loadDashboard();
+                populateBulkStudentSelect();
+                // Also load chat history
+                loadChatHistory(user.rollNo);
+            }
             const picker = document.getElementById('bulkDatePicker');
             if (picker) {
                 const today = new Date().toISOString().split('T')[0];
                 picker.value = today;
             }
-        }
-        initMonthSelector();
+            initMonthSelector();
 
-        document.getElementById('studentExcelRange')?.addEventListener('change', function() {
-            const wrapper = document.getElementById('selectedMonthWrapper');
-            if (wrapper) wrapper.style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none';
-        });
-        document.getElementById('singleStudentRange')?.addEventListener('change', function() {
-            const wrapper = document.getElementById('singleStudentMonthWrapper');
-            if (wrapper) wrapper.style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none';
-        });
-        document.getElementById('teacherReportRange')?.addEventListener('change', toggleTeacherReportRange);
+            // Add event listeners for Excel modal
+            document.getElementById('studentExcelRange')?.addEventListener('change', function() {
+                const wrapper = document.getElementById('selectedMonthWrapper');
+                if (wrapper) wrapper.style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none';
+            });
+            document.getElementById('singleStudentRange')?.addEventListener('change', function() {
+                const wrapper = document.getElementById('singleStudentMonthWrapper');
+                if (wrapper) wrapper.style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none';
+            });
+            document.getElementById('teacherReportRange')?.addEventListener('change', toggleTeacherReportRange);
 
-        console.log('✅ BM Group ERP Portal loaded successfully!');
-        console.log('🔒 Full Day: 5-digit passcode required.');
-        console.log('🔒 Single Lecture: 4-digit passcode required (valid for current period).');
-        console.log('📊 Teacher reports: date range options available.');
-        console.log('🔒 Roll number validation: 24CSE00 / 24AIDS00 format enforced.');
-        console.log('🛡️ All endpoints aligned with backend.');
-        console.log('🔍 Debug logging enabled. Open browser console (F12) to see logs.');
+            console.log('✅ BM Group ERP Portal loaded successfully!');
+            console.log('🔒 Full Day: 5-digit passcode required.');
+            console.log('🔒 Single Lecture: 4-digit passcode required (valid for current period).');
+            console.log('📊 Teacher reports: date range options available.');
+            console.log('🔒 Roll number validation: 24CSE00 / 24AIDS00 format enforced.');
+            console.log('🛡️ All endpoints aligned with backend.');
+            console.log('🤖 Chat AI: Gemini Pro style with history, time-based greetings, and quick chips.');
+        })();
     </script>
-
-    <!-- ===== CHAT WIDGET HTML (at the bottom of body) ===== -->
-    <div id="chatWidget" style="position:fixed; bottom:20px; right:20px; z-index:99999; display:none;">
-        <button id="chatToggle" style="background:#2563eb; color:#fff; border:none; border-radius:50%; width:56px; height:56px; font-size:28px; box-shadow:0 4px 12px rgba(0,0,0,0.15); cursor:pointer; display:flex; align-items:center; justify-content:center; transition: transform 0.3s;">
-            💬
-        </button>
-        <div id="chatWindow" style="display:none; position:absolute; bottom:70px; right:0; width:350px; max-width:90vw; height:450px; background:#fff; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.2); border:1px solid #e2e8f0; flex-direction:column; overflow:hidden; animation:cardScaleUp 0.3s;">
-            <div style="background:#2563eb; color:#fff; padding:10px 14px; font-weight:700; font-size:14px; display:flex; justify-content:space-between; align-items:center;">
-                <span>🤖 BM Attendance Bot</span>
-                <button id="chatClose" style="background:transparent; border:none; color:#fff; font-size:18px; cursor:pointer;">✕</button>
-            </div>
-            <div id="chatMessages" style="flex:1; padding:10px; overflow-y:auto; background:#f8fafc; font-size:13px; line-height:1.5;">
-                <div style="color:#64748b; text-align:center; font-size:12px; padding:20px;">Ask me anything about attendance, schedule, holidays, etc.</div>
-            </div>
-            <div style="display:flex; border-top:1px solid #e2e8f0; background:#fff;">
-                <input type="text" id="chatInput" placeholder="Type your message..." style="flex:1; padding:10px; border:none; outline:none; font-size:13px; min-width:0;" />
-                <button id="chatSend" style="background:#2563eb; color:#fff; border:none; padding:10px 16px; cursor:pointer; font-weight:600;">Send</button>
-            </div>
-        </div>
-    </div>
-
 </body>
 </html>
