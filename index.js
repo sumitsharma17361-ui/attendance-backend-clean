@@ -16,7 +16,7 @@ app.use(cors());
 // ---------- Environment Variables ----------
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
-const GROK_API_KEY = process.env.GROK_API_KEY; // ✅ NEW: API key for Grok
+const GROK_API_KEY = process.env.GROK_API_KEY;
 const COLLEGE_LAT = 28.4509370;
 const COLLEGE_LNG = 76.7688120;
 const COLLEGE_RADIUS = 50;
@@ -475,7 +475,6 @@ const attendanceSchema = new mongoose.Schema({
   branch: { type: String, default: 'CSE' }
 }, { timestamps: true });
 
-// Unique index to prevent duplicates
 attendanceSchema.index({ rollNo: 1, subject: 1, date: 1 }, { unique: true });
 
 const holidaySchema = new mongoose.Schema({
@@ -503,14 +502,28 @@ const teacherSubjectSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 
+// ---------- NEW: Chat Schema for persistent conversations ----------
+const chatSchema = new mongoose.Schema({
+  rollNo: { type: String, required: true },
+  threadId: { type: String, required: true, unique: true },
+  title: { type: String, default: 'New Chat' },
+  messages: [{
+    role: { type: String, enum: ['user', 'assistant'], required: true },
+    content: { type: String, required: true },
+    timestamp: { type: Date, default: Date.now }
+  }],
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
 const User = mongoose.model('User', userSchema);
 const Attendance = mongoose.model('Attendance', attendanceSchema);
 const Holiday = mongoose.model('Holiday', holidaySchema);
 const Notice = mongoose.model('Notice', noticeSchema);
 const Passcode = mongoose.model('Passcode', passcodeSchema);
 const TeacherSubject = mongoose.model('TeacherSubject', teacherSubjectSchema);
+const Chat = mongoose.model('Chat', chatSchema);
 
-// Ensure index is created
 Attendance.createIndexes().catch(err => console.error('Index creation error:', err));
 
 // ---------- Routes ----------
@@ -609,7 +622,7 @@ app.post('/api/auth/logout', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== VERIFY PASSCODE (for quick validation) ==========
+// ========== VERIFY PASSCODE ==========
 app.post('/api/auth/verify-passcode', async (req, res) => {
   try {
     const { passcode, type } = req.body;
@@ -1011,7 +1024,6 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     const blockCheck = await checkStudentBlocked(cleanRoll);
     if (blockCheck.blocked) return res.status(403).json({ error: blockCheck.message });
     
-    // Verify passcode BEFORE location
     const passcodeDoc = await Passcode.findOne({
       passcode: passcode.trim(),
       type: 'full_day',
@@ -1034,7 +1046,6 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const dayName = days[today.getDay()];
     const allSubjects = timetable[dayName] || [];
-    // Filter out non-academic and remove duplicates
     const academicSubjectSet = new Set();
     allSubjects.forEach(entry => {
       const sub = entry.subject;
@@ -1044,7 +1055,6 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     });
     const academicSubjects = Array.from(academicSubjectSet);
     
-    // Fetch existing attendance for today for these subjects
     const existingRecords = await Attendance.find({
       rollNo: cleanRoll,
       date: todayDate,
@@ -1428,11 +1438,9 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
       const allSubjects = timetable[dayName] || [];
       subjectsToMark = allSubjects.filter(entry => !entry.subject.includes("LIB") && !entry.subject.includes("Library") && !entry.subject.includes("Sports")).map(entry => entry.subject);
     }
-    // Remove duplicates
     const uniqueSubjects = [...new Set(subjectsToMark)];
     for (let sub of uniqueSubjects) {
       const fullSub = getFullSubjectName(sub);
-      // Explicitly check existence
       const existing = await Attendance.findOne({ rollNo: targetRoll, subject: fullSub, date });
       if (existing) {
         alreadyMarked.push(fullSub);
@@ -2025,13 +2033,11 @@ app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
     if (!dates || !Array.isArray(dates) || dates.length === 0) {
       return res.status(400).json({ error: 'At least one date required.' });
     }
-    // Validate dates format
     for (const d of dates) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) {
         return res.status(400).json({ error: `Invalid date format: ${d}. Use YYYY-MM-DD.` });
       }
     }
-    // Get students
     const students = await User.find({ rollNo: { $in: studentRollNos }, role: 'student' });
     if (students.length === 0) return res.status(404).json({ error: 'No valid students found.' });
 
@@ -2042,13 +2048,11 @@ app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
       let markedCount = 0;
       let skippedCount = 0;
       for (const date of dates) {
-        // Check if date is a working day (not weekend/holiday)
         const dateStatus = await checkDateStatus(date);
-        if (dateStatus.isBlocked) continue; // skip weekends/holidays
+        if (dateStatus.isBlocked) continue;
         const dayName = dateStatus.dayName;
         let daySubjects = timetable[dayName] || [];
         let subjectsToMark = subjects && subjects.length > 0 ? subjects : daySubjects.map(s => s.subject);
-        // Remove duplicates and filter out non-academic
         const uniqueSubjects = [...new Set(subjectsToMark.filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports')))];
         for (const sub of uniqueSubjects) {
           const exists = await Attendance.findOne({ rollNo: student.rollNo, subject: sub, date });
@@ -2096,7 +2100,6 @@ app.delete('/api/admin/bulk-delete-attendance', async (req, res) => {
     if (!dates || !Array.isArray(dates) || dates.length === 0) {
       return res.status(400).json({ error: 'At least one date required.' });
     }
-    // Validate dates
     for (const d of dates) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) {
         return res.status(400).json({ error: `Invalid date format: ${d}. Use YYYY-MM-DD.` });
@@ -2114,13 +2117,76 @@ app.delete('/api/admin/bulk-delete-attendance', async (req, res) => {
   }
 });
 
-// ========== ✅ NEW: GROK AI CHATBOT ENDPOINT ==========
+// ==================== NEW: CHAT MANAGEMENT ENDPOINTS ====================
+
+// Get all chat threads for a user
+app.get('/api/chats/:rollNo', async (req, res) => {
+  try {
+    const { rollNo } = req.params;
+    const cleanRoll = rollNo.trim().toUpperCase();
+    const chats = await Chat.find({ rollNo: cleanRoll }).sort({ updatedAt: -1 });
+    res.json(chats);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Create a new chat thread (or update existing)
+app.post('/api/chats', async (req, res) => {
+  try {
+    const { rollNo, threadId, title, messages } = req.body;
+    const cleanRoll = rollNo.trim().toUpperCase();
+    if (!threadId) {
+      // New chat – generate a threadId
+      const newThreadId = `chat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+      const newChat = new Chat({
+        rollNo: cleanRoll,
+        threadId: newThreadId,
+        title: title || 'New Chat',
+        messages: messages || []
+      });
+      await newChat.save();
+      return res.status(201).json(newChat);
+    } else {
+      // Update existing chat
+      const chat = await Chat.findOne({ threadId, rollNo: cleanRoll });
+      if (!chat) {
+        return res.status(404).json({ error: 'Chat not found' });
+      }
+      if (title) chat.title = title;
+      if (messages) chat.messages = messages;
+      chat.updatedAt = new Date();
+      await chat.save();
+      return res.json(chat);
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a chat thread
+app.delete('/api/chats/:threadId', async (req, res) => {
+  try {
+    const { threadId } = req.params;
+    const { rollNo } = req.body; // Should pass rollNo to ensure ownership
+    if (!rollNo) return res.status(400).json({ error: 'rollNo required' });
+    const cleanRoll = rollNo.trim().toUpperCase();
+    const result = await Chat.findOneAndDelete({ threadId, rollNo: cleanRoll });
+    if (!result) return res.status(404).json({ error: 'Chat not found' });
+    res.json({ message: 'Chat deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==================== UPDATED: CHAT AI ENDPOINT ====================
 app.post('/api/chat', async (req, res) => {
   try {
-    const { message, rollNo, role, name, branch } = req.body;
+    const { message, rollNo, role, name, branch, threadId } = req.body;
     if (!message) return res.status(400).json({ error: 'Message is required.' });
+    const cleanRoll = rollNo?.trim().toUpperCase() || 'guest';
 
-    // Fetch user data if rollNo provided
+    // Fetch user data
     let userData = null;
     let attendanceSummary = null;
     let workingDays = 0;
@@ -2129,86 +2195,149 @@ app.post('/api/chat', async (req, res) => {
     let currentPeriod = null;
 
     if (rollNo) {
-      userData = await User.findOne({ rollNo: rollNo.trim().toUpperCase() });
+      userData = await User.findOne({ rollNo: cleanRoll });
       if (userData) {
-        // Get attendance summary
         const summaryRes = await fetch(`${req.protocol}://${req.get('host')}/api/student/summary/${userData.rollNo}`);
         if (summaryRes.ok) {
           attendanceSummary = await summaryRes.json();
         }
-        // Get working days
         const today = new Date();
         const startStr = SEMESTER_START.toISOString().split('T')[0];
         const todayStr = today.toISOString().split('T')[0];
         workingDays = await getWorkingDays(startStr, todayStr);
-        // Get holidays
         holidays = await Holiday.find({ date: { $gte: startStr, $lte: todayStr } });
-        // Get timetable for branch
         const branchName = userData.branch || 'CSE';
         timetable = getBranchTimetable(branchName);
-        // Get current period
         currentPeriod = getCurrentPeriod(branchName);
       }
     }
 
+    // Determine greeting based on time
+    const now = new Date();
+    const hour = now.getHours();
+    let greeting = '';
+    let emoji = '';
+    if (hour < 12) { greeting = 'Good morning'; emoji = '🌞'; }
+    else if (hour < 17) { greeting = 'Good afternoon'; emoji = '🌤️'; }
+    else { greeting = 'Good evening'; emoji = '🌙'; }
+
     // Build system prompt with all context
+    const userName = userData?.name || name || 'Guest';
+    const userRole = userData?.role || role || 'student';
     const systemPrompt = `You are an AI assistant for BM Group of Institutions attendance portal.
-You have access to the following data (if the user is logged in):
-- User: ${name || 'Guest'} (Roll: ${rollNo || 'N/A'}, Role: ${role || 'student'})
-- Attendance summary: ${attendanceSummary ? JSON.stringify(attendanceSummary, null, 2) : 'Not available'}
-- Working days so far (since 15 July 2026): ${workingDays}
-- Holidays: ${holidays.map(h => `${h.date} (${h.reason})`).join(', ') || 'None'}
-- Today's timetable (for ${branch || 'CSE'}): ${JSON.stringify(timetable, null, 2)}
-- Current lecture period: ${currentPeriod ? `${currentPeriod.subject} (${currentPeriod.start} - ${currentPeriod.end})` : 'No class now'}
+Your name is "BM Bot".
+Current date/time: ${now.toLocaleString()}
+User: ${userName} (Roll: ${cleanRoll}, Role: ${userRole})
+Branch: ${userData?.branch || branch || 'CSE'}
 
-You must answer questions about attendance, schedule, holidays, working days, and college information.
-If the user asks for action (like marking attendance, updating records, etc.) and the user is Admin or Faculty, you may suggest the appropriate action or provide the exact API call needed, but you CANNOT execute actions directly. However, you can guide them to use the UI.
-For students, only answer queries; do not suggest actions.
-Be concise, friendly, and use the provided data to give accurate responses.
-If data is missing, say so.
+Attendance summary: ${attendanceSummary ? JSON.stringify(attendanceSummary, null, 2) : 'Not available'}
+Working days so far (since 15 July 2026): ${workingDays}
+Holidays: ${holidays.map(h => `${h.date} (${h.reason})`).join(', ') || 'None'}
+Today's timetable: ${JSON.stringify(timetable, null, 2)}
+Current lecture period: ${currentPeriod ? `${currentPeriod.subject} (${currentPeriod.start} - ${currentPeriod.end})` : 'No class now'}
 
-Reply in a clear, conversational tone.`;
+You have full knowledge of the attendance system, college schedule, and can answer any related queries.
+Be friendly, concise, and use emojis where appropriate.
+If the user asks for notes, assignments, or study materials, provide a detailed and helpful response with bullet points or sections.
+If the user asks for a flowchart, describe it in text using ASCII art or step-by-step instructions.
+Always greet the user with ${greeting}, ${userName} ${emoji} at the start of the conversation (unless it's a follow-up within the same thread).
+If the user asks for help, provide a list of common commands or questions they can ask.
+Do not perform any actions (like marking attendance) – only provide guidance.
 
-    // Call Grok API
+Reply in a clear, conversational, and professional manner.`;
+
+    // Manage chat history (thread)
+    let chatThread = null;
+    let existingMessages = [];
+    if (threadId) {
+      chatThread = await Chat.findOne({ threadId, rollNo: cleanRoll });
+      if (chatThread) {
+        existingMessages = chatThread.messages.map(m => ({ role: m.role, content: m.content }));
+      }
+    }
+
+    // Build the messages array
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...existingMessages,
+      { role: 'user', content: message }
+    ];
+
+    // Call Grok API (or fallback)
+    let reply = '';
     if (!GROK_API_KEY) {
-      // Fallback: return a simple rule-based response if no API key
-      return res.json({ 
-        reply: `⚠️ Grok API key not configured. I'm a fallback bot. Here's what I know:\n\n- Working days: ${workingDays}\n- Holidays: ${holidays.map(h => `${h.date} (${h.reason})`).join(', ') || 'None'}\n- Your attendance: ${attendanceSummary ? `${attendanceSummary.attendancePercentage}% (${attendanceSummary.totalAcademicLectures} of ${attendanceSummary.totalConductedLectures} lectures)` : 'not available'}\n\nPlease set GROK_API_KEY for full AI capabilities.`
+      reply = `${greeting}, ${userName} ${emoji}! I'm your BM Bot. ` +
+        `I see you have ${attendanceSummary?.attendancePercentage || 0}% attendance. ` +
+        `Working days so far: ${workingDays}. ` +
+        `Holidays: ${holidays.map(h => `${h.date} (${h.reason})`).join(', ') || 'None'}. ` +
+        `How can I assist you today? (Note: Grok API key not set, so I'm using fallback mode.)`;
+    } else {
+      const grokPayload = {
+        model: 'grok-1',
+        messages: messages,
+        temperature: 0.7,
+        max_tokens: 1000
+      };
+      const response = await fetch('https://api.x.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GROK_API_KEY}`
+        },
+        body: JSON.stringify(grokPayload)
       });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Grok API error:', errorText);
+        reply = '⚠️ AI service temporarily unavailable. Please try again later.';
+      } else {
+        const data = await response.json();
+        reply = data.choices?.[0]?.message?.content || 'Sorry, I could not understand.';
+      }
     }
 
-    const grokPayload = {
-      model: 'grok-1', // or the correct model name from xAI
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: message }
-      ],
-      temperature: 0.7,
-      max_tokens: 800
-    };
+    // Save the conversation to the thread
+    const newMessages = [
+      ...(existingMessages || []),
+      { role: 'user', content: message },
+      { role: 'assistant', content: reply }
+    ];
+    let title = '';
+    if (chatThread) {
+      // Update existing
+      chatThread.messages = newMessages;
+      chatThread.updatedAt = new Date();
+      if (!chatThread.title || chatThread.title === 'New Chat') {
+        // Generate title from first user message
+        const firstUserMsg = newMessages.find(m => m.role === 'user');
+        if (firstUserMsg) {
+          chatThread.title = firstUserMsg.content.substring(0, 50);
+        }
+      }
+      await chatThread.save();
+      title = chatThread.title;
+    } else {
+      // Create new thread
+      const firstUserMsg = newMessages.find(m => m.role === 'user');
+      const autoTitle = firstUserMsg ? firstUserMsg.content.substring(0, 50) : 'New Chat';
+      const newThreadId = `chat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+      const newChat = new Chat({
+        rollNo: cleanRoll,
+        threadId: newThreadId,
+        title: autoTitle,
+        messages: newMessages
+      });
+      await newChat.save();
+      chatThread = newChat;
+      title = autoTitle;
+    }
 
-    const response = await fetch('https://api.x.ai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${GROK_API_KEY}`
-      },
-      body: JSON.stringify(grokPayload)
+    res.json({
+      reply,
+      threadId: chatThread.threadId,
+      title: chatThread.title,
+      messages: chatThread.messages
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Grok API error:', errorText);
-      return res.status(500).json({ error: 'AI service temporarily unavailable.' });
-    }
-
-    const data = await response.json();
-    const reply = data.choices?.[0]?.message?.content || 'Sorry, I could not understand.';
-
-    // Optional: Parse reply for actions (e.g., if Admin/Faculty and they ask to mark attendance)
-    // We can check for keywords and return a structured action object, but for now we just return text.
-
-    res.json({ reply });
 
   } catch (err) {
     console.error('Chat error:', err);
