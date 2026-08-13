@@ -1209,9 +1209,10 @@
         }
 
         // ============================================================
-        // VERIFY PASSCODE (new dedicated endpoint)
+        // VERIFY PASSCODE – with verbose logging
         // ============================================================
         async function verifyPasscode(passcode, type) {
+            console.log(`🔍 Verifying ${type} passcode: ${passcode}`);
             try {
                 const res = await fetch(`${API_BASE}/api/auth/verify-passcode`, {
                     method: 'POST',
@@ -1219,13 +1220,16 @@
                     body: JSON.stringify({ passcode: passcode.trim(), type })
                 });
                 const data = await res.json();
+                console.log('📦 Response:', data);
                 if (res.ok && data.valid) {
+                    showMsg('✅ Passcode verified!', false);
                     return true;
                 } else {
                     showMsg(data.error || 'Invalid passcode', true);
                     return false;
                 }
             } catch (e) {
+                console.error('❌ Verify error:', e);
                 showMsg('Server error verifying passcode', true);
                 return false;
             }
@@ -1568,95 +1572,140 @@
         }
 
         // ============================================================
-        // FIXED: MARK FULL DAY ATTENDANCE – verify passcode BEFORE GPS
+        // FIXED: MARK FULL DAY ATTENDANCE – with console logs
         // ============================================================
         async function markFullDayAttendance() {
+            console.log('🚀 markFullDayAttendance called');
             const enteredPasscode = prompt("Enter Full Day Passcode (5‑digit):");
-            if (!enteredPasscode) return;
-            if (enteredPasscode.length !== 5) {
-                return showMsg('Full Day passcode must be 5 digits!', true);
+            if (!enteredPasscode) {
+                console.log('❌ No passcode entered');
+                return;
             }
-            // Verify passcode first
+            if (enteredPasscode.length !== 5) {
+                showMsg('Full Day passcode must be 5 digits!', true);
+                return;
+            }
+            console.log('📝 Passcode entered:', enteredPasscode);
             const valid = await verifyPasscode(enteredPasscode, 'full_day');
-            if (!valid) return;
-
-            if (!navigator.geolocation) { return showMsg('Geolocation not supported!', true); }
-
-            navigator.geolocation.getCurrentPosition(async (pos) => {
-                const user = JSON.parse(localStorage.getItem('user'));
-                if (!user || user.role !== 'student') {
-                    return showMsg('Student access required!', true);
-                }
-                try {
-                    const res = await fetch(`${API_BASE}/api/attendance/mark-fullday`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
-                        body: JSON.stringify({
-                            rollNo: user.rollNo,
-                            name: user.name,
-                            latitude: pos.coords.latitude,
-                            longitude: pos.coords.longitude,
-                            passcode: enteredPasscode.trim()
-                        })
-                    });
-                    const data = await res.json();
-                    if (res.ok) {
-                        showMsg(data.message || '✅ Full Day marked!');
-                        fetchHistory(user.rollNo);
-                        fetchMonthlySummary();
-                    } else {
-                        showMsg(data.error || "Failed", true);
+            if (!valid) {
+                console.log('❌ Passcode invalid');
+                return;
+            }
+            console.log('✅ Passcode valid, requesting GPS...');
+            if (!navigator.geolocation) {
+                showMsg('Geolocation not supported!', true);
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                async (pos) => {
+                    console.log('📍 GPS position:', pos.coords.latitude, pos.coords.longitude);
+                    const user = JSON.parse(localStorage.getItem('user'));
+                    if (!user || user.role !== 'student') {
+                        showMsg('Student access required!', true);
+                        return;
                     }
-                } catch (e) {
-                    showMsg("Network Error!", true);
+                    try {
+                        const res = await fetch(`${API_BASE}/api/attendance/mark-fullday`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
+                            body: JSON.stringify({
+                                rollNo: user.rollNo,
+                                name: user.name,
+                                latitude: pos.coords.latitude,
+                                longitude: pos.coords.longitude,
+                                passcode: enteredPasscode.trim()
+                            })
+                        });
+                        const data = await res.json();
+                        console.log('📦 Full day response:', data);
+                        if (res.ok) {
+                            showMsg(data.message || '✅ Full Day marked!');
+                            fetchHistory(user.rollNo);
+                            fetchMonthlySummary();
+                        } else {
+                            showMsg(data.error || "Failed", true);
+                        }
+                    } catch (e) {
+                        console.error('❌ Full day fetch error:', e);
+                        showMsg("Network Error!", true);
+                    }
+                },
+                (err) => {
+                    console.error('❌ GPS error:', err);
+                    showMsg('GPS Access Denied! Please allow location.', true);
                 }
-            }, () => showMsg('GPS Access Denied!', true));
+            );
         }
 
         // ============================================================
-        // FIXED: MARK ACTIVE PERIOD ATTENDANCE – verify passcode BEFORE GPS
+        // FIXED: MARK ACTIVE PERIOD ATTENDANCE – with console logs
         // ============================================================
         async function markActivePeriodAttendance() {
+            console.log('🚀 markActivePeriodAttendance called');
             const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || user.role !== 'student') return showMsg('Student access required!', true);
-            if (!activeSubjectSubjectCode) return showMsg('No active period found!', true);
-
+            if (!user || user.role !== 'student') {
+                showMsg('Student access required!', true);
+                return;
+            }
+            if (!activeSubjectSubjectCode) {
+                showMsg('No active period found!', true);
+                return;
+            }
             const enteredPasscode = prompt(`Enter Single Lecture Passcode (4‑digit) for "${activeSubjectSubjectCode}":`);
-            if (!enteredPasscode) return;
-            if (enteredPasscode.length !== 4) return showMsg('Passcode must be 4 digits!', true);
-            
-            // Verify passcode first
+            if (!enteredPasscode) {
+                console.log('❌ No passcode entered');
+                return;
+            }
+            if (enteredPasscode.length !== 4) {
+                showMsg('Passcode must be 4 digits!', true);
+                return;
+            }
+            console.log('📝 Passcode entered:', enteredPasscode);
             const valid = await verifyPasscode(enteredPasscode, 'single_lecture');
-            if (!valid) return;
-
-            if (!navigator.geolocation) return showMsg('Geolocation not supported!', true);
-
-            navigator.geolocation.getCurrentPosition(async (pos) => {
-                try {
-                    const res = await fetch(`${API_BASE}/api/attendance/mark-lecture`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
-                        body: JSON.stringify({
-                            rollNo: user.rollNo,
-                            name: user.name,
-                            subject: activeSubjectSubjectCode,
-                            latitude: pos.coords.latitude,
-                            longitude: pos.coords.longitude,
-                            passcode: enteredPasscode.trim()
-                        })
-                    });
-                    const data = await res.json();
-                    if (res.ok) {
-                        showMsg(data.message || '✅ Attendance Marked!');
-                        fetchHistory(user.rollNo);
-                        fetchMonthlySummary();
-                    } else {
-                        showMsg(data.error || "Failed", true);
+            if (!valid) {
+                console.log('❌ Passcode invalid');
+                return;
+            }
+            console.log('✅ Passcode valid, requesting GPS...');
+            if (!navigator.geolocation) {
+                showMsg('Geolocation not supported!', true);
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                async (pos) => {
+                    console.log('📍 GPS position:', pos.coords.latitude, pos.coords.longitude);
+                    try {
+                        const res = await fetch(`${API_BASE}/api/attendance/mark-lecture`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
+                            body: JSON.stringify({
+                                rollNo: user.rollNo,
+                                name: user.name,
+                                subject: activeSubjectSubjectCode,
+                                latitude: pos.coords.latitude,
+                                longitude: pos.coords.longitude,
+                                passcode: enteredPasscode.trim()
+                            })
+                        });
+                        const data = await res.json();
+                        console.log('📦 Lecture response:', data);
+                        if (res.ok) {
+                            showMsg(data.message || '✅ Attendance Marked!');
+                            fetchHistory(user.rollNo);
+                            fetchMonthlySummary();
+                        } else {
+                            showMsg(data.error || "Failed", true);
+                        }
+                    } catch (e) {
+                        console.error('❌ Lecture fetch error:', e);
+                        showMsg("Network Error!", true);
                     }
-                } catch (e) {
-                    showMsg("Network Error!", true);
+                },
+                (err) => {
+                    console.error('❌ GPS error:', err);
+                    showMsg('GPS Access Denied! Please allow location.', true);
                 }
-            }, () => showMsg('GPS Access Denied!', true));
+            );
         }
 
         // ============================================================
@@ -3388,6 +3437,7 @@
         console.log('📊 Teacher reports: date range options available.');
         console.log('🔒 Roll number validation: 24CSE00 / 24AIDS00 format enforced.');
         console.log('🛡️ All endpoints aligned with backend.');
+        console.log('🔍 Debug logging enabled. Open browser console (F12) to see logs.');
     </script>
 </body>
 </html>
