@@ -16,7 +16,7 @@ app.use(cors());
 // ---------- Environment Variables ----------
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
-const GROK_API_KEY = process.env.GROK_API_KEY;
+const GROQ_API_KEY = process.env.GROQ_API_KEY;  // ✅ Now using Groq
 const COLLEGE_LAT = 28.4509370;
 const COLLEGE_LNG = 76.7688120;
 const COLLEGE_RADIUS = 50;
@@ -1159,7 +1159,6 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     
     if (newAttendances.length > 0) {
       await Attendance.insertMany(newAttendances, { ordered: false }).catch(err => {
-        // Ignore duplicate key errors
         if (err.code !== 11000) throw err;
       });
     }
@@ -1910,7 +1909,6 @@ app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
         totalRegistered++;
       }
 
-      // Delete existing records for this student in the range (to avoid duplicates)
       await Attendance.deleteMany({
         rollNo: roll,
         date: { $gte: startStr, $lte: endStr }
@@ -2149,7 +2147,6 @@ app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
               markedCount++;
             } catch (err) {
               if (err.code === 11000) {
-                // duplicate, skip
                 skippedCount++;
               } else {
                 throw err;
@@ -2263,14 +2260,14 @@ app.delete('/api/chats/:threadId', async (req, res) => {
   }
 });
 
-// ==================== CHAT AI ENDPOINT (FIXED with fallback) ====================
+// ==================== CHAT AI ENDPOINT – USING GROQ API ====================
 app.post('/api/chat', async (req, res) => {
   try {
     const { message, rollNo, role, name, branch, threadId } = req.body;
     if (!message) return res.status(400).json({ error: 'Message is required.' });
     const cleanRoll = rollNo?.trim().toUpperCase() || 'guest';
 
-    // Fetch user data and context directly (no internal HTTP)
+    // Fetch user data and context
     let userData = null;
     let attendanceSummary = null;
     let workingDays = 0;
@@ -2349,39 +2346,40 @@ Reply in a clear, conversational, and professional manner.`;
     let reply = '';
     let aiError = false;
 
-    // Attempt to call Grok API with timeout
-    if (GROK_API_KEY) {
+    // ===== Call Groq API =====
+    if (GROQ_API_KEY) {
       try {
-        const grokPayload = {
-          model: 'grok-1',
+        const groqPayload = {
+          model: 'llama-3.3-70b-versatile',  // You can also use 'mixtral-8x7b-32768'
           messages: messages,
           temperature: 0.7,
           max_tokens: 1000
         };
+
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
 
-        const response = await fetch('https://api.x.ai/v1/chat/completions', {
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${GROK_API_KEY}`
+            'Authorization': `Bearer ${GROQ_API_KEY}`
           },
-          body: JSON.stringify(grokPayload),
+          body: JSON.stringify(groqPayload),
           signal: controller.signal
         });
         clearTimeout(timeout);
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('Grok API error:', errorText);
+          console.error('Groq API error:', errorText);
           aiError = true;
         } else {
           const data = await response.json();
           reply = data.choices?.[0]?.message?.content || 'Sorry, I could not understand.';
         }
       } catch (err) {
-        console.error('Grok API exception:', err);
+        console.error('Groq API exception:', err);
         aiError = true;
       }
     } else {
