@@ -25,6 +25,9 @@
             --text-muted: #64748b;
             --radius: 12px;
             --radius-sm: 8px;
+            --chat-bg: #f8fafc;
+            --chat-user: #2563eb;
+            --chat-bot: #e2e8f0;
         }
         * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding: 0; }
         body { background: var(--bg-body); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 16px; }
@@ -216,59 +219,37 @@
         .bulk-date-input-row input[type="date"] { flex: 1; padding: 6px; font-size: 10px; margin: 0; }
         .bulk-date-input-row button { padding: 6px 12px; font-size: 10px; margin: 0; }
 
-        /* ===== CHAT WIDGET - FIXED MOBILE ===== */
+        /* ===== CHAT WIDGET - COMPACT, CENTERED (75% size) ===== */
         #chatWidget {
             position: fixed;
-            bottom: 20px;
-            right: 20px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             z-index: 99999;
             display: none;
+            width: 75vw;
+            max-width: 700px;
+            height: 75vh;
+            max-height: 700px;
+            background: transparent;
+            pointer-events: none;
         }
         #chatWidget .chat-toggle-btn {
-            background: var(--primary);
-            color: #fff;
-            border: none;
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            font-size: 28px;
-            box-shadow: 0 4px 16px rgba(37,99,235,0.35);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s;
-            position: relative;
-            touch-action: manipulation;
-        }
-        #chatWidget .chat-toggle-btn:hover { transform: scale(1.05); box-shadow: 0 6px 24px rgba(37,99,235,0.5); }
-        #chatWidget .chat-toggle-btn .badge-dot {
-            position: absolute;
-            top: 4px;
-            right: 4px;
-            width: 12px;
-            height: 12px;
-            background: #22c55e;
-            border-radius: 50%;
-            border: 2px solid #fff;
+            display: none; /* we use the avatar to toggle */
         }
 
         .chat-panel {
-            position: absolute;
-            bottom: 72px;
-            right: 0;
-            width: 420px;
-            max-width: 94vw;
-            height: 560px;
-            max-height: 80vh;
+            width: 100%;
+            height: 100%;
             background: #fff;
             border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             border: 1px solid var(--card-border);
             display: none;
             flex-direction: column;
             overflow: hidden;
             animation: cardScaleUp 0.35s cubic-bezier(0.16,1,0.3,1);
+            pointer-events: auto;
         }
         .chat-panel.open { display: flex !important; }
 
@@ -325,7 +306,7 @@
             display: flex;
             flex-direction: column;
         }
-        .chat-panel .chat-sidebar.open { width: 180px; }
+        .chat-panel .chat-sidebar.open { width: 160px; }
         .chat-panel .chat-sidebar .sidebar-header {
             padding: 8px 10px;
             font-size: 10px;
@@ -391,17 +372,17 @@
         .chat-panel .chat-main .chat-messages {
             flex: 1;
             overflow-y: auto;
-            padding: 12px 14px;
+            padding: 10px 12px;
             font-size: 13px;
             line-height: 1.6;
             background: var(--chat-bg, #f8fafc);
         }
-        .chat-panel .chat-main .chat-messages .chat-msg { margin-bottom: 10px; display: flex; flex-direction: column; }
+        .chat-panel .chat-main .chat-messages .chat-msg { margin-bottom: 8px; display: flex; flex-direction: column; }
         .chat-panel .chat-main .chat-messages .chat-msg.user { align-items: flex-end; }
         .chat-panel .chat-main .chat-messages .chat-msg.bot { align-items: flex-start; }
         .chat-panel .chat-main .chat-messages .chat-msg .bubble {
             max-width: 85%;
-            padding: 8px 14px;
+            padding: 6px 12px;
             border-radius: 14px;
             word-wrap: break-word;
             font-size: 12px;
@@ -428,7 +409,7 @@
         .chat-panel .chat-main .chat-messages .chat-msg.user .bubble .msg-time { color: rgba(255,255,255,0.7); }
         .chat-panel .chat-main .chat-messages .typing-indicator {
             display: none;
-            padding: 8px 14px;
+            padding: 6px 12px;
             background: var(--chat-bot, #e2e8f0);
             border-radius: 14px;
             border-bottom-left-radius: 4px;
@@ -447,21 +428,21 @@
         }
 
         .chat-panel .chat-main .quick-chips {
-            padding: 6px 10px 8px 10px;
+            padding: 4px 10px 6px 10px;
             display: flex;
             flex-wrap: wrap;
-            gap: 5px;
+            gap: 4px;
             border-top: 1px solid var(--card-border);
             background: #fff;
             flex-shrink: 0;
-            max-height: 120px;
+            max-height: 90px;
             overflow-y: auto;
         }
         .chat-panel .chat-main .quick-chips .chip {
             background: #f1f5f9;
             border: 1px solid var(--card-border);
             border-radius: 16px;
-            padding: 4px 12px;
+            padding: 3px 10px;
             font-size: 9px;
             font-weight: 600;
             color: var(--text-main);
@@ -481,7 +462,7 @@
         }
         .chat-panel .chat-main .chat-input-row input {
             flex: 1;
-            padding: 8px 12px;
+            padding: 6px 10px;
             border: 1px solid var(--card-border);
             border-radius: 20px;
             font-size: 12px;
@@ -489,7 +470,7 @@
             background: #f8fafc;
             margin: 0;
             transition: 0.2s;
-            min-height: 36px;
+            min-height: 32px;
         }
         .chat-panel .chat-main .chat-input-row input:focus {
             border-color: var(--primary);
@@ -501,13 +482,13 @@
             color: #fff;
             border: none;
             border-radius: 50%;
-            width: 36px;
-            height: 36px;
+            width: 32px;
+            height: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 14px;
             transition: 0.2s;
             flex-shrink: 0;
             touch-action: manipulation;
@@ -518,7 +499,7 @@
         .chat-panel .chat-main .sidebar-toggle {
             background: transparent;
             border: none;
-            font-size: 18px;
+            font-size: 16px;
             cursor: pointer;
             color: var(--text-muted);
             padding: 0 4px;
@@ -527,34 +508,62 @@
         }
         .chat-panel .chat-main .sidebar-toggle:hover { color: var(--primary); }
 
-        /* Welcome greeting */
         .chat-panel .chat-main .chat-messages .welcome-greeting {
             text-align: center;
-            padding: 20px 0;
+            padding: 16px 0;
             color: var(--text-muted);
             font-size: 13px;
             line-height: 1.8;
         }
-        .chat-panel .chat-main .chat-messages .welcome-greeting .greeting-emoji { font-size: 32px; display: block; margin-bottom: 8px; }
+        .chat-panel .chat-main .chat-messages .welcome-greeting .greeting-emoji { font-size: 28px; display: block; margin-bottom: 6px; }
         .chat-panel .chat-main .chat-messages .welcome-greeting .greeting-name { font-weight: 700; color: var(--text-main); }
 
-        @media (max-width: 500px) {
-            .chat-panel {
-                width: 100vw;
-                max-width: 100vw;
-                height: 100vh;
-                max-height: 100vh;
-                bottom: 0;
-                right: 0;
-                border-radius: 0;
-                border: none;
+        @media (max-width: 600px) {
+            #chatWidget {
+                width: 92vw;
+                height: 85vh;
+                max-height: 90vh;
             }
-            .chat-panel .chat-sidebar.open { width: 140px; }
-            #chatWidget .chat-toggle-btn { width: 52px; height: 52px; font-size: 22px; }
-            .chat-panel .chat-main .quick-chips .chip { font-size: 8px; padding: 3px 10px; }
-            .chat-panel .chat-main .chat-messages { padding: 10px 12px; font-size: 12px; }
-            .chat-panel .chat-main .chat-input-row input { font-size: 11px; padding: 6px 10px; }
+            .chat-panel .chat-sidebar.open { width: 120px; }
+            .chat-panel .chat-main .quick-chips .chip { font-size: 8px; padding: 2px 8px; }
+            .chat-panel .chat-main .chat-messages { padding: 8px 10px; font-size: 12px; }
+            .chat-panel .chat-main .chat-input-row input { font-size: 11px; padding: 5px 8px; }
+            .chat-panel .chat-main .chat-input-row .send-btn { width: 28px; height: 28px; font-size: 12px; }
         }
+
+        /* ===== Floating Avatar trigger (visible when logged in) ===== */
+        .chat-avatar-trigger {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 99998;
+            display: none;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 56px;
+            height: 56px;
+            font-size: 28px;
+            box-shadow: 0 4px 16px rgba(37,99,235,0.35);
+            cursor: pointer;
+            transition: all 0.3s;
+            touch-action: manipulation;
+            align-items: center;
+            justify-content: center;
+        }
+        .chat-avatar-trigger:hover { transform: scale(1.05); }
+        .chat-avatar-trigger .badge-dot {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 12px;
+            height: 12px;
+            background: #22c55e;
+            border-radius: 50%;
+            border: 2px solid #fff;
+        }
+        .chat-avatar-trigger { position: fixed; bottom: 20px; right: 20px; }
     </style>
 </head>
 <body>
@@ -630,7 +639,7 @@
                 <p>B.Tech CSE / AIDS – 5th Semester</p>
             </div>
             <div class="header-avatar-badge" id="headerAvatarBox" style="display:none;">
-                <div class="avatar-circle" id="userAvatarText" onclick="toggleChat()">SS</div>
+                <div class="avatar-circle" id="userAvatarText">SS</div>
             </div>
         </div>
 
@@ -1207,14 +1216,9 @@
     </div>
 
     <!-- ========================================================== -->
-    <!-- CHAT WIDGET – FIXED MOBILE                                -->
+    <!-- CHAT WIDGET – COMPACT, CENTERED                            -->
     <!-- ========================================================== -->
     <div id="chatWidget">
-        <button class="chat-toggle-btn" id="chatToggleBtn">
-            💬
-            <span class="badge-dot"></span>
-        </button>
-
         <div class="chat-panel" id="chatPanel">
             <!-- Header -->
             <div class="chat-header">
@@ -1279,6 +1283,12 @@
             </div>
         </div>
     </div>
+
+    <!-- Floating trigger (avatar) – shown when logged in -->
+    <button class="chat-avatar-trigger" id="chatAvatarTrigger" onclick="toggleChat()">
+        💬
+        <span class="badge-dot"></span>
+    </button>
 
     <!-- ========================================================== -->
     <!-- JAVASCRIPT – includes all existing logic + fixes          -->
@@ -3891,8 +3901,8 @@
                 fetchMonthlySummary();
             }
 
-            // Show chat widget
-            document.getElementById('chatWidget').style.display = 'block';
+            // Show chat trigger
+            document.getElementById('chatAvatarTrigger').style.display = 'flex';
             loadChatHistory(user.rollNo);
             updateWelcomeGreeting();
         }
@@ -4069,7 +4079,7 @@
         }
 
         // ============================================================
-        // ===== CHAT WIDGET – FIXED MOBILE =====
+        // ===== CHAT WIDGET – COMPACT & CENTERED =====
         // ============================================================
         function toggleChat() {
             chatOpen = !chatOpen;
@@ -4080,7 +4090,6 @@
                 if (user) loadChatHistory(user.rollNo);
                 updateWelcomeGreeting();
             } else {
-                // Dismiss keyboard on close
                 if (document.activeElement) document.activeElement.blur();
             }
         }
@@ -4329,7 +4338,7 @@
 
         // Attach chat toggle events with both click and touch
         document.addEventListener('DOMContentLoaded', function() {
-            const toggleBtn = document.getElementById('chatToggleBtn');
+            const toggleBtn = document.getElementById('chatAvatarTrigger');
             const closeBtn = document.getElementById('chatCloseBtn');
             if (toggleBtn) {
                 toggleBtn.addEventListener('click', toggleChat);
@@ -4379,6 +4388,7 @@
             console.log('🛡️ All endpoints aligned with backend.');
             console.log('🤖 Chat AI: Gemini Pro style with history, time-based greetings, and quick chips.');
             console.log('📱 Mobile keyboard closes automatically after sending message.');
+            console.log('📏 Chat panel is now centered and occupies ~75% of screen.');
         })();
     </script>
 </body>
