@@ -215,6 +215,14 @@
         .bulk-date-input-row { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
         .bulk-date-input-row input[type="date"] { flex: 1; padding: 6px; font-size: 10px; margin: 0; }
         .bulk-date-input-row button { padding: 6px 12px; font-size: 10px; margin: 0; }
+
+        /* ===== CHAT WIDGET ===== */
+        #chatWindow { display: none; flex-direction: column; }
+        #chatWindow.open { display: flex !important; }
+        .chat-msg-user { text-align: right; margin: 4px 0; }
+        .chat-msg-user span { background: #2563eb; color: #fff; padding: 6px 12px; border-radius: 12px 12px 0 12px; display: inline-block; max-width: 80%; word-wrap: break-word; }
+        .chat-msg-bot { text-align: left; margin: 4px 0; }
+        .chat-msg-bot span { background: #e2e8f0; color: #0f172a; padding: 6px 12px; border-radius: 12px 12px 12px 0; display: inline-block; max-width: 80%; word-wrap: break-word; }
     </style>
 </head>
 <body>
@@ -3373,6 +3381,9 @@
             if (!isAdmin && !isFaculty) {
                 fetchMonthlySummary();
             }
+
+            // Show chat widget
+            document.getElementById('chatWidget').style.display = 'block';
         }
 
         // ============================================================
@@ -3542,6 +3553,67 @@
             }
         }
 
+        // ===== CHAT WIDGET (NEW) =====
+        let chatOpen = false;
+
+        function toggleChat() {
+            chatOpen = !chatOpen;
+            document.getElementById('chatWindow').classList.toggle('open', chatOpen);
+            if (chatOpen) document.getElementById('chatInput').focus();
+        }
+
+        document.getElementById('chatToggle').addEventListener('click', toggleChat);
+        document.getElementById('chatClose').addEventListener('click', toggleChat);
+
+        document.getElementById('chatSend').addEventListener('click', sendChatMessage);
+        document.getElementById('chatInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendChatMessage();
+        });
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const msg = input.value.trim();
+            if (!msg) return;
+            const messagesDiv = document.getElementById('chatMessages');
+            // Show user message
+            messagesDiv.innerHTML += `<div class="chat-msg-user"><span>${escapeHtml(msg)}</span></div>`;
+            input.value = '';
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            // Get user info
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            const token = localStorage.getItem('token');
+
+            try {
+                const res = await fetch(`${API_BASE}/api/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': token ? `Bearer ${token}` : ''
+                    },
+                    body: JSON.stringify({
+                        message: msg,
+                        rollNo: user?.rollNo || '',
+                        role: user?.role || 'student',
+                        name: user?.name || '',
+                        branch: user?.branch || 'CSE'
+                    })
+                });
+                const data = await res.json();
+                const reply = data.reply || 'Sorry, I could not process that.';
+                messagesDiv.innerHTML += `<div class="chat-msg-bot"><span>${escapeHtml(reply)}</span></div>`;
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            } catch (e) {
+                messagesDiv.innerHTML += `<div class="chat-msg-bot"><span style="color:#b91c1c;">⚠️ Network error. Please try again.</span></div>`;
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         // ============================================================
         // INIT
         // ============================================================
@@ -3584,5 +3656,26 @@
         console.log('🛡️ All endpoints aligned with backend.');
         console.log('🔍 Debug logging enabled. Open browser console (F12) to see logs.');
     </script>
+
+    <!-- ===== CHAT WIDGET HTML (at the bottom of body) ===== -->
+    <div id="chatWidget" style="position:fixed; bottom:20px; right:20px; z-index:99999; display:none;">
+        <button id="chatToggle" style="background:#2563eb; color:#fff; border:none; border-radius:50%; width:56px; height:56px; font-size:28px; box-shadow:0 4px 12px rgba(0,0,0,0.15); cursor:pointer; display:flex; align-items:center; justify-content:center; transition: transform 0.3s;">
+            💬
+        </button>
+        <div id="chatWindow" style="display:none; position:absolute; bottom:70px; right:0; width:350px; max-width:90vw; height:450px; background:#fff; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.2); border:1px solid #e2e8f0; flex-direction:column; overflow:hidden; animation:cardScaleUp 0.3s;">
+            <div style="background:#2563eb; color:#fff; padding:10px 14px; font-weight:700; font-size:14px; display:flex; justify-content:space-between; align-items:center;">
+                <span>🤖 BM Attendance Bot</span>
+                <button id="chatClose" style="background:transparent; border:none; color:#fff; font-size:18px; cursor:pointer;">✕</button>
+            </div>
+            <div id="chatMessages" style="flex:1; padding:10px; overflow-y:auto; background:#f8fafc; font-size:13px; line-height:1.5;">
+                <div style="color:#64748b; text-align:center; font-size:12px; padding:20px;">Ask me anything about attendance, schedule, holidays, etc.</div>
+            </div>
+            <div style="display:flex; border-top:1px solid #e2e8f0; background:#fff;">
+                <input type="text" id="chatInput" placeholder="Type your message..." style="flex:1; padding:10px; border:none; outline:none; font-size:13px; min-width:0;" />
+                <button id="chatSend" style="background:#2563eb; color:#fff; border:none; padding:10px 16px; cursor:pointer; font-weight:600;">Send</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
