@@ -509,6 +509,9 @@ const Notice = mongoose.model('Notice', noticeSchema);
 const Passcode = mongoose.model('Passcode', passcodeSchema);
 const TeacherSubject = mongoose.model('TeacherSubject', teacherSubjectSchema);
 
+// Ensure unique index exists (especially important for existing databases)
+Attendance.createIndexes().catch(err => console.error('Index creation error:', err));
+
 // ---------- Routes ----------
 app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active!'));
 
@@ -1030,12 +1033,21 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const dayName = days[today.getDay()];
     const allSubjects = timetable[dayName] || [];
-    const academicSubjects = allSubjects.filter(entry => !entry.subject.includes("LIB") && !entry.subject.includes("Library") && !entry.subject.includes("Sports"));
+    // Filter out non-academic subjects and remove duplicates using a Set
+    const academicSubjectSet = new Set();
+    allSubjects.forEach(entry => {
+      const sub = entry.subject;
+      if (!sub.includes("LIB") && !sub.includes("Library") && !sub.includes("Sports")) {
+        academicSubjectSet.add(sub);
+      }
+    });
+    // Convert Set to array for iteration
+    const academicSubjects = Array.from(academicSubjectSet);
+    
     let markedCount = 0;
     let skippedCount = 0;
     
-    for (let entry of academicSubjects) {
-      const sub = entry.subject;
+    for (const sub of academicSubjects) {
       try {
         const attendance = new Attendance({
           rollNo: cleanRoll,
@@ -1407,7 +1419,9 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
       const allSubjects = timetable[dayName] || [];
       subjectsToMark = allSubjects.filter(entry => !entry.subject.includes("LIB") && !entry.subject.includes("Library") && !entry.subject.includes("Sports")).map(entry => entry.subject);
     }
-    for (let sub of subjectsToMark) {
+    // Remove duplicates from subjectsToMark
+    const uniqueSubjects = [...new Set(subjectsToMark)];
+    for (let sub of uniqueSubjects) {
       const fullSub = getFullSubjectName(sub);
       try {
         const attendance = new Attendance({
