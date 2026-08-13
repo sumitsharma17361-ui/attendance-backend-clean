@@ -16,10 +16,9 @@ app.use(cors());
 // ---------- Environment Variables ----------
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
-const ADMIN_ROLL_NUMBERS = ['24CSE48'];
 const COLLEGE_LAT = 28.4509370;
 const COLLEGE_LNG = 76.7688120;
-const COLLEGE_RADIUS = 100;
+const COLLEGE_RADIUS = 50;
 const SEMESTER_START = new Date(2026, 6, 15);
 const SEMESTER_END = new Date(2026, 11, 31);
 
@@ -475,6 +474,9 @@ const attendanceSchema = new mongoose.Schema({
   branch: { type: String, default: 'CSE' }
 }, { timestamps: true });
 
+// Prevent duplicate attendance per student per subject per day
+attendanceSchema.index({ rollNo: 1, subject: 1, date: 1 }, { unique: true });
+
 const holidaySchema = new mongoose.Schema({
   date: { type: String, required: true, unique: true },
   reason: { type: String, default: 'College Holiday' }
@@ -489,7 +491,7 @@ const noticeSchema = new mongoose.Schema({
 const passcodeSchema = new mongoose.Schema({
   passcode: { type: String, required: true },
   type: { type: String, enum: ['full_day', 'single_lecture'], required: true },
-  key: { type: String, unique: true, sparse: true }, // for single_lecture: date+period
+  key: { type: String, unique: true, sparse: true },
   expiresAt: { type: Date, required: true }
 }, { timestamps: true });
 
@@ -601,6 +603,28 @@ app.post('/api/auth/logout', async (req, res) => {
     }
     res.json({ message: 'Logged out successfully!' });
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ========== VERIFY PASSCODE (for quick validation) ==========
+app.post('/api/auth/verify-passcode', async (req, res) => {
+  try {
+    const { passcode, type } = req.body;
+    if (!passcode || !type) {
+      return res.status(400).json({ error: 'Passcode and type are required.' });
+    }
+    const doc = await Passcode.findOne({
+      passcode: passcode.trim(),
+      type: type,
+      expiresAt: { $gt: new Date() }
+    });
+    if (doc) {
+      res.json({ valid: true, message: 'Passcode is valid.' });
+    } else {
+      res.status(400).json({ error: 'Invalid or expired passcode.' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ========== PROFILE ==========
@@ -790,7 +814,6 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
     const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
     if (!requester) return res.status(403).json({ error: 'User not found!' });
     
-    // Authorization
     if (requester.role === 'admin') {
       // allowed both
     } else if (requester.role === 'faculty' && type === 'single_lecture') {
@@ -803,7 +826,6 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
       return res.status(400).json({ error: 'Invalid passcode type.' });
     }
 
-    // For single_lecture: deterministic / stored passcode per period
     if (type === 'single_lecture') {
       const branch = requester.branch || 'CSE';
       const period = getCurrentPeriod(branch);
@@ -840,7 +862,6 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
       return res.json({ message: 'Passcode generated for lecture', passcode, type, expiresAt: expiry });
     }
     
-    // For full_day: random 5-digit, 5-min expiry
     if (type === 'full_day') {
       await Passcode.deleteMany({ type: 'full_day' });
       const passcode = Math.floor(10000 + Math.random() * 90000).toString();
@@ -862,7 +883,7 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
   }
 });
 
-// ========== GET CURRENT PASSCODE (without generating) ==========
+// ========== GET CURRENT PASSCODE ==========
 app.get('/api/admin/current-passcode/:type/:requesterRollNo', async (req, res) => {
   try {
     const { type, requesterRollNo } = req.params;
@@ -911,25 +932,21 @@ app.post('/api/attendance/mark-lecture', async (req, res) => {
     if (blockCheck.blocked) {
       return res.status(403).json({ error: blockCheck.message });
     }
-    const locCheck = checkLocation(latitude, longitude);
-    if (!locCheck.isInside) {
-      await incrementFailedAttempts(cleanRoll);
-      return res.status(400).json({ error: `Outside College Boundary! (${locCheck.distance}m away)` });
-    }
+    
+    // Verify passcode BEFORE location
+    const period = getCurrentPeriod(cleanRoll.branch || 'CSE'); // branch from student
+    // Actually we need the student's branch
     const user = await User.findOne({ rollNo: cleanRoll });
-    if (!user) {
-      return res.status(404).json({ error: 'Student not found!' });
-    }
+    if (!user) return res.status(404).json({ error: 'Student not found!' });
     const branch = user.branch || 'CSE';
-    const period = getCurrentPeriod(branch);
-    if (!period) {
+    const currentPeriod = getCurrentPeriod(branch);
+    if (!currentPeriod) {
       return res.status(400).json({ error: 'No active lecture period right now.' });
     }
-    // Verify subject matches current period
-    if (period.subject !== subject) {
+    if (currentPeriod.subject !== subject) {
       return res.status(400).json({ error: 'Subject does not match the current lecture.' });
     }
-    const key = `single_lecture_${todayDate}_${period.start}`;
+    const key = `single_lecture_${todayDate}_${currentPeriod.start}`;
     const passcodeDoc = await Passcode.findOne({ 
       key, 
       type: 'single_lecture', 
@@ -939,22 +956,35 @@ app.post('/api/attendance/mark-lecture', async (req, res) => {
     if (!passcodeDoc) {
       return res.status(400).json({ error: 'Invalid or expired passcode.' });
     }
-    // Check if already marked for this subject today
-    const exists = await Attendance.findOne({ rollNo: cleanRoll, subject, date: todayDate });
-    if (exists) {
-      return res.status(400).json({ error: `Already marked for ${subject} today.` });
+    
+    // Now check location
+    const locCheck = checkLocation(latitude, longitude);
+    if (!locCheck.isInside) {
+      await incrementFailedAttempts(cleanRoll);
+      return res.status(400).json({ error: `Outside College Boundary! (${locCheck.distance}m away)` });
     }
-    await new Attendance({
-      rollNo: cleanRoll,
-      studentName: user.name,
-      subject,
-      date: todayDate,
-      status: 'Present',
-      location: { latitude, longitude },
-      ipAddress: req.ip,
-      isVerified: true,
-      branch: branch
-    }).save();
+    
+    // Check for existing attendance (unique index will prevent duplicates)
+    try {
+      const attendance = new Attendance({
+        rollNo: cleanRoll,
+        studentName: user.name,
+        subject,
+        date: todayDate,
+        status: 'Present',
+        location: { latitude, longitude },
+        ipAddress: req.ip,
+        isVerified: true,
+        branch: branch
+      });
+      await attendance.save();
+    } catch (err) {
+      if (err.code === 11000) {
+        return res.status(400).json({ error: `Already marked for ${subject} today.` });
+      }
+      throw err;
+    }
+    
     user.lastAttendanceTime = new Date();
     user.lastAttendanceLocation = { latitude, longitude };
     user.failedAttempts = 0;
@@ -1280,15 +1310,8 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     const cleanRoll = rollNo.trim().toUpperCase();
     const blockCheck = await checkStudentBlocked(cleanRoll);
     if (blockCheck.blocked) return res.status(403).json({ error: blockCheck.message });
-    const locCheck = checkLocation(latitude, longitude);
-    if (!locCheck.isInside) {
-      await incrementFailedAttempts(cleanRoll);
-      return res.status(400).json({ error: `Outside College Boundary! (${locCheck.distance}m away)` });
-    }
-    const user = await User.findOne({ rollNo: cleanRoll });
-    if (!user) return res.status(404).json({ error: 'Student not found!' });
     
-    // Verify full-day passcode
+    // Verify passcode BEFORE location
     const passcodeDoc = await Passcode.findOne({
       passcode: passcode.trim(),
       type: 'full_day',
@@ -1297,6 +1320,15 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     if (!passcodeDoc) {
       return res.status(400).json({ error: 'Invalid or expired Full Day passcode.' });
     }
+    
+    // Now location
+    const locCheck = checkLocation(latitude, longitude);
+    if (!locCheck.isInside) {
+      await incrementFailedAttempts(cleanRoll);
+      return res.status(400).json({ error: `Outside College Boundary! (${locCheck.distance}m away)` });
+    }
+    const user = await User.findOne({ rollNo: cleanRoll });
+    if (!user) return res.status(404).json({ error: 'Student not found!' });
 
     const branch = user.branch || 'CSE';
     const timetable = getTimetableForBranch(branch);
@@ -1307,9 +1339,9 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     let markedCount = 0;
     for (let entry of academicSubjects) {
       const sub = entry.subject;
-      const exists = await Attendance.findOne({ rollNo: cleanRoll, subject: sub, date: todayDate });
-      if (!exists) {
-        await new Attendance({
+      // Try to insert; if duplicate, skip
+      try {
+        const attendance = new Attendance({
           rollNo: cleanRoll,
           studentName: name,
           subject: sub,
@@ -1319,8 +1351,15 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
           ipAddress: req.ip,
           isVerified: true,
           branch: branch
-        }).save();
+        });
+        await attendance.save();
         markedCount++;
+      } catch (err) {
+        if (err.code === 11000) {
+          // Duplicate, skip
+          continue;
+        }
+        throw err;
       }
     }
     user.lastAttendanceTime = new Date();
@@ -1328,7 +1367,7 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     user.failedAttempts = 0;
     user.blockUntil = null;
     await user.save();
-    if (markedCount === 0) return res.status(400).json({ error: 'All academic subjects already marked!' });
+    if (markedCount === 0) return res.status(400).json({ error: 'All academic subjects already marked today!' });
     res.status(201).json({ message: `✅ Full Day Marked (${markedCount} academic Lectures)!` });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1369,9 +1408,8 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
     }
     for (let sub of subjectsToMark) {
       const fullSub = getFullSubjectName(sub);
-      const exists = await Attendance.findOne({ rollNo: targetRoll, subject: fullSub, date });
-      if (!exists) {
-        await new Attendance({
+      try {
+        const attendance = new Attendance({
           rollNo: targetRoll,
           studentName: user.name,
           subject: fullSub,
@@ -1381,11 +1419,16 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
           ipAddress: 'admin-manual',
           isVerified: true,
           branch: actualBranch
-        }).save();
+        });
+        await attendance.save();
         markedCount++;
         markedSubjects.push(fullSub);
-      } else {
-        alreadyMarked.push(fullSub);
+      } catch (err) {
+        if (err.code === 11000) {
+          alreadyMarked.push(fullSub);
+        } else {
+          throw err;
+        }
       }
     }
     let message = `✅ Marked ${markedCount} lectures for ${user.name} on ${date}`;
