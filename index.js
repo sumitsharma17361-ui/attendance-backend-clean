@@ -16,7 +16,7 @@ app.use(cors());
 // ---------- Environment Variables ----------
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
-const GROQ_API_KEY = process.env.GROQ_API_KEY;  // ✅ Now using Groq
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY; // ✅ Now using OpenRouter
 const COLLEGE_LAT = 28.4509370;
 const COLLEGE_LNG = 76.7688120;
 const COLLEGE_RADIUS = 50;
@@ -2260,7 +2260,7 @@ app.delete('/api/chats/:threadId', async (req, res) => {
   }
 });
 
-// ==================== CHAT AI ENDPOINT – USING GROQ API (FIXED) ====================
+// ==================== CHAT AI ENDPOINT – USING OPENROUTER API ====================
 app.post('/api/chat', async (req, res) => {
   try {
     const { message, rollNo, role, name, branch, threadId } = req.body;
@@ -2346,12 +2346,12 @@ Reply in a clear, conversational, and professional manner.`;
     let reply = '';
     let aiError = false;
 
-    // ===== Call Groq API =====
-    if (GROQ_API_KEY) {
+    // ===== Call OpenRouter API =====
+    if (OPENROUTER_API_KEY) {
       try {
-        // ✅ FIXED: Use a valid Groq model
-        const groqPayload = {
-          model: 'llama-3.1-70b-versatile',  // Changed from llama-3.3-70b-versatile
+        // Use a free model from OpenRouter (e.g., Mistral 7B)
+        const openRouterPayload = {
+          model: 'mistralai/mistral-7b-instruct', // Free tier model
           messages: messages,
           temperature: 0.7,
           max_tokens: 1000
@@ -2360,31 +2360,33 @@ Reply in a clear, conversational, and professional manner.`;
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 15000);
 
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${GROQ_API_KEY}`
+            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+            'HTTP-Referer': 'https://bm-group-erp.com', // Your app URL
+            'X-Title': 'BM Group ERP'
           },
-          body: JSON.stringify(groqPayload),
+          body: JSON.stringify(openRouterPayload),
           signal: controller.signal
         });
         clearTimeout(timeout);
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('❌ Groq API error:', response.status, errorText);
+          console.error('❌ OpenRouter API error:', response.status, errorText);
           aiError = true;
         } else {
           const data = await response.json();
           reply = data.choices?.[0]?.message?.content || 'Sorry, I could not understand.';
         }
       } catch (err) {
-        console.error('❌ Groq API exception:', err);
+        console.error('❌ OpenRouter API exception:', err);
         aiError = true;
       }
     } else {
-      console.warn('⚠️ GROQ_API_KEY not set');
+      console.warn('⚠️ OPENROUTER_API_KEY not set');
       aiError = true;
     }
 
