@@ -810,34 +810,24 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
       if (!period) {
         return res.status(400).json({ error: 'No active lecture period right now.' });
       }
-      // period.subject can be used, but we want same passcode for all subjects? Actually each period has a subject, but we want passcode per period slot, not per subject. However, if two different subjects in same period (like lab) might need separate? But typical college has one subject per period. We'll use period start time as key.
       const now = new Date();
       const dateStr = now.toISOString().split('T')[0];
-      const key = `single_lecture_${dateStr}_${period.start}`; // e.g., single_lecture_2026-08-13_09:20
+      const key = `single_lecture_${dateStr}_${period.start}`;
       
-      // Check existing passcode for this key
       let passcodeDoc = await Passcode.findOne({ key, type: 'single_lecture' });
       if (passcodeDoc && passcodeDoc.expiresAt > new Date()) {
-        // Return existing valid passcode
         return res.json({ message: 'Existing passcode retrieved', passcode: passcodeDoc.passcode, type, expiresAt: passcodeDoc.expiresAt });
       }
       
-      // Generate new passcode for this period
-      const passcode = Math.floor(1000 + Math.random() * 9000).toString(); // 4-digit
-      // Set expiry to end of period (parse period.end)
+      const passcode = Math.floor(1000 + Math.random() * 9000).toString();
       const endParts = period.end.split(':');
-      const endMins = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
-      // Add 1 minute grace
       const expiry = new Date(now);
-      expiry.setHours(parseInt(endParts[0]), parseInt(endParts[1]) + 1, 0, 0); // +1 minute grace
-      // If expiry is in the past, set to 5 minutes from now
+      expiry.setHours(parseInt(endParts[0]), parseInt(endParts[1]) + 1, 0, 0);
       if (expiry <= now) {
         expiry.setMinutes(now.getMinutes() + 5);
       }
       
-      // Delete old passcodes with same key (if expired)
       await Passcode.deleteMany({ key, type: 'single_lecture' });
-      // Create new
       const newPasscode = new Passcode({
         passcode,
         type,
@@ -845,8 +835,6 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
         expiresAt: expiry
       });
       await newPasscode.save();
-      
-      // Also delete any expired ones for this type
       await Passcode.deleteMany({ type, expiresAt: { $lt: new Date() } });
       
       return res.json({ message: 'Passcode generated for lecture', passcode, type, expiresAt: expiry });
@@ -854,9 +842,8 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
     
     // For full_day: random 5-digit, 5-min expiry
     if (type === 'full_day') {
-      // Delete old full_day passcodes
       await Passcode.deleteMany({ type: 'full_day' });
-      const passcode = Math.floor(10000 + Math.random() * 90000).toString(); // 5-digit
+      const passcode = Math.floor(10000 + Math.random() * 90000).toString();
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
       const newPasscode = new Passcode({
         passcode,
@@ -902,6 +889,80 @@ app.get('/api/admin/current-passcode/:type/:requesterRollNo', async (req, res) =
       return res.json({ passcode: null, message: 'No passcode generated for current period' });
     }
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ========== NEW: STUDENT MARKS ATTENDANCE WITH PASSCODE ==========
+app.post('/api/attendance/mark-lecture', async (req, res) => {
+  try {
+    const { rollNo, name, subject, latitude, longitude, passcode } = req.body;
+    if (!rollNo || !subject || !passcode) {
+      return res.status(400).json({ error: 'Missing required fields: rollNo, subject, passcode' });
+    }
+    const today = new Date();
+    const todayDate = today.toISOString().split('T')[0];
+    const dateStatus = await checkDateStatus(todayDate);
+    if (dateStatus.isBlocked) {
+      return res.status(400).json({ error: dateStatus.message });
+    }
+    const cleanRoll = rollNo.trim().toUpperCase();
+    const blockCheck = await checkStudentBlocked(cleanRoll);
+    if (blockCheck.blocked) {
+      return res.status(403).json({ error: blockCheck.message });
+    }
+    const locCheck = checkLocation(latitude, longitude);
+    if (!locCheck.isInside) {
+      await incrementFailedAttempts(cleanRoll);
+      return res.status(400).json({ error: `Outside College Boundary! (${locCheck.distance}m away)` });
+    }
+    const user = await User.findOne({ rollNo: cleanRoll });
+    if (!user) {
+      return res.status(404).json({ error: 'Student not found!' });
+    }
+    const branch = user.branch || 'CSE';
+    const period = getCurrentPeriod(branch);
+    if (!period) {
+      return res.status(400).json({ error: 'No active lecture period right now.' });
+    }
+    // Verify subject matches current period
+    if (period.subject !== subject) {
+      return res.status(400).json({ error: 'Subject does not match the current lecture.' });
+    }
+    const key = `single_lecture_${todayDate}_${period.start}`;
+    const passcodeDoc = await Passcode.findOne({ 
+      key, 
+      type: 'single_lecture', 
+      passcode: passcode, 
+      expiresAt: { $gt: new Date() } 
+    });
+    if (!passcodeDoc) {
+      return res.status(400).json({ error: 'Invalid or expired passcode.' });
+    }
+    // Check if already marked for this subject today
+    const exists = await Attendance.findOne({ rollNo: cleanRoll, subject, date: todayDate });
+    if (exists) {
+      return res.status(400).json({ error: `Already marked for ${subject} today.` });
+    }
+    await new Attendance({
+      rollNo: cleanRoll,
+      studentName: user.name,
+      subject,
+      date: todayDate,
+      status: 'Present',
+      location: { latitude, longitude },
+      ipAddress: req.ip,
+      isVerified: true,
+      branch: branch
+    }).save();
+    user.lastAttendanceTime = new Date();
+    user.lastAttendanceLocation = { latitude, longitude };
+    user.failedAttempts = 0;
+    user.blockUntil = null;
+    await user.save();
+    res.status(201).json({ message: `✅ Attendance Marked for ${subject}!` });
+  } catch (err) {
+    console.error('Mark lecture error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -1167,7 +1228,7 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
   }
 });
 
-// ========== STUDENT ATTENDANCE MARKING ==========
+// ========== STUDENT ATTENDANCE MARKING (without passcode) ==========
 app.post('/api/attendance/mark', async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude } = req.body;
@@ -1516,9 +1577,7 @@ app.get('/api/timetable/faculty', async (req, res) => {
   }
 });
 
-// ================================================================
 // ========== CLASS ATTENDANCE REPORT (Admin) – WITH BRANCH FILTER ==========
-// ================================================================
 app.get('/api/admin/class-attendance-report', async (req, res) => {
   try {
     const { requesterRollNo, startDate, endDate, branch } = req.query;
