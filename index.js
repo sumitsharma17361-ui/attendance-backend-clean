@@ -1,3 +1,6 @@
+// ============================================================
+// COMPLETE BACKEND - attendancenew.js (with chat fix)
+// ============================================================
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -502,7 +505,7 @@ const teacherSubjectSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 
-// ---------- NEW: Chat Schema for persistent conversations ----------
+// Chat schema
 const chatSchema = new mongoose.Schema({
   rollNo: { type: String, required: true },
   threadId: { type: String, required: true, unique: true },
@@ -525,6 +528,80 @@ const TeacherSubject = mongoose.model('TeacherSubject', teacherSubjectSchema);
 const Chat = mongoose.model('Chat', chatSchema);
 
 Attendance.createIndexes().catch(err => console.error('Index creation error:', err));
+
+// ---------- Helper function for student summary (used in chat) ----------
+async function getStudentSummary(rollNo) {
+  try {
+    const user = await User.findOne({ rollNo });
+    if (!user) return null;
+    const branch = user.branch || 'CSE';
+    const timetable = getTimetableForBranch(branch);
+    const allRecords = await Attendance.find({ rollNo }).lean();
+    const holidays = await Holiday.find({}).lean();
+    const holidaySet = new Set(holidays.map(h => h.date));
+    const today = new Date();
+    const semesterStart = new Date(2026, 6, 15);
+    let current = new Date(semesterStart);
+    let totalConductedAcademicSubjects = 0;
+    const subjectStats = {};
+    const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const dayAcademicSubjects = {};
+    for (let d = 0; d < 7; d++) {
+      const dayName = dayNameMap[d];
+      const subjects = timetable[dayName] || [];
+      const academic = subjects.filter(entry => !entry.subject.includes("LIB") && !entry.subject.includes("Library") && !entry.subject.includes("Sports"));
+      dayAcademicSubjects[dayName] = academic.map(entry => entry.subject);
+    }
+    while (current <= today) {
+      const dateStr = current.toISOString().split('T')[0];
+      const dayOfWeek = current.getDay();
+      const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+      const isHoliday = holidaySet.has(dateStr);
+      if (!isWeekend && !isHoliday) {
+        const dayName = dayNameMap[dayOfWeek];
+        const academicSubjects = dayAcademicSubjects[dayName] || [];
+        totalConductedAcademicSubjects += academicSubjects.length;
+        academicSubjects.forEach(sub => {
+          if (!subjectStats[sub]) subjectStats[sub] = { total: 0, present: 0 };
+          subjectStats[sub].total = (subjectStats[sub].total || 0) + 1;
+        });
+      }
+      current.setDate(current.getDate() + 1);
+    }
+    const subjectPresentCount = {};
+    allRecords.forEach(rec => {
+      const sub = getFullSubjectName(rec.subject);
+      if (sub.includes("LIB") || sub.includes("Library") || sub.includes("Sports")) return;
+      if (rec.status === 'Present' || rec.status === 'Duty Leave') {
+        if (!subjectPresentCount[sub]) subjectPresentCount[sub] = 0;
+        subjectPresentCount[sub] = (subjectPresentCount[sub] || 0) + 1;
+      }
+    });
+    Object.keys(subjectPresentCount).forEach(sub => {
+      if (subjectStats[sub]) subjectStats[sub].present = subjectPresentCount[sub];
+    });
+    let totalAcademicLecturesAttended = 0;
+    Object.values(subjectPresentCount).forEach(v => totalAcademicLecturesAttended += v);
+    const pct = totalConductedAcademicSubjects > 0 ? Math.round((totalAcademicLecturesAttended / totalConductedAcademicSubjects) * 100) : 0;
+    const subjectStatsFinal = {};
+    for (let [sub, stats] of Object.entries(subjectStats)) {
+      subjectStatsFinal[sub] = {
+        present: stats.present || 0,
+        total: stats.total || 0,
+        percentage: stats.total > 0 ? Math.round(((stats.present || 0) / stats.total) * 100) : 0
+      };
+    }
+    return {
+      totalAcademicLectures: totalAcademicLecturesAttended,
+      totalConductedLectures: totalConductedAcademicSubjects,
+      attendancePercentage: pct,
+      subjectStats: subjectStatsFinal
+    };
+  } catch (e) {
+    console.error('Error in getStudentSummary:', e);
+    return null;
+  }
+}
 
 // ---------- Routes ----------
 app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active!'));
@@ -2117,7 +2194,7 @@ app.delete('/api/admin/bulk-delete-attendance', async (req, res) => {
   }
 });
 
-// ==================== NEW: CHAT MANAGEMENT ENDPOINTS ====================
+// ==================== CHAT MANAGEMENT ENDPOINTS ====================
 
 // Get all chat threads for a user
 app.get('/api/chats/:rollNo', async (req, res) => {
@@ -2137,7 +2214,6 @@ app.post('/api/chats', async (req, res) => {
     const { rollNo, threadId, title, messages } = req.body;
     const cleanRoll = rollNo.trim().toUpperCase();
     if (!threadId) {
-      // New chat – generate a threadId
       const newThreadId = `chat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
       const newChat = new Chat({
         rollNo: cleanRoll,
@@ -2148,7 +2224,6 @@ app.post('/api/chats', async (req, res) => {
       await newChat.save();
       return res.status(201).json(newChat);
     } else {
-      // Update existing chat
       const chat = await Chat.findOne({ threadId, rollNo: cleanRoll });
       if (!chat) {
         return res.status(404).json({ error: 'Chat not found' });
@@ -2168,7 +2243,7 @@ app.post('/api/chats', async (req, res) => {
 app.delete('/api/chats/:threadId', async (req, res) => {
   try {
     const { threadId } = req.params;
-    const { rollNo } = req.body; // Should pass rollNo to ensure ownership
+    const { rollNo } = req.body;
     if (!rollNo) return res.status(400).json({ error: 'rollNo required' });
     const cleanRoll = rollNo.trim().toUpperCase();
     const result = await Chat.findOneAndDelete({ threadId, rollNo: cleanRoll });
@@ -2179,14 +2254,14 @@ app.delete('/api/chats/:threadId', async (req, res) => {
   }
 });
 
-// ==================== UPDATED: CHAT AI ENDPOINT ====================
+// ==================== CHAT AI ENDPOINT (FIXED) ====================
 app.post('/api/chat', async (req, res) => {
   try {
     const { message, rollNo, role, name, branch, threadId } = req.body;
     if (!message) return res.status(400).json({ error: 'Message is required.' });
     const cleanRoll = rollNo?.trim().toUpperCase() || 'guest';
 
-    // Fetch user data
+    // Fetch user data and context directly (no internal HTTP)
     let userData = null;
     let attendanceSummary = null;
     let workingDays = 0;
@@ -2194,21 +2269,24 @@ app.post('/api/chat', async (req, res) => {
     let timetable = {};
     let currentPeriod = null;
 
-    if (rollNo) {
-      userData = await User.findOne({ rollNo: cleanRoll });
-      if (userData) {
-        const summaryRes = await fetch(`${req.protocol}://${req.get('host')}/api/student/summary/${userData.rollNo}`);
-        if (summaryRes.ok) {
-          attendanceSummary = await summaryRes.json();
+    if (cleanRoll !== 'guest') {
+      try {
+        userData = await User.findOne({ rollNo: cleanRoll });
+        if (userData) {
+          // Get summary using helper
+          attendanceSummary = await getStudentSummary(userData.rollNo);
+          const today = new Date();
+          const startStr = SEMESTER_START.toISOString().split('T')[0];
+          const todayStr = today.toISOString().split('T')[0];
+          workingDays = await getWorkingDays(startStr, todayStr);
+          holidays = await Holiday.find({ date: { $gte: startStr, $lte: todayStr } });
+          const branchName = userData.branch || 'CSE';
+          timetable = getBranchTimetable(branchName);
+          currentPeriod = getCurrentPeriod(branchName);
         }
-        const today = new Date();
-        const startStr = SEMESTER_START.toISOString().split('T')[0];
-        const todayStr = today.toISOString().split('T')[0];
-        workingDays = await getWorkingDays(startStr, todayStr);
-        holidays = await Holiday.find({ date: { $gte: startStr, $lte: todayStr } });
-        const branchName = userData.branch || 'CSE';
-        timetable = getBranchTimetable(branchName);
-        currentPeriod = getCurrentPeriod(branchName);
+      } catch (err) {
+        console.error('Error fetching user data for chat:', err);
+        // Continue without data
       }
     }
 
@@ -2221,7 +2299,6 @@ app.post('/api/chat', async (req, res) => {
     else if (hour < 17) { greeting = 'Good afternoon'; emoji = '🌤️'; }
     else { greeting = 'Good evening'; emoji = '🌙'; }
 
-    // Build system prompt with all context
     const userName = userData?.name || name || 'Guest';
     const userRole = userData?.role || role || 'student';
     const systemPrompt = `You are an AI assistant for BM Group of Institutions attendance portal.
@@ -2246,24 +2323,22 @@ Do not perform any actions (like marking attendance) – only provide guidance.
 
 Reply in a clear, conversational, and professional manner.`;
 
-    // Manage chat history (thread)
+    // Manage chat history
     let chatThread = null;
     let existingMessages = [];
-    if (threadId) {
+    if (threadId && cleanRoll !== 'guest') {
       chatThread = await Chat.findOne({ threadId, rollNo: cleanRoll });
       if (chatThread) {
         existingMessages = chatThread.messages.map(m => ({ role: m.role, content: m.content }));
       }
     }
 
-    // Build the messages array
     const messages = [
       { role: 'system', content: systemPrompt },
       ...existingMessages,
       { role: 'user', content: message }
     ];
 
-    // Call Grok API (or fallback)
     let reply = '';
     if (!GROK_API_KEY) {
       reply = `${greeting}, ${userName} ${emoji}! I'm your BM Bot. ` +
@@ -2272,76 +2347,82 @@ Reply in a clear, conversational, and professional manner.`;
         `Holidays: ${holidays.map(h => `${h.date} (${h.reason})`).join(', ') || 'None'}. ` +
         `How can I assist you today? (Note: Grok API key not set, so I'm using fallback mode.)`;
     } else {
-      const grokPayload = {
-        model: 'grok-1',
-        messages: messages,
-        temperature: 0.7,
-        max_tokens: 1000
-      };
-      const response = await fetch('https://api.x.ai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${GROK_API_KEY}`
-        },
-        body: JSON.stringify(grokPayload)
-      });
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Grok API error:', errorText);
-        reply = '⚠️ AI service temporarily unavailable. Please try again later.';
-      } else {
-        const data = await response.json();
-        reply = data.choices?.[0]?.message?.content || 'Sorry, I could not understand.';
+      try {
+        const grokPayload = {
+          model: 'grok-1',
+          messages: messages,
+          temperature: 0.7,
+          max_tokens: 1000
+        };
+        const response = await fetch('https://api.x.ai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${GROK_API_KEY}`
+          },
+          body: JSON.stringify(grokPayload)
+        });
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Grok API error:', errorText);
+          reply = '⚠️ AI service temporarily unavailable. Please try again later.';
+        } else {
+          const data = await response.json();
+          reply = data.choices?.[0]?.message?.content || 'Sorry, I could not understand.';
+        }
+      } catch (grokErr) {
+        console.error('Grok API exception:', grokErr);
+        reply = '⚠️ AI service error. Please try again later.';
       }
     }
 
-    // Save the conversation to the thread
-    const newMessages = [
-      ...(existingMessages || []),
-      { role: 'user', content: message },
-      { role: 'assistant', content: reply }
-    ];
-    let title = '';
-    if (chatThread) {
-      // Update existing
-      chatThread.messages = newMessages;
-      chatThread.updatedAt = new Date();
-      if (!chatThread.title || chatThread.title === 'New Chat') {
-        // Generate title from first user message
-        const firstUserMsg = newMessages.find(m => m.role === 'user');
-        if (firstUserMsg) {
-          chatThread.title = firstUserMsg.content.substring(0, 50);
+    // Save conversation to thread (only if user is logged in)
+    let newThreadId = threadId;
+    if (cleanRoll !== 'guest') {
+      const newMessages = [
+        ...(existingMessages || []),
+        { role: 'user', content: message },
+        { role: 'assistant', content: reply }
+      ];
+      let title = '';
+      if (chatThread) {
+        chatThread.messages = newMessages;
+        chatThread.updatedAt = new Date();
+        if (!chatThread.title || chatThread.title === 'New Chat') {
+          const firstUserMsg = newMessages.find(m => m.role === 'user');
+          if (firstUserMsg) {
+            chatThread.title = firstUserMsg.content.substring(0, 50);
+          }
         }
+        await chatThread.save();
+        title = chatThread.title;
+        newThreadId = chatThread.threadId;
+      } else {
+        const firstUserMsg = newMessages.find(m => m.role === 'user');
+        const autoTitle = firstUserMsg ? firstUserMsg.content.substring(0, 50) : 'New Chat';
+        const newThread = new Chat({
+          rollNo: cleanRoll,
+          threadId: `chat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+          title: autoTitle,
+          messages: newMessages
+        });
+        await newThread.save();
+        newThreadId = newThread.threadId;
+        title = autoTitle;
+        chatThread = newThread;
       }
-      await chatThread.save();
-      title = chatThread.title;
-    } else {
-      // Create new thread
-      const firstUserMsg = newMessages.find(m => m.role === 'user');
-      const autoTitle = firstUserMsg ? firstUserMsg.content.substring(0, 50) : 'New Chat';
-      const newThreadId = `chat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-      const newChat = new Chat({
-        rollNo: cleanRoll,
-        threadId: newThreadId,
-        title: autoTitle,
-        messages: newMessages
-      });
-      await newChat.save();
-      chatThread = newChat;
-      title = autoTitle;
     }
 
     res.json({
       reply,
-      threadId: chatThread.threadId,
-      title: chatThread.title,
-      messages: chatThread.messages
+      threadId: newThreadId || null,
+      title: chatThread?.title || 'New Chat',
+      messages: chatThread?.messages || []
     });
 
   } catch (err) {
     console.error('Chat error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error: ' + err.message });
   }
 });
 
