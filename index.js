@@ -2010,10 +2010,10 @@ app.post('/api/admin/bulk-register-and-update-attendance-aids', async (req, res)
   }
 });
 
-// ========== NEW: BULK MARK ATTENDANCE (Admin) ==========
+// ========== UPDATED: BULK MARK ATTENDANCE (Admin) – supports specific dates ==========
 app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
   try {
-    const { requesterRollNo, studentRollNos, startDate, endDate, subjects } = req.body;
+    const { requesterRollNo, studentRollNos, dates, subjects } = req.body;
     const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
     if (!requester || requester.role !== 'admin') {
       return res.status(403).json({ error: 'Access Denied: Admin Only!' });
@@ -2021,44 +2021,30 @@ app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
     if (!studentRollNos || !Array.isArray(studentRollNos) || studentRollNos.length === 0) {
       return res.status(400).json({ error: 'At least one student roll number required.' });
     }
-    if (!startDate || !endDate) {
-      return res.status(400).json({ error: 'Start and end dates are required.' });
+    if (!dates || !Array.isArray(dates) || dates.length === 0) {
+      return res.status(400).json({ error: 'At least one date required.' });
     }
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    if (start > end) return res.status(400).json({ error: 'Start date cannot be after end date.' });
-    
-    // Get all students
-    const students = await User.find({ rollNo: { $in: studentRollNos } });
+    // Validate dates format
+    for (const d of dates) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+        return res.status(400).json({ error: `Invalid date format: ${d}. Use YYYY-MM-DD.` });
+      }
+    }
+    // Get students
+    const students = await User.find({ rollNo: { $in: studentRollNos }, role: 'student' });
     if (students.length === 0) return res.status(404).json({ error: 'No valid students found.' });
 
     const results = [];
     for (const student of students) {
       const branch = student.branch || 'CSE';
       const timetable = getTimetableForBranch(branch);
-      const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-      
-      // Get list of dates in range
-      let current = new Date(start);
-      const dates = [];
-      while (current <= end) {
-        const dateStr = current.toISOString().split('T')[0];
-        const dayOfWeek = current.getDay();
-        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-        if (!isWeekend) {
-          // Check if holiday
-          const holiday = await Holiday.findOne({ date: dateStr });
-          if (!holiday) {
-            dates.push(dateStr);
-          }
-        }
-        current.setDate(current.getDate() + 1);
-      }
-
       let markedCount = 0;
       let skippedCount = 0;
       for (const date of dates) {
-        const dayName = dayNameMap[new Date(date).getDay()];
+        // Check if date is a working day (not weekend/holiday)
+        const dateStatus = await checkDateStatus(date);
+        if (dateStatus.isBlocked) continue; // skip weekends/holidays
+        const dayName = dateStatus.dayName;
         let daySubjects = timetable[dayName] || [];
         let subjectsToMark = subjects && subjects.length > 0 ? subjects : daySubjects.map(s => s.subject);
         // Remove duplicates and filter out non-academic
@@ -2095,10 +2081,10 @@ app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
   }
 });
 
-// ========== NEW: BULK DELETE ATTENDANCE (Admin) ==========
+// ========== UPDATED: BULK DELETE ATTENDANCE (Admin) – supports specific dates ==========
 app.delete('/api/admin/bulk-delete-attendance', async (req, res) => {
   try {
-    const { requesterRollNo, studentRollNos, startDate, endDate } = req.body;
+    const { requesterRollNo, studentRollNos, dates } = req.body;
     const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
     if (!requester || requester.role !== 'admin') {
       return res.status(403).json({ error: 'Access Denied: Admin Only!' });
@@ -2106,16 +2092,19 @@ app.delete('/api/admin/bulk-delete-attendance', async (req, res) => {
     if (!studentRollNos || !Array.isArray(studentRollNos) || studentRollNos.length === 0) {
       return res.status(400).json({ error: 'At least one student roll number required.' });
     }
-    if (!startDate || !endDate) {
-      return res.status(400).json({ error: 'Start and end dates are required.' });
+    if (!dates || !Array.isArray(dates) || dates.length === 0) {
+      return res.status(400).json({ error: 'At least one date required.' });
     }
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    if (start > end) return res.status(400).json({ error: 'Start date cannot be after end date.' });
+    // Validate dates
+    for (const d of dates) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+        return res.status(400).json({ error: `Invalid date format: ${d}. Use YYYY-MM-DD.` });
+      }
+    }
 
     const result = await Attendance.deleteMany({
       rollNo: { $in: studentRollNos },
-      date: { $gte: startDate, $lte: endDate }
+      date: { $in: dates }
     });
     res.json({ message: `✅ Deleted ${result.deletedCount} attendance records.` });
   } catch (err) {
