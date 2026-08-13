@@ -28,9 +28,9 @@ if (!MONGO_URI) {
   process.exit(1);
 }
 
-// ---------- Rate Limiting – LESS RESTRICTIVE ----------
+// ---------- Rate Limiting ----------
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { error: 'Too many attempts, try again after 15 minutes.' } });
-const apiLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 200, message: { error: 'Too many requests, please slow down.' } }); // Increased to 200
+const apiLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 200, message: { error: 'Too many requests, please slow down.' } });
 
 app.use('/api/auth/', authLimiter);
 app.use('/api/', apiLimiter);
@@ -312,6 +312,129 @@ async function generateTeacherId(subject) {
   return `${code}${newNum}`;
 }
 
+// ---------- Schedule for period detection ----------
+const CSE_SCHEDULE = {
+  1: [
+    { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
+    { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
+    { start: "10:50", end: "11:35", subject: "DAA - Design & Analysis of Algorithm", period: "P3" },
+    { start: "11:35", end: "12:20", subject: "FLA - Formal Language & Automata", period: "P4" },
+    { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+    { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
+    { start: "13:50", end: "14:35", subject: "CN - Computer Network", period: "P7" },
+    { start: "14:35", end: "15:20", subject: "LIB - Library", period: "P8" }
+  ],
+  2: [
+    { start: "09:20", end: "10:05", subject: "WT - Web Technology", period: "P1" },
+    { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
+    { start: "10:50", end: "11:35", subject: "Internet Lab (Ms. Geeta)", period: "P3" },
+    { start: "11:35", end: "12:20", subject: "FLA - Formal Language & Automata", period: "P4" },
+    { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+    { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
+    { start: "13:50", end: "14:35", subject: "BDA - Big Data Analytics", period: "P7" },
+    { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
+  ],
+  3: [
+    { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
+    { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
+    { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
+    { start: "11:35", end: "12:20", subject: "Sports / Activity", period: "P4" },
+    { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+    { start: "13:05", end: "13:50", subject: "WT - Web Technology", period: "P6" },
+    { start: "13:50", end: "15:20", subject: "CN LAB - Computer Network Lab", period: "P7-P8" }
+  ],
+  4: [
+    { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
+    { start: "10:05", end: "10:50", subject: "WT - Web Technology", period: "P2" },
+    { start: "10:50", end: "11:35", subject: "CN - Computer Network", period: "P3" },
+    { start: "11:35", end: "12:20", subject: "DAA - Design & Analysis of Algorithm", period: "P4" },
+    { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+    { start: "13:05", end: "14:35", subject: "DAA LAB - Algorithm Lab", period: "P6-P7" },
+    { start: "14:35", end: "15:20", subject: "HRM - Human Resource Mgmt", period: "P8" }
+  ],
+  5: [
+    { start: "09:20", end: "10:05", subject: "DAA - Design & Analysis of Algorithm", period: "P1" },
+    { start: "10:05", end: "10:50", subject: "CN - Computer Network", period: "P2" },
+    { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
+    { start: "11:35", end: "12:20", subject: "BDA - Big Data Analytics", period: "P4" },
+    { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+    { start: "13:05", end: "14:35", subject: "WT LAB - Web Technology Lab", period: "P6-P7" },
+    { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
+  ]
+};
+
+const AIDS_SCHEDULE = {
+  1: [
+    { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
+    { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
+    { start: "10:50", end: "11:35", subject: "LIB - Library", period: "P3" },
+    { start: "11:35", end: "12:20", subject: "FLA - Formal Language & Automata", period: "P4" },
+    { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+    { start: "13:05", end: "13:50", subject: "PA - Predictive Analysis", period: "P6" },
+    { start: "13:50", end: "14:35", subject: "PA - Predictive Analysis", period: "P7" },
+    { start: "14:35", end: "15:20", subject: "Sports", period: "P8" }
+  ],
+  2: [
+    { start: "09:20", end: "10:05", subject: "WT - Web Technology", period: "P1" },
+    { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
+    { start: "10:50", end: "11:35", subject: "PA - Predictive Analysis", period: "P3" },
+    { start: "11:35", end: "12:20", subject: "FLA - Formal Language & Automata", period: "P4" },
+    { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+    { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
+    { start: "13:50", end: "14:35", subject: "BDA - Big Data Analytics", period: "P7" },
+    { start: "14:35", end: "15:20", subject: "ML - Machine Learning", period: "P8" }
+  ],
+  3: [
+    { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
+    { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
+    { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
+    { start: "11:35", end: "12:20", subject: "Sports / Project", period: "P4" },
+    { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+    { start: "13:05", end: "13:50", subject: "WT - Web Technology", period: "P6" },
+    { start: "13:50", end: "15:20", subject: "PA LAB - Predictive Analysis Lab", period: "P7-P8" }
+  ],
+  4: [
+    { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
+    { start: "10:05", end: "10:50", subject: "WT - Web Technology", period: "P2" },
+    { start: "10:50", end: "11:35", subject: "ML - Machine Learning", period: "P3" },
+    { start: "11:35", end: "12:20", subject: "PA - Predictive Analysis", period: "P4" },
+    { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+    { start: "13:05", end: "14:35", subject: "ML LAB - Machine Learning Lab", period: "P6-P7" },
+    { start: "14:35", end: "15:20", subject: "HRM - Human Resource Mgmt", period: "P8" }
+  ],
+  5: [
+    { start: "09:20", end: "10:05", subject: "ML - Machine Learning", period: "P1" },
+    { start: "10:05", end: "10:50", subject: "LIB - Library", period: "P2" },
+    { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
+    { start: "11:35", end: "12:20", subject: "BDA - Big Data Analytics", period: "P4" },
+    { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+    { start: "13:05", end: "14:35", subject: "BDA LAB - Big Data Analytics Lab", period: "P6-P7" },
+    { start: "14:35", end: "15:20", subject: "Sports", period: "P8" }
+  ]
+};
+
+function getScheduleForBranch(branch) {
+  if (branch && branch.toUpperCase() === 'AIDS') return AIDS_SCHEDULE;
+  return CSE_SCHEDULE;
+}
+
+function getCurrentPeriod(branch = 'CSE') {
+  const now = new Date();
+  const day = now.getDay(); // 1=Monday, 5=Friday
+  if (day === 0 || day === 6) return null; // weekend
+  const schedule = getScheduleForBranch(branch);
+  const daySchedule = schedule[day] || [];
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  for (let slot of daySchedule) {
+    const startMins = parseInt(slot.start.split(':')[0]) * 60 + parseInt(slot.start.split(':')[1]);
+    const endMins = parseInt(slot.end.split(':')[0]) * 60 + parseInt(slot.end.split(':')[1]);
+    if (currentMinutes >= startMins && currentMinutes < endMins) {
+      return slot;
+    }
+  }
+  return null;
+}
+
 // ---------- MongoDB Connection ----------
 mongoose.connect(MONGO_URI)
   .then(() => console.log('✅ MongoDB Connected Successfully!'))
@@ -364,8 +487,9 @@ const noticeSchema = new mongoose.Schema({
 });
 
 const passcodeSchema = new mongoose.Schema({
-  passcode: { type: String, required: true, unique: true },
+  passcode: { type: String, required: true },
   type: { type: String, enum: ['full_day', 'single_lecture'], required: true },
+  key: { type: String, unique: true, sparse: true }, // for single_lecture: date+period
   expiresAt: { type: Date, required: true }
 }, { timestamps: true });
 
@@ -396,11 +520,8 @@ app.post('/api/auth/register', async (req, res) => {
     let { name, rollNo, password, deviceId, role, subject } = parseResult.data;
     let cleanRoll = rollNo.trim().toUpperCase();
     
-    // ----- ROLL NUMBER FORMAT VALIDATION FOR STUDENTS -----
     if (role === 'student') {
-      // Must match 24CSE01-99 or 24AIDS01-99
-      const validFormat = /^24(CSE|AIDS)\d{2}$/.test(cleanRoll);
-      if (!validFormat) {
+      if (!/^24(CSE|AIDS)\d{2}$/.test(cleanRoll)) {
         return res.status(400).json({ error: 'Invalid Roll Number format! Use 24CSE01 or 24AIDS01 format.' });
       }
     }
@@ -668,6 +789,8 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
     const { requesterRollNo, type } = req.body;
     const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
     if (!requester) return res.status(403).json({ error: 'User not found!' });
+    
+    // Authorization
     if (requester.role === 'admin') {
       // allowed both
     } else if (requester.role === 'faculty' && type === 'single_lecture') {
@@ -675,28 +798,112 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
     } else {
       return res.status(403).json({ error: 'Access Denied: Only admin can generate full_day, teacher can generate single_lecture.' });
     }
+    
     if (!type || !['full_day', 'single_lecture'].includes(type)) {
       return res.status(400).json({ error: 'Invalid passcode type.' });
     }
-    await Passcode.deleteMany({ type });
-    const length = type === 'full_day' ? 5 : 4;
-    const passcode = Math.floor(Math.pow(10, length-1) + Math.random() * (Math.pow(10, length) - Math.pow(10, length-1))).toString();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
-    await Passcode.create({ passcode, type, expiresAt });
-    res.json({ message: `Passcode generated for ${type}`, passcode, type, expiresAt });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+
+    // For single_lecture: deterministic / stored passcode per period
+    if (type === 'single_lecture') {
+      const branch = requester.branch || 'CSE';
+      const period = getCurrentPeriod(branch);
+      if (!period) {
+        return res.status(400).json({ error: 'No active lecture period right now.' });
+      }
+      // period.subject can be used, but we want same passcode for all subjects? Actually each period has a subject, but we want passcode per period slot, not per subject. However, if two different subjects in same period (like lab) might need separate? But typical college has one subject per period. We'll use period start time as key.
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
+      const key = `single_lecture_${dateStr}_${period.start}`; // e.g., single_lecture_2026-08-13_09:20
+      
+      // Check existing passcode for this key
+      let passcodeDoc = await Passcode.findOne({ key, type: 'single_lecture' });
+      if (passcodeDoc && passcodeDoc.expiresAt > new Date()) {
+        // Return existing valid passcode
+        return res.json({ message: 'Existing passcode retrieved', passcode: passcodeDoc.passcode, type, expiresAt: passcodeDoc.expiresAt });
+      }
+      
+      // Generate new passcode for this period
+      const passcode = Math.floor(1000 + Math.random() * 9000).toString(); // 4-digit
+      // Set expiry to end of period (parse period.end)
+      const endParts = period.end.split(':');
+      const endMins = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
+      // Add 1 minute grace
+      const expiry = new Date(now);
+      expiry.setHours(parseInt(endParts[0]), parseInt(endParts[1]) + 1, 0, 0); // +1 minute grace
+      // If expiry is in the past, set to 5 minutes from now
+      if (expiry <= now) {
+        expiry.setMinutes(now.getMinutes() + 5);
+      }
+      
+      // Delete old passcodes with same key (if expired)
+      await Passcode.deleteMany({ key, type: 'single_lecture' });
+      // Create new
+      const newPasscode = new Passcode({
+        passcode,
+        type,
+        key,
+        expiresAt: expiry
+      });
+      await newPasscode.save();
+      
+      // Also delete any expired ones for this type
+      await Passcode.deleteMany({ type, expiresAt: { $lt: new Date() } });
+      
+      return res.json({ message: 'Passcode generated for lecture', passcode, type, expiresAt: expiry });
+    }
+    
+    // For full_day: random 5-digit, 5-min expiry
+    if (type === 'full_day') {
+      // Delete old full_day passcodes
+      await Passcode.deleteMany({ type: 'full_day' });
+      const passcode = Math.floor(10000 + Math.random() * 90000).toString(); // 5-digit
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+      const newPasscode = new Passcode({
+        passcode,
+        type,
+        key: 'full_day_' + Date.now(),
+        expiresAt
+      });
+      await newPasscode.save();
+      return res.json({ message: 'Full Day passcode generated', passcode, type, expiresAt });
+    }
+    
+    res.status(400).json({ error: 'Invalid type' });
+  } catch (err) {
+    console.error('Passcode error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.post('/api/auth/verify-passcode', async (req, res) => {
+// ========== GET CURRENT PASSCODE (without generating) ==========
+app.get('/api/admin/current-passcode/:type/:requesterRollNo', async (req, res) => {
   try {
-    const { passcode, type } = req.body;
-    if (!passcode) return res.status(400).json({ error: 'Passcode required!' });
-    if (!type || !['full_day', 'single_lecture'].includes(type)) return res.status(400).json({ error: 'Invalid passcode type.' });
-    const record = await Passcode.findOne({ passcode, type });
-    if (!record) return res.status(400).json({ error: 'Invalid passcode!' });
-    if (record.expiresAt < new Date()) { await Passcode.deleteOne({ _id: record._id }); return res.status(400).json({ error: 'Passcode expired! Please refresh.' }); }
-    res.json({ message: 'Passcode verified!', verified: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+    const { type, requesterRollNo } = req.params;
+    const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+    if (!requester) return res.status(403).json({ error: 'User not found' });
+    if (requester.role !== 'admin' && requester.role !== 'faculty') {
+      return res.status(403).json({ error: 'Access Denied' });
+    }
+    if (type !== 'single_lecture') {
+      return res.status(400).json({ error: 'Only single_lecture type supported for current passcode' });
+    }
+    const branch = requester.branch || 'CSE';
+    const period = getCurrentPeriod(branch);
+    if (!period) {
+      return res.json({ passcode: null, message: 'No active lecture period' });
+    }
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+    const key = `single_lecture_${dateStr}_${period.start}`;
+    const passcodeDoc = await Passcode.findOne({ key, type: 'single_lecture', expiresAt: { $gt: new Date() } });
+    if (passcodeDoc) {
+      return res.json({ passcode: passcodeDoc.passcode, expiresAt: passcodeDoc.expiresAt });
+    } else {
+      return res.json({ passcode: null, message: 'No passcode generated for current period' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ========== NOTICES ==========
