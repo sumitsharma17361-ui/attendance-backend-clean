@@ -474,7 +474,7 @@ const attendanceSchema = new mongoose.Schema({
   branch: { type: String, default: 'CSE' }
 }, { timestamps: true });
 
-// Prevent duplicate attendance per student per subject per day
+// Unique index to prevent duplicates (fallback)
 attendanceSchema.index({ rollNo: 1, subject: 1, date: 1 }, { unique: true });
 
 const holidaySchema = new mongoose.Schema({
@@ -509,7 +509,7 @@ const Notice = mongoose.model('Notice', noticeSchema);
 const Passcode = mongoose.model('Passcode', passcodeSchema);
 const TeacherSubject = mongoose.model('TeacherSubject', teacherSubjectSchema);
 
-// Ensure unique index exists (especially important for existing databases)
+// Ensure index is created
 Attendance.createIndexes().catch(err => console.error('Index creation error:', err));
 
 // ---------- Routes ----------
@@ -963,25 +963,24 @@ app.post('/api/attendance/mark-lecture', async (req, res) => {
       return res.status(400).json({ error: `Outside College Boundary! (${locCheck.distance}m away)` });
     }
     
-    try {
-      const attendance = new Attendance({
-        rollNo: cleanRoll,
-        studentName: user.name,
-        subject,
-        date: todayDate,
-        status: 'Present',
-        location: { latitude, longitude },
-        ipAddress: req.ip,
-        isVerified: true,
-        branch: branch
-      });
-      await attendance.save();
-    } catch (err) {
-      if (err.code === 11000) {
-        return res.status(400).json({ error: `Already marked for ${subject} today.` });
-      }
-      throw err;
+    // Explicitly check existence
+    const existing = await Attendance.findOne({ rollNo: cleanRoll, subject, date: todayDate });
+    if (existing) {
+      return res.status(400).json({ error: `Already marked for ${subject} today.` });
     }
+    
+    const attendance = new Attendance({
+      rollNo: cleanRoll,
+      studentName: user.name,
+      subject,
+      date: todayDate,
+      status: 'Present',
+      location: { latitude, longitude },
+      ipAddress: req.ip,
+      isVerified: true,
+      branch: branch
+    });
+    await attendance.save();
     
     user.lastAttendanceTime = new Date();
     user.lastAttendanceLocation = { latitude, longitude };
@@ -1033,7 +1032,7 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const dayName = days[today.getDay()];
     const allSubjects = timetable[dayName] || [];
-    // Filter out non-academic subjects and remove duplicates using a Set
+    // Filter out non-academic and remove duplicates
     const academicSubjectSet = new Set();
     allSubjects.forEach(entry => {
       const sub = entry.subject;
@@ -1041,15 +1040,22 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
         academicSubjectSet.add(sub);
       }
     });
-    // Convert Set to array for iteration
     const academicSubjects = Array.from(academicSubjectSet);
+    
+    // Fetch existing attendance for today for these subjects
+    const existingRecords = await Attendance.find({
+      rollNo: cleanRoll,
+      date: todayDate,
+      subject: { $in: academicSubjects }
+    });
+    const existingSubjectSet = new Set(existingRecords.map(r => r.subject));
     
     let markedCount = 0;
     let skippedCount = 0;
-    
+    const newAttendances = [];
     for (const sub of academicSubjects) {
-      try {
-        const attendance = new Attendance({
+      if (!existingSubjectSet.has(sub)) {
+        newAttendances.push({
           rollNo: cleanRoll,
           studentName: name,
           subject: sub,
@@ -1060,21 +1066,22 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
           isVerified: true,
           branch: branch
         });
-        await attendance.save();
         markedCount++;
-      } catch (err) {
-        if (err.code === 11000) {
-          skippedCount++;
-          continue;
-        }
-        throw err;
+      } else {
+        skippedCount++;
       }
     }
+    
+    if (newAttendances.length > 0) {
+      await Attendance.insertMany(newAttendances);
+    }
+    
     user.lastAttendanceTime = new Date();
     user.lastAttendanceLocation = { latitude, longitude };
     user.failedAttempts = 0;
     user.blockUntil = null;
     await user.save();
+    
     if (markedCount === 0 && skippedCount > 0) {
       return res.status(400).json({ error: `All ${skippedCount} academic subjects already marked today!` });
     }
@@ -1419,32 +1426,30 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
       const allSubjects = timetable[dayName] || [];
       subjectsToMark = allSubjects.filter(entry => !entry.subject.includes("LIB") && !entry.subject.includes("Library") && !entry.subject.includes("Sports")).map(entry => entry.subject);
     }
-    // Remove duplicates from subjectsToMark
+    // Remove duplicates
     const uniqueSubjects = [...new Set(subjectsToMark)];
     for (let sub of uniqueSubjects) {
       const fullSub = getFullSubjectName(sub);
-      try {
-        const attendance = new Attendance({
-          rollNo: targetRoll,
-          studentName: user.name,
-          subject: fullSub,
-          date,
-          status: status || 'Present',
-          location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG },
-          ipAddress: 'admin-manual',
-          isVerified: true,
-          branch: actualBranch
-        });
-        await attendance.save();
-        markedCount++;
-        markedSubjects.push(fullSub);
-      } catch (err) {
-        if (err.code === 11000) {
-          alreadyMarked.push(fullSub);
-        } else {
-          throw err;
-        }
+      // Explicitly check existence
+      const existing = await Attendance.findOne({ rollNo: targetRoll, subject: fullSub, date });
+      if (existing) {
+        alreadyMarked.push(fullSub);
+        continue;
       }
+      const attendance = new Attendance({
+        rollNo: targetRoll,
+        studentName: user.name,
+        subject: fullSub,
+        date,
+        status: status || 'Present',
+        location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG },
+        ipAddress: 'admin-manual',
+        isVerified: true,
+        branch: actualBranch
+      });
+      await attendance.save();
+      markedCount++;
+      markedSubjects.push(fullSub);
     }
     let message = `✅ Marked ${markedCount} lectures for ${user.name} on ${date}`;
     if (alreadyMarked.length > 0) message += `. Already marked: ${alreadyMarked.join(', ')}`;
