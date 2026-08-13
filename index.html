@@ -803,9 +803,9 @@
                     </div>
                 </div>
 
-                <!-- ===== TEACHER TAB ===== -->
+                <!-- ===== TEACHER TAB (UPDATED) ===== -->
                 <div id="teacherTab" style="display:none;">
-                    <!-- Teacher Passcode -->
+                    <!-- Teacher Passcode (Manual Generate) -->
                     <div style="background:#eff6ff; border-radius:var(--radius-sm); padding:10px; border:1px solid #bfdbfe; margin-bottom:10px; text-align:center;">
                         <span class="sub-section-title" style="color:#1d4ed8;">🔒 Single Lecture Passcode (4‑digit)</span>
                         <div class="passcode-display" style="margin-top:4px;">
@@ -815,7 +815,7 @@
                         <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">⏳ Expires after 5 minutes – for marking single lecture attendance.</p>
                     </div>
 
-                    <!-- Students -->
+                    <!-- Students List -->
                     <div style="margin-bottom:10px;">
                         <h4 style="font-size:11px; font-weight:800;">📋 Students (with your subjects)</h4>
                         <button class="btn btn-outline btn-sm" onclick="fetchTeacherStudents()" style="padding:4px;">Refresh</button>
@@ -827,12 +827,37 @@
                         </div>
                     </div>
 
-                    <!-- Student Report -->
+                    <!-- Teacher Report with Date Range -->
                     <div style="background:#f0fdf4; border-radius:var(--radius-sm); padding:10px; border:1px solid #bbf7d0; margin-bottom:10px;">
                         <span class="sub-section-title">📈 Student Report (PDF/CSV)</span>
                         <select id="teacherStudentReportSelect" style="padding:8px; margin-bottom:6px; font-size:10px;">
                             <option value="">Select Student…</option>
                         </select>
+                        
+                        <!-- Date Range Selection -->
+                        <div style="margin:6px 0;">
+                            <select id="teacherReportRange" style="padding:6px; font-size:10px; margin:0;" onchange="toggleTeacherReportRange()">
+                                <option value="FULL_SEMESTER">Full Semester (Jul–Dec 2026)</option>
+                                <option value="CURRENT_MONTH">Current Month</option>
+                                <option value="SELECTED_MONTH">Selected Month</option>
+                                <option value="CUSTOM">Custom Range</option>
+                            </select>
+                            <div id="teacherSelectedMonthWrapper" style="display:none; margin-top:4px;">
+                                <select id="teacherSelectedMonth" style="padding:6px; font-size:10px;">
+                                    <option value="6">July 2026</option>
+                                    <option value="7">August 2026</option>
+                                    <option value="8">September 2026</option>
+                                    <option value="9">October 2026</option>
+                                    <option value="10">November 2026</option>
+                                    <option value="11">December 2026</option>
+                                </select>
+                            </div>
+                            <div id="teacherCustomRangeWrapper" style="display:none; margin-top:4px;">
+                                <input type="date" id="teacherReportStart" style="padding:6px; font-size:10px; margin:0 0 4px 0;" />
+                                <input type="date" id="teacherReportEnd" style="padding:6px; font-size:10px; margin:0;" />
+                            </div>
+                        </div>
+
                         <div class="flex-buttons">
                             <button class="btn btn-primary btn-sm" onclick="generateTeacherReport('pdf')" style="padding:6px;">PDF</button>
                             <button class="btn btn-success btn-sm" onclick="generateTeacherReport('csv')" style="padding:6px;">CSV</button>
@@ -862,7 +887,7 @@
         // ============================================================
         // CONFIGURATION
         // ============================================================
-        const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; // Change to your backend URL
+        const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com";
         const ADMIN_ROLL_NUMBERS = ['24CSE48'];
         let globalAllRecords = [],
             globalMyRecords = [],
@@ -1145,7 +1170,7 @@
         }
 
         // ============================================================
-        // PASSCODE FUNCTIONS
+        // PASSCODE FUNCTIONS – No auto-refresh
         // ============================================================
         let currentFullDayPasscode = "—";
         let currentSingleLecturePasscode = "—";
@@ -1180,6 +1205,9 @@
             }
         }
 
+        // ============================================================
+        // TEACHER PASSCODE – Manual generate (no auto-refresh)
+        // ============================================================
         async function generateTeacherPasscode() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'faculty') return showMsg('Teacher access required!', true);
@@ -1322,21 +1350,47 @@
         }
 
         // ============================================================
-        // TEACHER REPORT
+        // TEACHER REPORT – with date range
         // ============================================================
+        function toggleTeacherReportRange() {
+            const range = document.getElementById('teacherReportRange').value;
+            document.getElementById('teacherSelectedMonthWrapper').style.display = (range === 'SELECTED_MONTH') ? 'block' : 'none';
+            document.getElementById('teacherCustomRangeWrapper').style.display = (range === 'CUSTOM') ? 'block' : 'none';
+        }
+
         async function generateTeacherReport(format) {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'faculty') return showMsg('Teacher access required!', true);
             const studentRoll = document.getElementById('teacherStudentReportSelect').value;
             if (!studentRoll) return showMsg('Select a student!', true);
 
+            // Determine date range
+            const range = document.getElementById('teacherReportRange').value;
+            let startDate, endDate;
+            const today = new Date();
+            if (range === 'FULL_SEMESTER') {
+                startDate = new Date(2026, 6, 15);
+                endDate = new Date(2026, 11, 31);
+            } else if (range === 'CURRENT_MONTH') {
+                startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            } else if (range === 'SELECTED_MONTH') {
+                const month = parseInt(document.getElementById('teacherSelectedMonth').value);
+                startDate = new Date(2026, month, 1);
+                endDate = new Date(2026, month + 1, 0);
+            } else { // CUSTOM
+                startDate = document.getElementById('teacherReportStart').value;
+                endDate = document.getElementById('teacherReportEnd').value;
+                if (!startDate || !endDate) return showMsg('Please select start and end dates!', true);
+                startDate = new Date(startDate);
+                endDate = new Date(endDate);
+            }
+            if (startDate > endDate) return showMsg('Start date cannot be after end date!', true);
+
             try {
                 const subRes = await fetch(`${API_BASE}/api/teacher/subjects/${user.rollNo}`);
                 let teacherSubjects = await subRes.json();
-                if (!subRes.ok || !Array.isArray(teacherSubjects)) {
-                    return showMsg('Could not fetch your assigned subjects.', true);
-                }
-                if (teacherSubjects.length === 0) {
+                if (!subRes.ok || !Array.isArray(teacherSubjects) || teacherSubjects.length === 0) {
                     return showMsg('You have no subjects assigned.', true);
                 }
 
@@ -1345,24 +1399,28 @@
                 if (!profileRes.ok) return showMsg('Student not found!', true);
                 const branch = profile.branch || 'CSE';
 
+                const startStr = startDate.toISOString().split('T')[0];
+                const endStr = endDate.toISOString().split('T')[0];
+
+                // Fetch attendance records for this student (filtered by teacher's subjects via backend)
                 const attRes = await fetch(`${API_BASE}/api/attendance/student/${studentRoll}/${user.rollNo}`);
-                const records = await attRes.json();
+                let records = await attRes.json();
                 if (!attRes.ok || records.length === 0) {
                     return showMsg('No attendance records found for this student.', true);
                 }
+                // Filter by date range
+                records = records.filter(r => r.date >= startStr && r.date <= endStr);
 
-                const today = new Date();
-                const semesterStart = new Date(2026, 6, 15);
+                // Calculate total conducted lectures for teacher's subjects in the date range
                 const holidayRes = await fetch(`${API_BASE}/api/holidays`);
                 const holidays = await holidayRes.json();
                 const holidaySet = new Set(holidays.map(h => h.date));
-
                 const timetable = getBranchTimetable(branch);
                 const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
                 const subjectTotals = {};
                 let totalConducted = 0;
-                let cur = new Date(semesterStart);
-                while (cur <= today) {
+                let cur = new Date(startDate);
+                while (cur <= endDate) {
                     const dateStr = cur.toISOString().split('T')[0];
                     const dayOfWeek = cur.getDay();
                     const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
@@ -1409,7 +1467,7 @@
                             <p>Teacher: ${user.name} (${user.rollNo})</p>
                             <p>Generated: ${new Date().toLocaleString()}</p>
                             <p>Branch: ${branch}</p>
-                            <p>Range: 15 July 2026 to ${today.toISOString().split('T')[0]}</p>
+                            <p>Range: ${startStr} to ${endStr}</p>
                             <hr>
                             <h3>Summary</h3>
                             <p><strong>Total Lectures Conducted:</strong> ${totalConducted}</p>
@@ -1426,7 +1484,7 @@
                             <table style="width:100%; border-collapse:collapse; border:1px solid #ccc;">
                                 <thead><tr style="background:#f0f0f0;"><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
                                 <tbody>
-                                    ${records.filter(r => teacherSubjects.includes(r.subject)).map(r => `
+                                    ${records.map(r => `
                                         <tr><td>${r.date}</td><td>${r.subject}</td><td>${r.status}</td></tr>
                                     `).join('')}
                                 </tbody>
@@ -1439,12 +1497,13 @@
                     win.document.close();
                     win.print();
                 } else {
-                    let csv = `Student Attendance Report\nStudent: ${studentRoll}\nTeacher: ${user.name}\nBranch: ${branch}\nRange: 15 July 2026 to ${today.toISOString().split('T')[0]}\nTotal Conducted: ${totalConducted}, Attended: ${totalAttended}, %: ${pct}%\n\nSubject,Attended,Total,Percentage\n`;
+                    // CSV
+                    let csv = `Student Attendance Report\nStudent: ${studentRoll}\nTeacher: ${user.name}\nBranch: ${branch}\nRange: ${startStr} to ${endStr}\nTotal Conducted: ${totalConducted}, Attended: ${totalAttended}, %: ${pct}%\n\nSubject,Attended,Total,Percentage\n`;
                     Object.entries(subjectStats).forEach(([sub, st]) => {
                         csv += `"${sub}",${st.present},${st.total},${st.percentage}%\n`;
                     });
                     csv += `\nDate,Subject,Status\n`;
-                    records.filter(r => teacherSubjects.includes(r.subject)).forEach(r => {
+                    records.forEach(r => {
                         csv += `${r.date},${r.subject},${r.status}\n`;
                     });
                     downloadFile(csv, `Teacher_${studentRoll}_Attendance.csv`, 'text/csv');
@@ -1452,8 +1511,27 @@
                 }
             } catch (e) {
                 console.error('Report error:', e);
-                showMsg('Error generating report', true);
+                showMsg('Error generating report: ' + e.message, true);
             }
+        }
+
+        // ============================================================
+        // TEACHER RECENT MARKS
+        // ============================================================
+        async function loadTeacherRecent() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'faculty') return;
+            try {
+                const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
+                const data = await res.json();
+                const tbody = document.querySelector('#teacherRecentTable tbody');
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:8px;">No records.</td></tr>';
+                    return;
+                }
+                const recent = data.slice(0, 10);
+                tbody.innerHTML = recent.map(r => `<tr><td>${r.date}</td><td>${r.studentName}</td><td>${r.subject}</td></tr>`).join('');
+            } catch (e) {}
         }
 
         // ============================================================
@@ -1556,6 +1634,49 @@
             } catch (e) {
                 showMsg('Server error!', true);
             }
+        }
+
+        // ============================================================
+        // MARK ACTIVE PERIOD ATTENDANCE
+        // ============================================================
+        async function markActivePeriodAttendance() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'student') return showMsg('Student access required!', true);
+            if (!activeSubjectSubjectCode) return showMsg('No active period found!', true);
+            if (!navigator.geolocation) return showMsg('Geolocation not supported!', true);
+            
+            const enteredPasscode = prompt(`Enter Single Lecture Passcode (4‑digit) for "${activeSubjectSubjectCode}":`);
+            if (!enteredPasscode) return;
+            if (enteredPasscode.length !== 4) return showMsg('Passcode must be 4 digits!', true);
+            
+            passcodeVerified = false;
+            verifyPasscode(enteredPasscode, 'single_lecture', async () => {
+                navigator.geolocation.getCurrentPosition(async (pos) => {
+                    try {
+                        const res = await fetch(`${API_BASE}/api/attendance/mark`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
+                            body: JSON.stringify({
+                                rollNo: user.rollNo,
+                                name: user.name,
+                                subject: activeSubjectSubjectCode,
+                                latitude: pos.coords.latitude,
+                                longitude: pos.coords.longitude
+                            })
+                        });
+                        const data = await res.json();
+                        passcodeVerified = false;
+                        if (res.ok) {
+                            showMsg(data.message);
+                            fetchHistory(user.rollNo);
+                        } else {
+                            showMsg(data.error || "Failed", true);
+                        }
+                    } catch (e) {
+                        showMsg("Network Error!", true);
+                    }
+                }, () => showMsg('GPS Access Denied!', true));
+            });
         }
 
         // ============================================================
@@ -2089,25 +2210,6 @@
             } catch (e) {
                 showMsg('Failed to update: ' + e.message, true);
             }
-        }
-
-        // ============================================================
-        // TEACHER RECENT MARKS
-        // ============================================================
-        async function loadTeacherRecent() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || user.role !== 'faculty') return;
-            try {
-                const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
-                const data = await res.json();
-                const tbody = document.querySelector('#teacherRecentTable tbody');
-                if (!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:8px;">No records.</td></tr>';
-                    return;
-                }
-                const recent = data.slice(0, 10);
-                tbody.innerHTML = recent.map(r => `<tr><td>${r.date}</td><td>${r.studentName}</td><td>${r.subject}</td></tr>`).join('');
-            } catch (e) {}
         }
 
         // ============================================================
@@ -2679,9 +2781,7 @@
                 if (!name) return showMsg('⚠️ Faculty Name is required!', true);
                 rawRoll = 'AUTO';
             } else {
-                // Student or Admin
                 if (role === 'student') {
-                    // ✅ STRICT ROLL NUMBER FORMAT VALIDATION
                     if (!isValidStudentRoll(rawRoll.toUpperCase())) {
                         return showMsg('⚠️ Invalid Roll Number! Use 24CSE01 or 24AIDS01 format.', true);
                     }
@@ -3116,7 +3216,6 @@
                     const name = document.getElementById('regName').value.trim();
                     if (!name) return showMsg('Enter Full Name!', true);
                     const role = 'student';
-                    // Validate roll number format for registration
                     if (!isValidStudentRoll(validation.cleanRoll)) {
                         return showMsg('⚠️ Invalid Roll Number! Use 24CSE01 or 24AIDS01 format.', true);
                     }
@@ -3157,7 +3256,7 @@
         }
 
         // ============================================================
-        // LOAD DASHBOARD – fixed: month selector set FIRST
+        // LOAD DASHBOARD – fixed: month selector set FIRST, no auto passcode for teacher
         // ============================================================
         function loadDashboard() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -3217,7 +3316,9 @@
                 loadTeacherSubjects();
                 loadTeacherRecent();
                 fetchTeacherStudents();
-                generateTeacherPasscode();
+                // DO NOT auto-generate passcode – user must click Generate
+                document.getElementById('teacherPasscodeDisplay').innerText = '—';
+                teacherCurrentPasscode = '—';
             } else {
                 document.getElementById('adminTabHeader').style.display = 'none';
                 document.getElementById('teacherTabHeader').style.display = 'none';
@@ -3280,49 +3381,6 @@
         }
 
         // ============================================================
-        // MARK ACTIVE PERIOD ATTENDANCE
-        // ============================================================
-        async function markActivePeriodAttendance() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || user.role !== 'student') return showMsg('Student access required!', true);
-            if (!activeSubjectSubjectCode) return showMsg('No active period found!', true);
-            if (!navigator.geolocation) return showMsg('Geolocation not supported!', true);
-            
-            const enteredPasscode = prompt(`Enter Single Lecture Passcode (4‑digit) for "${activeSubjectSubjectCode}":`);
-            if (!enteredPasscode) return;
-            if (enteredPasscode.length !== 4) return showMsg('Passcode must be 4 digits!', true);
-            
-            passcodeVerified = false;
-            verifyPasscode(enteredPasscode, 'single_lecture', async () => {
-                navigator.geolocation.getCurrentPosition(async (pos) => {
-                    try {
-                        const res = await fetch(`${API_BASE}/api/attendance/mark`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
-                            body: JSON.stringify({
-                                rollNo: user.rollNo,
-                                name: user.name,
-                                subject: activeSubjectSubjectCode,
-                                latitude: pos.coords.latitude,
-                                longitude: pos.coords.longitude
-                            })
-                        });
-                        const data = await res.json();
-                        passcodeVerified = false;
-                        if (res.ok) {
-                            showMsg(data.message);
-                            fetchHistory(user.rollNo);
-                        } else {
-                            showMsg(data.error || "Failed", true);
-                        }
-                    } catch (e) {
-                        showMsg("Network Error!", true);
-                    }
-                }, () => showMsg('GPS Access Denied!', true));
-            });
-        }
-
-        // ============================================================
         // INIT
         // ============================================================
         function initMonthSelector() {
@@ -3347,10 +3405,12 @@
             const wrapper = document.getElementById('singleStudentMonthWrapper');
             if (wrapper) wrapper.style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none';
         });
+        document.getElementById('teacherReportRange')?.addEventListener('change', toggleTeacherReportRange);
 
         console.log('✅ BM Group ERP Portal loaded successfully!');
-        console.log('📆 Month selector default set to current month (FIXED).');
-        console.log('📊 Today\'s Present Students: sorted & grouped by branch.');
+        console.log('📆 Month selector default set to current month.');
+        console.log('🔒 Teacher passcode: manual generate only (no auto-refresh).');
+        console.log('📊 Teacher reports: added date range options.');
         console.log('🔒 Roll number validation: 24CSE00 / 24AIDS00 format enforced.');
         console.log('🛡️ Rate limit increased to avoid "Too many requests".');
     </script>
