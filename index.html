@@ -138,31 +138,8 @@
         .tab-item.active { background: #fff; color: var(--primary); box-shadow: var(--shadow-sm); }
 
         /* ===== ADMIN NAV ===== */
-        .admin-nav {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-            background: #f1f5f9;
-            padding: 6px;
-            border-radius: var(--radius-sm);
-            margin-bottom: 10px;
-        }
-        .admin-nav-item {
-            flex: 1 0 auto;
-            min-width: 60px;
-            text-align: center;
-            padding: 10px 6px;
-            font-size: 11px;
-            font-weight: 800;
-            cursor: pointer;
-            border-radius: 6px;
-            color: var(--text-muted);
-            transition: all 0.3s;
-            background: transparent;
-            border: 1px solid transparent;
-            line-height: 1.3;
-            letter-spacing: 0.3px;
-        }
+        .admin-nav { display: flex; flex-wrap: wrap; gap: 4px; background: #f1f5f9; padding: 6px; border-radius: var(--radius-sm); margin-bottom: 10px; }
+        .admin-nav-item { flex: 1 0 auto; min-width: 60px; text-align: center; padding: 10px 6px; font-size: 11px; font-weight: 800; cursor: pointer; border-radius: 6px; color: var(--text-muted); transition: all 0.3s; background: transparent; border: 1px solid transparent; line-height: 1.3; letter-spacing: 0.3px; }
         .admin-nav-item:hover { background: rgba(255,255,255,0.6); }
         .admin-nav-item.active { background: #fff; color: var(--primary); box-shadow: var(--shadow-sm); border-color: var(--card-border); }
 
@@ -487,7 +464,8 @@
                     </div>
                     <div id="monthlySummaryContainer" style="background:#f8fafc; border-radius:var(--radius-sm); padding:8px; margin-bottom:8px; border:1px solid var(--card-border); display:none;"></div>
 
-                    <button class="btn btn-primary" onclick="openFullDayPasscodePrompt()" style="padding:9px; font-size:10px;">
+                    <!-- Full Day Button with Passcode Prompt -->
+                    <button class="btn btn-primary" onclick="markFullDayAttendance()" style="padding:9px; font-size:10px;">
                         <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                         Mark Full Day Attendance
                     </button>
@@ -803,7 +781,7 @@
                     </div>
                 </div>
 
-                <!-- ===== TEACHER TAB (UPDATED) ===== -->
+                <!-- ===== TEACHER TAB ===== -->
                 <div id="teacherTab" style="display:none;">
                     <!-- Teacher Passcode (Manual Generate) -->
                     <div style="background:#eff6ff; border-radius:var(--radius-sm); padding:10px; border:1px solid #bfdbfe; margin-bottom:10px; text-align:center;">
@@ -885,9 +863,9 @@
     <!-- ========================================================== -->
     <script>
         // ============================================================
-        // CONFIGURATION
+        // CONFIGURATION – UPDATE THIS URL TO YOUR BACKEND
         // ============================================================
-        const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com";
+        const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; // <-- CHANGE HERE
         const ADMIN_ROLL_NUMBERS = ['24CSE48'];
         let globalAllRecords = [],
             globalMyRecords = [],
@@ -896,7 +874,6 @@
         let activeSubjectSubjectCode = "";
         let toastTimeout = null;
         let allUsersData = [];
-        let passcodeVerified = false;
         let isRegistering = false;
         let impersonating = false;
         let originalAdminToken = null;
@@ -1170,7 +1147,7 @@
         }
 
         // ============================================================
-        // PASSCODE FUNCTIONS – No auto-refresh
+        // PASSCODE FUNCTIONS
         // ============================================================
         let currentFullDayPasscode = "—";
         let currentSingleLecturePasscode = "—";
@@ -1206,7 +1183,7 @@
         }
 
         // ============================================================
-        // TEACHER PASSCODE – Manual generate (no auto-refresh)
+        // TEACHER PASSCODE
         // ============================================================
         async function generateTeacherPasscode() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -1364,7 +1341,6 @@
             const studentRoll = document.getElementById('teacherStudentReportSelect').value;
             if (!studentRoll) return showMsg('Select a student!', true);
 
-            // Determine date range
             const range = document.getElementById('teacherReportRange').value;
             let startDate, endDate;
             const today = new Date();
@@ -1378,7 +1354,7 @@
                 const month = parseInt(document.getElementById('teacherSelectedMonth').value);
                 startDate = new Date(2026, month, 1);
                 endDate = new Date(2026, month + 1, 0);
-            } else { // CUSTOM
+            } else {
                 startDate = document.getElementById('teacherReportStart').value;
                 endDate = document.getElementById('teacherReportEnd').value;
                 if (!startDate || !endDate) return showMsg('Please select start and end dates!', true);
@@ -1402,16 +1378,13 @@
                 const startStr = startDate.toISOString().split('T')[0];
                 const endStr = endDate.toISOString().split('T')[0];
 
-                // Fetch attendance records for this student (filtered by teacher's subjects via backend)
                 const attRes = await fetch(`${API_BASE}/api/attendance/student/${studentRoll}/${user.rollNo}`);
                 let records = await attRes.json();
                 if (!attRes.ok || records.length === 0) {
                     return showMsg('No attendance records found for this student.', true);
                 }
-                // Filter by date range
                 records = records.filter(r => r.date >= startStr && r.date <= endStr);
 
-                // Calculate total conducted lectures for teacher's subjects in the date range
                 const holidayRes = await fetch(`${API_BASE}/api/holidays`);
                 const holidays = await holidayRes.json();
                 const holidaySet = new Set(holidays.map(h => h.date));
@@ -1497,7 +1470,6 @@
                     win.document.close();
                     win.print();
                 } else {
-                    // CSV
                     let csv = `Student Attendance Report\nStudent: ${studentRoll}\nTeacher: ${user.name}\nBranch: ${branch}\nRange: ${startStr} to ${endStr}\nTotal Conducted: ${totalConducted}, Attended: ${totalAttended}, %: ${pct}%\n\nSubject,Attended,Total,Percentage\n`;
                     Object.entries(subjectStats).forEach(([sub, st]) => {
                         csv += `"${sub}",${st.present},${st.total},${st.percentage}%\n`;
@@ -1573,24 +1545,21 @@
         }
 
         // ============================================================
-        // FULL DAY ATTENDANCE
+        // FIXED: MARK FULL DAY ATTENDANCE (prompts for 5-digit passcode)
         // ============================================================
-        async function openFullDayPasscodePrompt() {
-            const enteredPasscode = prompt(`Enter Full Day Passcode (5‑digit):`);
+        function markFullDayAttendance() {
+            const enteredPasscode = prompt("Enter Full Day Passcode (5‑digit):");
             if (!enteredPasscode) return;
             if (enteredPasscode.length !== 5) {
                 return showMsg('Full Day passcode must be 5 digits!', true);
             }
-            passcodeVerified = false;
-            verifyPasscode(enteredPasscode, 'full_day', markFullDayAttendance);
-        }
-
-        function markFullDayAttendance() {
-            if (!passcodeVerified) { return showMsg('Verify passcode first!', true); }
             if (!navigator.geolocation) { return showMsg('Geolocation not supported!', true); }
 
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 const user = JSON.parse(localStorage.getItem('user'));
+                if (!user || user.role !== 'student') {
+                    return showMsg('Student access required!', true);
+                }
                 try {
                     const res = await fetch(`${API_BASE}/api/attendance/mark-fullday`, {
                         method: 'POST',
@@ -1599,14 +1568,15 @@
                             rollNo: user.rollNo,
                             name: user.name,
                             latitude: pos.coords.latitude,
-                            longitude: pos.coords.longitude
+                            longitude: pos.coords.longitude,
+                            passcode: enteredPasscode.trim()
                         })
                     });
                     const data = await res.json();
-                    passcodeVerified = false;
                     if (res.ok) {
-                        showMsg(data.message);
+                        showMsg(data.message || '✅ Full Day marked!');
                         fetchHistory(user.rollNo);
+                        fetchMonthlySummary();
                     } else {
                         showMsg(data.error || "Failed", true);
                     }
@@ -1616,67 +1586,45 @@
             }, () => showMsg('GPS Access Denied!', true));
         }
 
-        async function verifyPasscode(passcode, type, callback) {
-            try {
-                const res = await fetch(`${API_BASE}/api/auth/verify-passcode`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ passcode: passcode.trim(), type })
-                });
-                const data = await res.json();
-                if (res.ok && data.verified) {
-                    passcodeVerified = true;
-                    showMsg('✅ Passcode Verified!');
-                    if (callback) callback();
-                } else {
-                    showMsg('❌ ' + (data.error || 'Invalid Passcode!'), true);
-                }
-            } catch (e) {
-                showMsg('Server error!', true);
-            }
-        }
-
         // ============================================================
-        // MARK ACTIVE PERIOD ATTENDANCE
+        // FIXED: MARK ACTIVE PERIOD ATTENDANCE (uses /mark-lecture)
         // ============================================================
         async function markActivePeriodAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'student') return showMsg('Student access required!', true);
             if (!activeSubjectSubjectCode) return showMsg('No active period found!', true);
             if (!navigator.geolocation) return showMsg('Geolocation not supported!', true);
-            
+
             const enteredPasscode = prompt(`Enter Single Lecture Passcode (4‑digit) for "${activeSubjectSubjectCode}":`);
             if (!enteredPasscode) return;
             if (enteredPasscode.length !== 4) return showMsg('Passcode must be 4 digits!', true);
-            
-            passcodeVerified = false;
-            verifyPasscode(enteredPasscode, 'single_lecture', async () => {
-                navigator.geolocation.getCurrentPosition(async (pos) => {
-                    try {
-                        const res = await fetch(`${API_BASE}/api/attendance/mark`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
-                            body: JSON.stringify({
-                                rollNo: user.rollNo,
-                                name: user.name,
-                                subject: activeSubjectSubjectCode,
-                                latitude: pos.coords.latitude,
-                                longitude: pos.coords.longitude
-                            })
-                        });
-                        const data = await res.json();
-                        passcodeVerified = false;
-                        if (res.ok) {
-                            showMsg(data.message);
-                            fetchHistory(user.rollNo);
-                        } else {
-                            showMsg(data.error || "Failed", true);
-                        }
-                    } catch (e) {
-                        showMsg("Network Error!", true);
+
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                try {
+                    const res = await fetch(`${API_BASE}/api/attendance/mark-lecture`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
+                        body: JSON.stringify({
+                            rollNo: user.rollNo,
+                            name: user.name,
+                            subject: activeSubjectSubjectCode,
+                            latitude: pos.coords.latitude,
+                            longitude: pos.coords.longitude,
+                            passcode: enteredPasscode.trim()
+                        })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        showMsg(data.message || '✅ Attendance Marked!');
+                        fetchHistory(user.rollNo);
+                        fetchMonthlySummary();
+                    } else {
+                        showMsg(data.error || "Failed", true);
                     }
-                }, () => showMsg('GPS Access Denied!', true));
-            });
+                } catch (e) {
+                    showMsg("Network Error!", true);
+                }
+            }, () => showMsg('GPS Access Denied!', true));
         }
 
         // ============================================================
@@ -2284,7 +2232,7 @@
         function toggleCalendarView() { renderAttendanceCalendar(globalMyRecords); }
 
         // ============================================================
-        // FETCH HISTORY – Fixed: Graceful error handling
+        // FETCH HISTORY
         // ============================================================
         async function fetchHistory(rollNo) {
             try {
@@ -2338,7 +2286,7 @@
         }
 
         // ============================================================
-        // LOAD DASHBOARD STATS – with sorted & grouped present students
+        // LOAD DASHBOARD STATS
         // ============================================================
         async function loadDashboardStats() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -2537,7 +2485,7 @@
         }
 
         // ============================================================
-        // ADMIN MANUAL ATTENDANCE – with branch validation
+        // ADMIN MANUAL ATTENDANCE
         // ============================================================
         async function validateStudentBranchForManual() {
             const rollNo = document.getElementById('manualRoll').value.trim();
@@ -2763,9 +2711,6 @@
             }
         }
 
-        // ============================================================
-        // ADMIN REGISTER USER – with roll number validation
-        // ============================================================
         async function adminRegisterUser() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
@@ -3256,13 +3201,12 @@
         }
 
         // ============================================================
-        // LOAD DASHBOARD – fixed: month selector set FIRST, no auto passcode for teacher
+        // LOAD DASHBOARD
         // ============================================================
         function loadDashboard() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user) return;
             
-            // --- SET MONTH SELECTOR FIRST ---
             const now = new Date();
             const currentMonth = now.getMonth();
             const monthSelect = document.getElementById('monthSelector');
@@ -3316,7 +3260,6 @@
                 loadTeacherSubjects();
                 loadTeacherRecent();
                 fetchTeacherStudents();
-                // DO NOT auto-generate passcode – user must click Generate
                 document.getElementById('teacherPasscodeDisplay').innerText = '—';
                 teacherCurrentPasscode = '—';
             } else {
@@ -3408,11 +3351,11 @@
         document.getElementById('teacherReportRange')?.addEventListener('change', toggleTeacherReportRange);
 
         console.log('✅ BM Group ERP Portal loaded successfully!');
-        console.log('📆 Month selector default set to current month.');
-        console.log('🔒 Teacher passcode: manual generate only (no auto-refresh).');
-        console.log('📊 Teacher reports: added date range options.');
+        console.log('🔒 Full Day: 5-digit passcode required.');
+        console.log('🔒 Single Lecture: 4-digit passcode required (valid for current period).');
+        console.log('📊 Teacher reports: date range options available.');
         console.log('🔒 Roll number validation: 24CSE00 / 24AIDS00 format enforced.');
-        console.log('🛡️ Rate limit increased to avoid "Too many requests".');
+        console.log('🛡️ All endpoints aligned with backend.');
     </script>
 </body>
 </html>
