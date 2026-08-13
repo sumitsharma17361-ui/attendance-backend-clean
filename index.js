@@ -18,7 +18,7 @@ const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
 const COLLEGE_LAT = 28.4509370;
 const COLLEGE_LNG = 76.7688120;
-const COLLEGE_RADIUS = 100;
+const COLLEGE_RADIUS = 50;
 const SEMESTER_START = new Date(2026, 6, 15);
 const SEMESTER_END = new Date(2026, 11, 31);
 
@@ -933,9 +933,6 @@ app.post('/api/attendance/mark-lecture', async (req, res) => {
       return res.status(403).json({ error: blockCheck.message });
     }
     
-    // Verify passcode BEFORE location
-    const period = getCurrentPeriod(cleanRoll.branch || 'CSE'); // branch from student
-    // Actually we need the student's branch
     const user = await User.findOne({ rollNo: cleanRoll });
     if (!user) return res.status(404).json({ error: 'Student not found!' });
     const branch = user.branch || 'CSE';
@@ -957,14 +954,12 @@ app.post('/api/attendance/mark-lecture', async (req, res) => {
       return res.status(400).json({ error: 'Invalid or expired passcode.' });
     }
     
-    // Now check location
     const locCheck = checkLocation(latitude, longitude);
     if (!locCheck.isInside) {
       await incrementFailedAttempts(cleanRoll);
       return res.status(400).json({ error: `Outside College Boundary! (${locCheck.distance}m away)` });
     }
     
-    // Check for existing attendance (unique index will prevent duplicates)
     try {
       const attendance = new Attendance({
         rollNo: cleanRoll,
@@ -995,6 +990,128 @@ app.post('/api/attendance/mark-lecture', async (req, res) => {
     console.error('Mark lecture error:', err);
     res.status(500).json({ error: err.message });
   }
+});
+
+// ========== FULL DAY ATTENDANCE (Branch-aware) WITH PASSCODE ==========
+app.post('/api/attendance/mark-fullday', async (req, res) => {
+  try {
+    const { rollNo, name, latitude, longitude, passcode } = req.body;
+    if (!passcode) {
+      return res.status(400).json({ error: 'Full Day passcode required!' });
+    }
+    const today = new Date();
+    const todayDate = today.toISOString().split('T')[0];
+    const dateStatus = await checkDateStatus(todayDate);
+    if (dateStatus.isBlocked) return res.status(400).json({ error: dateStatus.message });
+    const cleanRoll = rollNo.trim().toUpperCase();
+    const blockCheck = await checkStudentBlocked(cleanRoll);
+    if (blockCheck.blocked) return res.status(403).json({ error: blockCheck.message });
+    
+    // Verify passcode BEFORE location
+    const passcodeDoc = await Passcode.findOne({
+      passcode: passcode.trim(),
+      type: 'full_day',
+      expiresAt: { $gt: new Date() }
+    });
+    if (!passcodeDoc) {
+      return res.status(400).json({ error: 'Invalid or expired Full Day passcode.' });
+    }
+    
+    const locCheck = checkLocation(latitude, longitude);
+    if (!locCheck.isInside) {
+      await incrementFailedAttempts(cleanRoll);
+      return res.status(400).json({ error: `Outside College Boundary! (${locCheck.distance}m away)` });
+    }
+    const user = await User.findOne({ rollNo: cleanRoll });
+    if (!user) return res.status(404).json({ error: 'Student not found!' });
+
+    const branch = user.branch || 'CSE';
+    const timetable = getTimetableForBranch(branch);
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const dayName = days[today.getDay()];
+    const allSubjects = timetable[dayName] || [];
+    const academicSubjects = allSubjects.filter(entry => !entry.subject.includes("LIB") && !entry.subject.includes("Library") && !entry.subject.includes("Sports"));
+    let markedCount = 0;
+    let skippedCount = 0;
+    
+    for (let entry of academicSubjects) {
+      const sub = entry.subject;
+      try {
+        const attendance = new Attendance({
+          rollNo: cleanRoll,
+          studentName: name,
+          subject: sub,
+          date: todayDate,
+          status: 'Present',
+          location: { latitude, longitude },
+          ipAddress: req.ip,
+          isVerified: true,
+          branch: branch
+        });
+        await attendance.save();
+        markedCount++;
+      } catch (err) {
+        if (err.code === 11000) {
+          skippedCount++;
+          continue;
+        }
+        throw err;
+      }
+    }
+    user.lastAttendanceTime = new Date();
+    user.lastAttendanceLocation = { latitude, longitude };
+    user.failedAttempts = 0;
+    user.blockUntil = null;
+    await user.save();
+    if (markedCount === 0 && skippedCount > 0) {
+      return res.status(400).json({ error: `All ${skippedCount} academic subjects already marked today!` });
+    }
+    if (markedCount === 0) {
+      return res.status(400).json({ error: 'No academic subjects found for today.' });
+    }
+    res.status(201).json({ message: `✅ Full Day Marked (${markedCount} new lectures, ${skippedCount} already marked)!` });
+  } catch (err) {
+    console.error('Full Day error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ========== STUDENT ATTENDANCE MARKING (without passcode) ==========
+app.post('/api/attendance/mark', async (req, res) => {
+  try {
+    const { rollNo, name, subject, latitude, longitude } = req.body;
+    const today = new Date();
+    const todayDate = today.toISOString().split('T')[0];
+    const dateStatus = await checkDateStatus(todayDate);
+    if (dateStatus.isBlocked) return res.status(400).json({ error: dateStatus.message });
+    const cleanRoll = rollNo.trim().toUpperCase();
+    const blockCheck = await checkStudentBlocked(cleanRoll);
+    if (blockCheck.blocked) return res.status(403).json({ error: blockCheck.message });
+    const locCheck = checkLocation(latitude, longitude);
+    if (!locCheck.isInside) { await incrementFailedAttempts(cleanRoll); return res.status(400).json({ error: `Outside College Boundary! (${locCheck.distance}m away)` }); }
+    const user = await User.findOne({ rollNo: cleanRoll });
+    if (!user) return res.status(404).json({ error: 'Student not found!' });
+    const isLab = subject.includes("LAB") || subject.includes("Lab");
+    const todayEntries = await Attendance.find({ rollNo: cleanRoll, subject, date: todayDate });
+    if (isLab && todayEntries.length >= 1) return res.status(400).json({ error: `Already marked for ${subject} today! (Lab - 1 lecture only)` });
+    user.failedAttempts = 0;
+    user.blockUntil = null;
+    await new Attendance({
+      rollNo: cleanRoll,
+      studentName: name,
+      subject,
+      date: todayDate,
+      status: 'Present',
+      location: { latitude, longitude },
+      ipAddress: req.ip,
+      isVerified: true,
+      branch: user.branch || 'CSE'
+    }).save();
+    user.lastAttendanceTime = new Date();
+    user.lastAttendanceLocation = { latitude, longitude };
+    await user.save();
+    res.status(201).json({ message: `✅ Attendance Marked for ${subject}!` });
+  } catch (err) { console.error('Attendance error:', err); res.status(500).json({ error: err.message }); }
 });
 
 // ========== NOTICES ==========
@@ -1254,122 +1371,6 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
     });
   } catch (err) {
     console.error('Monthly summary error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ========== STUDENT ATTENDANCE MARKING (without passcode) ==========
-app.post('/api/attendance/mark', async (req, res) => {
-  try {
-    const { rollNo, name, subject, latitude, longitude } = req.body;
-    const today = new Date();
-    const todayDate = today.toISOString().split('T')[0];
-    const dateStatus = await checkDateStatus(todayDate);
-    if (dateStatus.isBlocked) return res.status(400).json({ error: dateStatus.message });
-    const cleanRoll = rollNo.trim().toUpperCase();
-    const blockCheck = await checkStudentBlocked(cleanRoll);
-    if (blockCheck.blocked) return res.status(403).json({ error: blockCheck.message });
-    const locCheck = checkLocation(latitude, longitude);
-    if (!locCheck.isInside) { await incrementFailedAttempts(cleanRoll); return res.status(400).json({ error: `Outside College Boundary! (${locCheck.distance}m away)` }); }
-    const user = await User.findOne({ rollNo: cleanRoll });
-    if (!user) return res.status(404).json({ error: 'Student not found!' });
-    const isLab = subject.includes("LAB") || subject.includes("Lab");
-    const todayEntries = await Attendance.find({ rollNo: cleanRoll, subject, date: todayDate });
-    if (isLab && todayEntries.length >= 1) return res.status(400).json({ error: `Already marked for ${subject} today! (Lab - 1 lecture only)` });
-    user.failedAttempts = 0;
-    user.blockUntil = null;
-    await new Attendance({
-      rollNo: cleanRoll,
-      studentName: name,
-      subject,
-      date: todayDate,
-      status: 'Present',
-      location: { latitude, longitude },
-      ipAddress: req.ip,
-      isVerified: true,
-      branch: user.branch || 'CSE'
-    }).save();
-    user.lastAttendanceTime = new Date();
-    user.lastAttendanceLocation = { latitude, longitude };
-    await user.save();
-    res.status(201).json({ message: `✅ Attendance Marked for ${subject}!` });
-  } catch (err) { console.error('Attendance error:', err); res.status(500).json({ error: err.message }); }
-});
-
-// ========== FULL DAY ATTENDANCE (Branch-aware) WITH PASSCODE ==========
-app.post('/api/attendance/mark-fullday', async (req, res) => {
-  try {
-    const { rollNo, name, latitude, longitude, passcode } = req.body;
-    if (!passcode) {
-      return res.status(400).json({ error: 'Full Day passcode required!' });
-    }
-    const today = new Date();
-    const todayDate = today.toISOString().split('T')[0];
-    const dateStatus = await checkDateStatus(todayDate);
-    if (dateStatus.isBlocked) return res.status(400).json({ error: dateStatus.message });
-    const cleanRoll = rollNo.trim().toUpperCase();
-    const blockCheck = await checkStudentBlocked(cleanRoll);
-    if (blockCheck.blocked) return res.status(403).json({ error: blockCheck.message });
-    
-    // Verify passcode BEFORE location
-    const passcodeDoc = await Passcode.findOne({
-      passcode: passcode.trim(),
-      type: 'full_day',
-      expiresAt: { $gt: new Date() }
-    });
-    if (!passcodeDoc) {
-      return res.status(400).json({ error: 'Invalid or expired Full Day passcode.' });
-    }
-    
-    // Now location
-    const locCheck = checkLocation(latitude, longitude);
-    if (!locCheck.isInside) {
-      await incrementFailedAttempts(cleanRoll);
-      return res.status(400).json({ error: `Outside College Boundary! (${locCheck.distance}m away)` });
-    }
-    const user = await User.findOne({ rollNo: cleanRoll });
-    if (!user) return res.status(404).json({ error: 'Student not found!' });
-
-    const branch = user.branch || 'CSE';
-    const timetable = getTimetableForBranch(branch);
-    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    const dayName = days[today.getDay()];
-    const allSubjects = timetable[dayName] || [];
-    const academicSubjects = allSubjects.filter(entry => !entry.subject.includes("LIB") && !entry.subject.includes("Library") && !entry.subject.includes("Sports"));
-    let markedCount = 0;
-    for (let entry of academicSubjects) {
-      const sub = entry.subject;
-      // Try to insert; if duplicate, skip
-      try {
-        const attendance = new Attendance({
-          rollNo: cleanRoll,
-          studentName: name,
-          subject: sub,
-          date: todayDate,
-          status: 'Present',
-          location: { latitude, longitude },
-          ipAddress: req.ip,
-          isVerified: true,
-          branch: branch
-        });
-        await attendance.save();
-        markedCount++;
-      } catch (err) {
-        if (err.code === 11000) {
-          // Duplicate, skip
-          continue;
-        }
-        throw err;
-      }
-    }
-    user.lastAttendanceTime = new Date();
-    user.lastAttendanceLocation = { latitude, longitude };
-    user.failedAttempts = 0;
-    user.blockUntil = null;
-    await user.save();
-    if (markedCount === 0) return res.status(400).json({ error: 'All academic subjects already marked today!' });
-    res.status(201).json({ message: `✅ Full Day Marked (${markedCount} academic Lectures)!` });
-  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
