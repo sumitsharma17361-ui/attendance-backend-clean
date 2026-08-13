@@ -1132,7 +1132,7 @@
             margin: 0;
         }
 
-        /* ===== CHAT WIDGET - GEMINI PRO STYLE ===== */
+        /* ===== CHAT WIDGET - GEMINI PRO STYLE (FIXED RESPONSIVE) ===== */
         #chatWidget {
             position: fixed;
             bottom: 20px;
@@ -1416,6 +1416,8 @@
             border-top: 1px solid var(--card-border);
             background: #fff;
             flex-shrink: 0;
+            max-height: 100px;
+            overflow-y: auto;
         }
         .chat-panel .chat-main .quick-chips .chip {
             background: #f1f5f9;
@@ -1539,6 +1541,10 @@
             .chat-panel .chat-main .quick-chips .chip {
                 font-size: 8px;
                 padding: 3px 10px;
+            }
+            .chat-panel .chat-main .chat-messages {
+                padding: 10px 12px;
+                font-size: 12px;
             }
         }
     </style>
@@ -2193,7 +2199,7 @@
     </div>
 
     <!-- ========================================================== -->
-    <!-- CHAT WIDGET – GEMINI PRO STYLE                             -->
+    <!-- CHAT WIDGET – GEMINI PRO STYLE (FIXED)                     -->
     <!-- ========================================================== -->
     <div id="chatWidget">
         <button class="chat-toggle-btn" onclick="toggleChat()" id="chatToggleBtn">
@@ -4873,6 +4879,8 @@
             document.getElementById('chatWidget').style.display = 'block';
             // Load chat history
             loadChatHistory(user.rollNo);
+            // Update greeting
+            updateWelcomeGreeting();
         }
 
         // ============================================================
@@ -5047,17 +5055,15 @@
         }
 
         // ============================================================
-        // ===== CHAT WIDGET – GEMINI PRO STYLE =====
+        // ===== CHAT WIDGET – GEMINI PRO STYLE (FIXED) =====
         // ============================================================
         function toggleChat() {
             chatOpen = !chatOpen;
             document.getElementById('chatPanel').classList.toggle('open', chatOpen);
             if (chatOpen) {
                 document.getElementById('chatInput').focus();
-                // Load chat history
                 const user = JSON.parse(localStorage.getItem('user'));
                 if (user) loadChatHistory(user.rollNo);
-                // Show welcome greeting
                 updateWelcomeGreeting();
             }
         }
@@ -5118,7 +5124,6 @@
         function newChat() {
             currentThreadId = null;
             const messagesDiv = document.getElementById('chatMessages');
-            // Clear messages but keep welcome greeting
             messagesDiv.innerHTML = `
                     <div class="welcome-greeting" id="welcomeGreeting">
                         <span class="greeting-emoji">👋</span>
@@ -5128,11 +5133,8 @@
                     <div class="typing-indicator" id="typingIndicator"><span class="dots">...</span></div>
                 `;
             updateWelcomeGreeting();
-            // Update sidebar
             document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
-            // Close sidebar on mobile
             if (window.innerWidth < 500) toggleSidebar();
-            // Focus input
             document.getElementById('chatInput').focus();
         }
 
@@ -5149,7 +5151,6 @@
                 currentThreadId = threadId;
                 const messagesDiv = document.getElementById('chatMessages');
                 messagesDiv.innerHTML = '';
-                // Add welcome greeting
                 const greetingDiv = document.createElement('div');
                 greetingDiv.className = 'welcome-greeting';
                 greetingDiv.id = 'welcomeGreeting';
@@ -5169,7 +5170,6 @@
                     messagesDiv.appendChild(div);
                 });
 
-                // Add typing indicator
                 const typing = document.createElement('div');
                 typing.className = 'typing-indicator';
                 typing.id = 'typingIndicator';
@@ -5178,7 +5178,6 @@
 
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
-                // Update sidebar
                 document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
                 const items = document.querySelectorAll('.chat-item');
                 items.forEach(el => {
@@ -5220,11 +5219,9 @@
             if (!user) { showMsg('Please login to chat!', true); return; }
 
             const messagesDiv = document.getElementById('chatMessages');
-            // Remove welcome greeting if present
             const welcome = document.getElementById('welcomeGreeting');
             if (welcome) welcome.remove();
 
-            // Add user message
             const userDiv = document.createElement('div');
             userDiv.className = 'chat-msg user';
             const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -5233,10 +5230,8 @@
             input.value = '';
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
-            // Show typing indicator
             const typing = document.getElementById('typingIndicator');
             if (typing) typing.style.display = 'block';
-
             const sendBtn = document.getElementById('chatSendBtn');
             sendBtn.disabled = true;
 
@@ -5259,17 +5254,13 @@
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Failed to get response');
 
-                // Update thread ID
                 if (data.threadId) {
                     currentThreadId = data.threadId;
-                    // Reload chat history
                     loadChatHistory(user.rollNo);
                 }
 
-                // Hide typing
                 if (typing) typing.style.display = 'none';
 
-                // Add bot response
                 const botDiv = document.createElement('div');
                 botDiv.className = 'chat-msg bot';
                 const botTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -5314,13 +5305,11 @@
             }
         }
 
-        // Check for saved user session on load
         (function() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (user && localStorage.getItem('token')) {
                 loadDashboard();
                 populateBulkStudentSelect();
-                // Also load chat history
                 loadChatHistory(user.rollNo);
             }
             const picker = document.getElementById('bulkDatePicker');
@@ -5330,7 +5319,6 @@
             }
             initMonthSelector();
 
-            // Add event listeners for Excel modal
             document.getElementById('studentExcelRange')?.addEventListener('change', function() {
                 const wrapper = document.getElementById('selectedMonthWrapper');
                 if (wrapper) wrapper.style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none';
