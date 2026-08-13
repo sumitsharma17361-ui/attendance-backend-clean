@@ -2260,7 +2260,7 @@ app.delete('/api/chats/:threadId', async (req, res) => {
   }
 });
 
-// ==================== CHAT AI ENDPOINT – USING GROQ API ====================
+// ==================== CHAT AI ENDPOINT – USING GROQ API (FIXED) ====================
 app.post('/api/chat', async (req, res) => {
   try {
     const { message, rollNo, role, name, branch, threadId } = req.body;
@@ -2349,15 +2349,16 @@ Reply in a clear, conversational, and professional manner.`;
     // ===== Call Groq API =====
     if (GROQ_API_KEY) {
       try {
+        // ✅ FIXED: Use a valid Groq model
         const groqPayload = {
-          model: 'llama-3.3-70b-versatile',  // You can also use 'mixtral-8x7b-32768'
+          model: 'llama-3.1-70b-versatile',  // Changed from llama-3.3-70b-versatile
           messages: messages,
           temperature: 0.7,
           max_tokens: 1000
         };
 
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
+        const timeout = setTimeout(() => controller.abort(), 15000);
 
         const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
@@ -2372,21 +2373,22 @@ Reply in a clear, conversational, and professional manner.`;
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('Groq API error:', errorText);
+          console.error('❌ Groq API error:', response.status, errorText);
           aiError = true;
         } else {
           const data = await response.json();
           reply = data.choices?.[0]?.message?.content || 'Sorry, I could not understand.';
         }
       } catch (err) {
-        console.error('Groq API exception:', err);
+        console.error('❌ Groq API exception:', err);
         aiError = true;
       }
     } else {
-      aiError = true; // no API key
+      console.warn('⚠️ GROQ_API_KEY not set');
+      aiError = true;
     }
 
-    // Fallback: if AI failed, generate a local intelligent response
+    // Fallback
     if (aiError || !reply) {
       let fallback = `${greeting}, ${userName} ${emoji}! I'm your BM Bot. `;
       if (attendanceSummary) {
@@ -2405,7 +2407,7 @@ Reply in a clear, conversational, and professional manner.`;
       reply = fallback;
     }
 
-    // Save conversation to thread (only if user is logged in)
+    // Save conversation to thread
     let newThreadId = threadId;
     if (cleanRoll !== 'guest') {
       const newMessages = [
@@ -2450,7 +2452,7 @@ Reply in a clear, conversational, and professional manner.`;
     });
 
   } catch (err) {
-    console.error('Chat error:', err);
+    console.error('❌ Chat error:', err);
     res.status(500).json({ error: 'Internal server error: ' + err.message });
   }
 });
