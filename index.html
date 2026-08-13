@@ -8,6 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous">
     </script>
     <style>
+        /* ===== ROOT & RESET ===== */
         :root {
             --bg-body: #f0f4f8;
             --primary: #2563eb;
@@ -27,30 +28,37 @@
         }
         * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding: 0; }
         body { background: var(--bg-body); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 16px; }
+        /* ===== TOAST ===== */
         #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; width: 90%; max-width: 420px; pointer-events: none; }
         .toast-card { padding: 12px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 600; text-align: center; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); border: 1px solid var(--card-border); display: flex; align-items: center; justify-content: center; gap: 10px; opacity: 0; transform: translateY(-16px) scale(0.96); transition: all 0.45s cubic-bezier(0.16,1,0.3,1); pointer-events: auto; }
         .toast-card.show { opacity: 1; transform: translateY(0) scale(1); }
         .toast-card.toast-success { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
         .toast-card.toast-error { background: #fef2f2; color: #991b1b; border-color: #fecaca; animation: shake 0.4s ease-in-out; }
         @keyframes shake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-4px); } 40%,80% { transform: translateX(4px); } }
+        /* ===== APP CONTAINER ===== */
         .app-container { width: 100%; max-width: 480px; background: var(--card-bg); border-radius: 20px; box-shadow: var(--shadow-md); border: 1px solid var(--card-border); overflow: hidden; animation: cardScaleUp 0.75s cubic-bezier(0.16,1,0.3,1); }
         @keyframes cardScaleUp { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         @keyframes fadeInSlide { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
         .tab-content-active { animation: fadeInSlide 0.5s cubic-bezier(0.16,1,0.3,1) forwards; }
+        /* ===== HEADER ===== */
         .app-header { background: #fff; padding: 16px 18px; border-bottom: 1px solid var(--card-border); display: flex; align-items: center; justify-content: space-between; }
         .app-header-title h1 { font-size: 15px; font-weight: 800; color: #0f172a; letter-spacing: -0.3px; }
         .app-header-title p { font-size: 10px; font-weight: 600; color: var(--text-muted); margin-top: 1px; }
         .header-avatar-badge { display: flex; align-items: center; gap: 8px; }
         .avatar-circle { width: 32px; height: 32px; border-radius: 50%; background: #eff6ff; color: var(--primary); font-weight: 700; font-size: 11px; display: flex; align-items: center; justify-content: center; border: 1px solid #dbeafe; transition: all 0.3s; }
         .avatar-circle:hover { transform: scale(1.05); }
+        /* ===== NOTICE BANNER ===== */
         .notice-banner { background: #fffbeb; border-bottom: 1px solid #fef3c7; color: #92400e; font-size: 10px; padding: 6px 12px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
         .notice-marquee { overflow: hidden; white-space: nowrap; width: 100%; }
         .notice-marquee p { display: inline-block; animation: marquee 16s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+        /* ===== IMPERSONATION BANNER ===== */
         .impersonation-banner { background: #fef3c7; border-bottom: 2px solid #f59e0b; color: #92400e; padding: 6px 14px; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
         .impersonation-banner .switch-back-btn { background: #dc2626; color: white; border: none; border-radius: 6px; padding: 4px 12px; font-size: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; }
         .impersonation-banner .switch-back-btn:hover { background: #b91c1c; }
+        /* ===== BODY ===== */
         .app-body { padding: 14px; }
+        /* ===== FORM ===== */
         input, select { width: 100%; padding: 9px 12px; margin-bottom: 8px; background: #f8fafc; border: 1px solid var(--card-border); border-radius: var(--radius-sm); font-size: 11px; font-weight: 600; color: var(--text-main); outline: none; transition: all 0.3s; }
         select option { background: #fff; color: #0f172a; }
         input::placeholder { color: #94a3b8; font-weight: 500; }
@@ -59,6 +67,7 @@
         .password-wrapper input { padding-right: 36px; }
         .eye-icon { position: absolute; right: 10px; top: 38%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); transition: color 0.3s; }
         .eye-icon:hover { color: var(--primary); }
+        /* ===== BUTTONS ===== */
         .btn { width: 100%; padding: 9px 12px; border-radius: var(--radius-sm); font-weight: 700; font-size: 11px; cursor: pointer; margin-top: 4px; transition: all 0.3s; border: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: var(--shadow-sm); }
         .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-hover); }
         .btn:active { transform: scale(0.97) translateY(0); }
@@ -75,6 +84,7 @@
         .btn-xs { padding: 3px 8px; font-size: 8px; width: auto; margin: 0; }
         .btn-ghost { background: transparent; border: 1px solid transparent; color: var(--text-muted); box-shadow: none; }
         .btn-ghost:hover { background: #f1f5f9; border-color: var(--card-border); transform: none; }
+        /* ===== BADGES ===== */
         .badge { padding: 2px 8px; border-radius: 4px; font-size: 9px; font-weight: 700; transition: all 0.3s; display: inline-block; }
         .badge-present { background: #dcfce7; color: #15803d; }
         .badge-absent { background: #fee2e2; color: #991b1b; }
@@ -84,16 +94,20 @@
         .badge-dl { background: #fef3c7; color: #92400e; }
         .badge-cse { background: #dbeafe; color: #1e40af; }
         .badge-aids { background: #fae8ff; color: #7c3aed; }
+        /* ===== STATS GRID ===== */
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
         .stat-card { background: #f8fafc; padding: 10px; border-radius: var(--radius); text-align: center; border: 1px solid var(--card-border); transition: all 0.3s; }
         .stat-card:hover { transform: translateY(-1px); border-color: #cbd5e1; box-shadow: var(--shadow-sm); }
         .stat-card .value { font-size: 18px; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; }
         .stat-card .label { font-size: 9px; color: var(--text-muted); font-weight: 700; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+        /* ===== SIMULATOR CARD ===== */
         .simulator-card { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: var(--radius); padding: 8px 12px; margin-bottom: 10px; font-size: 10px; color: #0369a1; display: flex; align-items: center; gap: 8px; }
+        /* ===== QUICK PORTALS ===== */
         .quick-portals-card { background: #fff; border: 1px solid var(--card-border); border-radius: var(--radius); padding: 10px; margin: 10px 0; }
         .portal-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 6px; }
         .portal-btn { background: #f8fafc; border: 1px solid var(--card-border); border-radius: var(--radius-sm); padding: 6px 4px; text-align: center; font-size: 9px; font-weight: 700; color: var(--text-main); cursor: pointer; transition: all 0.3s; display: flex; flex-direction: column; align-items: center; gap: 3px; }
         .portal-btn:hover { background: #fff; border-color: var(--primary); transform: translateY(-1px); box-shadow: var(--shadow-sm); color: var(--primary); }
+        /* ===== CALENDAR ===== */
         .calendar-container { background: #fff; border: 1px solid var(--card-border); border-radius: var(--radius); padding: 10px; margin: 10px 0; }
         .calendar-header { display: flex; justify-content: space-between; align-items: center; font-size: 10px; font-weight: 800; margin-bottom: 8px; color: var(--text-main); }
         .calendar-header select { margin-top: 0; padding: 4px 6px; font-size: 10px; width: auto; }
@@ -104,13 +118,16 @@
         .cal-p { background: #dcfce7; color: #15803d; font-weight: 800; border-color: #bbf7d0; }
         .cal-a { background: #fee2e2; color: #b91c1c; font-weight: 800; border-color: #fecaca; }
         .cal-off { background: #f1f5f9; color: #94a3b8; }
+        /* ===== TABS ===== */
         .tab-bar { display: flex; background: #f1f5f9; border-radius: var(--radius-sm); padding: 2px; margin-bottom: 10px; }
         .tab-item { flex: 1; padding: 6px; text-align: center; font-size: 10px; font-weight: 700; cursor: pointer; color: var(--text-muted); border-radius: 6px; transition: all 0.3s; }
         .tab-item.active { background: #fff; color: var(--primary); box-shadow: var(--shadow-sm); }
+        /* ===== ADMIN NAV ===== */
         .admin-nav { display: flex; flex-wrap: wrap; gap: 4px; background: #f1f5f9; padding: 6px; border-radius: var(--radius-sm); margin-bottom: 10px; }
         .admin-nav-item { flex: 1 0 auto; min-width: 60px; text-align: center; padding: 10px 6px; font-size: 11px; font-weight: 800; cursor: pointer; border-radius: 6px; color: var(--text-muted); transition: all 0.3s; background: transparent; border: 1px solid transparent; line-height: 1.3; letter-spacing: 0.3px; }
         .admin-nav-item:hover { background: rgba(255,255,255,0.6); }
         .admin-nav-item.active { background: #fff; color: var(--primary); box-shadow: var(--shadow-sm); border-color: var(--card-border); }
+        /* ===== PERIOD CARD ===== */
         .period-card { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: var(--radius); padding: 10px; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; }
         .action-btn { border: none; border-radius: 6px; padding: 5px 8px; font-size: 9px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s; }
         .action-btn:hover { opacity: 0.9; transform: translateY(-1px); }
@@ -122,11 +139,13 @@
         .btn-edit:hover { background: #fef3c7; }
         .status-holiday { background: #fef3c7; color: #92400e; border-color: #fde68a; }
         .status-weekend { background: #e2e8f0; color: #475569; border-color: #cbd5e1; }
+        /* ===== TABLES ===== */
         .table-container { max-height: 300px; overflow-y: auto; border: 1px solid var(--card-border); border-radius: var(--radius-sm); margin-top: 6px; background: #fff; }
         .table-container table { width: 100%; border-collapse: collapse; font-size: 10px; }
         .table-container th { background: #f8fafc; color: var(--text-muted); padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--card-border); position: sticky; top: 0; font-weight: 700; font-size: 9px; z-index: 2; }
         .table-container td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; font-size: 10px; vertical-align: middle; }
         .table-container tr:hover td { background: #f8fafc; }
+        /* ===== ADMIN BOXES ===== */
         .admin-box { background: #fff; padding: 12px; border-radius: var(--radius); border: 1px solid var(--card-border); animation: cardScaleUp 0.5s; margin-bottom: 8px; }
         .admin-box.sub-reports { background: #f0fdf4; border-color: #bbf7d0; }
         .admin-box.sub-attendance { background: #fefce8; border-color: #fef08a; }
@@ -137,14 +156,17 @@
         .admin-box.sub-all-attendance { background: #ecfdf5; border-color: #a7f3d0; }
         .admin-box.sub-bulk { background: #f0f9ff; border-color: #bae6fd; }
         .sub-section-title { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block; }
+        /* ===== SUBJECT CHECKBOXES ===== */
         .subject-checkbox-container { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; max-height: 150px; overflow-y: auto; padding: 4px; background: #f8fafc; border-radius: var(--radius-sm); border: 1px solid var(--card-border); }
         .subject-checkbox-container label { font-size: 9px; font-weight: 500; display: flex; align-items: center; gap: 4px; cursor: pointer; padding: 3px 6px; background: #fff; border-radius: 4px; border: 1px solid #e2e8f0; transition: all 0.2s; }
         .subject-checkbox-container label:hover { background: #eff6ff; border-color: var(--primary); }
         .subject-checkbox-container label input[type="checkbox"] { width: auto; margin: 0; }
         .subject-checkbox-container .select-all { grid-column: span 2; background: #e2e8f0; padding: 4px 8px; font-weight: 700; border: none; }
         .subject-checkbox-container .select-all:hover { background: #cbd5e1; }
+        /* ===== PASSCODE DISPLAY ===== */
         .passcode-display { background: #f8fafc; padding: 8px; border-radius: var(--radius-sm); margin-bottom: 6px; border: 1px solid var(--card-border); text-align: center; }
         .passcode-display h2 { font-size: 20px; font-weight: 900; color: var(--primary); letter-spacing: 4px; }
+        /* ===== TODAY PRESENT LIST ===== */
         #todayPresentList { max-height: 180px; overflow-y: auto; font-size: 10px; margin: 6px 0; }
         .present-group { margin-bottom: 8px; }
         .present-group .group-title { font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px; display: block; border-bottom: 1px solid var(--card-border); padding-bottom: 2px; }
@@ -152,14 +174,18 @@
         .present-item:last-child { border-bottom: none; }
         .present-item .roll { font-weight: 600; }
         .present-item .name { color: var(--text-muted); }
+        /* ===== SUBJECT CHIPS ===== */
         .subject-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
         .subject-chip { background: var(--card-bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--card-border); font-size: 8px; }
+        /* ===== TOOL SUB CARD ===== */
         .tool-sub-card { background: #f8fafc; border: 1px solid var(--card-border); border-radius: var(--radius); padding: 10px; margin-bottom: 8px; }
         .tool-title { font-size: 10px; font-weight: 800; margin-bottom: 6px; display: block; }
         .flex-buttons { display: flex; gap: 6px; }
         .flex-buttons .btn { margin: 0; flex: 1; }
+        /* ===== SVG ICON ===== */
         .svg-icon { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: inline-block; vertical-align: middle; transition: transform 0.3s; }
         .svg-icon-sm { width: 12px; height: 12px; }
+        /* ===== MODAL ===== */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 16px; }
         .modal-card { background: #fff; width: 100%; max-width: 340px; border-radius: 14px; padding: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border: 1px solid var(--card-border); animation: cardScaleUp 0.3s; }
         .modal-card .modal-actions { display: flex; gap: 6px; margin-top: 10px; }
@@ -167,17 +193,33 @@
         .profile-modal { max-width: 480px; max-height: 90vh; overflow-y: auto; }
         .profile-modal .record-item { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #f1f5f9; }
         .profile-modal .record-item:last-child { border-bottom: none; }
+        /* ===== DOWNLOAD PROGRESS ===== */
         .download-progress { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 10px 20px; border-radius: var(--radius-sm); font-size: 12px; z-index: 99999; display: none; align-items: center; gap: 10px; max-width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .download-progress.show { display: flex; }
         .download-progress .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top: 2px solid white; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        /* ===== FILTER ROW ===== */
         .filter-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
         .filter-row select, .filter-row input { flex: 1; min-width: 80px; padding: 6px 8px; font-size: 9px; margin: 0; }
+        /* ===== RESPONSIVE ===== */
         @media (max-width: 480px) { .app-container { border-radius: 12px; } .stats-grid { grid-template-columns: 1fr 1fr; gap: 6px; } .admin-nav-item { min-width: 50px; font-size: 10px; padding: 8px 4px; } .filter-row select, .filter-row input { min-width: 60px; font-size: 8px; } .profile-modal { max-width: 100%; } }
+        /* ===== BULK STUDENT LIST ===== */
+        .bulk-student-list { max-height: 150px; overflow-y: auto; border: 1px solid var(--card-border); border-radius: var(--radius-sm); padding: 6px; background: #fff; margin-bottom: 6px; }
+        .bulk-student-list label { display: flex; align-items: center; gap: 6px; font-size: 10px; padding: 2px 4px; cursor: pointer; }
+        .bulk-student-list label:hover { background: #f1f5f9; }
+        .bulk-student-list .select-all-label { font-weight: 700; border-bottom: 1px solid var(--card-border); padding-bottom: 4px; margin-bottom: 4px; }
+        .bulk-date-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+        .bulk-date-chip { background: #e2e8f0; padding: 2px 8px; border-radius: 12px; font-size: 10px; display: flex; align-items: center; gap: 4px; }
+        .bulk-date-chip .remove-date { cursor: pointer; color: var(--danger); font-weight: 700; }
+        .bulk-date-chip .remove-date:hover { color: #b91c1c; }
+        .bulk-date-input-row { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
+        .bulk-date-input-row input[type="date"] { flex: 1; padding: 6px; font-size: 10px; margin: 0; }
+        .bulk-date-input-row button { padding: 6px 12px; font-size: 10px; margin: 0; }
     </style>
 </head>
 <body>
 
+    <!-- ===== TOAST ===== -->
     <div id="toast-container">
         <div id="toast" class="toast-card">
             <svg id="toast-icon" class="svg-icon" viewBox="0 0 24 24">
@@ -188,11 +230,13 @@
         </div>
     </div>
 
+    <!-- ===== DOWNLOAD PROGRESS ===== -->
     <div id="downloadProgress" class="download-progress">
         <div class="spinner"></div>
         <span id="downloadStatus">Preparing file…</span>
     </div>
 
+    <!-- ===== STUDENT EXCEL MODAL ===== -->
     <div id="studentExcelModal" class="modal-overlay" style="display:none;">
         <div class="modal-card">
             <h3 style="font-size:13px; font-weight:800; margin-bottom:4px;">Download Student Excel Sheet</h3>
@@ -219,6 +263,7 @@
         </div>
     </div>
 
+    <!-- ===== EDIT ATTENDANCE MODAL ===== -->
     <div id="editAttendanceModal" class="modal-overlay" style="display:none;">
         <div class="modal-card">
             <h3 style="font-size:13px; font-weight:800; margin-bottom:4px;">✏️ Edit Attendance</h3>
@@ -235,8 +280,10 @@
         </div>
     </div>
 
+    <!-- ===== MAIN APP ===== -->
     <div class="app-container">
 
+        <!-- HEADER -->
         <div class="app-header">
             <div class="app-header-title">
                 <h1>BM Group of Institutions</h1>
@@ -247,6 +294,7 @@
             </div>
         </div>
 
+        <!-- NOTICE BANNER -->
         <div class="notice-banner" id="noticeBanner" style="display:none;">
             <svg class="svg-icon" viewBox="0 0 24 24">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -255,13 +303,16 @@
             <div class="notice-marquee"><p id="noticeText">Loading announcements…</p></div>
         </div>
 
+        <!-- IMPERSONATION BANNER -->
         <div id="impersonationBanner" class="impersonation-banner" style="display:none;">
             <span>🔑 <strong>Impersonating:</strong> <span id="impersonatedName">Student</span> (<span id="impersonatedRoll">—</span>)</span>
             <button class="switch-back-btn" onclick="switchBackFromImpersonation()">⬅ Switch Back</button>
         </div>
 
+        <!-- BODY -->
         <div class="app-body">
 
+            <!-- ===== AUTH BOX ===== -->
             <div id="auth-box" class="tab-content-active">
                 <h3 style="font-size:14px; font-weight:800; margin-bottom:8px;">Sign In to Web Attendance System</h3>
                 <select id="loginRole" style="margin-bottom:8px;">
@@ -286,8 +337,10 @@
                 <span style="color:var(--primary); cursor:pointer; font-size:11px; display:block; text-align:center; margin-top:10px; font-weight:600;" id="toggleLink" onclick="toggleMode()">New Student? Register</span>
             </div>
 
+            <!-- ===== DASHBOARD ===== -->
             <div id="dash-box" style="display:none;">
 
+                <!-- Welcome + Logout -->
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <div>
                         <h3 style="font-size:13px; font-weight:800;"><span id="welcomeMsg">Welcome!</span></h3>
@@ -300,6 +353,7 @@
                     <button class="btn btn-danger" style="width:auto; padding:4px 8px; margin:0; font-size:10px;" onclick="logout()">Logout</button>
                 </div>
 
+                <!-- Student Stats -->
                 <div class="stats-grid" id="studentStatsGrid">
                     <div class="stat-card">
                         <div class="value" id="totalDaysCount">0</div>
@@ -311,6 +365,7 @@
                     </div>
                 </div>
 
+                <!-- Admin/Teacher Stats -->
                 <div class="stats-grid" id="adminStatsGrid" style="display:none;">
                     <div class="stat-card">
                         <div class="value" id="adminTotalStudents">0</div>
@@ -322,6 +377,7 @@
                     </div>
                 </div>
 
+                <!-- Advisor -->
                 <div class="simulator-card" id="simulatorBox">
                     <svg class="svg-icon" viewBox="0 0 24 24">
                         <circle cx="12" cy="12" r="10" />
@@ -331,6 +387,7 @@
                     <div><b>Attendance Advisor:</b> <span id="advisorText">Calculating criteria…</span></div>
                 </div>
 
+                <!-- Admin Live Dashboard -->
                 <div id="adminLiveDashboard" style="display:none; margin:10px 0;">
                     <div class="stats-grid">
                         <div class="stat-card"><div class="value" id="liveTotalStudents">0</div><div class="label">Total Students</div></div>
@@ -349,6 +406,7 @@
                     <button class="btn btn-outline btn-sm" onclick="loadDashboardStats()" style="padding:4px; font-size:9px;">Refresh Stats</button>
                 </div>
 
+                <!-- Quick Portals -->
                 <div class="quick-portals-card">
                     <span style="font-size:9px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Quick Portals</span>
                     <div class="portal-grid">
@@ -367,6 +425,7 @@
                     </div>
                 </div>
 
+                <!-- Tab Bar -->
                 <div class="tab-bar">
                     <div class="tab-item active" id="studentTabHeader" onclick="switchTab('markTab')">Attendance</div>
                     <div class="tab-item" id="adminTabHeader" style="display:none;" onclick="switchTab('adminTab')">Admin</div>
@@ -579,22 +638,38 @@
                         <button class="btn btn-success btn-sm" onclick="markAllSubjectsForDay()" style="margin-top:4px; padding:6px; font-size:9px;">📚 Mark All Subjects for this Day</button>
                         <p id="manualBranchWarning" style="font-size:8px; color:var(--danger); margin-top:4px; display:none;"></p>
 
-                        <!-- ===== BULK ACTIONS ===== -->
+                        <!-- ===== NEW BULK ACTIONS (multi-select students & dates) ===== -->
                         <div style="margin-top:14px; border-top: 2px dashed var(--card-border); padding-top:12px;">
-                            <span class="sub-section-title" style="color: var(--primary);">📦 Bulk Actions (Multiple Students & Dates)</span>
+                            <span class="sub-section-title" style="color: var(--primary);">📦 Bulk Actions (Select Students & Dates)</span>
                             <div style="background: #f8fafc; border: 1px solid var(--card-border); border-radius: var(--radius-sm); padding: 10px; margin-top:4px;">
-                                <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px;">
-                                    <select id="bulkStudentSelect" style="flex:1; min-width:100px; padding:6px; font-size:10px; margin:0;">
-                                        <option value="ALL">All Students</option>
-                                    </select>
-                                    <input type="date" id="bulkStartDate" style="flex:1; min-width:90px; padding:6px; font-size:10px; margin:0;" />
-                                    <input type="date" id="bulkEndDate" style="flex:1; min-width:90px; padding:6px; font-size:10px; margin:0;" />
+
+                                <!-- Student Selection -->
+                                <div style="margin-bottom:8px;">
+                                    <label style="font-size:10px; font-weight:700; display:block; margin-bottom:3px;">👥 Select Students:</label>
+                                    <div id="bulkStudentList" class="bulk-student-list">
+                                        <!-- populated by JS -->
+                                        <label class="select-all-label"><input type="checkbox" id="bulkSelectAllStudents" onchange="toggleAllBulkStudents()" /> Select All</label>
+                                    </div>
                                 </div>
+
+                                <!-- Date Selection -->
+                                <div style="margin-bottom:8px;">
+                                    <label style="font-size:10px; font-weight:700; display:block; margin-bottom:3px;">📅 Select Dates:</label>
+                                    <div class="bulk-date-input-row">
+                                        <input type="date" id="bulkDatePicker" />
+                                        <button class="btn btn-primary btn-sm" onclick="addBulkDate()" style="padding:4px 8px; margin:0;">Add Date</button>
+                                    </div>
+                                    <div id="bulkDateChips" class="bulk-date-chips">
+                                        <!-- dates will appear as chips -->
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons -->
                                 <div style="display:flex; gap:6px; flex-wrap:wrap;">
                                     <button class="btn btn-success btn-sm" onclick="bulkMarkAttendance()" style="flex:1; padding:6px;">✅ Mark Bulk</button>
                                     <button class="btn btn-danger btn-sm" onclick="bulkDeleteAttendance()" style="flex:1; padding:6px;">🗑️ Delete Bulk</button>
                                 </div>
-                                <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">Select students, date range, then Mark (uses subjects selected above) or Delete all records.</p>
+                                <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">Select students and dates, then click Mark (uses subjects selected above) or Delete.</p>
                             </div>
                         </div>
                     </div>
@@ -814,6 +889,7 @@
         let teacherCurrentPasscode = "—";
         let teacherPasscodeExpiry = null;
         let editRecordId = null;
+        let selectedDates = []; // for bulk actions
 
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -3342,36 +3418,76 @@
         }
 
         // ============================================================
-        // BULK MARK & DELETE (NEW)
+        // BULK MARK & DELETE – NEW with student checkboxes and date chips
         // ============================================================
+        // Populate the student list with checkboxes
+        async function populateBulkStudentSelect() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'admin') return;
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/all-users/${user.rollNo}`);
+                const data = await res.json();
+                const students = data.filter(u => u.role === 'student').sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }));
+                const container = document.getElementById('bulkStudentList');
+                // Clear previous content except the "Select All" label
+                container.innerHTML = `<label class="select-all-label"><input type="checkbox" id="bulkSelectAllStudents" onchange="toggleAllBulkStudents()" /> Select All</label>`;
+                students.forEach(s => {
+                    const label = document.createElement('label');
+                    label.innerHTML = `<input type="checkbox" class="bulk-student-checkbox" value="${s.rollNo}" /> ${s.rollNo} - ${s.name}`;
+                    container.appendChild(label);
+                });
+            } catch (e) {}
+        }
+
+        function toggleAllBulkStudents() {
+            const checked = document.getElementById('bulkSelectAllStudents').checked;
+            document.querySelectorAll('.bulk-student-checkbox').forEach(cb => cb.checked = checked);
+        }
+
+        // Date selection
+        function addBulkDate() {
+            const picker = document.getElementById('bulkDatePicker');
+            const date = picker.value;
+            if (!date) return showMsg('Please select a date.', true);
+            if (selectedDates.includes(date)) return showMsg('Date already added.', true);
+            selectedDates.push(date);
+            renderBulkDateChips();
+            picker.value = '';
+        }
+
+        function removeBulkDate(date) {
+            selectedDates = selectedDates.filter(d => d !== date);
+            renderBulkDateChips();
+        }
+
+        function renderBulkDateChips() {
+            const container = document.getElementById('bulkDateChips');
+            if (selectedDates.length === 0) {
+                container.innerHTML = '<span style="font-size:9px; color:var(--text-muted);">No dates selected.</span>';
+                return;
+            }
+            container.innerHTML = selectedDates.map(d => `
+                <span class="bulk-date-chip">
+                    ${d}
+                    <span class="remove-date" onclick="removeBulkDate('${d}')">×</span>
+                </span>
+            `).join('');
+        }
+
+        // Bulk Mark
         async function bulkMarkAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
+            const selectedStudents = Array.from(document.querySelectorAll('.bulk-student-checkbox:checked')).map(cb => cb.value);
+            if (selectedStudents.length === 0) return showMsg('Please select at least one student.', true);
+            if (selectedDates.length === 0) return showMsg('Please add at least one date.', true);
 
-            const studentSelect = document.getElementById('bulkStudentSelect');
-            const startDate = document.getElementById('bulkStartDate').value;
-            const endDate = document.getElementById('bulkEndDate').value;
-            if (!startDate || !endDate) return showMsg('Please select both start and end dates.', true);
-            if (new Date(startDate) > new Date(endDate)) return showMsg('Start date cannot be after end date.', true);
-
-            let studentRollNos = [];
-            if (studentSelect.value === 'ALL') {
-                try {
-                    const res = await fetch(`${API_BASE}/api/admin/all-users/${user.rollNo}`);
-                    const data = await res.json();
-                    studentRollNos = data.filter(u => u.role === 'student').map(u => u.rollNo);
-                } catch (e) {
-                    return showMsg('Failed to fetch student list.', true);
-                }
-            } else {
-                studentRollNos = [studentSelect.value];
-            }
-
+            // Get selected subjects from the main subject checkboxes
             const subjectCheckboxes = document.querySelectorAll('.subject-checkbox:checked');
             const subjects = Array.from(subjectCheckboxes).map(cb => cb.value);
-            if (subjects.length === 0) return showMsg('Please select at least one subject to mark.', true);
+            if (subjects.length === 0) return showMsg('Please select at least one subject to mark (above).', true);
 
-            if (!confirm(`Mark ${subjects.length} subjects for ${studentRollNos.length} students from ${startDate} to ${endDate}?`)) return;
+            if (!confirm(`Mark ${subjects.length} subjects for ${selectedStudents.length} students on ${selectedDates.length} dates?`)) return;
 
             try {
                 const res = await fetch(`${API_BASE}/api/admin/bulk-mark-attendance`, {
@@ -3379,9 +3495,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         requesterRollNo: user.rollNo,
-                        studentRollNos,
-                        startDate,
-                        endDate,
+                        studentRollNos: selectedStudents,
+                        dates: selectedDates,
                         subjects
                     })
                 });
@@ -3396,30 +3511,15 @@
             }
         }
 
+        // Bulk Delete
         async function bulkDeleteAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
+            const selectedStudents = Array.from(document.querySelectorAll('.bulk-student-checkbox:checked')).map(cb => cb.value);
+            if (selectedStudents.length === 0) return showMsg('Please select at least one student.', true);
+            if (selectedDates.length === 0) return showMsg('Please add at least one date.', true);
 
-            const studentSelect = document.getElementById('bulkStudentSelect');
-            const startDate = document.getElementById('bulkStartDate').value;
-            const endDate = document.getElementById('bulkEndDate').value;
-            if (!startDate || !endDate) return showMsg('Please select both start and end dates.', true);
-            if (new Date(startDate) > new Date(endDate)) return showMsg('Start date cannot be after end date.', true);
-
-            let studentRollNos = [];
-            if (studentSelect.value === 'ALL') {
-                try {
-                    const res = await fetch(`${API_BASE}/api/admin/all-users/${user.rollNo}`);
-                    const data = await res.json();
-                    studentRollNos = data.filter(u => u.role === 'student').map(u => u.rollNo);
-                } catch (e) {
-                    return showMsg('Failed to fetch student list.', true);
-                }
-            } else {
-                studentRollNos = [studentSelect.value];
-            }
-
-            if (!confirm(`Delete ALL attendance records for ${studentRollNos.length} students from ${startDate} to ${endDate}?`)) return;
+            if (!confirm(`Delete ALL attendance records for ${selectedStudents.length} students on ${selectedDates.length} dates?`)) return;
 
             try {
                 const res = await fetch(`${API_BASE}/api/admin/bulk-delete-attendance`, {
@@ -3427,9 +3527,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         requesterRollNo: user.rollNo,
-                        studentRollNos,
-                        startDate,
-                        endDate
+                        studentRollNos: selectedStudents,
+                        dates: selectedDates
                     })
                 });
                 const data = await res.json();
@@ -3441,24 +3540,6 @@
             } catch (e) {
                 showMsg('Network error!', true);
             }
-        }
-
-        // ============================================================
-        // POPULATE STUDENT DROPDOWN FOR BULK
-        // ============================================================
-        async function populateBulkStudentSelect() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || user.role !== 'admin') return;
-            try {
-                const res = await fetch(`${API_BASE}/api/admin/all-users/${user.rollNo}`);
-                const data = await res.json();
-                const students = data.filter(u => u.role === 'student');
-                const select = document.getElementById('bulkStudentSelect');
-                select.innerHTML = '<option value="ALL">All Students</option>';
-                students.forEach(s => {
-                    select.innerHTML += `<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`;
-                });
-            } catch (e) {}
         }
 
         // ============================================================
@@ -3476,6 +3557,12 @@
         if (localStorage.getItem('user')) {
             loadDashboard();
             populateBulkStudentSelect();
+            // Set default date in picker
+            const picker = document.getElementById('bulkDatePicker');
+            if (picker) {
+                const today = new Date().toISOString().split('T')[0];
+                picker.value = today;
+            }
         }
         initMonthSelector();
 
