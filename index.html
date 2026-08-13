@@ -1209,6 +1209,29 @@
         }
 
         // ============================================================
+        // VERIFY PASSCODE (new dedicated endpoint)
+        // ============================================================
+        async function verifyPasscode(passcode, type) {
+            try {
+                const res = await fetch(`${API_BASE}/api/auth/verify-passcode`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ passcode: passcode.trim(), type })
+                });
+                const data = await res.json();
+                if (res.ok && data.valid) {
+                    return true;
+                } else {
+                    showMsg(data.error || 'Invalid passcode', true);
+                    return false;
+                }
+            } catch (e) {
+                showMsg('Server error verifying passcode', true);
+                return false;
+            }
+        }
+
+        // ============================================================
         // TEACHER FUNCTIONS
         // ============================================================
         async function loadTeacherSubjects() {
@@ -1545,14 +1568,18 @@
         }
 
         // ============================================================
-        // FIXED: MARK FULL DAY ATTENDANCE (prompts for 5-digit passcode)
+        // FIXED: MARK FULL DAY ATTENDANCE – verify passcode BEFORE GPS
         // ============================================================
-        function markFullDayAttendance() {
+        async function markFullDayAttendance() {
             const enteredPasscode = prompt("Enter Full Day Passcode (5‑digit):");
             if (!enteredPasscode) return;
             if (enteredPasscode.length !== 5) {
                 return showMsg('Full Day passcode must be 5 digits!', true);
             }
+            // Verify passcode first
+            const valid = await verifyPasscode(enteredPasscode, 'full_day');
+            if (!valid) return;
+
             if (!navigator.geolocation) { return showMsg('Geolocation not supported!', true); }
 
             navigator.geolocation.getCurrentPosition(async (pos) => {
@@ -1587,17 +1614,22 @@
         }
 
         // ============================================================
-        // FIXED: MARK ACTIVE PERIOD ATTENDANCE (uses /mark-lecture)
+        // FIXED: MARK ACTIVE PERIOD ATTENDANCE – verify passcode BEFORE GPS
         // ============================================================
         async function markActivePeriodAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'student') return showMsg('Student access required!', true);
             if (!activeSubjectSubjectCode) return showMsg('No active period found!', true);
-            if (!navigator.geolocation) return showMsg('Geolocation not supported!', true);
 
             const enteredPasscode = prompt(`Enter Single Lecture Passcode (4‑digit) for "${activeSubjectSubjectCode}":`);
             if (!enteredPasscode) return;
             if (enteredPasscode.length !== 4) return showMsg('Passcode must be 4 digits!', true);
+            
+            // Verify passcode first
+            const valid = await verifyPasscode(enteredPasscode, 'single_lecture');
+            if (!valid) return;
+
+            if (!navigator.geolocation) return showMsg('Geolocation not supported!', true);
 
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 try {
