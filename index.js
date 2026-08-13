@@ -1,6 +1,3 @@
-// ============================================================
-// COMPLETE BACKEND - attendancenew.js (with chat fix)
-// ============================================================
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -505,7 +502,6 @@ const teacherSubjectSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 
-// Chat schema
 const chatSchema = new mongoose.Schema({
   rollNo: { type: String, required: true },
   threadId: { type: String, required: true, unique: true },
@@ -1162,7 +1158,10 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     }
     
     if (newAttendances.length > 0) {
-      await Attendance.insertMany(newAttendances);
+      await Attendance.insertMany(newAttendances, { ordered: false }).catch(err => {
+        // Ignore duplicate key errors
+        if (err.code !== 11000) throw err;
+      });
     }
     
     user.lastAttendanceTime = new Date();
@@ -1483,7 +1482,7 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
   }
 });
 
-// ========== MANUAL ATTENDANCE (Admin) – with branch validation ==========
+// ========== MANUAL ATTENDANCE (Admin) – with branch validation and duplicate handling ==========
 app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNo, date, subjects, status, branch } = req.body;
@@ -1826,7 +1825,7 @@ app.get('/api/admin/class-attendance-report', async (req, res) => {
   }
 });
 
-// ========== BULK REGISTRATION & ATTENDANCE – CSE ==========
+// ========== BULK REGISTRATION & ATTENDANCE – CSE (with duplicate skip) ==========
 app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
   try {
     const requester = await User.findOne({ rollNo: req.body.requesterRollNo?.trim().toUpperCase() || '' });
@@ -1911,6 +1910,7 @@ app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
         totalRegistered++;
       }
 
+      // Delete existing records for this student in the range (to avoid duplicates)
       await Attendance.deleteMany({
         rollNo: roll,
         date: { $gte: startStr, $lte: endStr }
@@ -1974,7 +1974,7 @@ app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
   }
 });
 
-// ========== BULK REGISTRATION & ATTENDANCE – AIDS ==========
+// ========== BULK REGISTRATION & ATTENDANCE – AIDS (with duplicate skip) ==========
 app.post('/api/admin/bulk-register-and-update-attendance-aids', async (req, res) => {
   try {
     const requester = await User.findOne({ rollNo: req.body.requesterRollNo?.trim().toUpperCase() || '' });
@@ -2096,7 +2096,7 @@ app.post('/api/admin/bulk-register-and-update-attendance-aids', async (req, res)
   }
 });
 
-// ========== UPDATED: BULK MARK ATTENDANCE (Admin) – supports specific dates ==========
+// ========== UPDATED: BULK MARK ATTENDANCE (Admin) – with duplicate handling ==========
 app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNos, dates, subjects } = req.body;
@@ -2134,18 +2134,27 @@ app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
         for (const sub of uniqueSubjects) {
           const exists = await Attendance.findOne({ rollNo: student.rollNo, subject: sub, date });
           if (!exists) {
-            await new Attendance({
-              rollNo: student.rollNo,
-              studentName: student.name,
-              subject: sub,
-              date,
-              status: 'Present',
-              location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG },
-              ipAddress: 'bulk-mark',
-              isVerified: true,
-              branch: branch
-            }).save();
-            markedCount++;
+            try {
+              await new Attendance({
+                rollNo: student.rollNo,
+                studentName: student.name,
+                subject: sub,
+                date,
+                status: 'Present',
+                location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG },
+                ipAddress: 'bulk-mark',
+                isVerified: true,
+                branch: branch
+              }).save();
+              markedCount++;
+            } catch (err) {
+              if (err.code === 11000) {
+                // duplicate, skip
+                skippedCount++;
+              } else {
+                throw err;
+              }
+            }
           } else {
             skippedCount++;
           }
@@ -2254,7 +2263,7 @@ app.delete('/api/chats/:threadId', async (req, res) => {
   }
 });
 
-// ==================== CHAT AI ENDPOINT (FIXED) ====================
+// ==================== CHAT AI ENDPOINT (FIXED with fallback) ====================
 app.post('/api/chat', async (req, res) => {
   try {
     const { message, rollNo, role, name, branch, threadId } = req.body;
@@ -2273,7 +2282,6 @@ app.post('/api/chat', async (req, res) => {
       try {
         userData = await User.findOne({ rollNo: cleanRoll });
         if (userData) {
-          // Get summary using helper
           attendanceSummary = await getStudentSummary(userData.rollNo);
           const today = new Date();
           const startStr = SEMESTER_START.toISOString().split('T')[0];
@@ -2286,11 +2294,10 @@ app.post('/api/chat', async (req, res) => {
         }
       } catch (err) {
         console.error('Error fetching user data for chat:', err);
-        // Continue without data
+        // continue without data
       }
     }
 
-    // Determine greeting based on time
     const now = new Date();
     const hour = now.getHours();
     let greeting = '';
@@ -2340,13 +2347,10 @@ Reply in a clear, conversational, and professional manner.`;
     ];
 
     let reply = '';
-    if (!GROK_API_KEY) {
-      reply = `${greeting}, ${userName} ${emoji}! I'm your BM Bot. ` +
-        `I see you have ${attendanceSummary?.attendancePercentage || 0}% attendance. ` +
-        `Working days so far: ${workingDays}. ` +
-        `Holidays: ${holidays.map(h => `${h.date} (${h.reason})`).join(', ') || 'None'}. ` +
-        `How can I assist you today? (Note: Grok API key not set, so I'm using fallback mode.)`;
-    } else {
+    let aiError = false;
+
+    // Attempt to call Grok API with timeout
+    if (GROK_API_KEY) {
       try {
         const grokPayload = {
           model: 'grok-1',
@@ -2354,26 +2358,53 @@ Reply in a clear, conversational, and professional manner.`;
           temperature: 0.7,
           max_tokens: 1000
         };
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
         const response = await fetch('https://api.x.ai/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${GROK_API_KEY}`
           },
-          body: JSON.stringify(grokPayload)
+          body: JSON.stringify(grokPayload),
+          signal: controller.signal
         });
+        clearTimeout(timeout);
+
         if (!response.ok) {
           const errorText = await response.text();
           console.error('Grok API error:', errorText);
-          reply = '⚠️ AI service temporarily unavailable. Please try again later.';
+          aiError = true;
         } else {
           const data = await response.json();
           reply = data.choices?.[0]?.message?.content || 'Sorry, I could not understand.';
         }
-      } catch (grokErr) {
-        console.error('Grok API exception:', grokErr);
-        reply = '⚠️ AI service error. Please try again later.';
+      } catch (err) {
+        console.error('Grok API exception:', err);
+        aiError = true;
       }
+    } else {
+      aiError = true; // no API key
+    }
+
+    // Fallback: if AI failed, generate a local intelligent response
+    if (aiError || !reply) {
+      let fallback = `${greeting}, ${userName} ${emoji}! I'm your BM Bot. `;
+      if (attendanceSummary) {
+        const pct = attendanceSummary.attendancePercentage || 0;
+        const attended = attendanceSummary.totalAcademicLectures || 0;
+        const total = attendanceSummary.totalConductedLectures || 0;
+        fallback += `Your attendance is ${pct}% (${attended}/${total} lectures). `;
+      }
+      if (workingDays > 0) {
+        fallback += `Working days so far: ${workingDays}. `;
+      }
+      if (holidays.length > 0) {
+        fallback += `Upcoming holidays: ${holidays.map(h => `${h.date} (${h.reason})`).join(', ')}. `;
+      }
+      fallback += `How can I assist you today? (AI service is currently unavailable, but I can still help with basic info.)`;
+      reply = fallback;
     }
 
     // Save conversation to thread (only if user is logged in)
