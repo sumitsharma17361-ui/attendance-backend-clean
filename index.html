@@ -2212,7 +2212,6 @@
                             <span class="greeting-emoji">👋</span>
                             <div>Hello! I'm <strong>BM Bot</strong>, your AI assistant.</div>
                             <div style="font-size:12px; color:var(--text-muted);">Ask me about attendance, schedule, holidays, or anything!</div>
-                            <div style="font-size:11px; color:var(--primary); margin-top:6px;">🔑 <strong>Admins & Faculty:</strong> Type <em>"mark attendance for ROLL"</em> or <em>"mark ROLL present"</em> to mark all subjects for that student today.</div>
                         </div>
                         <div class="typing-indicator" id="typingIndicator">
                             <span class="dots">...</span>
@@ -5085,128 +5084,129 @@
                 emoji = '🌤️'; } else { greeting = 'Good evening';
                 emoji = '🌙'; }
             const name = user?.name || 'Guest';
-            const role = user?.role || '';
-            let adminHint = '';
-            if (role === 'admin' || role === 'faculty') {
-                adminHint =
-                    `<div style="font-size:11px; color:var(--primary); margin-top:4px;">🔑 <strong>Command:</strong> Type <em>"mark attendance for ROLL"</em> or <em>"mark ROLL present"</em> to mark all subjects for that student today.</div>`;
-            }
             greetingEl.innerHTML = `
                     <span class="greeting-emoji">${emoji}</span>
                     <div><strong>${greeting}, ${name}!</strong> I'm <strong>BM Bot</strong>, your AI assistant.</div>
                     <div style="font-size:12px; color:var(--text-muted);">Ask me about attendance, schedule, holidays, or anything!</div>
-                    ${adminHint}
+                    <div style="font-size:10px; color:var(--text-muted); margin-top:4px;">💡 Try: "What is my attendance?" or "Today's timetable"</div>
                 `;
         }
 
-        // ============================================================
-        // ADMIN COMMAND PARSER – enables attendance marking via chat
-        // ============================================================
-        async function handleAdminCommand(msg, user) {
-            // Only for admin or faculty
-            if (user.role !== 'admin' && user.role !== 'faculty') return { handled: false };
-
-            // Trim and lowercase for matching, but we need roll case-insensitive
-            const trimmed = msg.trim();
-            // Patterns:
-            // "mark attendance for 24CSE46" or "mark attendance for 24CSE46 on 2026-08-14"
-            // "mark 24CSE46 present" or "mark 24CSE46 present on 2026-08-14"
-            // "mark 24CSE46 present today"
-            // Also "mark attendance for 24CSE46 today"
-
-            const rollRegex = /(24(CSE|AIDS)\d{2})/i;
-            const rollMatch = trimmed.match(rollRegex);
-            if (!rollMatch) return { handled: false };
-
-            const rollNo = rollMatch[1].toUpperCase();
-
-            // Find date
-            let dateStr = null;
-            // Check for specific date YYYY-MM-DD
-            const dateRegex = /\d{4}-\d{2}-\d{2}/;
-            const dateMatch = trimmed.match(dateRegex);
-            if (dateMatch) {
-                dateStr = dateMatch[0];
-            } else if (trimmed.includes('today')) {
-                dateStr = new Date().toISOString().split('T')[0];
-            } else if (trimmed.includes('tomorrow')) {
-                const d = new Date();
-                d.setDate(d.getDate() + 1);
-                dateStr = d.toISOString().split('T')[0];
-            } else {
-                // default to today
-                dateStr = new Date().toISOString().split('T')[0];
-            }
-
-            // Check if it's a command to mark attendance
-            const markKeywords = ['mark', 'attendance', 'present'];
-            const isMarkCommand = markKeywords.some(kw => trimmed.toLowerCase().includes(kw));
-            if (!isMarkCommand) return { handled: false };
-
-            // Proceed to mark attendance for this student on this date
+        async function loadChatHistory(rollNo) {
             try {
-                // Fetch student profile to get branch
-                const profileRes = await fetch(`${API_BASE}/api/student/profile/${rollNo}`);
-                if (!profileRes.ok) {
-                    return { handled: true, reply: `❌ Student ${rollNo} not found. Please check the roll number.` };
-                }
-                const profile = await profileRes.json();
-                const branch = profile.branch || 'CSE';
-
-                // If faculty, get their subjects to filter
-                let subjectsToMark = [];
-                const timetable = getBranchTimetable(branch);
-                const dateObj = new Date(dateStr);
-                const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dateObj.getDay()];
-                const daySubjects = timetable[dayName] || [];
-
-                if (user.role === 'faculty') {
-                    // Fetch teacher's subjects
-                    const subRes = await fetch(`${API_BASE}/api/teacher/subjects/${user.rollNo}`);
-                    if (!subRes.ok) {
-                        return { handled: true, reply: `❌ Could not fetch your subjects. Please try again.` };
-                    }
-                    const teacherSubjects = await subRes.json();
-                    subjectsToMark = daySubjects.filter(sub => teacherSubjects.includes(sub));
-                    if (subjectsToMark.length === 0) {
-                        return { handled: true, reply: `📌 No matching subjects for ${rollNo} on ${dateStr} that you teach.` };
-                    }
-                } else {
-                    // Admin marks all subjects for that day (excluding breaks/lunch/sports/library)
-                    subjectsToMark = daySubjects.filter(sub =>
-                        !sub.includes('Lunch') && !sub.includes('Sports') && !sub.includes('LIB') && !sub.includes('Library')
-                    );
-                    if (subjectsToMark.length === 0) {
-                        return { handled: true, reply: `📌 No academic subjects found for ${rollNo} on ${dateStr} (maybe holiday/weekend).` };
-                    }
-                }
-
-                // Now mark attendance using the bulk endpoint
-                const markRes = await fetch(`${API_BASE}/api/admin/manual-attendance-bulk`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        requesterRollNo: user.rollNo,
-                        studentRollNo: rollNo,
-                        date: dateStr,
-                        subjects: subjectsToMark,
-                        status: 'Present',
-                        branch: branch
-                    })
-                });
-                const markData = await markRes.json();
-                if (markRes.ok) {
-                    const count = subjectsToMark.length;
-                    return {
-                        handled: true,
-                        reply: `✅ Marked **${count}** subject(s) as Present for ${rollNo} on ${dateStr}.\nSubjects: ${subjectsToMark.join(', ')}`
-                    };
-                } else {
-                    return { handled: true, reply: `❌ Failed to mark attendance: ${markData.error || 'Unknown error'}` };
-                }
+                const res = await fetch(`${API_BASE}/api/chats/${rollNo}`);
+                if (!res.ok) throw new Error('Failed to load chats');
+                const data = await res.json();
+                chatHistory = data;
+                renderChatHistory();
             } catch (e) {
-                console.error('Admin command error:', e);
-                return { handled: true, reply: `❌ Error: ${e.message || 'Server error'}` };
+                console.error('Failed to load chat history:', e);
+            }
+        }
+
+        function renderChatHistory() {
+            const list = document.getElementById('chatHistoryList');
+            if (!list) return;
+            if (chatHistory.length === 0) {
+                list.innerHTML = '<div class="empty-chats">No chats yet. Start a new conversation!</div>';
+                return;
+            }
+            list.innerHTML = chatHistory.map(chat => `
+                    <div class="chat-item ${chat.threadId === currentThreadId ? 'active' : ''}" onclick="loadChatThread('${chat.threadId}')">
+                        ${chat.title || 'Untitled'}
+                        <span class="delete-chat" onclick="event.stopPropagation(); deleteChatThread('${chat.threadId}')">✕</span>
+                    </div>
+                `).join('');
+        }
+
+        function newChat() {
+            currentThreadId = null;
+            const messagesDiv = document.getElementById('chatMessages');
+            messagesDiv.innerHTML = `
+                    <div class="welcome-greeting" id="welcomeGreeting">
+                        <span class="greeting-emoji">👋</span>
+                        <div><strong>Hello!</strong> I'm <strong>BM Bot</strong>, your AI assistant.</div>
+                        <div style="font-size:12px; color:var(--text-muted);">Ask me about attendance, schedule, holidays, or anything!</div>
+                    </div>
+                    <div class="typing-indicator" id="typingIndicator"><span class="dots">...</span></div>
+                `;
+            updateWelcomeGreeting();
+            document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
+            if (window.innerWidth < 500) toggleSidebar();
+            const input = document.getElementById('chatInput');
+            if (input) input.focus();
+        }
+
+        async function loadChatThread(threadId) {
+            try {
+                const user = JSON.parse(localStorage.getItem('user'));
+                if (!user) return;
+                const res = await fetch(`${API_BASE}/api/chats/${user.rollNo}`);
+                if (!res.ok) throw new Error('Failed to load chat');
+                const data = await res.json();
+                const chat = data.find(c => c.threadId === threadId);
+                if (!chat) return showMsg('Chat not found!', true);
+
+                currentThreadId = threadId;
+                const messagesDiv = document.getElementById('chatMessages');
+                messagesDiv.innerHTML = '';
+                const greetingDiv = document.createElement('div');
+                greetingDiv.className = 'welcome-greeting';
+                greetingDiv.id = 'welcomeGreeting';
+                greetingDiv.innerHTML = `
+                        <span class="greeting-emoji">💬</span>
+                        <div><strong>Continuing conversation...</strong></div>
+                        <div style="font-size:11px; color:var(--text-muted);">${chat.title || 'Chat'}</div>
+                    `;
+                messagesDiv.appendChild(greetingDiv);
+
+                chat.messages.forEach(msg => {
+                    const div = document.createElement('div');
+                    div.className = `chat-msg ${msg.role === 'user' ? 'user' : 'bot'}`;
+                    const time = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit',
+                        minute: '2-digit' });
+                    div.innerHTML = `<div class="bubble">${escapeHtml(msg.content)}<span class="msg-time">${time}</span></div>`;
+                    messagesDiv.appendChild(div);
+                });
+
+                const typing = document.createElement('div');
+                typing.className = 'typing-indicator';
+                typing.id = 'typingIndicator';
+                typing.innerHTML = '<span class="dots">...</span>';
+                messagesDiv.appendChild(typing);
+
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+                document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
+                const items = document.querySelectorAll('.chat-item');
+                items.forEach(el => {
+                    if (el.textContent.includes(chat.title || '')) el.classList.add('active');
+                });
+
+                const input = document.getElementById('chatInput');
+                if (input) input.focus();
+            } catch (e) {
+                showMsg('Failed to load chat thread', true);
+            }
+        }
+
+        async function deleteChatThread(threadId) {
+            if (!confirm('Delete this chat permanently?')) return;
+            try {
+                const user = JSON.parse(localStorage.getItem('user'));
+                if (!user) return;
+                const res = await fetch(`${API_BASE}/api/chats/${threadId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rollNo: user.rollNo })
+                });
+                if (!res.ok) throw new Error('Failed to delete');
+                if (currentThreadId === threadId) newChat();
+                chatHistory = chatHistory.filter(c => c.threadId !== threadId);
+                renderChatHistory();
+                showMsg('✅ Chat deleted');
+            } catch (e) {
+                showMsg('Failed to delete chat', true);
             }
         }
 
@@ -5233,20 +5233,6 @@
 
             if (document.activeElement) document.activeElement.blur();
 
-            // Check if it's an admin/faculty command
-            const commandResult = await handleAdminCommand(msg, user);
-            if (commandResult.handled) {
-                const botDiv = document.createElement('div');
-                botDiv.className = 'chat-msg bot';
-                const botTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                botDiv.innerHTML = `<div class="bubble">${escapeHtml(commandResult.reply)}<span class="msg-time">${botTime}</span></div>`;
-                messagesDiv.appendChild(botDiv);
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                // Save to history if needed (optional)
-                return;
-            }
-
-            // Otherwise, send to AI
             const typing = document.getElementById('typingIndicator');
             if (typing) typing.style.display = 'block';
             const sendBtn = document.getElementById('chatSendBtn');
@@ -5376,7 +5362,6 @@
             console.log('📱 Mobile keyboard closes automatically after sending message.');
             console.log('📏 Chat panel is now centered and occupies ~75% of screen.');
             console.log('✅ Chat button fixed: removed inline onclick causing double toggle; widget display toggled properly.');
-            console.log('✅ Admin/Faculty can now mark attendance via chat commands: "mark attendance for 24CSE46"');
         })();
     </script>
 </body>
