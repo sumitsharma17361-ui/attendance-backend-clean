@@ -19,7 +19,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
 const ADMIN_ROLL_NUMBERS = ['24CSE48'];
 const COLLEGE_LAT = 28.4509370;
 const COLLEGE_LNG = 76.7688120;
-const COLLEGE_RADIUS = 50;
+const COLLEGE_RADIUS = 100;
 const SEMESTER_START = new Date(2026, 6, 15);
 const SEMESTER_END = new Date(2026, 11, 31);
 
