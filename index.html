@@ -90,9 +90,18 @@
             animation: shake 0.4s ease-in-out;
         }
         @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            20%, 60% { transform: translateX(-4px); }
-            40%, 80% { transform: translateX(4px); }
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+            20%,
+            60% {
+                transform: translateX(-4px);
+            }
+            40%,
+            80% {
+                transform: translateX(4px);
+            }
         }
         /* ===== APP CONTAINER ===== */
         .app-container {
@@ -107,12 +116,24 @@
             position: relative;
         }
         @keyframes cardScaleUp {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
         @keyframes fadeInSlide {
-            from { opacity: 0; transform: translateY(12px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         .tab-content-active {
             animation: fadeInSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -157,7 +178,9 @@
             color: var(--text-main);
             display: none;
         }
-        .hamburger-btn:hover { background: #f1f5f9; }
+        .hamburger-btn:hover {
+            background: #f1f5f9;
+        }
         .avatar-circle {
             width: 32px;
             height: 32px;
@@ -173,7 +196,9 @@
             transition: all 0.3s;
             cursor: pointer;
         }
-        .avatar-circle:hover { transform: scale(1.05); }
+        .avatar-circle:hover {
+            transform: scale(1.05);
+        }
 
         /* ===== SIDE DRAWER ===== */
         .side-drawer-overlay {
@@ -243,7 +268,9 @@
             color: var(--text-muted);
             transition: 0.2s;
         }
-        .side-drawer-close:hover { color: var(--danger); }
+        .side-drawer-close:hover {
+            color: var(--danger);
+        }
 
         .side-drawer-body {
             flex: 1;
@@ -318,7 +345,9 @@
             cursor: pointer;
             transition: 0.2s;
         }
-        .side-drawer-footer .logout-btn:hover { background: #fee2e2; }
+        .side-drawer-footer .logout-btn:hover {
+            background: #fee2e2;
+        }
 
         /* ===== NOTICE BANNER ===== */
         .notice-banner {
@@ -342,10 +371,15 @@
             animation: marquee 16s linear infinite;
         }
         @keyframes marquee {
-            0% { transform: translateX(100%); }
-            100% { transform: translateX(-100%); }
+            0% {
+                transform: translateX(100%);
+            }
+            100% {
+                transform: translateX(-100%);
+            }
         }
-        /* ===== SERVER BUSY BANNER ===== */
+
+        /* ===== SERVER BUSY BANNER – ONLY FOR STUDENTS ===== */
         .server-busy-banner {
             background: #fef2f2;
             border-bottom: 2px solid #dc2626;
@@ -367,8 +401,15 @@
             animation: pulse 1.2s ease-in-out infinite;
         }
         @keyframes pulse {
-            0%, 100% { opacity: 0.4; transform: scale(0.8); }
-            50% { opacity: 1; transform: scale(1.2); }
+            0%,
+            100% {
+                opacity: 0.4;
+                transform: scale(0.8);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
         }
 
         /* ===== IMPERSONATION BANNER ===== */
@@ -396,7 +437,9 @@
             cursor: pointer;
             transition: 0.2s;
         }
-        .impersonation-banner .switch-back-btn:hover { background: #b91c1c; }
+        .impersonation-banner .switch-back-btn:hover {
+            background: #b91c1c;
+        }
 
         /* ===== BODY ===== */
         .app-body {
@@ -404,7 +447,8 @@
         }
 
         /* ===== FORM ===== */
-        input, select {
+        input,
+        select {
             width: 100%;
             padding: 9px 12px;
             margin-bottom: 8px;
@@ -417,9 +461,16 @@
             outline: none;
             transition: all 0.3s;
         }
-        select option { background: #fff; color: #0f172a; }
-        input::placeholder { color: #94a3b8; font-weight: 500; }
-        input:focus, select:focus {
+        select option {
+            background: #fff;
+            color: #0f172a;
+        }
+        input::placeholder {
+            color: #94a3b8;
+            font-weight: 500;
+        }
+        input:focus,
+        select:focus {
             background: #fff;
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
@@ -428,7 +479,9 @@
             position: relative;
             width: 100%;
         }
-        .password-wrapper input { padding-right: 36px; }
+        .password-wrapper input {
+            padding-right: 36px;
+        }
         .eye-icon {
             position: absolute;
             right: 10px;
@@ -438,7 +491,9 @@
             color: var(--text-muted);
             transition: color 0.3s;
         }
-        .eye-icon:hover { color: var(--primary); }
+        .eye-icon:hover {
+            color: var(--primary);
+        }
 
         /* ===== BUTTONS ===== */
         .btn {
@@ -457,21 +512,72 @@
             gap: 6px;
             box-shadow: var(--shadow-sm);
         }
-        .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-hover); }
-        .btn:active { transform: scale(0.97) translateY(0); }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: var(--primary-hover); }
-        .btn-success { background: var(--success); color: white; }
-        .btn-warning { background: var(--warning); color: white; }
-        .btn-accent { background: #0284c7; color: white; }
-        .btn-outline { background: #fff; border: 1px solid var(--card-border); color: var(--text-main); }
-        .btn-outline:hover { background: #f8fafc; border-color: #cbd5e1; }
-        .btn-danger { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
-        .btn-danger:hover { background: #fee2e2; }
-        .btn-sm { padding: 5px 10px; font-size: 10px; width: auto; margin: 0; }
-        .btn-xs { padding: 3px 8px; font-size: 8px; width: auto; margin: 0; }
-        .btn-ghost { background: transparent; border: 1px solid transparent; color: var(--text-muted); box-shadow: none; }
-        .btn-ghost:hover { background: #f1f5f9; border-color: var(--card-border); transform: none; }
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-hover);
+        }
+        .btn:active {
+            transform: scale(0.97) translateY(0);
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        .btn-warning {
+            background: var(--warning);
+            color: white;
+        }
+        .btn-accent {
+            background: #0284c7;
+            color: white;
+        }
+        .btn-outline {
+            background: #fff;
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+        }
+        .btn-outline:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+        .btn-danger {
+            background: #fef2f2;
+            color: var(--danger);
+            border: 1px solid #fecaca;
+        }
+        .btn-danger:hover {
+            background: #fee2e2;
+        }
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 10px;
+            width: auto;
+            margin: 0;
+        }
+        .btn-xs {
+            padding: 3px 8px;
+            font-size: 8px;
+            width: auto;
+            margin: 0;
+        }
+        .btn-ghost {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            box-shadow: none;
+        }
+        .btn-ghost:hover {
+            background: #f1f5f9;
+            border-color: var(--card-border);
+            transform: none;
+        }
 
         /* ===== BADGES ===== */
         .badge {
@@ -482,12 +588,30 @@
             transition: all 0.3s;
             display: inline-block;
         }
-        .badge-present { background: #dcfce7; color: #15803d; }
-        .badge-absent { background: #fee2e2; color: #991b1b; }
-        .badge-active { background: #dbeafe; color: #1d4ed8; }
-        .badge-role { background: #e2e8f0; color: #475569; }
-        .badge-attendance { background: #e0e7ff; color: #1e40af; }
-        .badge-dl { background: #fef3c7; color: #92400e; }
+        .badge-present {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        .badge-absent {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .badge-active {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+        .badge-role {
+            background: #e2e8f0;
+            color: #475569;
+        }
+        .badge-attendance {
+            background: #e0e7ff;
+            color: #1e40af;
+        }
+        .badge-dl {
+            background: #fef3c7;
+            color: #92400e;
+        }
 
         /* ===== STATS GRID ===== */
         .stats-grid {
@@ -496,7 +620,9 @@
             gap: 8px;
             margin: 10px 0;
         }
-        .stats-grid.two-col { grid-template-columns: 1fr 1fr; }
+        .stats-grid.two-col {
+            grid-template-columns: 1fr 1fr;
+        }
         .stat-card {
             background: #f8fafc;
             padding: 10px 8px;
@@ -505,11 +631,31 @@
             border: 1px solid var(--card-border);
             transition: all 0.3s;
         }
-        .stat-card:hover { transform: translateY(-1px); border-color: #cbd5e1; box-shadow: var(--shadow-sm); }
-        .stat-card .value { font-size: 18px; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; }
-        .stat-card .value.danger { color: var(--danger); }
-        .stat-card .value.success { color: var(--success); }
-        .stat-card .label { font-size: 8px; color: var(--text-muted); font-weight: 700; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.3px; }
+        .stat-card:hover {
+            transform: translateY(-1px);
+            border-color: #cbd5e1;
+            box-shadow: var(--shadow-sm);
+        }
+        .stat-card .value {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+        }
+        .stat-card .value.danger {
+            color: var(--danger);
+        }
+        .stat-card .value.success {
+            color: var(--success);
+        }
+        .stat-card .label {
+            font-size: 8px;
+            color: var(--text-muted);
+            font-weight: 700;
+            margin-top: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
 
         /* ===== SIMULATOR CARD ===== */
         .simulator-card {
@@ -555,7 +701,13 @@
             align-items: center;
             gap: 3px;
         }
-        .portal-btn:hover { background: #fff; border-color: var(--primary); transform: translateY(-1px); box-shadow: var(--shadow-sm); color: var(--primary); }
+        .portal-btn:hover {
+            background: #fff;
+            border-color: var(--primary);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+            color: var(--primary);
+        }
 
         /* ===== CALENDAR ===== */
         .calendar-container {
@@ -574,7 +726,12 @@
             margin-bottom: 8px;
             color: var(--text-main);
         }
-        .calendar-header select { margin-top: 0; padding: 4px 6px; font-size: 10px; width: auto; }
+        .calendar-header select {
+            margin-top: 0;
+            padding: 4px 6px;
+            font-size: 10px;
+            width: auto;
+        }
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
@@ -582,7 +739,12 @@
             text-align: center;
             font-size: 9px;
         }
-        .cal-day-head { font-weight: 700; color: var(--text-muted); padding-bottom: 3px; font-size: 8px; }
+        .cal-day-head {
+            font-weight: 700;
+            color: var(--text-muted);
+            padding-bottom: 3px;
+            font-size: 8px;
+        }
         .cal-date {
             padding: 4px 1px;
             border-radius: 4px;
@@ -591,10 +753,26 @@
             border: 1px solid #f1f5f9;
             transition: all 0.2s;
         }
-        .cal-date:hover { transform: scale(1.05); z-index: 1; }
-        .cal-p { background: #dcfce7; color: #15803d; font-weight: 800; border-color: #bbf7d0; }
-        .cal-a { background: #fee2e2; color: #b91c1c; font-weight: 800; border-color: #fecaca; }
-        .cal-off { background: #f1f5f9; color: #94a3b8; }
+        .cal-date:hover {
+            transform: scale(1.05);
+            z-index: 1;
+        }
+        .cal-p {
+            background: #dcfce7;
+            color: #15803d;
+            font-weight: 800;
+            border-color: #bbf7d0;
+        }
+        .cal-a {
+            background: #fee2e2;
+            color: #b91c1c;
+            font-weight: 800;
+            border-color: #fecaca;
+        }
+        .cal-off {
+            background: #f1f5f9;
+            color: #94a3b8;
+        }
 
         /* ===== PERIOD CARD ===== */
         .period-card {
@@ -619,15 +797,44 @@
             gap: 4px;
             transition: all 0.2s;
         }
-        .action-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-        .btn-del { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-        .btn-del:hover { background: #fee2e2; }
-        .btn-view { background: #eff6ff; color: #2563eb; border: 1px solid #dbeafe; }
-        .btn-view:hover { background: #dbeafe; }
-        .btn-edit { background: #fefce8; color: #d97706; border: 1px solid #fde68a; }
-        .btn-edit:hover { background: #fef3c7; }
-        .status-holiday { background: #fef3c7; color: #92400e; border-color: #fde68a; }
-        .status-weekend { background: #e2e8f0; color: #475569; border-color: #cbd5e1; }
+        .action-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        .btn-del {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+        .btn-del:hover {
+            background: #fee2e2;
+        }
+        .btn-view {
+            background: #eff6ff;
+            color: #2563eb;
+            border: 1px solid #dbeafe;
+        }
+        .btn-view:hover {
+            background: #dbeafe;
+        }
+        .btn-edit {
+            background: #fefce8;
+            color: #d97706;
+            border: 1px solid #fde68a;
+        }
+        .btn-edit:hover {
+            background: #fef3c7;
+        }
+        .status-holiday {
+            background: #fef3c7;
+            color: #92400e;
+            border-color: #fde68a;
+        }
+        .status-weekend {
+            background: #e2e8f0;
+            color: #475569;
+            border-color: #cbd5e1;
+        }
 
         /* ===== TABLES ===== */
         .table-container {
@@ -655,8 +862,15 @@
             font-size: 9px;
             z-index: 2;
         }
-        .table-container td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; font-size: 10px; vertical-align: middle; }
-        .table-container tr:hover td { background: #f8fafc; }
+        .table-container td {
+            padding: 6px 8px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 10px;
+            vertical-align: middle;
+        }
+        .table-container tr:hover td {
+            background: #f8fafc;
+        }
 
         /* ===== ADMIN BOXES ===== */
         .admin-box {
@@ -667,13 +881,34 @@
             animation: cardScaleUp 0.5s;
             margin-bottom: 8px;
         }
-        .admin-box.sub-reports { background: #f0fdf4; border-color: #bbf7d0; }
-        .admin-box.sub-attendance { background: #fefce8; border-color: #fef08a; }
-        .admin-box.sub-holiday { background: #fef2f2; border-color: #fecaca; }
-        .admin-box.sub-passcode { background: #eff6ff; border-color: #bfdbfe; }
-        .admin-box.sub-tools { background: #f5f3ff; border-color: #ddd6fe; }
-        .admin-box.sub-directory { background: #fce7f3; border-color: #fbcfe8; }
-        .admin-box.sub-all-attendance { background: #ecfdf5; border-color: #a7f3d0; }
+        .admin-box.sub-reports {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+        }
+        .admin-box.sub-attendance {
+            background: #fefce8;
+            border-color: #fef08a;
+        }
+        .admin-box.sub-holiday {
+            background: #fef2f2;
+            border-color: #fecaca;
+        }
+        .admin-box.sub-passcode {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+        }
+        .admin-box.sub-tools {
+            background: #f5f3ff;
+            border-color: #ddd6fe;
+        }
+        .admin-box.sub-directory {
+            background: #fce7f3;
+            border-color: #fbcfe8;
+        }
+        .admin-box.sub-all-attendance {
+            background: #ecfdf5;
+            border-color: #a7f3d0;
+        }
         .sub-section-title {
             font-size: 10px;
             font-weight: 700;
@@ -709,10 +944,24 @@
             border: 1px solid #e2e8f0;
             transition: all 0.2s;
         }
-        .subject-checkbox-container label:hover { background: #eff6ff; border-color: var(--primary); }
-        .subject-checkbox-container label input[type="checkbox"] { width: auto; margin: 0; }
-        .subject-checkbox-container .select-all { grid-column: span 2; background: #e2e8f0; padding: 4px 8px; font-weight: 700; border: none; }
-        .subject-checkbox-container .select-all:hover { background: #cbd5e1; }
+        .subject-checkbox-container label:hover {
+            background: #eff6ff;
+            border-color: var(--primary);
+        }
+        .subject-checkbox-container label input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+        .subject-checkbox-container .select-all {
+            grid-column: span 2;
+            background: #e2e8f0;
+            padding: 4px 8px;
+            font-weight: 700;
+            border: none;
+        }
+        .subject-checkbox-container .select-all:hover {
+            background: #cbd5e1;
+        }
 
         /* ===== PASSCODE DISPLAY ===== */
         .passcode-display {
@@ -723,7 +972,12 @@
             border: 1px solid var(--card-border);
             text-align: center;
         }
-        .passcode-display h2 { font-size: 20px; font-weight: 900; color: var(--primary); letter-spacing: 4px; }
+        .passcode-display h2 {
+            font-size: 20px;
+            font-weight: 900;
+            color: var(--primary);
+            letter-spacing: 4px;
+        }
 
         /* ===== TODAY PRESENT LIST ===== */
         #todayPresentList {
@@ -732,7 +986,9 @@
             font-size: 10px;
             margin: 6px 0;
         }
-        .present-group { margin-bottom: 8px; }
+        .present-group {
+            margin-bottom: 8px;
+        }
         .present-group .group-title {
             font-size: 9px;
             font-weight: 700;
@@ -749,9 +1005,15 @@
             padding: 3px 6px;
             border-bottom: 1px solid #f1f5f9;
         }
-        .present-item:last-child { border-bottom: none; }
-        .present-item .roll { font-weight: 600; }
-        .present-item .name { color: var(--text-muted); }
+        .present-item:last-child {
+            border-bottom: none;
+        }
+        .present-item .roll {
+            font-weight: 600;
+        }
+        .present-item .name {
+            color: var(--text-muted);
+        }
 
         /* ===== SUBJECT CHIPS ===== */
         .subject-chips {
@@ -776,9 +1038,20 @@
             padding: 10px;
             margin-bottom: 8px;
         }
-        .tool-title { font-size: 10px; font-weight: 800; margin-bottom: 6px; display: block; }
-        .flex-buttons { display: flex; gap: 6px; }
-        .flex-buttons .btn { margin: 0; flex: 1; }
+        .tool-title {
+            font-size: 10px;
+            font-weight: 800;
+            margin-bottom: 6px;
+            display: block;
+        }
+        .flex-buttons {
+            display: flex;
+            gap: 6px;
+        }
+        .flex-buttons .btn {
+            margin: 0;
+            flex: 1;
+        }
 
         /* ===== SVG ICON ===== */
         .svg-icon {
@@ -793,7 +1066,10 @@
             vertical-align: middle;
             transition: transform 0.3s;
         }
-        .svg-icon-sm { width: 12px; height: 12px; }
+        .svg-icon-sm {
+            width: 12px;
+            height: 12px;
+        }
 
         /* ===== MODAL ===== */
         .modal-overlay {
@@ -820,8 +1096,14 @@
             border: 1px solid var(--card-border);
             animation: cardScaleUp 0.3s;
         }
-        .modal-card .modal-actions { display: flex; gap: 6px; margin-top: 10px; }
-        .modal-card .modal-actions .btn { flex: 1; }
+        .modal-card .modal-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 10px;
+        }
+        .modal-card .modal-actions .btn {
+            flex: 1;
+        }
         .profile-modal {
             max-width: 480px;
             max-height: 90vh;
@@ -834,7 +1116,9 @@
             padding: 4px 0;
             border-bottom: 1px solid #f1f5f9;
         }
-        .profile-modal .record-item:last-child { border-bottom: none; }
+        .profile-modal .record-item:last-child {
+            border-bottom: none;
+        }
 
         /* ===== DOWNLOAD PROGRESS ===== */
         .download-progress {
@@ -854,7 +1138,9 @@
             max-width: 90%;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
         }
-        .download-progress.show { display: flex; }
+        .download-progress.show {
+            display: flex;
+        }
         .download-progress .spinner {
             width: 16px;
             height: 16px;
@@ -863,7 +1149,14 @@
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
 
         /* ===== FILTER ROW ===== */
         .filter-row {
@@ -872,7 +1165,8 @@
             flex-wrap: wrap;
             margin-bottom: 6px;
         }
-        .filter-row select, .filter-row input {
+        .filter-row select,
+        .filter-row input {
             flex: 1;
             min-width: 80px;
             padding: 6px 8px;
@@ -882,16 +1176,36 @@
 
         /* ===== RESPONSIVE ===== */
         @media (max-width: 480px) {
-            .app-container { border-radius: 12px; }
-            .stats-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
-            .stats-grid.three-col { grid-template-columns: 1fr 1fr; }
-            .filter-row select, .filter-row input { min-width: 60px; font-size: 8px; }
-            .profile-modal { max-width: 100%; }
-            .side-drawer { width: 85vw; }
+            .app-container {
+                border-radius: 12px;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+            }
+            .stats-grid.three-col {
+                grid-template-columns: 1fr 1fr;
+            }
+            .filter-row select,
+            .filter-row input {
+                min-width: 60px;
+                font-size: 8px;
+            }
+            .profile-modal {
+                max-width: 100%;
+            }
+            .side-drawer {
+                width: 85vw;
+            }
         }
         @media (max-width: 380px) {
-            .stats-grid { grid-template-columns: 1fr 1fr; gap: 4px; }
-            .stat-card .value { font-size: 14px; }
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 4px;
+            }
+            .stat-card .value {
+                font-size: 14px;
+            }
         }
 
         /* ===== BULK STUDENT LIST ===== */
@@ -912,7 +1226,9 @@
             padding: 2px 4px;
             cursor: pointer;
         }
-        .bulk-student-list label:hover { background: #f1f5f9; }
+        .bulk-student-list label:hover {
+            background: #f1f5f9;
+        }
         .bulk-student-list .select-all-label {
             font-weight: 700;
             border-bottom: 1px solid var(--card-border);
@@ -934,16 +1250,31 @@
             align-items: center;
             gap: 4px;
         }
-        .bulk-date-chip .remove-date { cursor: pointer; color: var(--danger); font-weight: 700; }
-        .bulk-date-chip .remove-date:hover { color: #b91c1c; }
+        .bulk-date-chip .remove-date {
+            cursor: pointer;
+            color: var(--danger);
+            font-weight: 700;
+        }
+        .bulk-date-chip .remove-date:hover {
+            color: #b91c1c;
+        }
         .bulk-date-input-row {
             display: flex;
             gap: 6px;
             align-items: center;
             margin-bottom: 4px;
         }
-        .bulk-date-input-row input[type="date"] { flex: 1; padding: 6px; font-size: 10px; margin: 0; }
-        .bulk-date-input-row button { padding: 6px 12px; font-size: 10px; margin: 0; }
+        .bulk-date-input-row input[type="date"] {
+            flex: 1;
+            padding: 6px;
+            font-size: 10px;
+            margin: 0;
+        }
+        .bulk-date-input-row button {
+            padding: 6px 12px;
+            font-size: 10px;
+            margin: 0;
+        }
 
         /* ===== LOADING OVERLAY ===== */
         #loadingOverlay {
@@ -972,7 +1303,12 @@
             animation: spin 0.8s linear infinite;
             margin-bottom: 16px;
         }
-        #loadingOverlay .loading-text { font-size: 14px; opacity: 0.9; text-align: center; padding: 0 20px; }
+        #loadingOverlay .loading-text {
+            font-size: 14px;
+            opacity: 0.9;
+            text-align: center;
+            padding: 0 20px;
+        }
 
         /* ===== CHAT WIDGET ===== */
         #chatWidget {
@@ -1002,7 +1338,9 @@
             animation: cardScaleUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
             pointer-events: auto;
         }
-        .chat-panel.open { display: flex !important; }
+        .chat-panel.open {
+            display: flex !important;
+        }
         .chat-panel .chat-header {
             background: #fff;
             padding: 10px 14px;
@@ -1038,7 +1376,9 @@
             transition: 0.2s;
             touch-action: manipulation;
         }
-        .chat-panel .chat-header .chat-close:hover { color: var(--danger); }
+        .chat-panel .chat-header .chat-close:hover {
+            color: var(--danger);
+        }
         .chat-panel .chat-body {
             display: flex;
             flex: 1;
@@ -1055,7 +1395,9 @@
             display: flex;
             flex-direction: column;
         }
-        .chat-panel .chat-sidebar.open { width: 160px; }
+        .chat-panel .chat-sidebar.open {
+            width: 160px;
+        }
         .chat-panel .chat-sidebar .sidebar-header {
             padding: 8px 10px;
             font-size: 10px;
@@ -1079,7 +1421,9 @@
             font-weight: 700;
             cursor: pointer;
         }
-        .chat-panel .chat-sidebar .sidebar-header .new-chat-btn:hover { background: var(--primary-hover); }
+        .chat-panel .chat-sidebar .sidebar-header .new-chat-btn:hover {
+            background: var(--primary-hover);
+        }
         .chat-panel .chat-sidebar .sidebar-list {
             flex: 1;
             overflow-y: auto;
@@ -1099,8 +1443,15 @@
             text-overflow: ellipsis;
             border: 1px solid transparent;
         }
-        .chat-panel .chat-sidebar .sidebar-list .chat-item:hover { background: #fff; border-color: var(--card-border); }
-        .chat-panel .chat-sidebar .sidebar-list .chat-item.active { background: #fff; border-color: var(--primary); color: var(--primary); }
+        .chat-panel .chat-sidebar .sidebar-list .chat-item:hover {
+            background: #fff;
+            border-color: var(--card-border);
+        }
+        .chat-panel .chat-sidebar .sidebar-list .chat-item.active {
+            background: #fff;
+            border-color: var(--primary);
+            color: var(--primary);
+        }
         .chat-panel .chat-sidebar .sidebar-list .chat-item .delete-chat {
             float: right;
             color: var(--text-muted);
@@ -1108,7 +1459,9 @@
             font-size: 12px;
             padding: 0 4px;
         }
-        .chat-panel .chat-sidebar .sidebar-list .chat-item .delete-chat:hover { color: var(--danger); }
+        .chat-panel .chat-sidebar .sidebar-list .chat-item .delete-chat:hover {
+            color: var(--danger);
+        }
         .chat-panel .chat-sidebar .sidebar-list .empty-chats {
             text-align: center;
             color: var(--text-muted);
@@ -1135,8 +1488,12 @@
             display: flex;
             flex-direction: column;
         }
-        .chat-panel .chat-main .chat-messages .chat-msg.user { align-items: flex-end; }
-        .chat-panel .chat-main .chat-messages .chat-msg.bot { align-items: flex-start; }
+        .chat-panel .chat-main .chat-messages .chat-msg.user {
+            align-items: flex-end;
+        }
+        .chat-panel .chat-main .chat-messages .chat-msg.bot {
+            align-items: flex-start;
+        }
         .chat-panel .chat-main .chat-messages .chat-msg .bubble {
             max-width: 85%;
             padding: 6px 12px;
@@ -1163,7 +1520,9 @@
             margin-top: 4px;
             opacity: 0.7;
         }
-        .chat-panel .chat-main .chat-messages .chat-msg.user .bubble .msg-time { color: rgba(255, 255, 255, 0.7); }
+        .chat-panel .chat-main .chat-messages .chat-msg.user .bubble .msg-time {
+            color: rgba(255, 255, 255, 0.7);
+        }
         .chat-panel .chat-main .chat-messages .typing-indicator {
             display: none;
             padding: 6px 12px;
@@ -1179,9 +1538,15 @@
             animation: typingDots 1.4s infinite;
         }
         @keyframes typingDots {
-            0% { content: '.'; }
-            33% { content: '..'; }
-            66% { content: '...'; }
+            0% {
+                content: '.';
+            }
+            33% {
+                content: '..';
+            }
+            66% {
+                content: '...';
+            }
         }
         .chat-panel .chat-main .quick-chips {
             padding: 4px 10px 6px 10px;
@@ -1206,7 +1571,11 @@
             transition: all 0.2s;
             white-space: nowrap;
         }
-        .chat-panel .chat-main .quick-chips .chip:hover { background: #dbeafe; border-color: var(--primary); color: var(--primary); }
+        .chat-panel .chat-main .quick-chips .chip:hover {
+            background: #dbeafe;
+            border-color: var(--primary);
+            color: var(--primary);
+        }
         .chat-panel .chat-main .chat-input-row {
             display: flex;
             border-top: 1px solid var(--card-border);
@@ -1248,8 +1617,14 @@
             flex-shrink: 0;
             touch-action: manipulation;
         }
-        .chat-panel .chat-main .chat-input-row .send-btn:hover { background: var(--primary-hover); transform: scale(1.04); }
-        .chat-panel .chat-main .chat-input-row .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .chat-panel .chat-main .chat-input-row .send-btn:hover {
+            background: var(--primary-hover);
+            transform: scale(1.04);
+        }
+        .chat-panel .chat-main .chat-input-row .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
         .chat-panel .chat-main .sidebar-toggle {
             background: transparent;
             border: none;
@@ -1260,7 +1635,9 @@
             transition: 0.2s;
             touch-action: manipulation;
         }
-        .chat-panel .chat-main .sidebar-toggle:hover { color: var(--primary); }
+        .chat-panel .chat-main .sidebar-toggle:hover {
+            color: var(--primary);
+        }
         .chat-panel .chat-main .chat-messages .welcome-greeting {
             text-align: center;
             padding: 16px 0;
@@ -1268,16 +1645,42 @@
             font-size: 13px;
             line-height: 1.8;
         }
-        .chat-panel .chat-main .chat-messages .welcome-greeting .greeting-emoji { font-size: 28px; display: block; margin-bottom: 6px; }
-        .chat-panel .chat-main .chat-messages .welcome-greeting .greeting-name { font-weight: 700; color: var(--text-main); }
+        .chat-panel .chat-main .chat-messages .welcome-greeting .greeting-emoji {
+            font-size: 28px;
+            display: block;
+            margin-bottom: 6px;
+        }
+        .chat-panel .chat-main .chat-messages .welcome-greeting .greeting-name {
+            font-weight: 700;
+            color: var(--text-main);
+        }
 
         @media (max-width: 600px) {
-            #chatWidget { width: 92vw; height: 85vh; max-height: 90vh; }
-            .chat-panel .chat-sidebar.open { width: 120px; }
-            .chat-panel .chat-main .quick-chips .chip { font-size: 8px; padding: 2px 8px; }
-            .chat-panel .chat-main .chat-messages { padding: 8px 10px; font-size: 12px; }
-            .chat-panel .chat-main .chat-input-row input { font-size: 11px; padding: 5px 8px; }
-            .chat-panel .chat-main .chat-input-row .send-btn { width: 28px; height: 28px; font-size: 12px; }
+            #chatWidget {
+                width: 92vw;
+                height: 85vh;
+                max-height: 90vh;
+            }
+            .chat-panel .chat-sidebar.open {
+                width: 120px;
+            }
+            .chat-panel .chat-main .quick-chips .chip {
+                font-size: 8px;
+                padding: 2px 8px;
+            }
+            .chat-panel .chat-main .chat-messages {
+                padding: 8px 10px;
+                font-size: 12px;
+            }
+            .chat-panel .chat-main .chat-input-row input {
+                font-size: 11px;
+                padding: 5px 8px;
+            }
+            .chat-panel .chat-main .chat-input-row .send-btn {
+                width: 28px;
+                height: 28px;
+                font-size: 12px;
+            }
         }
 
         /* ===== Floating Avatar trigger ===== */
@@ -1301,7 +1704,9 @@
             align-items: center;
             justify-content: center;
         }
-        .chat-avatar-trigger:hover { transform: scale(1.05); }
+        .chat-avatar-trigger:hover {
+            transform: scale(1.05);
+        }
         .chat-avatar-trigger .badge-dot {
             position: absolute;
             top: 4px;
@@ -1312,7 +1717,11 @@
             border-radius: 50%;
             border: 2px solid #fff;
         }
-        .chat-avatar-trigger { position: fixed; bottom: 20px; right: 20px; }
+        .chat-avatar-trigger {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+        }
 
         /* ===== Scrollable admin content ===== */
         .admin-scroll-content {
@@ -1320,10 +1729,62 @@
             overflow-y: auto;
             padding-right: 4px;
         }
-        .admin-scroll-content::-webkit-scrollbar { width: 4px; }
-        .admin-scroll-content::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
-        .admin-scroll-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        .admin-scroll-content::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .admin-scroll-content::-webkit-scrollbar {
+            width: 4px;
+        }
+        .admin-scroll-content::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        .admin-scroll-content::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .admin-scroll-content::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* ===== Student-only server busy overlay ===== */
+        .student-busy-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 99996;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: white;
+            text-align: center;
+            padding: 30px;
+        }
+        .student-busy-overlay .busy-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        .student-busy-overlay .busy-title {
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+        .student-busy-overlay .busy-sub {
+            font-size: 14px;
+            opacity: 0.8;
+            max-width: 320px;
+        }
+        .student-busy-overlay .busy-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 16px;
+        }
     </style>
 </head>
 <body>
@@ -1343,6 +1804,14 @@
     <div id="loadingOverlay">
         <div class="spinner"></div>
         <div class="loading-text" id="loadingText">Processing…</div>
+    </div>
+
+    <!-- ===== STUDENT BUSY OVERLAY (only for students) ===== -->
+    <div class="student-busy-overlay" id="studentBusyOverlay">
+        <div class="busy-spinner"></div>
+        <div class="busy-icon">🔧</div>
+        <div class="busy-title">Server Busy</div>
+        <div class="busy-sub">The system is currently under maintenance. Please try again later.</div>
     </div>
 
     <!-- ===== DOWNLOAD PROGRESS ===== -->
@@ -1429,7 +1898,7 @@
             </div>
         </div>
 
-        <!-- SERVER BUSY BANNER -->
+        <!-- SERVER BUSY BANNER – ONLY SHOWN TO STUDENTS (controlled by JS) -->
         <div class="server-busy-banner" id="serverBusyBanner">
             <span class="dot-pulse"></span>
             <span>🔧 Server is currently busy with maintenance. Some features may be limited.</span>
@@ -1494,7 +1963,7 @@
                     <button class="btn btn-danger" style="width:auto; padding:4px 8px; margin:0; font-size:10px;" onclick="logout()">Logout</button>
                 </div>
 
-                <!-- Student Stats (2 rows: Lectures + Days) -->
+                <!-- Student Stats (2 rows: Lectures + Days) – hidden for admin/faculty -->
                 <div class="stats-grid two-col" id="studentStatsGrid">
                     <div class="stat-card">
                         <div class="value" id="totalDaysCount">0</div>
@@ -1534,7 +2003,7 @@
                     </div>
                 </div>
 
-                <!-- Advisor -->
+                <!-- Advisor – only for students -->
                 <div class="simulator-card" id="simulatorBox">
                     <svg class="svg-icon" viewBox="0 0 24 24">
                         <circle cx="12" cy="12" r="10" />
@@ -1945,11 +2414,7 @@
                         <span class="icon">💰</span> Pay Fees
                      </button>`;
 
-            // Logout in footer is handled separately
-
             body.innerHTML = html;
-
-            // Update footer
             document.getElementById('sideDrawerUser').innerHTML = `👤 ${user?.name || 'Guest'}`;
         }
 
@@ -1975,24 +2440,17 @@
                 loadTeacherRecent();
             }
             closeSideDrawer();
-            // Update nav active state
-            document.querySelectorAll('.side-drawer-body .nav-item').forEach(el => el.classList.remove('active'));
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (user?.role === 'admin' && tabId === 'markTab') {
-                // keep mark tab active for student view
-            }
             buildSideDrawer();
         }
 
         // ============================================================
-        // ADMIN SUB-TAB SWITCHING (renders inside side drawer content area)
+        // ADMIN SUB-TAB SWITCHING
         // ============================================================
         function switchAdminSubTab(subId) {
             currentAdminSubTab = subId;
             const container = document.getElementById('adminScrollContent');
             if (!container) return;
 
-            // Build content based on subId
             let html = '';
             const user = JSON.parse(localStorage.getItem('user'));
 
@@ -2027,7 +2485,6 @@
             document.getElementById('markTab').style.display = 'none';
             document.getElementById('teacherTab').style.display = 'none';
 
-            // Re-run any initialization for the loaded content
             if (subId === 'subDirectory') fetchAllUsers();
             if (subId === 'subAllAttendance') loadAllAttendance();
             if (subId === 'subReports') { populateStudentSelect();
@@ -2264,11 +2721,11 @@
                             <div class="tool-sub-card" style="border-color:#f97316; background:#fff7ed;">
                                 <span class="tool-title" style="color:#ea580c;">🔧 Server Busy Mode</span>
                                 <p style="font-size:8px; color:var(--text-muted); margin-bottom:6px;">
-                                    When enabled, only Admin & Faculty can login. Students will see "Server is currently busy with maintenance."
+                                    When enabled, <strong>only Students</strong> are blocked. Admin & Faculty can still login and work.
                                     Logged-in students will see a banner and actions will be blocked.
                                 </p>
                                 <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                                    <button class="btn btn-warning btn-sm" onclick="setServerBusy(true)" style="padding:6px 12px; margin:0;">🔴 Enable Busy Mode</button>
+                                    <button class="btn btn-warning btn-sm" onclick="setServerBusy(true)" style="padding:6px 12px; margin:0;">🔴 Enable Busy Mode (Students only)</button>
                                     <button class="btn btn-success btn-sm" onclick="setServerBusy(false)" style="padding:6px 12px; margin:0;">🟢 Disable Busy Mode</button>
                                     <span id="serverBusyStatus" style="font-size:10px; font-weight:700; color:var(--text-muted);">Status: Off</span>
                                 </div>
@@ -3012,11 +3469,11 @@
         }
 
         // ============================================================
-        // MARK FULL DAY ATTENDANCE – FIXED LOCATION ERRORS
+        // MARK FULL DAY ATTENDANCE – WITH SERVER BUSY CHECK FOR STUDENTS
         // ============================================================
         async function markFullDayAttendance() {
-            // Check server busy for students
             const user = JSON.parse(localStorage.getItem('user'));
+            // Only block students
             if (user && user.role === 'student') {
                 const busy = await checkServerBusy();
                 if (busy) {
@@ -3091,10 +3548,11 @@
         }
 
         // ============================================================
-        // MARK ACTIVE PERIOD ATTENDANCE
+        // MARK ACTIVE PERIOD ATTENDANCE – WITH SERVER BUSY CHECK FOR STUDENTS
         // ============================================================
         async function markActivePeriodAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
+            // Only block students
             if (user && user.role === 'student') {
                 const busy = await checkServerBusy();
                 if (busy) {
@@ -3172,6 +3630,72 @@
                     showMsg(errorMsg, true);
                 }
             );
+        }
+
+        // ============================================================
+        // SERVER BUSY – STUDENTS ONLY
+        // ============================================================
+        async function checkServerBusy() {
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/get-server-busy`);
+                const data = await res.json();
+                const busy = data.busy || false;
+                const user = JSON.parse(localStorage.getItem('user'));
+                const isStudent = user && user.role === 'student';
+
+                // Only show banner and overlay to students
+                if (busy && isStudent) {
+                    document.getElementById('serverBusyBanner').style.display = 'flex';
+                    document.getElementById('studentBusyOverlay').style.display = 'flex';
+                    // Also disable interactive elements for students
+                    document.querySelectorAll('.btn').forEach(btn => {
+                        if (!btn.closest('#adminContentArea') && !btn.closest('#teacherTab')) {
+                            btn.style.opacity = '0.5';
+                            btn.style.cursor = 'not-allowed';
+                            btn.disabled = true;
+                        }
+                    });
+                } else {
+                    document.getElementById('serverBusyBanner').style.display = 'none';
+                    document.getElementById('studentBusyOverlay').style.display = 'none';
+                    // Re-enable buttons
+                    document.querySelectorAll('.btn').forEach(btn => {
+                        btn.style.opacity = '1';
+                        btn.style.cursor = 'pointer';
+                        btn.disabled = false;
+                    });
+                }
+                return busy;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        // ============================================================
+        // ADMIN TOOLS – Server Busy Toggle (only affects students)
+        // ============================================================
+        async function setServerBusy(busy) {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/set-server-busy`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requesterRollNo: user.rollNo, busy })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showMsg(data.message);
+                    document.getElementById('serverBusyStatus').innerText = `Status: ${busy ? '🔴 ON (Students only)' : '🟢 OFF'}`;
+                    document.getElementById('serverBusyStatus').style.color = busy ? '#dc2626' : '#16a34a';
+                    // Re-check to apply banner for students
+                    await checkServerBusy();
+                } else {
+                    showMsg(data.error || 'Failed', true);
+                }
+            } catch (e) {
+                showMsg('Server error!', true);
+            }
         }
 
         // ============================================================
@@ -3742,8 +4266,7 @@
                 const sub = r.subject || "";
                 return !sub.includes("LIB") && !sub.includes("Sports") && !sub.includes("Library");
             }).length;
-            
-            // Days present calculation
+
             const presentDaysSet = new Set();
             globalMyRecords.forEach(r => {
                 const sub = r.subject || "";
@@ -3755,20 +4278,20 @@
             });
             const daysPresent = presentDaysSet.size;
             const daysPct = totalWorkingDays > 0 ? Math.round((daysPresent / totalWorkingDays) * 100) : 0;
-            
-            if (totalConductedLectures === 0) return { 
-                pct: 100, 
-                totalWorkingDays, 
-                totalConductedLectures, 
+
+            if (totalConductedLectures === 0) return {
+                pct: 100,
+                totalWorkingDays,
+                totalConductedLectures,
                 totalAttendedLectures: academicAttendedLectures,
                 daysPresent,
                 daysPct
             };
             const pct = Math.min(100, ((academicAttendedLectures / totalConductedLectures) * 100)).toFixed(1);
-            return { 
-                pct, 
-                totalWorkingDays, 
-                totalConductedLectures, 
+            return {
+                pct,
+                totalWorkingDays,
+                totalConductedLectures,
                 totalAttendedLectures: academicAttendedLectures,
                 daysPresent,
                 daysPct
@@ -3844,19 +4367,17 @@
                 globalMyRecords = data || [];
                 const tbody = document.querySelector('#myHistoryTable tbody');
                 const calc = calculateRealAttendancePercentage();
-                
-                // Update stats with days
+
                 document.getElementById('totalDaysCount').innerText = calc.totalAttendedLectures;
                 const pctEl = document.getElementById('attendancePct');
                 if (pctEl) { pctEl.innerText = `${calc.pct}%`;
                     pctEl.style.color = calc.pct >= 75 ? 'var(--success)' : 'var(--danger)'; }
-                
-                // Days present
+
                 document.getElementById('daysPresentCount').innerText = calc.daysPresent || 0;
                 const daysPctEl = document.getElementById('daysPct');
                 if (daysPctEl) { daysPctEl.innerText = `${calc.daysPct || 0}%`;
                     daysPctEl.style.color = (calc.daysPct || 0) >= 75 ? 'var(--success)' : 'var(--danger)'; }
-                
+
                 const advisorBox = document.getElementById('advisorText');
                 if (advisorBox) {
                     if (calc.pct >= 75) {
@@ -4270,57 +4791,6 @@
             originalAdminUser = null;
             showMsg('✅ Switched back to admin');
             loadDashboard();
-        }
-
-        // ============================================================
-        // ADMIN TOOLS – Server Busy Mode
-        // ============================================================
-        async function setServerBusy(busy) {
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
-            try {
-                const res = await fetch(`${API_BASE}/api/admin/set-server-busy`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ requesterRollNo: user.rollNo, busy })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    showMsg(data.message);
-                    document.getElementById('serverBusyStatus').innerText = `Status: ${busy ? '🔴 ON' : '🟢 OFF'}`;
-                    document.getElementById('serverBusyStatus').style.color = busy ? '#dc2626' : '#16a34a';
-                    // Show/hide banner for all logged-in users
-                    if (busy) {
-                        document.getElementById('serverBusyBanner').style.display = 'flex';
-                    } else {
-                        document.getElementById('serverBusyBanner').style.display = 'none';
-                    }
-                    // If student, show message
-                    if (user.role === 'student' && busy) {
-                        showMsg('🔧 Server is busy with maintenance. Some features are temporarily disabled.', false);
-                    }
-                } else {
-                    showMsg(data.error || 'Failed', true);
-                }
-            } catch (e) {
-                showMsg('Server error!', true);
-            }
-        }
-
-        async function checkServerBusy() {
-            try {
-                const res = await fetch(`${API_BASE}/api/admin/get-server-busy`);
-                const data = await res.json();
-                const busy = data.busy || false;
-                if (busy) {
-                    document.getElementById('serverBusyBanner').style.display = 'flex';
-                } else {
-                    document.getElementById('serverBusyBanner').style.display = 'none';
-                }
-                return busy;
-            } catch (e) {
-                return false;
-            }
         }
 
         // ============================================================
@@ -4935,7 +5405,6 @@
 
             showLoading(`Marking attendance for ${selectedStudents.length} students... This may take a moment.`);
             try {
-                // Branch detection is now handled in backend per student
                 const res = await fetch(`${API_BASE}/api/admin/bulk-mark-attendance`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -5310,6 +5779,7 @@
             impersonating = false;
             document.getElementById('impersonationBanner').style.display = 'none';
             document.getElementById('serverBusyBanner').style.display = 'none';
+            document.getElementById('studentBusyOverlay').style.display = 'none';
             location.reload();
         }
 
@@ -5327,7 +5797,7 @@
                 monthSelect.value = currentMonth.toString();
             }
 
-            // Check server busy status
+            // Check server busy (only affects students)
             checkServerBusy();
 
             document.getElementById('auth-box').style.display = 'none';
@@ -5336,7 +5806,6 @@
             document.getElementById('welcomeMsg').innerText = `Hello, ${user.name}!`;
             const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 'ST';
             document.getElementById('userAvatarText').innerText = initials;
-            // Show hamburger for all logged-in users
             document.getElementById('hamburgerBtn').style.display = 'flex';
 
             const isAdmin = user.role === 'admin';
@@ -5348,7 +5817,6 @@
             document.getElementById('userRoleBadge').innerText = isAdmin ? '👑 Admin' : isFaculty ? '👨‍🏫 Faculty' : '🎓 Student';
             document.getElementById('userBranchBadge').innerText = `📚 ${branch}`;
 
-            // Hide student stats grid for admin/faculty
             if (isAdmin || isFaculty) {
                 document.getElementById('studentStatsGrid').style.display = 'none';
                 document.getElementById('adminStatsGrid').style.display = 'grid';
@@ -5358,7 +5826,6 @@
                 document.getElementById('adminContentArea').style.display = 'block';
                 document.getElementById('teacherTab').style.display = isFaculty ? 'block' : 'none';
                 if (isAdmin) {
-                    // Load admin dashboard stats
                     loadDashboardStats();
                     setInterval(loadDashboardStats, 60000);
                     populateStudentSelect();
@@ -5371,16 +5838,13 @@
                     toggleFacultyRegistrationFields();
                     loadAllAttendance();
                     populateBulkStudentSelect();
-                    // Load admin content
                     switchAdminSubTab(currentAdminSubTab || 'subDirectory');
                 } else {
-                    // Faculty
                     loadTeacherSubjects();
                     loadTeacherRecent();
                     fetchTeacherStudents();
                     document.getElementById('teacherPasscodeDisplay').innerText = '—';
                     teacherCurrentPasscode = '—';
-                    // Show teacher tab
                     document.getElementById('teacherTab').style.display = 'block';
                     document.getElementById('adminContentArea').style.display = 'none';
                 }
@@ -5397,7 +5861,6 @@
                 fetchMonthlySummary();
             }
 
-            // Common for all
             if (impersonating) {
                 document.getElementById('impersonationBanner').style.display = 'flex';
             } else {
@@ -5411,12 +5874,9 @@
             updatePeriodTrackerWidget();
             setInterval(updatePeriodTrackerWidget, 30000);
 
-            // Show chat trigger
             document.getElementById('chatAvatarTrigger').style.display = 'flex';
             loadChatHistory(user.rollNo);
             updateWelcomeGreeting();
-
-            // Build side drawer
             buildSideDrawer();
         }
 
@@ -5432,7 +5892,6 @@
             }
         }
 
-        // Attach chat toggle events
         document.addEventListener('DOMContentLoaded', function() {
             const toggleBtn = document.getElementById('chatAvatarTrigger');
             const closeBtn = document.getElementById('chatCloseBtn');
@@ -5450,22 +5909,18 @@
                 avatar.addEventListener('touchstart', toggleChat, { passive: true });
             }
 
-            // Auto branch detection on manual roll input
             const manualRoll = document.getElementById('manualRoll');
             if (manualRoll) {
                 manualRoll.addEventListener('input', autoDetectBranch);
             }
 
-            // Close drawer on escape
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape') closeSideDrawer();
             });
 
-            // Click outside to close
             document.getElementById('sideDrawerOverlay').addEventListener('click', closeSideDrawer);
         });
 
-        // Main init
         (function() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (user && localStorage.getItem('token')) {
@@ -5495,12 +5950,12 @@
             console.log('✅ Auto branch detection for manual entry.');
             console.log('✅ Days attended percentage added.');
             console.log('✅ Side drawer navigation with animations.');
-            console.log('✅ Server busy mode affects logged-in students too.');
+            console.log('✅ Server busy mode – ONLY affects Students. Admin & Faculty unaffected.');
             console.log('✅ Bulk marking uses each student\'s branch timetable.');
             console.log('✅ Location errors show specific messages.');
         })();
 
-        // Expose functions globally for inline onclick
+        // Expose functions globally
         window.toggleSideDrawer = toggleSideDrawer;
         window.closeSideDrawer = closeSideDrawer;
         window.switchMainTab = switchMainTab;
@@ -5577,6 +6032,7 @@
         window.toggleCalendarView = toggleCalendarView;
         window.openEditModal = openEditModal;
         window.switchBackFromImpersonation = switchBackFromImpersonation;
+        window.checkServerBusy = checkServerBusy;
     </script>
 </body>
 </html>
