@@ -28,7 +28,6 @@
             --chat-bg: #f8fafc;
             --chat-user: #2563eb;
             --chat-bot: #e2e8f0;
-            --sidebar-width: 280px;
         }
         * {
             box-sizing: border-box;
@@ -44,7 +43,6 @@
             justify-content: center;
             align-items: center;
             padding: 16px;
-            overflow-x: hidden;
         }
         /* ===== TOAST ===== */
         #toast-container {
@@ -113,7 +111,6 @@
             border: 1px solid var(--card-border);
             overflow: hidden;
             animation: cardScaleUp 0.75s cubic-bezier(0.16, 1, 0.3, 1);
-            position: relative;
         }
         @keyframes cardScaleUp {
             from {
@@ -141,13 +138,11 @@
         /* ===== HEADER ===== */
         .app-header {
             background: #fff;
-            padding: 14px 16px;
+            padding: 16px 18px;
             border-bottom: 1px solid var(--card-border);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            position: relative;
-            z-index: 5;
         }
         .app-header-title h1 {
             font-size: 15px;
@@ -161,25 +156,10 @@
             color: var(--text-muted);
             margin-top: 1px;
         }
-        .header-actions {
+        .header-avatar-badge {
             display: flex;
             align-items: center;
             gap: 8px;
-        }
-        .hamburger-btn {
-            background: transparent;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            padding: 4px 6px;
-            border-radius: 8px;
-            transition: 0.3s;
-            touch-action: manipulation;
-            color: var(--text-main);
-            display: none;
-        }
-        .hamburger-btn:hover {
-            background: #f1f5f9;
         }
         .avatar-circle {
             width: 32px;
@@ -199,156 +179,6 @@
         .avatar-circle:hover {
             transform: scale(1.05);
         }
-
-        /* ===== SIDE DRAWER ===== */
-        .side-drawer-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.4);
-            z-index: 1000;
-            display: none;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        .side-drawer-overlay.open {
-            display: block;
-            opacity: 1;
-        }
-        .side-drawer {
-            position: fixed;
-            top: 0;
-            left: -100%;
-            width: var(--sidebar-width);
-            max-width: 85vw;
-            height: 100vh;
-            background: #fff;
-            z-index: 1001;
-            transition: left 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-            box-shadow: 4px 0 30px rgba(0, 0, 0, 0.15);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        .side-drawer.open {
-            left: 0;
-        }
-        .side-drawer-header {
-            padding: 20px 18px 14px;
-            border-bottom: 1px solid var(--card-border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-shrink: 0;
-            background: #fff;
-        }
-        .side-drawer-header .brand {
-            font-weight: 800;
-            font-size: 16px;
-            color: var(--text-main);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .side-drawer-header .brand small {
-            font-weight: 600;
-            font-size: 10px;
-            color: var(--text-muted);
-            display: block;
-            margin-top: 2px;
-        }
-        .side-drawer-close {
-            background: transparent;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            padding: 4px;
-            color: var(--text-muted);
-            transition: 0.2s;
-        }
-        .side-drawer-close:hover {
-            color: var(--danger);
-        }
-
-        .side-drawer-body {
-            flex: 1;
-            overflow-y: auto;
-            padding: 12px 8px 20px;
-        }
-        .side-drawer-body .nav-section-title {
-            font-size: 9px;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            padding: 10px 12px 4px;
-        }
-        .side-drawer-body .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 14px;
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-main);
-            text-decoration: none;
-            border: none;
-            background: transparent;
-            width: 100%;
-            text-align: left;
-        }
-        .side-drawer-body .nav-item:hover {
-            background: #f1f5f9;
-        }
-        .side-drawer-body .nav-item.active {
-            background: #eff6ff;
-            color: var(--primary);
-        }
-        .side-drawer-body .nav-item .icon {
-            font-size: 18px;
-            width: 28px;
-            text-align: center;
-            flex-shrink: 0;
-        }
-        .side-drawer-body .nav-item .badge-nav {
-            margin-left: auto;
-            font-size: 9px;
-            background: var(--card-border);
-            padding: 2px 8px;
-            border-radius: 10px;
-            color: var(--text-muted);
-        }
-
-        .side-drawer-footer {
-            padding: 14px 18px;
-            border-top: 1px solid var(--card-border);
-            flex-shrink: 0;
-            font-size: 11px;
-            color: var(--text-muted);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .side-drawer-footer .logout-btn {
-            background: #fef2f2;
-            color: var(--danger);
-            border: 1px solid #fecaca;
-            border-radius: 6px;
-            padding: 4px 12px;
-            font-size: 11px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .side-drawer-footer .logout-btn:hover {
-            background: #fee2e2;
-        }
-
         /* ===== NOTICE BANNER ===== */
         .notice-banner {
             background: #fffbeb;
@@ -378,40 +208,6 @@
                 transform: translateX(-100%);
             }
         }
-
-        /* ===== SERVER BUSY BANNER – ONLY FOR STUDENTS ===== */
-        .server-busy-banner {
-            background: #fef2f2;
-            border-bottom: 2px solid #dc2626;
-            color: #991b1b;
-            padding: 8px 14px;
-            font-size: 12px;
-            font-weight: 700;
-            display: none;
-            align-items: center;
-            gap: 10px;
-            justify-content: center;
-            text-align: center;
-        }
-        .server-busy-banner .dot-pulse {
-            width: 8px;
-            height: 8px;
-            background: #dc2626;
-            border-radius: 50%;
-            animation: pulse 1.2s ease-in-out infinite;
-        }
-        @keyframes pulse {
-            0%,
-            100% {
-                opacity: 0.4;
-                transform: scale(0.8);
-            }
-            50% {
-                opacity: 1;
-                transform: scale(1.2);
-            }
-        }
-
         /* ===== IMPERSONATION BANNER ===== */
         .impersonation-banner {
             background: #fef3c7;
@@ -440,12 +236,10 @@
         .impersonation-banner .switch-back-btn:hover {
             background: #b91c1c;
         }
-
         /* ===== BODY ===== */
         .app-body {
             padding: 14px;
         }
-
         /* ===== FORM ===== */
         input,
         select {
@@ -494,7 +288,6 @@
         .eye-icon:hover {
             color: var(--primary);
         }
-
         /* ===== BUTTONS ===== */
         .btn {
             width: 100%;
@@ -578,7 +371,6 @@
             border-color: var(--card-border);
             transform: none;
         }
-
         /* ===== BADGES ===== */
         .badge {
             padding: 2px 8px;
@@ -612,20 +404,24 @@
             background: #fef3c7;
             color: #92400e;
         }
-
+        .badge-cse {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        .badge-aids {
+            background: #fae8ff;
+            color: #7c3aed;
+        }
         /* ===== STATS GRID ===== */
         .stats-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: 1fr 1fr;
             gap: 8px;
             margin: 10px 0;
         }
-        .stats-grid.two-col {
-            grid-template-columns: 1fr 1fr;
-        }
         .stat-card {
             background: #f8fafc;
-            padding: 10px 8px;
+            padding: 10px;
             border-radius: var(--radius);
             text-align: center;
             border: 1px solid var(--card-border);
@@ -642,21 +438,14 @@
             color: var(--primary);
             letter-spacing: -0.5px;
         }
-        .stat-card .value.danger {
-            color: var(--danger);
-        }
-        .stat-card .value.success {
-            color: var(--success);
-        }
         .stat-card .label {
-            font-size: 8px;
+            font-size: 9px;
             color: var(--text-muted);
             font-weight: 700;
             margin-top: 2px;
             text-transform: uppercase;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.5px;
         }
-
         /* ===== SIMULATOR CARD ===== */
         .simulator-card {
             background: #f0f9ff;
@@ -670,7 +459,6 @@
             align-items: center;
             gap: 8px;
         }
-
         /* ===== QUICK PORTALS ===== */
         .quick-portals-card {
             background: #fff;
@@ -708,7 +496,6 @@
             box-shadow: var(--shadow-sm);
             color: var(--primary);
         }
-
         /* ===== CALENDAR ===== */
         .calendar-container {
             background: #fff;
@@ -773,7 +560,65 @@
             background: #f1f5f9;
             color: #94a3b8;
         }
-
+        /* ===== TABS ===== */
+        .tab-bar {
+            display: flex;
+            background: #f1f5f9;
+            border-radius: var(--radius-sm);
+            padding: 2px;
+            margin-bottom: 10px;
+        }
+        .tab-item {
+            flex: 1;
+            padding: 6px;
+            text-align: center;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            color: var(--text-muted);
+            border-radius: 6px;
+            transition: all 0.3s;
+        }
+        .tab-item.active {
+            background: #fff;
+            color: var(--primary);
+            box-shadow: var(--shadow-sm);
+        }
+        /* ===== ADMIN NAV ===== */
+        .admin-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            background: #f1f5f9;
+            padding: 6px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 10px;
+        }
+        .admin-nav-item {
+            flex: 1 0 auto;
+            min-width: 60px;
+            text-align: center;
+            padding: 10px 6px;
+            font-size: 11px;
+            font-weight: 800;
+            cursor: pointer;
+            border-radius: 6px;
+            color: var(--text-muted);
+            transition: all 0.3s;
+            background: transparent;
+            border: 1px solid transparent;
+            line-height: 1.3;
+            letter-spacing: 0.3px;
+        }
+        .admin-nav-item:hover {
+            background: rgba(255, 255, 255, 0.6);
+        }
+        .admin-nav-item.active {
+            background: #fff;
+            color: var(--primary);
+            box-shadow: var(--shadow-sm);
+            border-color: var(--card-border);
+        }
         /* ===== PERIOD CARD ===== */
         .period-card {
             background: #f0f9ff;
@@ -835,7 +680,6 @@
             color: #475569;
             border-color: #cbd5e1;
         }
-
         /* ===== TABLES ===== */
         .table-container {
             max-height: 300px;
@@ -871,7 +715,6 @@
         .table-container tr:hover td {
             background: #f8fafc;
         }
-
         /* ===== ADMIN BOXES ===== */
         .admin-box {
             background: #fff;
@@ -909,6 +752,10 @@
             background: #ecfdf5;
             border-color: #a7f3d0;
         }
+        .admin-box.sub-bulk {
+            background: #f0f9ff;
+            border-color: #bae6fd;
+        }
         .sub-section-title {
             font-size: 10px;
             font-weight: 700;
@@ -918,7 +765,6 @@
             margin-bottom: 6px;
             display: block;
         }
-
         /* ===== SUBJECT CHECKBOXES ===== */
         .subject-checkbox-container {
             display: grid;
@@ -962,7 +808,6 @@
         .subject-checkbox-container .select-all:hover {
             background: #cbd5e1;
         }
-
         /* ===== PASSCODE DISPLAY ===== */
         .passcode-display {
             background: #f8fafc;
@@ -978,7 +823,6 @@
             color: var(--primary);
             letter-spacing: 4px;
         }
-
         /* ===== TODAY PRESENT LIST ===== */
         #todayPresentList {
             max-height: 180px;
@@ -1014,7 +858,6 @@
         .present-item .name {
             color: var(--text-muted);
         }
-
         /* ===== SUBJECT CHIPS ===== */
         .subject-chips {
             display: flex;
@@ -1029,7 +872,6 @@
             border: 1px solid var(--card-border);
             font-size: 8px;
         }
-
         /* ===== TOOL SUB CARD ===== */
         .tool-sub-card {
             background: #f8fafc;
@@ -1052,7 +894,6 @@
             margin: 0;
             flex: 1;
         }
-
         /* ===== SVG ICON ===== */
         .svg-icon {
             width: 14px;
@@ -1070,7 +911,6 @@
             width: 12px;
             height: 12px;
         }
-
         /* ===== MODAL ===== */
         .modal-overlay {
             position: fixed;
@@ -1119,7 +959,6 @@
         .profile-modal .record-item:last-child {
             border-bottom: none;
         }
-
         /* ===== DOWNLOAD PROGRESS ===== */
         .download-progress {
             position: fixed;
@@ -1157,7 +996,6 @@
                 transform: rotate(360deg);
             }
         }
-
         /* ===== FILTER ROW ===== */
         .filter-row {
             display: flex;
@@ -1173,7 +1011,6 @@
             font-size: 9px;
             margin: 0;
         }
-
         /* ===== RESPONSIVE ===== */
         @media (max-width: 480px) {
             .app-container {
@@ -1183,8 +1020,10 @@
                 grid-template-columns: 1fr 1fr;
                 gap: 6px;
             }
-            .stats-grid.three-col {
-                grid-template-columns: 1fr 1fr;
+            .admin-nav-item {
+                min-width: 50px;
+                font-size: 10px;
+                padding: 8px 4px;
             }
             .filter-row select,
             .filter-row input {
@@ -1194,20 +1033,7 @@
             .profile-modal {
                 max-width: 100%;
             }
-            .side-drawer {
-                width: 85vw;
-            }
         }
-        @media (max-width: 380px) {
-            .stats-grid {
-                grid-template-columns: 1fr 1fr;
-                gap: 4px;
-            }
-            .stat-card .value {
-                font-size: 14px;
-            }
-        }
-
         /* ===== BULK STUDENT LIST ===== */
         .bulk-student-list {
             max-height: 150px;
@@ -1276,47 +1102,13 @@
             margin: 0;
         }
 
-        /* ===== LOADING OVERLAY ===== */
-        #loadingOverlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.55);
-            backdrop-filter: blur(3px);
-            z-index: 99999;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            color: white;
-            font-size: 16px;
-            font-weight: 600;
-        }
-        #loadingOverlay .spinner {
-            width: 48px;
-            height: 48px;
-            border: 5px solid rgba(255, 255, 255, 0.3);
-            border-top: 5px solid #fff;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-bottom: 16px;
-        }
-        #loadingOverlay .loading-text {
-            font-size: 14px;
-            opacity: 0.9;
-            text-align: center;
-            padding: 0 20px;
-        }
-
-        /* ===== CHAT WIDGET ===== */
+        /* ===== CHAT WIDGET - COMPACT, CENTERED (75% size) ===== */
         #chatWidget {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            z-index: 99998;
+            z-index: 99999;
             display: none;
             width: 75vw;
             max-width: 700px;
@@ -1325,6 +1117,11 @@
             background: transparent;
             pointer-events: none;
         }
+        #chatWidget .chat-toggle-btn {
+            display: none;
+            /* we use the avatar to toggle */
+        }
+
         .chat-panel {
             width: 100%;
             height: 100%;
@@ -1341,6 +1138,7 @@
         .chat-panel.open {
             display: flex !important;
         }
+
         .chat-panel .chat-header {
             background: #fff;
             padding: 10px 14px;
@@ -1379,6 +1177,7 @@
         .chat-panel .chat-header .chat-close:hover {
             color: var(--danger);
         }
+
         .chat-panel .chat-body {
             display: flex;
             flex: 1;
@@ -1468,6 +1267,7 @@
             font-size: 10px;
             padding: 20px 0;
         }
+
         .chat-panel .chat-main {
             flex: 1;
             display: flex;
@@ -1548,6 +1348,7 @@
                 content: '...';
             }
         }
+
         .chat-panel .chat-main .quick-chips {
             padding: 4px 10px 6px 10px;
             display: flex;
@@ -1576,6 +1377,7 @@
             border-color: var(--primary);
             color: var(--primary);
         }
+
         .chat-panel .chat-main .chat-input-row {
             display: flex;
             border-top: 1px solid var(--card-border);
@@ -1625,6 +1427,7 @@
             opacity: 0.5;
             cursor: not-allowed;
         }
+
         .chat-panel .chat-main .sidebar-toggle {
             background: transparent;
             border: none;
@@ -1638,6 +1441,7 @@
         .chat-panel .chat-main .sidebar-toggle:hover {
             color: var(--primary);
         }
+
         .chat-panel .chat-main .chat-messages .welcome-greeting {
             text-align: center;
             padding: 16px 0;
@@ -1683,12 +1487,12 @@
             }
         }
 
-        /* ===== Floating Avatar trigger ===== */
+        /* ===== Floating Avatar trigger (visible when logged in) ===== */
         .chat-avatar-trigger {
             position: fixed;
             bottom: 20px;
             right: 20px;
-            z-index: 99997;
+            z-index: 99998;
             display: none;
             background: var(--primary);
             color: #fff;
@@ -1722,69 +1526,6 @@
             bottom: 20px;
             right: 20px;
         }
-
-        /* ===== Scrollable admin content ===== */
-        .admin-scroll-content {
-            max-height: 70vh;
-            overflow-y: auto;
-            padding-right: 4px;
-        }
-        .admin-scroll-content::-webkit-scrollbar {
-            width: 4px;
-        }
-        .admin-scroll-content::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 4px;
-        }
-        .admin-scroll-content::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
-        .admin-scroll-content::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
-
-        /* ===== Student-only server busy overlay ===== */
-        .student-busy-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(4px);
-            z-index: 99996;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            color: white;
-            text-align: center;
-            padding: 30px;
-        }
-        .student-busy-overlay .busy-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
-        }
-        .student-busy-overlay .busy-title {
-            font-size: 22px;
-            font-weight: 800;
-            margin-bottom: 8px;
-        }
-        .student-busy-overlay .busy-sub {
-            font-size: 14px;
-            opacity: 0.8;
-            max-width: 320px;
-        }
-        .student-busy-overlay .busy-spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(255, 255, 255, 0.2);
-            border-top: 4px solid #fff;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-bottom: 16px;
-        }
     </style>
 </head>
 <body>
@@ -1800,43 +1541,10 @@
         </div>
     </div>
 
-    <!-- ===== LOADING OVERLAY ===== -->
-    <div id="loadingOverlay">
-        <div class="spinner"></div>
-        <div class="loading-text" id="loadingText">Processing…</div>
-    </div>
-
-    <!-- ===== STUDENT BUSY OVERLAY (only for students) ===== -->
-    <div class="student-busy-overlay" id="studentBusyOverlay">
-        <div class="busy-spinner"></div>
-        <div class="busy-icon">🔧</div>
-        <div class="busy-title">Server Busy</div>
-        <div class="busy-sub">The system is currently under maintenance. Please try again later.</div>
-    </div>
-
     <!-- ===== DOWNLOAD PROGRESS ===== -->
     <div id="downloadProgress" class="download-progress">
         <div class="spinner"></div>
         <span id="downloadStatus">Preparing file…</span>
-    </div>
-
-    <!-- ===== SIDE DRAWER ===== -->
-    <div class="side-drawer-overlay" id="sideDrawerOverlay" onclick="closeSideDrawer()"></div>
-    <div class="side-drawer" id="sideDrawer">
-        <div class="side-drawer-header">
-            <div class="brand">
-                📚 BM Group
-                <small>ERP Portal</small>
-            </div>
-            <button class="side-drawer-close" onclick="closeSideDrawer()">✕</button>
-        </div>
-        <div class="side-drawer-body" id="sideDrawerBody">
-            <!-- Populated by JS -->
-        </div>
-        <div class="side-drawer-footer">
-            <span id="sideDrawerUser">👤 Guest</span>
-            <button class="logout-btn" onclick="logout()">🚪 Logout</button>
-        </div>
     </div>
 
     <!-- ===== STUDENT EXCEL MODAL ===== -->
@@ -1892,16 +1600,9 @@
                 <h1>BM Group of Institutions</h1>
                 <p>B.Tech CSE / AIDS – 5th Semester</p>
             </div>
-            <div class="header-actions">
-                <div class="avatar-circle" id="userAvatarText" onclick="toggleChat()">SS</div>
-                <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSideDrawer()">☰</button>
+            <div class="header-avatar-badge" id="headerAvatarBox" style="display:none;">
+                <div class="avatar-circle" id="userAvatarText">SS</div>
             </div>
-        </div>
-
-        <!-- SERVER BUSY BANNER – ONLY SHOWN TO STUDENTS (controlled by JS) -->
-        <div class="server-busy-banner" id="serverBusyBanner">
-            <span class="dot-pulse"></span>
-            <span>🔧 Server is currently busy with maintenance. Some features may be limited.</span>
         </div>
 
         <!-- NOTICE BANNER -->
@@ -1950,7 +1651,7 @@
             <!-- ===== DASHBOARD ===== -->
             <div id="dash-box" style="display:none;">
 
-                <!-- Welcome + Logout (top bar) -->
+                <!-- Welcome + Logout -->
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <div>
                         <h3 style="font-size:13px; font-weight:800;"><span id="welcomeMsg">Welcome!</span></h3>
@@ -1963,47 +1664,31 @@
                     <button class="btn btn-danger" style="width:auto; padding:4px 8px; margin:0; font-size:10px;" onclick="logout()">Logout</button>
                 </div>
 
-                <!-- Student Stats (2 rows: Lectures + Days) – hidden for admin/faculty -->
-                <div class="stats-grid two-col" id="studentStatsGrid">
+                <!-- Student Stats -->
+                <div class="stats-grid" id="studentStatsGrid">
                     <div class="stat-card">
                         <div class="value" id="totalDaysCount">0</div>
                         <div class="label">Academic Lectures</div>
                     </div>
                     <div class="stat-card">
                         <div class="value" id="attendancePct">0%</div>
-                        <div class="label">Lecture Attendance</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="value" id="daysPresentCount">0</div>
-                        <div class="label">Days Present</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="value" id="daysPct">0%</div>
-                        <div class="label">Days Attendance %</div>
+                        <div class="label">Attendance Status</div>
                     </div>
                 </div>
 
-                <!-- Admin/Teacher Stats (hidden for students) -->
-                <div class="stats-grid two-col" id="adminStatsGrid" style="display:none;">
+                <!-- Admin/Teacher Stats -->
+                <div class="stats-grid" id="adminStatsGrid" style="display:none;">
                     <div class="stat-card">
                         <div class="value" id="adminTotalStudents">0</div>
                         <div class="label">Enrolled Students</div>
                     </div>
                     <div class="stat-card">
                         <div class="value" id="adminClassAvg">0%</div>
-                        <div class="label">Class Lecture Avg</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="value" id="adminDaysAvg">0%</div>
-                        <div class="label">Class Days Avg</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="value" id="adminWorkingDays">0</div>
-                        <div class="label">Working Days</div>
+                        <div class="label">Class Attendance Avg</div>
                     </div>
                 </div>
 
-                <!-- Advisor – only for students -->
+                <!-- Advisor -->
                 <div class="simulator-card" id="simulatorBox">
                     <svg class="svg-icon" viewBox="0 0 24 24">
                         <circle cx="12" cy="12" r="10" />
@@ -2013,22 +1698,26 @@
                     <div><b>Attendance Advisor:</b> <span id="advisorText">Calculating criteria…</span></div>
                 </div>
 
-                <!-- Admin Live Dashboard (hidden for students) -->
+                <!-- Admin Live Dashboard -->
                 <div id="adminLiveDashboard" style="display:none; margin:10px 0;">
-                    <div class="stats-grid two-col">
+                    <div class="stats-grid">
                         <div class="stat-card"><div class="value" id="liveTotalStudents">0</div><div class="label">Total Students</div></div>
                         <div class="stat-card"><div class="value" id="liveTodayPresent">0</div><div class="label">Present Today</div></div>
                         <div class="stat-card"><div class="value" id="liveTodayAbsent">0</div><div class="label">Absent Today</div></div>
-                        <div class="stat-card"><div class="value" id="liveOverallPct">0%</div><div class="label">Overall Lecture %</div></div>
+                        <div class="stat-card"><div class="value" id="liveOverallPct">0%</div><div class="label">Overall %</div></div>
                     </div>
                     <div style="background:#f8fafc; border-radius:var(--radius-sm); padding:8px; border:1px solid var(--card-border);">
                         <span style="font-size:9px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">📋 Today's Present Students</span>
                         <div id="todayPresentList"></div>
                     </div>
-                    <button class="btn btn-outline btn-sm" onclick="loadDashboardStats()" style="padding:4px; font-size:9px; margin-top:4px;">Refresh Stats</button>
+                    <div class="stats-grid" style="margin-top:8px;">
+                        <div class="stat-card"><div class="value" id="workingDaysSoFar">0</div><div class="label">Working Days (so far)</div></div>
+                        <div class="stat-card"><div class="value" id="totalWorkingDaysSemester">0</div><div class="label">Total Working Days (Semester)</div></div>
+                    </div>
+                    <button class="btn btn-outline btn-sm" onclick="loadDashboardStats()" style="padding:4px; font-size:9px;">Refresh Stats</button>
                 </div>
 
-                <!-- Quick Portals (shown to all) -->
+                <!-- Quick Portals -->
                 <div class="quick-portals-card">
                     <span style="font-size:9px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Quick Portals</span>
                     <div class="portal-grid">
@@ -2045,6 +1734,13 @@
                             <span>Results</span>
                         </div>
                     </div>
+                </div>
+
+                <!-- Tab Bar -->
+                <div class="tab-bar">
+                    <div class="tab-item active" id="studentTabHeader" onclick="switchTab('markTab')">Attendance</div>
+                    <div class="tab-item" id="adminTabHeader" style="display:none;" onclick="switchTab('adminTab')">Admin</div>
+                    <div class="tab-item" id="teacherTabHeader" style="display:none;" onclick="switchTab('teacherTab')">Teacher</div>
                 </div>
 
                 <!-- ===== MARK TAB (Student) ===== -->
@@ -2104,14 +1800,314 @@
                     </div>
                 </div>
 
-                <!-- ===== ADMIN CONTENT (now rendered inside side drawer) ===== -->
-                <div id="adminContentArea" style="display:none;">
-                    <div class="admin-scroll-content" id="adminScrollContent">
-                        <!-- Populated by JS via side drawer navigation -->
+                <!-- ===== ADMIN TAB ===== -->
+                <div id="adminTab" style="display:none;">
+                    <div class="admin-nav">
+                        <div class="admin-nav-item active" onclick="switchAdminSubTab('subDirectory')">📋 Directory</div>
+                        <div class="admin-nav-item" onclick="switchAdminSubTab('subAllAttendance')">📊 All Attend</div>
+                        <div class="admin-nav-item" onclick="switchAdminSubTab('subReports')">📤 Excel</div>
+                        <div class="admin-nav-item" onclick="switchAdminSubTab('subAttendance')">✏️ Entry</div>
+                        <div class="admin-nav-item" onclick="switchAdminSubTab('subHoliday')">🎉 Holiday</div>
+                        <div class="admin-nav-item" onclick="switchAdminSubTab('subPasscode')">🔑 Passcode</div>
+                        <div class="admin-nav-item" onclick="switchAdminSubTab('subTools')">⚙️ Tools</div>
+                    </div>
+
+                    <!-- SUB: Directory -->
+                    <div id="subDirectory" class="admin-box sub-directory tab-content-active">
+                        <span class="sub-section-title">👥 Directory – All Users</span>
+                        <button class="btn btn-outline btn-sm" onclick="fetchAllUsers()" style="padding:4px; margin:0;">🔄 Refresh</button>
+                        <div class="table-container" style="max-height:350px; margin-top:6px;">
+                            <table id="directoryTable">
+                                <thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Device</th><th>Attendance</th><th>Action</th></tr></thead>
+                                <tbody><tr><td colspan="6" style="text-align:center; padding:12px;">Loading users…</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- SUB: All Attendance -->
+                    <div id="subAllAttendance" class="admin-box sub-all-attendance" style="display:none;">
+                        <span class="sub-section-title">📊 All Attendance Records – Manage</span>
+                        <div class="filter-row">
+                            <input type="text" id="filterAttendanceRoll" placeholder="Filter by Roll No" style="flex:1; min-width:60px; padding:6px 8px; font-size:9px; margin:0;" oninput="loadAllAttendance()" />
+                            <input type="date" id="filterAttendanceDate" style="flex:1; min-width:80px; padding:6px 8px; font-size:9px; margin:0;" onchange="loadAllAttendance()" />
+                            <button class="btn btn-outline btn-sm" onclick="loadAllAttendance()" style="padding:4px 8px; margin:0;">Filter</button>
+                        </div>
+                        <button class="btn btn-outline btn-sm" onclick="loadAllAttendance()" style="padding:4px; margin:0 0 4px 0;">🔄 Refresh All</button>
+                        <div class="table-container" style="max-height:350px;">
+                            <table id="allAttendanceTable">
+                                <thead><tr><th>Date</th><th>Roll</th><th>Name</th><th>Subject</th><th>Status</th><th>Actions</th></tr></thead>
+                                <tbody><tr><td colspan="6" style="text-align:center; padding:12px;">Loading records…</td></tr></tbody>
+                            </table>
+                        </div>
+                        <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">💡 Click <strong>Edit</strong> to change status, <strong>Delete</strong> to remove record.</p>
+                    </div>
+
+                    <!-- SUB: Reports -->
+                    <div id="subReports" class="admin-box sub-reports" style="display:none;">
+                        <span class="sub-section-title">📊 Export Reports</span>
+                        <select id="exportSelection" style="padding:8px; margin-bottom:6px; font-size:10px;">
+                            <option value="ALL_SEMESTER">Full Semester (Jul–Dec 2026)</option>
+                            <option value="6">July 2026</option>
+                            <option value="7">August 2026</option>
+                            <option value="8">September 2026</option>
+                            <option value="9">October 2026</option>
+                            <option value="10">November 2026</option>
+                            <option value="11">December 2026</option>
+                        </select>
+                        <button class="btn btn-success btn-sm" onclick="exportExcelGrid()" style="padding:8px; margin:0;">Download Excel Report</button>
+                        <button class="btn btn-accent btn-sm" onclick="downloadGoogleSheetsExport()" style="padding:8px; margin:4px 0 0 0;">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="12" x2="12" y1="4" y2="20"/></svg>
+                            Export to Google Sheets (CSV)
+                        </button>
+                        <hr style="margin:12px 0; border-color:var(--card-border);" />
+                        <span class="sub-section-title">👤 Single Student Attendance</span>
+                        <select id="singleStudentSelect" style="padding:8px; margin-bottom:6px; font-size:10px;">
+                            <option value="">Select Student…</option>
+                        </select>
+                        <select id="singleStudentRange" style="padding:8px; margin-bottom:6px; font-size:10px;" onchange="toggleSingleMonthWrapper()">
+                            <option value="CURRENT_MONTH">Current Month</option>
+                            <option value="SELECTED_MONTH">Selected Month</option>
+                            <option value="FULL_SEMESTER">Full Semester</option>
+                        </select>
+                        <div id="singleStudentMonthWrapper" style="display:none; margin-bottom:6px;">
+                            <select id="singleStudentMonth" style="padding:8px; font-size:10px;">
+                                <option value="6">July 2026</option>
+                                <option value="7">August 2026</option>
+                                <option value="8">September 2026</option>
+                                <option value="9">October 2026</option>
+                                <option value="10">November 2026</option>
+                                <option value="11">December 2026</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="downloadSingleStudentAttendance()" style="padding:8px; margin:0;">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                            Download Student CSV
+                        </button>
+                        <hr style="margin:12px 0; border-color:var(--card-border);" />
+                        <span class="sub-section-title">🔑 Login as Student (Impersonate)</span>
+                        <input type="text" id="impersonateRoll" placeholder="Student Roll No" style="font-size:10px; padding:7px;" />
+                        <button class="btn btn-warning btn-sm" onclick="adminLoginAsStudent()" style="padding:7px; margin:0;">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            Login as Student
+                        </button>
+                        <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">💡 Bypasses device binding – for admin assistance only.</p>
+
+                        <!-- Individual Student Report for Admin -->
+                        <hr style="margin:12px 0; border-color:var(--card-border);" />
+                        <span class="sub-section-title">📈 Individual Student Report (PDF/CSV)</span>
+                        <select id="adminStudentReportSelect" style="padding:8px; margin-bottom:6px; font-size:10px;">
+                            <option value="">Select Student…</option>
+                        </select>
+                        <div class="flex-buttons">
+                            <button class="btn btn-primary btn-sm" onclick="generateStudentReport('pdf')" style="padding:6px;">PDF</button>
+                            <button class="btn btn-success btn-sm" onclick="generateStudentReport('csv')" style="padding:6px;">CSV</button>
+                        </div>
+
+                        <!-- Class Attendance Report (PDF) -->
+                        <hr style="margin:12px 0; border-color:var(--card-border);" />
+                        <span class="sub-section-title">📋 Class Attendance Report (PDF)</span>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                            <input type="date" id="classReportStart" style="flex:1; padding:6px; font-size:10px; margin:0;" />
+                            <input type="date" id="classReportEnd" style="flex:1; padding:6px; font-size:10px; margin:0;" />
+                        </div>
+                        <select id="classReportBranch" style="padding:6px; font-size:10px; margin:0 0 6px 0;">
+                            <option value="ALL">All Branches</option>
+                            <option value="CSE">CSE</option>
+                            <option value="AIDS">AIDS</option>
+                        </select>
+                        <button class="btn btn-primary btn-sm" onclick="generateClassAttendanceReport()" style="padding:8px; margin-top:6px;">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                            Generate PDF
+                        </button>
+                        <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">Shows all registered students with total present and percentage.</p>
+                    </div>
+
+                    <!-- SUB: Entry -->
+                    <div id="subAttendance" class="admin-box sub-attendance" style="display:none;">
+                        <span class="sub-section-title">📝 Manual Backdate Attendance</span>
+                        <input type="text" id="manualRoll" placeholder="Student Roll No" style="font-size:10px; padding:7px;" onchange="validateStudentBranchForManual()" />
+                        <input type="date" id="manualDate" style="font-size:10px; padding:7px;" onchange="loadSubjectsForManual()" />
+                        <select id="manualBranch" style="font-size:10px; padding:7px;">
+                            <option value="CSE">CSE</option>
+                            <option value="AIDS">AIDS</option>
+                        </select>
+                        <select id="manualStatus" style="font-size:10px; padding:7px;">
+                            <option value="Present">Present</option>
+                            <option value="Duty Leave">Duty Leave (DL)</option>
+                        </select>
+                        <div style="margin:8px 0;">
+                            <span style="font-size:10px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">Select Subjects to Mark:</span>
+                            <div id="subjectCheckboxContainer" class="subject-checkbox-container">
+                                <label class="select-all"><input type="checkbox" id="selectAllSubjects" onchange="toggleAllSubjects()" /> Select All</label>
+                            </div>
+                        </div>
+                        <div class="flex-buttons">
+                            <button class="btn btn-primary btn-sm" onclick="markManualAttendanceBulk()" style="padding:7px; flex:2;">Mark Selected</button>
+                            <button class="btn btn-outline btn-sm" onclick="selectAllSubjects(true)" style="padding:7px; flex:1;">All</button>
+                            <button class="btn btn-outline btn-sm" onclick="selectAllSubjects(false)" style="padding:7px; flex:1;">Clear</button>
+                        </div>
+                        <button class="btn btn-success btn-sm" onclick="markAllSubjectsForDay()" style="margin-top:4px; padding:6px; font-size:9px;">📚 Mark All Subjects for this Day</button>
+                        <p id="manualBranchWarning" style="font-size:8px; color:var(--danger); margin-top:4px; display:none;"></p>
+
+                        <!-- ===== NEW BULK ACTIONS (multi-select students & dates) ===== -->
+                        <div style="margin-top:14px; border-top: 2px dashed var(--card-border); padding-top:12px;">
+                            <span class="sub-section-title" style="color: var(--primary);">📦 Bulk Actions (Select Students & Dates)</span>
+                            <div style="background: #f8fafc; border: 1px solid var(--card-border); border-radius: var(--radius-sm); padding: 10px; margin-top:4px;">
+
+                                <!-- Student Selection -->
+                                <div style="margin-bottom:8px;">
+                                    <label style="font-size:10px; font-weight:700; display:block; margin-bottom:3px;">👥 Select Students:</label>
+                                    <div id="bulkStudentList" class="bulk-student-list">
+                                        <!-- populated by JS -->
+                                        <label class="select-all-label"><input type="checkbox" id="bulkSelectAllStudents" onchange="toggleAllBulkStudents()" /> Select All</label>
+                                    </div>
+                                </div>
+
+                                <!-- Date Selection -->
+                                <div style="margin-bottom:8px;">
+                                    <label style="font-size:10px; font-weight:700; display:block; margin-bottom:3px;">📅 Select Dates:</label>
+                                    <div class="bulk-date-input-row">
+                                        <input type="date" id="bulkDatePicker" />
+                                        <button class="btn btn-primary btn-sm" onclick="addBulkDate()" style="padding:4px 8px; margin:0;">Add Date</button>
+                                    </div>
+                                    <div id="bulkDateChips" class="bulk-date-chips">
+                                        <!-- dates will appear as chips -->
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                    <button class="btn btn-success btn-sm" onclick="bulkMarkAttendance()" style="flex:1; padding:6px;">✅ Mark Bulk</button>
+                                    <button class="btn btn-danger btn-sm" onclick="bulkDeleteAttendance()" style="flex:1; padding:6px;">🗑️ Delete Bulk</button>
+                                </div>
+                                <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">Select students and dates, then click Mark (uses subjects selected above) or Delete.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SUB: Holiday -->
+                    <div id="subHoliday" class="admin-box sub-holiday" style="display:none;">
+                        <span class="sub-section-title">📅 Declare Official Holiday</span>
+                        <input type="date" id="holidayDate" style="font-size:10px; padding:7px;" />
+                        <input type="text" id="holidayReason" placeholder="Reason (e.g. Diwali)" style="font-size:10px; padding:7px;" />
+                        <button class="btn btn-warning btn-sm" onclick="declareHoliday()" style="padding:7px; margin:0;">Mark Holiday</button>
+                        <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">💡 Holiday reason will show to students</p>
+                    </div>
+
+                    <!-- SUB: Passcode -->
+                    <div id="subPasscode" class="admin-box sub-passcode" style="display:none; text-align:center;">
+                        <span class="sub-section-title">📱 Class Passcodes</span>
+                        <p style="font-size:9px; color:var(--text-muted); margin-bottom:8px;">Generate passcodes for Full Day (5‑digit) or Single Lecture (4‑digit).</p>
+                        <div style="background:#f8fafc; border-radius:var(--radius-sm); padding:8px; margin-bottom:8px; border:1px solid var(--card-border);">
+                            <span style="font-size:9px; font-weight:700; color:var(--text-muted);">🔵 FULL DAY (5‑digit)</span>
+                            <div class="passcode-display" style="margin-top:4px;">
+                                <h2 id="fullDayPasscodeDisplay">—</h2>
+                            </div>
+                            <button class="btn btn-primary btn-sm" onclick="generatePasscode('full_day')" style="padding:4px 10px; width:auto; margin:0 auto;">Generate Full Day Passcode</button>
+                        </div>
+                        <div style="background:#f8fafc; border-radius:var(--radius-sm); padding:8px; margin-bottom:8px; border:1px solid var(--card-border);">
+                            <span style="font-size:9px; font-weight:700; color:var(--text-muted);">🟢 SINGLE LECTURE (4‑digit)</span>
+                            <div class="passcode-display" style="margin-top:4px;">
+                                <h2 id="singleLecturePasscodeDisplay">—</h2>
+                            </div>
+                            <button class="btn btn-success btn-sm" onclick="generatePasscode('single_lecture')" style="padding:4px 10px; width:auto; margin:0 auto;">Generate Lecture Passcode</button>
+                        </div>
+                        <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">⏳ Each passcode expires after 5 minutes.</p>
+                    </div>
+
+                    <!-- SUB: Tools -->
+                    <div id="subTools" class="admin-box sub-tools" style="display:none;">
+                        <div class="tool-sub-card">
+                            <span class="tool-title" style="color:var(--primary);">➕ Register New User</span>
+                            <input type="text" id="adminRegName" placeholder="Full Name" style="font-size:10px; padding:7px;" />
+                            <input type="text" id="adminRegRoll" placeholder="Roll/ID" style="font-size:10px; padding:7px;" />
+                            <select id="adminRegRole" style="font-size:10px; padding:7px;" onchange="toggleFacultyRegistrationFields()">
+                                <option value="student">Student</option>
+                                <option value="faculty">Faculty</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                            <div id="facultyRegistrationFields" style="display:none; margin-top:6px;">
+                                <select id="facultySubjectSelect" style="font-size:10px; padding:7px; margin-bottom:6px;">
+                                    <option value="">Select Subject…</option>
+                                </select>
+                                <p style="font-size:8px; color:var(--text-muted);">ID will be auto-generated: e.g., BDA01, WT02, FLA03</p>
+                            </div>
+                            <input type="text" id="adminRegPass" placeholder="Password (Default: 123456)" style="font-size:10px; padding:7px;" />
+                            <button class="btn btn-primary btn-sm" onclick="adminRegisterUser()" style="padding:7px; margin:0;">Register</button>
+                        </div>
+
+                        <div class="tool-sub-card">
+                            <span class="tool-title" style="color:#1d4ed8;">📚 Assign Subject to Teacher</span>
+                            <select id="teacherSelect" style="font-size:10px; padding:7px;">
+                                <option value="">Select Teacher…</option>
+                            </select>
+                            <select id="subjectAssignDropdown" style="font-size:10px; padding:7px;">
+                                <option value="">Select Subject…</option>
+                            </select>
+                            <div class="flex-buttons">
+                                <button class="btn btn-primary btn-sm" onclick="assignSubjectToTeacher()" style="padding:6px;">Assign</button>
+                                <button class="btn btn-danger btn-sm" onclick="removeSubjectFromTeacher()" style="padding:6px;">Remove</button>
+                            </div>
+                        </div>
+
+                        <div class="tool-sub-card" style="border-color:#93c5fd; background:#eff6ff;">
+                            <span class="tool-title" style="color:#1d4ed8;">🔓 Reset Device Binding (Student Only)</span>
+                            <input type="text" id="resetDeviceRoll" placeholder="Student Roll No" style="font-size:10px; padding:7px;" />
+                            <button class="btn btn-primary btn-sm" onclick="resetDeviceBinding()" style="padding:7px; margin:0;">Reset</button>
+                        </div>
+
+                        <div class="tool-sub-card">
+                            <span class="tool-title" style="color:var(--text-main);">📢 Broadcast Notice</span>
+                            <input type="text" id="noticeMsg" placeholder="Notice text…" style="font-size:10px; padding:7px;" />
+                            <div class="flex-buttons">
+                                <button class="btn btn-primary btn-sm" onclick="postNotice()" style="padding:6px;">Publish</button>
+                                <button class="btn btn-danger btn-sm" onclick="clearNotice()" style="padding:6px;">Clear</button>
+                            </div>
+                        </div>
+
+                        <div class="tool-sub-card">
+                            <span class="tool-title" style="color:var(--primary);">🔄 Update Roll Number</span>
+                            <input type="text" id="oldRollFormat" placeholder="Old ID" style="font-size:10px; padding:7px;" />
+                            <input type="text" id="newRollFormat" placeholder="New ID" style="font-size:10px; padding:7px;" />
+                            <button class="btn btn-primary btn-sm" onclick="updateRollNumberFormat()" style="padding:7px; margin:0;">Update</button>
+                        </div>
+
+                        <div class="tool-sub-card">
+                            <span class="tool-title" style="color:var(--warning);">🔑 Reset Password</span>
+                            <input type="text" id="resetRoll" placeholder="ID" style="font-size:10px; padding:7px;" />
+                            <input type="text" id="resetPass" placeholder="New Password" style="font-size:10px; padding:7px;" />
+                            <button class="btn btn-warning btn-sm" onclick="resetUserPassword()" style="padding:7px; margin:0;">Reset</button>
+                        </div>
+
+                        <div class="tool-sub-card" style="border-color:#60a5fa; background:#eff6ff;">
+                            <span class="tool-title" style="color:#1d4ed8;">📋 CSE Bulk Register & Update Attendance</span>
+                            <p style="font-size:8px; color:var(--text-muted); margin-bottom:6px;">Register all CSE students (15-30 July) & set attendance as per records. Password: 123456</p>
+                            <button class="btn btn-primary btn-sm" onclick="triggerBulkUpdate()" style="padding:7px; margin:0;">
+                                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 12v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                ▶️ Run CSE Bulk Update
+                            </button>
+                            <p id="bulkStatus" style="font-size:8px; color:var(--text-muted); margin-top:4px;">⚠️ Overwrites 15-30 July attendance.</p>
+                        </div>
+
+                        <div class="tool-sub-card" style="border-color:#a78bfa; background:#f5f3ff;">
+                            <span class="tool-title" style="color:#7c3aed;">📋 AIDS Bulk Register & Update Attendance</span>
+                            <p style="font-size:8px; color:var(--text-muted); margin-bottom:6px;">Register all AIDS students (15-30 July) & set attendance as per records. Password: 123456</p>
+                            <button class="btn btn-primary btn-sm" onclick="triggerAidsBulkUpdate()" style="padding:7px; margin:0; background:#7c3aed;">
+                                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 12v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                ▶️ Run AIDS Bulk Update
+                            </button>
+                            <p id="aidsBulkStatus" style="font-size:8px; color:var(--text-muted); margin-top:4px;">⚠️ Overwrites 15-30 July attendance.</p>
+                        </div>
+
+                        <div class="tool-sub-card" style="border-color:#fecaca; background:#fef2f2;">
+                            <span class="tool-title" style="color:#b91c1c;">🗑️ Delete Account</span>
+                            <input type="text" id="deleteUserRoll" placeholder="ID to Delete" style="font-size:10px; padding:7px;" />
+                            <button class="btn btn-danger btn-sm" onclick="deleteUserAccount()" style="padding:7px; margin:0;">Delete Permanently</button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- ===== TEACHER TAB (simple, kept here) ===== -->
+                <!-- ===== TEACHER TAB ===== -->
                 <div id="teacherTab" style="display:none;">
                     <div style="background:#eff6ff; border-radius:var(--radius-sm); padding:10px; border:1px solid #bfdbfe; margin-bottom:10px; text-align:center;">
                         <span class="sub-section-title" style="color:#1d4ed8;">🔒 Single Lecture Passcode (4‑digit)</span>
@@ -2121,6 +2117,7 @@
                         <button class="btn btn-success btn-sm" onclick="generateTeacherPasscode()" style="padding:4px 10px; width:auto; margin:0 auto;">Generate Passcode</button>
                         <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">⏳ Expires after 5 minutes – for marking single lecture attendance.</p>
                     </div>
+
                     <div style="margin-bottom:10px;">
                         <h4 style="font-size:11px; font-weight:800;">📋 Students (with your subjects)</h4>
                         <button class="btn btn-outline btn-sm" onclick="fetchTeacherStudents()" style="padding:4px;">Refresh</button>
@@ -2131,6 +2128,7 @@
                             </table>
                         </div>
                     </div>
+
                     <div style="background:#f0fdf4; border-radius:var(--radius-sm); padding:10px; border:1px solid #bbf7d0; margin-bottom:10px;">
                         <span class="sub-section-title">📈 Student Report (PDF/CSV)</span>
                         <select id="teacherStudentReportSelect" style="padding:8px; margin-bottom:6px; font-size:10px;">
@@ -2163,6 +2161,7 @@
                             <button class="btn btn-success btn-sm" onclick="generateTeacherReport('csv')" style="padding:6px;">CSV</button>
                         </div>
                     </div>
+
                     <div>
                         <h4 style="font-size:11px; font-weight:800;">Recent Marks</h4>
                         <div class="table-container" style="max-height:150px;">
@@ -2179,10 +2178,11 @@
     </div>
 
     <!-- ========================================================== -->
-    <!-- CHAT WIDGET                                              -->
+    <!-- CHAT WIDGET – COMPACT, CENTERED                            -->
     <!-- ========================================================== -->
     <div id="chatWidget">
         <div class="chat-panel" id="chatPanel">
+            <!-- Header -->
             <div class="chat-header">
                 <div class="chat-title">
                     🤖 BM Bot
@@ -2190,7 +2190,10 @@
                 </div>
                 <button class="chat-close" id="chatCloseBtn">✕</button>
             </div>
+
+            <!-- Body with sidebar -->
             <div class="chat-body">
+                <!-- Sidebar -->
                 <div class="chat-sidebar" id="chatSidebar">
                     <div class="sidebar-header">
                         <span>📋 History</span>
@@ -2200,15 +2203,22 @@
                         <div class="empty-chats">No chats yet.</div>
                     </div>
                 </div>
+
+                <!-- Main -->
                 <div class="chat-main">
+                    <!-- Messages -->
                     <div class="chat-messages" id="chatMessages">
                         <div class="welcome-greeting" id="welcomeGreeting">
                             <span class="greeting-emoji">👋</span>
                             <div>Hello! I'm <strong>BM Bot</strong>, your AI assistant.</div>
                             <div style="font-size:12px; color:var(--text-muted);">Ask me about attendance, schedule, holidays, or anything!</div>
                         </div>
-                        <div class="typing-indicator" id="typingIndicator"><span class="dots">...</span></div>
+                        <div class="typing-indicator" id="typingIndicator">
+                            <span class="dots">...</span>
+                        </div>
                     </div>
+
+                    <!-- Quick Chips – expanded with subject notes -->
                     <div class="quick-chips" id="quickChips">
                         <span class="chip" onclick="sendQuickQuestion('What is my attendance percentage?')">📊 My Attendance</span>
                         <span class="chip" onclick="sendQuickQuestion('What is today\'s timetable?')">📅 Today's Schedule</span>
@@ -2224,6 +2234,8 @@
                         <span class="chip" onclick="sendQuickQuestion('Give me notes for ML - Machine Learning')">📝 Notes ML</span>
                         <span class="chip" onclick="sendQuickQuestion('Help')">❓ Help</span>
                     </div>
+
+                    <!-- Input -->
                     <div class="chat-input-row">
                         <button class="sidebar-toggle" onclick="toggleSidebar()" title="Chat History">☰</button>
                         <input type="text" id="chatInput" placeholder="Ask me anything..." onkeydown="if(event.key==='Enter') sendChatMessage()" />
@@ -2234,20 +2246,20 @@
         </div>
     </div>
 
-    <!-- Floating trigger -->
+    <!-- Floating trigger (avatar) – shown when logged in -->
     <button class="chat-avatar-trigger" id="chatAvatarTrigger">
         💬
         <span class="badge-dot"></span>
     </button>
 
     <!-- ========================================================== -->
-    <!-- JAVASCRIPT – Complete                                    -->
+    <!-- JAVASCRIPT – includes all existing logic + fixes          -->
     <!-- ========================================================== -->
     <script>
         // ============================================================
-        // CONFIGURATION
+        // CONFIGURATION – UPDATE THIS URL TO YOUR BACKEND
         // ============================================================
-        const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com";
+        const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; // CHANGE THIS
         const ADMIN_ROLL_NUMBERS = ['24CSE48'];
         let globalAllRecords = [],
             globalMyRecords = [],
@@ -2268,9 +2280,6 @@
         let currentThreadId = null;
         let chatHistory = [];
         let sidebarOpen = false;
-        let currentAdminSubTab = 'subDirectory';
-        let workingDaysSoFar = 0;
-        let totalWorkingDaysSemester = 0;
 
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
@@ -2278,7 +2287,7 @@
         ];
 
         // ============================================================
-        // ROLL VALIDATION
+        // ROLL NUMBER VALIDATION
         // ============================================================
         function isValidStudentRoll(roll) {
             return /^24(CSE|AIDS)\d{2}$/.test(roll);
@@ -2295,8 +2304,7 @@
             toastMsg.innerText = text || (isError ? 'Something went wrong!' : 'Done!');
             toastIcon.setAttribute("viewBox", "0 0 24 24");
             if (isError) {
-                toastIcon.innerHTML =
-                `<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>`;
+                toastIcon.innerHTML = `<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>`;
             } else {
                 toastIcon.innerHTML = `<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>`;
             }
@@ -2335,486 +2343,7 @@
         }
 
         // ============================================================
-        // SIDE DRAWER
-        // ============================================================
-        function toggleSideDrawer() {
-            const drawer = document.getElementById('sideDrawer');
-            const overlay = document.getElementById('sideDrawerOverlay');
-            const isOpen = drawer.classList.contains('open');
-            if (isOpen) {
-                closeSideDrawer();
-            } else {
-                drawer.classList.add('open');
-                overlay.classList.add('open');
-                document.body.style.overflow = 'hidden';
-                buildSideDrawer();
-            }
-        }
-
-        function closeSideDrawer() {
-            const drawer = document.getElementById('sideDrawer');
-            const overlay = document.getElementById('sideDrawerOverlay');
-            drawer.classList.remove('open');
-            overlay.classList.remove('open');
-            document.body.style.overflow = '';
-        }
-
-        function buildSideDrawer() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            const body = document.getElementById('sideDrawerBody');
-            if (!body) return;
-            const isAdmin = user?.role === 'admin';
-            const isFaculty = user?.role === 'faculty';
-            const isStudent = user?.role === 'student';
-
-            let html = '';
-
-            // User info
-            html += `<div style="padding: 4px 12px 12px; border-bottom:1px solid var(--card-border); margin-bottom:8px;">
-                        <div style="font-weight:700;font-size:14px;">${user?.name || 'Guest'}</div>
-                        <div style="font-size:10px;color:var(--text-muted);">${user?.rollNo || ''} · ${user?.role || ''} · ${user?.branch || ''}</div>
-                     </div>`;
-
-            // Common nav
-            html += `<div class="nav-section-title">Main</div>`;
-            html += `<button class="nav-item ${!isAdmin && !isFaculty ? 'active' : ''}" onclick="switchMainTab('markTab')">
-                        <span class="icon">📋</span> My Attendance
-                     </button>`;
-
-            if (isAdmin) {
-                html += `<div class="nav-section-title">Admin Panel</div>`;
-                const adminNavs = [
-                    { id: 'subDirectory', icon: '👥', label: 'Directory' },
-                    { id: 'subAllAttendance', icon: '📊', label: 'All Attendance' },
-                    { id: 'subReports', icon: '📤', label: 'Reports & Export' },
-                    { id: 'subAttendance', icon: '✏️', label: 'Manual Entry' },
-                    { id: 'subHoliday', icon: '🎉', label: 'Holidays' },
-                    { id: 'subPasscode', icon: '🔑', label: 'Passcodes' },
-                    { id: 'subTools', icon: '⚙️', label: 'Tools' }
-                ];
-                adminNavs.forEach(nav => {
-                    const active = currentAdminSubTab === nav.id ? 'active' : '';
-                    html += `<button class="nav-item ${active}" onclick="switchAdminSubTab('${nav.id}')">
-                                <span class="icon">${nav.icon}</span> ${nav.label}
-                             </button>`;
-                });
-            } else if (isFaculty) {
-                html += `<div class="nav-section-title">Faculty</div>`;
-                html += `<button class="nav-item active" onclick="switchMainTab('teacherTab')">
-                            <span class="icon">👨‍🏫</span> Teacher Dashboard
-                         </button>`;
-            }
-
-            // Quick actions
-            html += `<div class="nav-section-title">Quick</div>`;
-            html += `<button class="nav-item" onclick="closeSideDrawer();toggleChat();">
-                        <span class="icon">💬</span> Chat Assistant
-                     </button>`;
-            html += `<button class="nav-item" onclick="closeSideDrawer();window.open('https://erp.bmctm.com/fees','_blank');">
-                        <span class="icon">💰</span> Pay Fees
-                     </button>`;
-
-            body.innerHTML = html;
-            document.getElementById('sideDrawerUser').innerHTML = `👤 ${user?.name || 'Guest'}`;
-        }
-
-        // ============================================================
-        // MAIN TAB SWITCHING
-        // ============================================================
-        function switchMainTab(tabId) {
-            const markTab = document.getElementById('markTab');
-            const adminContent = document.getElementById('adminContentArea');
-            const teacherTab = document.getElementById('teacherTab');
-
-            markTab.style.display = 'none';
-            adminContent.style.display = 'none';
-            teacherTab.style.display = 'none';
-
-            if (tabId === 'markTab') {
-                markTab.style.display = 'block';
-                markTab.classList.add('tab-content-active');
-            } else if (tabId === 'teacherTab') {
-                teacherTab.style.display = 'block';
-                teacherTab.classList.add('tab-content-active');
-                fetchTeacherStudents();
-                loadTeacherRecent();
-            }
-            closeSideDrawer();
-            buildSideDrawer();
-        }
-
-        // ============================================================
-        // ADMIN SUB-TAB SWITCHING
-        // ============================================================
-        function switchAdminSubTab(subId) {
-            currentAdminSubTab = subId;
-            const container = document.getElementById('adminScrollContent');
-            if (!container) return;
-
-            let html = '';
-            const user = JSON.parse(localStorage.getItem('user'));
-
-            switch (subId) {
-                case 'subDirectory':
-                    html = buildDirectoryContent();
-                    break;
-                case 'subAllAttendance':
-                    html = buildAllAttendanceContent();
-                    break;
-                case 'subReports':
-                    html = buildReportsContent();
-                    break;
-                case 'subAttendance':
-                    html = buildAttendanceEntryContent();
-                    break;
-                case 'subHoliday':
-                    html = buildHolidayContent();
-                    break;
-                case 'subPasscode':
-                    html = buildPasscodeContent();
-                    break;
-                case 'subTools':
-                    html = buildToolsContent();
-                    break;
-                default:
-                    html = '<p>Select a section</p>';
-            }
-
-            container.innerHTML = html;
-            document.getElementById('adminContentArea').style.display = 'block';
-            document.getElementById('markTab').style.display = 'none';
-            document.getElementById('teacherTab').style.display = 'none';
-
-            if (subId === 'subDirectory') fetchAllUsers();
-            if (subId === 'subAllAttendance') loadAllAttendance();
-            if (subId === 'subReports') { populateStudentSelect();
-                populateAdminStudentSelect(); }
-            if (subId === 'subTools') { populateTeacherSelect();
-                populateSubjectDropdown();
-                toggleFacultyRegistrationFields(); }
-            if (subId === 'subPasscode') { generatePasscode('full_day');
-                generatePasscode('single_lecture'); }
-            if (subId === 'subAttendance') {
-                const today = new Date().toISOString().split('T')[0];
-                document.getElementById('manualDate') && (document.getElementById('manualDate').value = today);
-                loadSubjectsForManual();
-                populateBulkStudentSelect();
-            }
-
-            closeSideDrawer();
-            buildSideDrawer();
-        }
-
-        // ============================================================
-        // BUILD ADMIN CONTENT SECTIONS
-        // ============================================================
-        function buildDirectoryContent() {
-            return `
-                        <div class="admin-box sub-directory">
-                            <span class="sub-section-title">👥 Directory – All Users</span>
-                            <button class="btn btn-outline btn-sm" onclick="fetchAllUsers()" style="padding:4px; margin:0;">🔄 Refresh</button>
-                            <div class="table-container" style="max-height:350px; margin-top:6px;">
-                                <table id="directoryTable">
-                                    <thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Device</th><th>Attendance</th><th>Action</th></tr></thead>
-                                    <tbody><tr><td colspan="6" style="text-align:center; padding:12px;">Loading users…</td></tr></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    `;
-        }
-
-        function buildAllAttendanceContent() {
-            return `
-                        <div class="admin-box sub-all-attendance">
-                            <span class="sub-section-title">📊 All Attendance Records – Manage</span>
-                            <div class="filter-row">
-                                <input type="text" id="filterAttendanceRoll" placeholder="Filter by Roll No" style="flex:1; min-width:60px; padding:6px 8px; font-size:9px; margin:0;" oninput="loadAllAttendance()" />
-                                <input type="date" id="filterAttendanceDate" style="flex:1; min-width:80px; padding:6px 8px; font-size:9px; margin:0;" onchange="loadAllAttendance()" />
-                                <button class="btn btn-outline btn-sm" onclick="loadAllAttendance()" style="padding:4px 8px; margin:0;">Filter</button>
-                            </div>
-                            <button class="btn btn-outline btn-sm" onclick="loadAllAttendance()" style="padding:4px; margin:0 0 4px 0;">🔄 Refresh All</button>
-                            <div class="table-container" style="max-height:350px;">
-                                <table id="allAttendanceTable">
-                                    <thead><tr><th>Date</th><th>Roll</th><th>Name</th><th>Subject</th><th>Status</th><th>Actions</th></tr></thead>
-                                    <tbody><tr><td colspan="6" style="text-align:center; padding:12px;">Loading records…</td></tr></tbody>
-                                </table>
-                            </div>
-                            <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">💡 Click <strong>Edit</strong> to change status, <strong>Delete</strong> to remove record.</p>
-                        </div>
-                    `;
-        }
-
-        function buildReportsContent() {
-            return `
-                        <div class="admin-box sub-reports">
-                            <span class="sub-section-title">📊 Export Reports</span>
-                            <select id="exportSelection" style="padding:8px; margin-bottom:6px; font-size:10px;">
-                                <option value="ALL_SEMESTER">Full Semester (Jul–Dec 2026)</option>
-                                <option value="6">July 2026</option>
-                                <option value="7">August 2026</option>
-                                <option value="8">September 2026</option>
-                                <option value="9">October 2026</option>
-                                <option value="10">November 2026</option>
-                                <option value="11">December 2026</option>
-                            </select>
-                            <button class="btn btn-success btn-sm" onclick="exportExcelGrid()" style="padding:8px; margin:0;">Download Excel Report</button>
-                            <button class="btn btn-accent btn-sm" onclick="downloadGoogleSheetsExport()" style="padding:8px; margin:4px 0 0 0;">
-                                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="12" x2="12" y1="4" y2="20"/></svg>
-                                Export to Google Sheets (CSV)
-                            </button>
-                            <hr style="margin:12px 0; border-color:var(--card-border);" />
-                            <span class="sub-section-title">👤 Single Student Attendance</span>
-                            <select id="singleStudentSelect" style="padding:8px; margin-bottom:6px; font-size:10px;">
-                                <option value="">Select Student…</option>
-                            </select>
-                            <select id="singleStudentRange" style="padding:8px; margin-bottom:6px; font-size:10px;" onchange="toggleSingleMonthWrapper()">
-                                <option value="CURRENT_MONTH">Current Month</option>
-                                <option value="SELECTED_MONTH">Selected Month</option>
-                                <option value="FULL_SEMESTER">Full Semester</option>
-                            </select>
-                            <div id="singleStudentMonthWrapper" style="display:none; margin-bottom:6px;">
-                                <select id="singleStudentMonth" style="padding:8px; font-size:10px;">
-                                    <option value="6">July 2026</option>
-                                    <option value="7">August 2026</option>
-                                    <option value="8">September 2026</option>
-                                    <option value="9">October 2026</option>
-                                    <option value="10">November 2026</option>
-                                    <option value="11">December 2026</option>
-                                </select>
-                            </div>
-                            <button class="btn btn-primary btn-sm" onclick="downloadSingleStudentAttendance()" style="padding:8px; margin:0;">
-                                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                                Download Student CSV
-                            </button>
-                            <hr style="margin:12px 0; border-color:var(--card-border);" />
-                            <span class="sub-section-title">🔑 Login as Student (Impersonate)</span>
-                            <input type="text" id="impersonateRoll" placeholder="Student Roll No" style="font-size:10px; padding:7px;" />
-                            <button class="btn btn-warning btn-sm" onclick="adminLoginAsStudent()" style="padding:7px; margin:0;">
-                                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                                Login as Student
-                            </button>
-                            <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">💡 Bypasses device binding – for admin assistance only.</p>
-                            <hr style="margin:12px 0; border-color:var(--card-border);" />
-                            <span class="sub-section-title">📈 Individual Student Report (PDF/CSV)</span>
-                            <select id="adminStudentReportSelect" style="padding:8px; margin-bottom:6px; font-size:10px;">
-                                <option value="">Select Student…</option>
-                            </select>
-                            <div class="flex-buttons">
-                                <button class="btn btn-primary btn-sm" onclick="generateStudentReport('pdf')" style="padding:6px;">PDF</button>
-                                <button class="btn btn-success btn-sm" onclick="generateStudentReport('csv')" style="padding:6px;">CSV</button>
-                            </div>
-                            <hr style="margin:12px 0; border-color:var(--card-border);" />
-                            <span class="sub-section-title">📋 Class Attendance Report (PDF)</span>
-                            <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                                <input type="date" id="classReportStart" style="flex:1; padding:6px; font-size:10px; margin:0;" />
-                                <input type="date" id="classReportEnd" style="flex:1; padding:6px; font-size:10px; margin:0;" />
-                            </div>
-                            <select id="classReportBranch" style="padding:6px; font-size:10px; margin:0 0 6px 0;">
-                                <option value="ALL">All Branches</option>
-                                <option value="CSE">CSE</option>
-                                <option value="AIDS">AIDS</option>
-                            </select>
-                            <button class="btn btn-primary btn-sm" onclick="generateClassAttendanceReport()" style="padding:8px; margin-top:6px;">
-                                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                                Generate PDF
-                            </button>
-                            <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">Shows all registered students with total present and percentage.</p>
-                        </div>
-                    `;
-        }
-
-        function buildAttendanceEntryContent() {
-            return `
-                        <div class="admin-box sub-attendance">
-                            <span class="sub-section-title">📝 Manual Backdate Attendance</span>
-                            <input type="text" id="manualRoll" placeholder="Student Roll No" style="font-size:10px; padding:7px;" oninput="autoDetectBranch()" />
-                            <input type="date" id="manualDate" style="font-size:10px; padding:7px;" onchange="loadSubjectsForManual()" />
-                            <select id="manualBranch" style="font-size:10px; padding:7px;">
-                                <option value="CSE">CSE</option>
-                                <option value="AIDS">AIDS</option>
-                            </select>
-                            <select id="manualStatus" style="font-size:10px; padding:7px;">
-                                <option value="Present">Present</option>
-                                <option value="Duty Leave">Duty Leave (DL)</option>
-                            </select>
-                            <div style="margin:8px 0;">
-                                <span style="font-size:10px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">Select Subjects to Mark:</span>
-                                <div id="subjectCheckboxContainer" class="subject-checkbox-container">
-                                    <label class="select-all"><input type="checkbox" id="selectAllSubjects" onchange="toggleAllSubjects()" /> Select All</label>
-                                </div>
-                            </div>
-                            <div class="flex-buttons">
-                                <button class="btn btn-primary btn-sm" onclick="markManualAttendanceBulk()" style="padding:7px; flex:2;">Mark Selected</button>
-                                <button class="btn btn-outline btn-sm" onclick="selectAllSubjects(true)" style="padding:7px; flex:1;">All</button>
-                                <button class="btn btn-outline btn-sm" onclick="selectAllSubjects(false)" style="padding:7px; flex:1;">Clear</button>
-                            </div>
-                            <button class="btn btn-success btn-sm" onclick="markAllSubjectsForDay()" style="margin-top:4px; padding:6px; font-size:9px;">📚 Mark All Subjects for this Day</button>
-                            <p id="manualBranchWarning" style="font-size:8px; color:var(--danger); margin-top:4px; display:none;"></p>
-
-                            <div style="margin-top:14px; border-top: 2px dashed var(--card-border); padding-top:12px;">
-                                <span class="sub-section-title" style="color: var(--primary);">📦 Bulk Actions (Select Students & Dates)</span>
-                                <div style="background: #f8fafc; border: 1px solid var(--card-border); border-radius: var(--radius-sm); padding: 10px; margin-top:4px;">
-                                    <div style="margin-bottom:8px;">
-                                        <label style="font-size:10px; font-weight:700; display:block; margin-bottom:3px;">👥 Select Students:</label>
-                                        <div id="bulkStudentList" class="bulk-student-list">
-                                            <label class="select-all-label"><input type="checkbox" id="bulkSelectAllStudents" onchange="toggleAllBulkStudents()" /> Select All</label>
-                                        </div>
-                                    </div>
-                                    <div style="margin-bottom:8px;">
-                                        <label style="font-size:10px; font-weight:700; display:block; margin-bottom:3px;">📅 Select Dates:</label>
-                                        <div class="bulk-date-input-row">
-                                            <input type="date" id="bulkDatePicker" />
-                                            <button class="btn btn-primary btn-sm" onclick="addBulkDate()" style="padding:4px 8px; margin:0;">Add Date</button>
-                                        </div>
-                                        <div id="bulkDateChips" class="bulk-date-chips"></div>
-                                    </div>
-                                    <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                                        <button class="btn btn-success btn-sm" onclick="bulkMarkAttendance()" style="flex:1; padding:6px;">✅ Mark Bulk</button>
-                                        <button class="btn btn-danger btn-sm" onclick="bulkDeleteAttendance()" style="flex:1; padding:6px;">🗑️ Delete Bulk</button>
-                                    </div>
-                                    <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">Select students and dates, then click Mark (uses subjects selected above) or Delete.</p>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-        }
-
-        function buildHolidayContent() {
-            return `
-                        <div class="admin-box sub-holiday">
-                            <span class="sub-section-title">📅 Declare Official Holiday</span>
-                            <input type="date" id="holidayDate" style="font-size:10px; padding:7px;" />
-                            <input type="text" id="holidayReason" placeholder="Reason (e.g. Diwali)" style="font-size:10px; padding:7px;" />
-                            <button class="btn btn-warning btn-sm" onclick="declareHoliday()" style="padding:7px; margin:0;">Mark Holiday</button>
-                            <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">💡 Holiday reason will show to students</p>
-                        </div>
-                    `;
-        }
-
-        function buildPasscodeContent() {
-            return `
-                        <div class="admin-box sub-passcode" style="text-align:center;">
-                            <span class="sub-section-title">📱 Class Passcodes</span>
-                            <p style="font-size:9px; color:var(--text-muted); margin-bottom:8px;">Generate passcodes for Full Day (5‑digit) or Single Lecture (4‑digit).</p>
-                            <div style="background:#f8fafc; border-radius:var(--radius-sm); padding:8px; margin-bottom:8px; border:1px solid var(--card-border);">
-                                <span style="font-size:9px; font-weight:700; color:var(--text-muted);">🔵 FULL DAY (5‑digit)</span>
-                                <div class="passcode-display" style="margin-top:4px;">
-                                    <h2 id="fullDayPasscodeDisplay">—</h2>
-                                </div>
-                                <button class="btn btn-primary btn-sm" onclick="generatePasscode('full_day')" style="padding:4px 10px; width:auto; margin:0 auto;">Generate Full Day Passcode</button>
-                            </div>
-                            <div style="background:#f8fafc; border-radius:var(--radius-sm); padding:8px; margin-bottom:8px; border:1px solid var(--card-border);">
-                                <span style="font-size:9px; font-weight:700; color:var(--text-muted);">🟢 SINGLE LECTURE (4‑digit)</span>
-                                <div class="passcode-display" style="margin-top:4px;">
-                                    <h2 id="singleLecturePasscodeDisplay">—</h2>
-                                </div>
-                                <button class="btn btn-success btn-sm" onclick="generatePasscode('single_lecture')" style="padding:4px 10px; width:auto; margin:0 auto;">Generate Lecture Passcode</button>
-                            </div>
-                            <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">⏳ Each passcode expires after 5 minutes.</p>
-                        </div>
-                    `;
-        }
-
-        function buildToolsContent() {
-            return `
-                        <div class="admin-box sub-tools">
-                            <div class="tool-sub-card" style="border-color:#f97316; background:#fff7ed;">
-                                <span class="tool-title" style="color:#ea580c;">🔧 Server Busy Mode</span>
-                                <p style="font-size:8px; color:var(--text-muted); margin-bottom:6px;">
-                                    When enabled, <strong>only Students</strong> are blocked. Admin & Faculty can still login and work.
-                                    Logged-in students will see a banner and actions will be blocked.
-                                </p>
-                                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                                    <button class="btn btn-warning btn-sm" onclick="setServerBusy(true)" style="padding:6px 12px; margin:0;">🔴 Enable Busy Mode (Students only)</button>
-                                    <button class="btn btn-success btn-sm" onclick="setServerBusy(false)" style="padding:6px 12px; margin:0;">🟢 Disable Busy Mode</button>
-                                    <span id="serverBusyStatus" style="font-size:10px; font-weight:700; color:var(--text-muted);">Status: Off</span>
-                                </div>
-                            </div>
-                            <div class="tool-sub-card">
-                                <span class="tool-title" style="color:var(--primary);">➕ Register New User</span>
-                                <input type="text" id="adminRegName" placeholder="Full Name" style="font-size:10px; padding:7px;" />
-                                <input type="text" id="adminRegRoll" placeholder="Roll/ID" style="font-size:10px; padding:7px;" />
-                                <select id="adminRegRole" style="font-size:10px; padding:7px;" onchange="toggleFacultyRegistrationFields()">
-                                    <option value="student">Student</option>
-                                    <option value="faculty">Faculty</option>
-                                    <option value="admin">Admin</option>
-                                </select>
-                                <div id="facultyRegistrationFields" style="display:none; margin-top:6px;">
-                                    <select id="facultySubjectSelect" style="font-size:10px; padding:7px; margin-bottom:6px;">
-                                        <option value="">Select Subject…</option>
-                                    </select>
-                                    <p style="font-size:8px; color:var(--text-muted);">ID will be auto-generated: e.g., BDA01, WT02, FLA03</p>
-                                </div>
-                                <input type="text" id="adminRegPass" placeholder="Password (Default: 123456)" style="font-size:10px; padding:7px;" />
-                                <button class="btn btn-primary btn-sm" onclick="adminRegisterUser()" style="padding:7px; margin:0;">Register</button>
-                            </div>
-                            <div class="tool-sub-card">
-                                <span class="tool-title" style="color:#1d4ed8;">📚 Assign Subject to Teacher</span>
-                                <select id="teacherSelect" style="font-size:10px; padding:7px;">
-                                    <option value="">Select Teacher…</option>
-                                </select>
-                                <select id="subjectAssignDropdown" style="font-size:10px; padding:7px;">
-                                    <option value="">Select Subject…</option>
-                                </select>
-                                <div class="flex-buttons">
-                                    <button class="btn btn-primary btn-sm" onclick="assignSubjectToTeacher()" style="padding:6px;">Assign</button>
-                                    <button class="btn btn-danger btn-sm" onclick="removeSubjectFromTeacher()" style="padding:6px;">Remove</button>
-                                </div>
-                            </div>
-                            <div class="tool-sub-card" style="border-color:#93c5fd; background:#eff6ff;">
-                                <span class="tool-title" style="color:#1d4ed8;">🔓 Reset Device Binding (Student Only)</span>
-                                <input type="text" id="resetDeviceRoll" placeholder="Student Roll No" style="font-size:10px; padding:7px;" />
-                                <button class="btn btn-primary btn-sm" onclick="resetDeviceBinding()" style="padding:7px; margin:0;">Reset</button>
-                            </div>
-                            <div class="tool-sub-card">
-                                <span class="tool-title" style="color:var(--text-main);">📢 Broadcast Notice</span>
-                                <input type="text" id="noticeMsg" placeholder="Notice text…" style="font-size:10px; padding:7px;" />
-                                <div class="flex-buttons">
-                                    <button class="btn btn-primary btn-sm" onclick="postNotice()" style="padding:6px;">Publish</button>
-                                    <button class="btn btn-danger btn-sm" onclick="clearNotice()" style="padding:6px;">Clear</button>
-                                </div>
-                            </div>
-                            <div class="tool-sub-card">
-                                <span class="tool-title" style="color:var(--primary);">🔄 Update Roll Number</span>
-                                <input type="text" id="oldRollFormat" placeholder="Old ID" style="font-size:10px; padding:7px;" />
-                                <input type="text" id="newRollFormat" placeholder="New ID" style="font-size:10px; padding:7px;" />
-                                <button class="btn btn-primary btn-sm" onclick="updateRollNumberFormat()" style="padding:7px; margin:0;">Update</button>
-                            </div>
-                            <div class="tool-sub-card">
-                                <span class="tool-title" style="color:var(--warning);">🔑 Reset Password</span>
-                                <input type="text" id="resetRoll" placeholder="ID" style="font-size:10px; padding:7px;" />
-                                <input type="text" id="resetPass" placeholder="New Password" style="font-size:10px; padding:7px;" />
-                                <button class="btn btn-warning btn-sm" onclick="resetUserPassword()" style="padding:7px; margin:0;">Reset</button>
-                            </div>
-                            <div class="tool-sub-card" style="border-color:#60a5fa; background:#eff6ff;">
-                                <span class="tool-title" style="color:#1d4ed8;">📋 CSE Bulk Register & Update Attendance</span>
-                                <p style="font-size:8px; color:var(--text-muted); margin-bottom:6px;">Register all CSE students (15-30 July) & set attendance as per records. Password: 123456</p>
-                                <button class="btn btn-primary btn-sm" onclick="triggerBulkUpdate()" style="padding:7px; margin:0;">
-                                    <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 12v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                                    ▶️ Run CSE Bulk Update
-                                </button>
-                                <p id="bulkStatus" style="font-size:8px; color:var(--text-muted); margin-top:4px;">⚠️ Overwrites 15-30 July attendance.</p>
-                            </div>
-                            <div class="tool-sub-card" style="border-color:#a78bfa; background:#f5f3ff;">
-                                <span class="tool-title" style="color:#7c3aed;">📋 AIDS Bulk Register & Update Attendance</span>
-                                <p style="font-size:8px; color:var(--text-muted); margin-bottom:6px;">Register all AIDS students (15-30 July) & set attendance as per records. Password: 123456</p>
-                                <button class="btn btn-primary btn-sm" onclick="triggerAidsBulkUpdate()" style="padding:7px; margin:0; background:#7c3aed;">
-                                    <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 12v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                                    ▶️ Run AIDS Bulk Update
-                                </button>
-                                <p id="aidsBulkStatus" style="font-size:8px; color:var(--text-muted); margin-top:4px;">⚠️ Overwrites 15-30 July attendance.</p>
-                            </div>
-                            <div class="tool-sub-card" style="border-color:#fecaca; background:#fef2f2;">
-                                <span class="tool-title" style="color:#b91c1c;">🗑️ Delete Account</span>
-                                <input type="text" id="deleteUserRoll" placeholder="ID to Delete" style="font-size:10px; padding:7px;" />
-                                <button class="btn btn-danger btn-sm" onclick="deleteUserAccount()" style="padding:7px; margin:0;">Delete Permanently</button>
-                            </div>
-                        </div>
-                    `;
-        }
-
-        // ============================================================
-        // TIMETABLE & PERIOD TRACKER
+        // TIMETABLE & PERIOD TRACKER (branch-aware)
         // ============================================================
         function getBranchTimetable(branch) {
             const CSE = {
@@ -3084,6 +2613,9 @@
             }
         }
 
+        // ============================================================
+        // TEACHER PASSCODE
+        // ============================================================
         async function generateTeacherPasscode() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'faculty') return showMsg('Teacher access required!', true);
@@ -3107,6 +2639,9 @@
             }
         }
 
+        // ============================================================
+        // VERIFY PASSCODE
+        // ============================================================
         async function verifyPasscode(passcode, type) {
             console.log(`🔍 Verifying ${type} passcode: ${passcode}`);
             try {
@@ -3132,7 +2667,7 @@
         }
 
         // ============================================================
-        // TEACHER FUNCTIONS
+        // TEACHER FUNCTIONS (unchanged)
         // ============================================================
         async function loadTeacherSubjects() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -3164,14 +2699,14 @@
                     return;
                 }
                 tbody.innerHTML = data.map(s => `
-                            <tr>
-                                <td><b>${s.rollNo}</b></td>
-                                <td>${s.name}</td>
-                                <td>
-                                    <button class="btn-view btn-xs" onclick="viewTeacherStudent('${s.rollNo}')">View</button>
-                                </td>
-                            </tr>
-                        `).join('');
+                        <tr>
+                            <td><b>${s.rollNo}</b></td>
+                            <td>${s.name}</td>
+                            <td>
+                                <button class="btn-view btn-xs" onclick="viewTeacherStudent('${s.rollNo}')">View</button>
+                            </td>
+                        </tr>
+                    `).join('');
                 const select = document.getElementById('teacherStudentReportSelect');
                 select.innerHTML = '<option value="">Select Student…</option>';
                 data.forEach(s => {
@@ -3198,13 +2733,13 @@
                 modal.className = 'modal-overlay';
                 modal.id = 'teacherStudentModal';
                 let html = `
-                            <div class="modal-card profile-modal">
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                                    <h3 style="font-size:14px; font-weight:800;">Attendance – ${rollNo}</h3>
-                                    <button class="btn btn-danger btn-sm" onclick="closeTeacherStudentModal()" style="padding:2px 8px;">✕</button>
-                                </div>
-                                <div style="max-height:300px; overflow-y:auto;">
-                        `;
+                        <div class="modal-card profile-modal">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                <h3 style="font-size:14px; font-weight:800;">Attendance – ${rollNo}</h3>
+                                <button class="btn btn-danger btn-sm" onclick="closeTeacherStudentModal()" style="padding:2px 8px;">✕</button>
+                            </div>
+                            <div style="max-height:300px; overflow-y:auto;">
+                    `;
                 if (Object.keys(grouped).length === 0) {
                     html += `<p style="text-align:center; color:var(--text-muted);">No records found.</p>`;
                 } else {
@@ -3212,31 +2747,31 @@
                     sortedDates.forEach(date => {
                         const records = grouped[date];
                         html += `
-                                    <div style="border-bottom:1px solid #e2e8f0; margin-bottom:6px; padding-bottom:6px;">
-                                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                                            <span style="font-weight:700; font-size:11px;">📅 ${date}</span>
-                                            <button class="btn btn-danger btn-xs" onclick="deleteAllForDate('${rollNo}','${date}')" style="padding:2px 6px;">Delete All</button>
-                                        </div>
-                                `;
+                                <div style="border-bottom:1px solid #e2e8f0; margin-bottom:6px; padding-bottom:6px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                                        <span style="font-weight:700; font-size:11px;">📅 ${date}</span>
+                                        <button class="btn btn-danger btn-xs" onclick="deleteAllForDate('${rollNo}','${date}')" style="padding:2px 6px;">Delete All</button>
+                                    </div>
+                            `;
                         records.forEach(r => {
                             html += `
-                                        <div class="record-item">
-                                            <div>
-                                                <span style="font-weight:600;">${r.subject}</span>
-                                                <span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span>
-                                            </div>
-                                            <button class="btn btn-del btn-xs" onclick="deleteRecord('${r._id}')">Delete</button>
+                                    <div class="record-item">
+                                        <div>
+                                            <span style="font-weight:600;">${r.subject}</span>
+                                            <span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span>
                                         </div>
-                                    `;
+                                        <button class="btn btn-del btn-xs" onclick="deleteRecord('${r._id}')">Delete</button>
+                                    </div>
+                                `;
                         });
                         html += `</div>`;
                     });
                 }
                 html += `
-                                </div>
-                                <button class="btn btn-outline btn-sm" onclick="closeTeacherStudentModal()" style="margin-top:8px;">Close</button>
                             </div>
-                        `;
+                            <button class="btn btn-outline btn-sm" onclick="closeTeacherStudentModal()" style="margin-top:8px;">Close</button>
+                        </div>
+                    `;
                 modal.innerHTML = html;
                 document.body.appendChild(modal);
             } catch (e) {
@@ -3250,12 +2785,12 @@
         }
 
         // ============================================================
-        // TEACHER REPORT
+        // TEACHER REPORT – with date range
         // ============================================================
         function toggleTeacherReportRange() {
             const range = document.getElementById('teacherReportRange').value;
             document.getElementById('teacherSelectedMonthWrapper').style.display = (range === 'SELECTED_MONTH') ? 'block' :
-            'none';
+                'none';
             document.getElementById('teacherCustomRangeWrapper').style.display = (range === 'CUSTOM') ? 'block' : 'none';
         }
 
@@ -3359,36 +2894,36 @@
 
                 if (format === 'pdf') {
                     const content = `
-                                <div style="font-family:Arial; padding:20px;">
-                                    <h1 style="color:#2563eb;">BM Group of Institutions</h1>
-                                    <h2>Student Attendance Report – ${studentRoll}</h2>
-                                    <p>Teacher: ${user.name} (${user.rollNo})</p>
-                                    <p>Generated: ${new Date().toLocaleString()}</p>
-                                    <p>Branch: ${branch}</p>
-                                    <p>Range: ${startStr} to ${endStr}</p>
-                                    <hr>
-                                    <h3>Summary</h3>
-                                    <p><strong>Total Lectures Conducted:</strong> ${totalConducted}</p>
-                                    <p><strong>Lectures Attended:</strong> ${totalAttended}</p>
-                                    <p><strong>Attendance %:</strong> ${pct}%</p>
-                                    <h3>Subject-wise</h3>
-                                    <ul>
-                                        ${Object.entries(subjectStats).map(([sub, st]) => `
-                                                <li>${sub}: ${st.present}/${st.total} (${st.percentage}%)</li>
+                            <div style="font-family:Arial; padding:20px;">
+                                <h1 style="color:#2563eb;">BM Group of Institutions</h1>
+                                <h2>Student Attendance Report – ${studentRoll}</h2>
+                                <p>Teacher: ${user.name} (${user.rollNo})</p>
+                                <p>Generated: ${new Date().toLocaleString()}</p>
+                                <p>Branch: ${branch}</p>
+                                <p>Range: ${startStr} to ${endStr}</p>
+                                <hr>
+                                <h3>Summary</h3>
+                                <p><strong>Total Lectures Conducted:</strong> ${totalConducted}</p>
+                                <p><strong>Lectures Attended:</strong> ${totalAttended}</p>
+                                <p><strong>Attendance %:</strong> ${pct}%</p>
+                                <h3>Subject-wise</h3>
+                                <ul>
+                                    ${Object.entries(subjectStats).map(([sub, st]) => `
+                                            <li>${sub}: ${st.present}/${st.total} (${st.percentage}%)</li>
+                                        `).join('')}
+                                </ul>
+                                <hr>
+                                <h3>Detailed Records</h3>
+                                <table style="width:100%; border-collapse:collapse; border:1px solid #ccc;">
+                                    <thead><tr style="background:#f0f0f0;"><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
+                                    <tbody>
+                                        ${records.map(r => `
+                                                <tr><td>${r.date}</td><td>${r.subject}</td><td>${r.status}</td></tr>
                                             `).join('')}
-                                    </ul>
-                                    <hr>
-                                    <h3>Detailed Records</h3>
-                                    <table style="width:100%; border-collapse:collapse; border:1px solid #ccc;">
-                                        <thead><tr style="background:#f0f0f0;"><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
-                                        <tbody>
-                                            ${records.map(r => `
-                                                    <tr><td>${r.date}</td><td>${r.subject}</td><td>${r.status}</td></tr>
-                                                `).join('')}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            `;
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
                     const win = window.open('', '_blank');
                     if (!win) { showMsg('Allow popups!', true); return; }
                     win.document.write(content);
@@ -3413,6 +2948,9 @@
             }
         }
 
+        // ============================================================
+        // TEACHER RECENT MARKS
+        // ============================================================
         async function loadTeacherRecent() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'faculty') return;
@@ -3447,18 +2985,18 @@
                     const pct = data.attendancePercentage || 0;
                     const color = pct >= 75 ? 'var(--success)' : 'var(--danger)';
                     let html = `
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                                    <span style="font-weight:700; font-size:11px;">${MONTH_NAMES[parseInt(month)]} 2026</span>
-                                    <span style="font-size:12px; font-weight:800; color:${color};">${pct}%</span>
-                                </div>
-                                <div style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">Attended ${data.totalAttended} / ${data.totalConducted} lectures</div>
-                                <div style="display:flex; flex-wrap:wrap; gap:4px; max-height:80px; overflow-y:auto;">
-                                    ${Object.entries(data.subjectStats || {}).map(([sub, st]) => {
-                                        const percentage = st.percentage !== undefined ? st.percentage : 0;
-                                        return `<span class="subject-chip">${sub.substring(0,12)}: ${percentage}% (${st.present}/${st.total})</span>`;
-                                    }).join('')}
-                                </div>
-                            `;
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                <span style="font-weight:700; font-size:11px;">${MONTH_NAMES[parseInt(month)]} 2026</span>
+                                <span style="font-size:12px; font-weight:800; color:${color};">${pct}%</span>
+                            </div>
+                            <div style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">Attended ${data.totalAttended} / ${data.totalConducted} lectures</div>
+                            <div style="display:flex; flex-wrap:wrap; gap:4px; max-height:80px; overflow-y:auto;">
+                                ${Object.entries(data.subjectStats || {}).map(([sub, st]) => {
+                                    const percentage = st.percentage !== undefined ? st.percentage : 0;
+                                    return `<span class="subject-chip">${sub.substring(0,12)}: ${percentage}% (${st.present}/${st.total})</span>`;
+                                }).join('')}
+                            </div>
+                        `;
                     container.innerHTML = html;
                 } else {
                     container.style.display = 'none';
@@ -3469,18 +3007,9 @@
         }
 
         // ============================================================
-        // MARK FULL DAY ATTENDANCE – WITH SERVER BUSY CHECK FOR STUDENTS
+        // MARK FULL DAY ATTENDANCE
         // ============================================================
         async function markFullDayAttendance() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            // Only block students
-            if (user && user.role === 'student') {
-                const busy = await checkServerBusy();
-                if (busy) {
-                    showMsg('🔧 Server is busy with maintenance. Attendance marking is temporarily disabled.', true);
-                    return;
-                }
-            }
             console.log('🚀 markFullDayAttendance called');
             const enteredPasscode = prompt("Enter Full Day Passcode (5‑digit):");
             if (!enteredPasscode) {
@@ -3505,6 +3034,7 @@
             navigator.geolocation.getCurrentPosition(
                 async (pos) => {
                     console.log('📍 GPS position:', pos.coords.latitude, pos.coords.longitude);
+                    const user = JSON.parse(localStorage.getItem('user'));
                     if (!user || user.role !== 'student') {
                         showMsg('Student access required!', true);
                         return;
@@ -3538,29 +3068,17 @@
                 },
                 (err) => {
                     console.error('❌ GPS error:', err);
-                    let errorMsg = 'GPS Access Denied! Please allow location.';
-                    if (err.code === 1) errorMsg = '❌ Location permission denied. Please enable GPS in browser settings.';
-                    else if (err.code === 2) errorMsg = '❌ Location unavailable. Please check your GPS.';
-                    else if (err.code === 3) errorMsg = '❌ GPS timeout. Please try again.';
-                    showMsg(errorMsg, true);
+                    showMsg('GPS Access Denied! Please allow location.', true);
                 }
             );
         }
 
         // ============================================================
-        // MARK ACTIVE PERIOD ATTENDANCE – WITH SERVER BUSY CHECK FOR STUDENTS
+        // MARK ACTIVE PERIOD ATTENDANCE
         // ============================================================
         async function markActivePeriodAttendance() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            // Only block students
-            if (user && user.role === 'student') {
-                const busy = await checkServerBusy();
-                if (busy) {
-                    showMsg('🔧 Server is busy with maintenance. Attendance marking is temporarily disabled.', true);
-                    return;
-                }
-            }
             console.log('🚀 markActivePeriodAttendance called');
+            const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'student') {
                 showMsg('Student access required!', true);
                 return;
@@ -3623,79 +3141,9 @@
                 },
                 (err) => {
                     console.error('❌ GPS error:', err);
-                    let errorMsg = 'GPS Access Denied! Please allow location.';
-                    if (err.code === 1) errorMsg = '❌ Location permission denied. Please enable GPS in browser settings.';
-                    else if (err.code === 2) errorMsg = '❌ Location unavailable. Please check your GPS.';
-                    else if (err.code === 3) errorMsg = '❌ GPS timeout. Please try again.';
-                    showMsg(errorMsg, true);
+                    showMsg('GPS Access Denied! Please allow location.', true);
                 }
             );
-        }
-
-        // ============================================================
-        // SERVER BUSY – STUDENTS ONLY
-        // ============================================================
-        async function checkServerBusy() {
-            try {
-                const res = await fetch(`${API_BASE}/api/admin/get-server-busy`);
-                const data = await res.json();
-                const busy = data.busy || false;
-                const user = JSON.parse(localStorage.getItem('user'));
-                const isStudent = user && user.role === 'student';
-
-                // Only show banner and overlay to students
-                if (busy && isStudent) {
-                    document.getElementById('serverBusyBanner').style.display = 'flex';
-                    document.getElementById('studentBusyOverlay').style.display = 'flex';
-                    // Also disable interactive elements for students
-                    document.querySelectorAll('.btn').forEach(btn => {
-                        if (!btn.closest('#adminContentArea') && !btn.closest('#teacherTab')) {
-                            btn.style.opacity = '0.5';
-                            btn.style.cursor = 'not-allowed';
-                            btn.disabled = true;
-                        }
-                    });
-                } else {
-                    document.getElementById('serverBusyBanner').style.display = 'none';
-                    document.getElementById('studentBusyOverlay').style.display = 'none';
-                    // Re-enable buttons
-                    document.querySelectorAll('.btn').forEach(btn => {
-                        btn.style.opacity = '1';
-                        btn.style.cursor = 'pointer';
-                        btn.disabled = false;
-                    });
-                }
-                return busy;
-            } catch (e) {
-                return false;
-            }
-        }
-
-        // ============================================================
-        // ADMIN TOOLS – Server Busy Toggle (only affects students)
-        // ============================================================
-        async function setServerBusy(busy) {
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
-            try {
-                const res = await fetch(`${API_BASE}/api/admin/set-server-busy`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ requesterRollNo: user.rollNo, busy })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    showMsg(data.message);
-                    document.getElementById('serverBusyStatus').innerText = `Status: ${busy ? '🔴 ON (Students only)' : '🟢 OFF'}`;
-                    document.getElementById('serverBusyStatus').style.color = busy ? '#dc2626' : '#16a34a';
-                    // Re-check to apply banner for students
-                    await checkServerBusy();
-                } else {
-                    showMsg(data.error || 'Failed', true);
-                }
-            } catch (e) {
-                showMsg('Server error!', true);
-            }
         }
 
         // ============================================================
@@ -3770,35 +3218,35 @@
 
                 if (format === 'pdf') {
                     const content = `
-                                <div style="font-family:Arial; padding:20px;">
-                                    <h1 style="color:#2563eb;">BM Group of Institutions</h1>
-                                    <h2>Student Attendance Report – ${studentRoll}</h2>
-                                    <p>Generated: ${new Date().toLocaleString()}</p>
-                                    <p>Branch: ${branch}</p>
-                                    <p>Range: 15 July 2026 to ${today.toISOString().split('T')[0]}</p>
-                                    <hr>
-                                    <h3>Summary</h3>
-                                    <p><strong>Total Lectures Conducted:</strong> ${totalConducted}</p>
-                                    <p><strong>Lectures Attended:</strong> ${totalAttended}</p>
-                                    <p><strong>Attendance %:</strong> ${pct}%</p>
-                                    <h3>Subject-wise</h3>
-                                    <ul>
-                                        ${Object.entries(subjectStats).map(([sub, st]) => `
-                                                <li>${sub}: ${st.present}/${st.total} (${st.percentage}%)</li>
+                            <div style="font-family:Arial; padding:20px;">
+                                <h1 style="color:#2563eb;">BM Group of Institutions</h1>
+                                <h2>Student Attendance Report – ${studentRoll}</h2>
+                                <p>Generated: ${new Date().toLocaleString()}</p>
+                                <p>Branch: ${branch}</p>
+                                <p>Range: 15 July 2026 to ${today.toISOString().split('T')[0]}</p>
+                                <hr>
+                                <h3>Summary</h3>
+                                <p><strong>Total Lectures Conducted:</strong> ${totalConducted}</p>
+                                <p><strong>Lectures Attended:</strong> ${totalAttended}</p>
+                                <p><strong>Attendance %:</strong> ${pct}%</p>
+                                <h3>Subject-wise</h3>
+                                <ul>
+                                    ${Object.entries(subjectStats).map(([sub, st]) => `
+                                            <li>${sub}: ${st.present}/${st.total} (${st.percentage}%)</li>
+                                        `).join('')}
+                                </ul>
+                                <hr>
+                                <h3>Detailed Records</h3>
+                                <table style="width:100%; border-collapse:collapse; border:1px solid #ccc;">
+                                    <thead><tr style="background:#f0f0f0;"><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
+                                    <tbody>
+                                        ${records.map(r => `
+                                                <tr><td>${r.date}</td><td>${r.subject}</td><td>${r.status}</td></tr>
                                             `).join('')}
-                                    </ul>
-                                    <hr>
-                                    <h3>Detailed Records</h3>
-                                    <table style="width:100%; border-collapse:collapse; border:1px solid #ccc;">
-                                        <thead><tr style="background:#f0f0f0;"><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
-                                        <tbody>
-                                            ${records.map(r => `
-                                                    <tr><td>${r.date}</td><td>${r.subject}</td><td>${r.status}</td></tr>
-                                                `).join('')}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            `;
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
                     const win = window.open('', '_blank');
                     if (!win) { showMsg('Allow popups!', true); return; }
                     win.document.write(content);
@@ -3860,57 +3308,57 @@
                 const branchName = branchFilter === 'ALL' ? 'All Branches' : branchFilter;
 
                 let tableRows = students.map((s, idx) => `
-                            <tr>
-                                <td style="padding:6px 8px; border:1px solid #ccc; text-align:center;">${idx + 1}</td>
-                                <td style="padding:6px 8px; border:1px solid #ccc; text-align:left;">${s.rollNo || 'N/A'}</td>
-                                <td style="padding:6px 8px; border:1px solid #ccc; text-align:left;">${s.name || 'Unknown'}</td>
-                                <td style="padding:6px 8px; border:1px solid #ccc; text-align:center;">${s.totalPresent || 0}</td>
-                                <td style="padding:6px 8px; border:1px solid #ccc; text-align:center;">${s.percentage || 0}%</td>
-                            </tr>
-                        `).join('');
+                        <tr>
+                            <td style="padding:6px 8px; border:1px solid #ccc; text-align:center;">${idx + 1}</td>
+                            <td style="padding:6px 8px; border:1px solid #ccc; text-align:left;">${s.rollNo || 'N/A'}</td>
+                            <td style="padding:6px 8px; border:1px solid #ccc; text-align:left;">${s.name || 'Unknown'}</td>
+                            <td style="padding:6px 8px; border:1px solid #ccc; text-align:center;">${s.totalPresent || 0}</td>
+                            <td style="padding:6px 8px; border:1px solid #ccc; text-align:center;">${s.percentage || 0}%</td>
+                        </tr>
+                    `).join('');
 
                 const htmlContent = `
-                            <!DOCTYPE html>
-                            <html>
-                            <head>
-                                <meta charset="UTF-8">
-                                <title>Class Attendance Report</title>
-                                <style>
-                                    body { font-family: Arial, sans-serif; padding: 20px; }
-                                    h1 { color: #2563eb; text-align: center; }
-                                    h2 { text-align: center; }
-                                    table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
-                                    th, td { padding: 6px 8px; border: 1px solid #ccc; }
-                                    th { background: #f0f0f0; text-align: center; }
-                                    td { text-align: left; }
-                                    td.center { text-align: center; }
-                                    .footer { text-align: center; font-size: 10px; color: #999; margin-top: 20px; }
-                                    .summary { text-align: center; font-size: 14px; color: #666; }
-                                </style>
-                            </head>
-                            <body>
-                                <h1>BM Group of Institutions</h1>
-                                <h2>${branchName} – 5th Semester</h2>
-                                <p style="text-align:center;">Attendance from ${startDate} to ${endDate}</p>
-                                <p class="summary">Total Lectures Conducted: ${totalLectures}</p>
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>S.No</th>
-                                            <th>Roll No</th>
-                                            <th>Name</th>
-                                            <th>Total Present</th>
-                                            <th>Percentage</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        ${tableRows}
-                                    </tbody>
-                                </table>
-                                <p class="footer">Generated on ${new Date().toLocaleString()}</p>
-                            </body>
-                            </html>
-                        `;
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <meta charset="UTF-8">
+                            <title>Class Attendance Report</title>
+                            <style>
+                                body { font-family: Arial, sans-serif; padding: 20px; }
+                                h1 { color: #2563eb; text-align: center; }
+                                h2 { text-align: center; }
+                                table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+                                th, td { padding: 6px 8px; border: 1px solid #ccc; }
+                                th { background: #f0f0f0; text-align: center; }
+                                td { text-align: left; }
+                                td.center { text-align: center; }
+                                .footer { text-align: center; font-size: 10px; color: #999; margin-top: 20px; }
+                                .summary { text-align: center; font-size: 14px; color: #666; }
+                            </style>
+                        </head>
+                        <body>
+                            <h1>BM Group of Institutions</h1>
+                            <h2>${branchName} – 5th Semester</h2>
+                            <p style="text-align:center;">Attendance from ${startDate} to ${endDate}</p>
+                            <p class="summary">Total Lectures Conducted: ${totalLectures}</p>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>S.No</th>
+                                        <th>Roll No</th>
+                                        <th>Name</th>
+                                        <th>Total Present</th>
+                                        <th>Percentage</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${tableRows}
+                                </tbody>
+                            </table>
+                            <p class="footer">Generated on ${new Date().toLocaleString()}</p>
+                        </body>
+                        </html>
+                    `;
 
                 const win = window.open('', '_blank', 'width=900,height=700');
                 if (!win) {
@@ -4053,15 +3501,15 @@
                         attendanceDisplay = `${attended}/${conducted} (${pct}%)`;
                     }
                     return `<tr>
-                                <td><b>${s.rollNo || 'N/A'}</b></td>
-                                <td>${s.name || 'Unknown'}</td>
-                                <td><span class="badge badge-role">${roleBadge}</span></td>
-                                <td><span class="badge ${s.boundDeviceId ? 'badge-active' : 'badge-present'}">${deviceStatus}</span></td>
-                                <td><span class="badge badge-attendance">${attendanceDisplay}</span></td>
-                                <td>
-                                    ${s.role === 'student' ? `<button class="action-btn btn-view btn-sm" onclick="viewStudentProfile('${s.rollNo}')" style="padding:2px 6px; font-size:8px;"><svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>` : ''}
-                                </td>
-                            </tr>`;
+                            <td><b>${s.rollNo || 'N/A'}</b></td>
+                            <td>${s.name || 'Unknown'}</td>
+                            <td><span class="badge badge-role">${roleBadge}</span></td>
+                            <td><span class="badge ${s.boundDeviceId ? 'badge-active' : 'badge-present'}">${deviceStatus}</span></td>
+                            <td><span class="badge badge-attendance">${attendanceDisplay}</span></td>
+                            <td>
+                                ${s.role === 'student' ? `<button class="action-btn btn-view btn-sm" onclick="viewStudentProfile('${s.rollNo}')" style="padding:2px 6px; font-size:8px;"><svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>` : ''}
+                            </td>
+                        </tr>`;
                 }).join('');
             } catch (e) { showMsg("Failed to connect to backend", true); }
         }
@@ -4085,13 +3533,13 @@
                 modal.className = 'modal-overlay';
                 modal.id = 'studentProfileModal';
                 let html = `
-                            <div class="modal-card profile-modal">
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                                    <h3 style="font-size:14px; font-weight:800;">Attendance – ${rollNo}</h3>
-                                    <button class="btn btn-danger btn-sm" onclick="closeProfileModal()" style="padding:2px 8px;">✕</button>
-                                </div>
-                                <div style="max-height:300px; overflow-y:auto;">
-                        `;
+                        <div class="modal-card profile-modal">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                <h3 style="font-size:14px; font-weight:800;">Attendance – ${rollNo}</h3>
+                                <button class="btn btn-danger btn-sm" onclick="closeProfileModal()" style="padding:2px 8px;">✕</button>
+                            </div>
+                            <div style="max-height:300px; overflow-y:auto;">
+                    `;
                 if (Object.keys(grouped).length === 0) {
                     html += `<p style="text-align:center; color:var(--text-muted);">No records found.</p>`;
                 } else {
@@ -4099,31 +3547,31 @@
                     sortedDates.forEach(date => {
                         const records = grouped[date];
                         html += `
-                                    <div style="border-bottom:1px solid #e2e8f0; margin-bottom:6px; padding-bottom:6px;">
-                                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                                            <span style="font-weight:700; font-size:11px;">📅 ${date}</span>
-                                            <button class="btn btn-danger btn-xs" onclick="deleteAllForDate('${rollNo}','${date}')" style="padding:2px 6px;">Delete All</button>
-                                        </div>
-                                `;
+                                <div style="border-bottom:1px solid #e2e8f0; margin-bottom:6px; padding-bottom:6px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                                        <span style="font-weight:700; font-size:11px;">📅 ${date}</span>
+                                        <button class="btn btn-danger btn-xs" onclick="deleteAllForDate('${rollNo}','${date}')" style="padding:2px 6px;">Delete All</button>
+                                    </div>
+                            `;
                         records.forEach(r => {
                             html += `
-                                        <div class="record-item">
-                                            <div>
-                                                <span style="font-weight:600;">${r.subject}</span>
-                                                <span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span>
-                                            </div>
-                                            <button class="btn btn-del btn-xs" onclick="deleteRecord('${r._id}')">Delete</button>
+                                    <div class="record-item">
+                                        <div>
+                                            <span style="font-weight:600;">${r.subject}</span>
+                                            <span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span>
                                         </div>
-                                    `;
+                                        <button class="btn btn-del btn-xs" onclick="deleteRecord('${r._id}')">Delete</button>
+                                    </div>
+                                `;
                         });
                         html += `</div>`;
                     });
                 }
                 html += `
-                                </div>
-                                <button class="btn btn-outline btn-sm" onclick="closeProfileModal()" style="margin-top:8px;">Close</button>
                             </div>
-                        `;
+                            <button class="btn btn-outline btn-sm" onclick="closeProfileModal()" style="margin-top:8px;">Close</button>
+                        </div>
+                    `;
                 modal.innerHTML = html;
                 document.body.appendChild(modal);
             } catch (e) {
@@ -4169,18 +3617,18 @@
                     const statusClass = r.status === 'Present' ? 'badge-present' : r.status === 'Duty Leave' ?
                         'badge-dl' : 'badge-absent';
                     return `
-                                <tr>
-                                    <td><b>${r.date}</b></td>
-                                    <td>${r.rollNo}</td>
-                                    <td>${r.studentName || r.name || 'Unknown'}</td>
-                                    <td>${r.subject}</td>
-                                    <td><span class="badge ${statusClass}">${r.status}</span></td>
-                                    <td>
-                                        <button class="btn-edit btn-xs" onclick="openEditModal('${r._id}','${r.rollNo}','${r.status}')" style="padding:2px 6px;">Edit</button>
-                                        <button class="btn-del btn-xs" onclick="deleteRecord('${r._id}')" style="padding:2px 6px;">Delete</button>
-                                    </td>
-                                </tr>
-                            `;
+                            <tr>
+                                <td><b>${r.date}</b></td>
+                                <td>${r.rollNo}</td>
+                                <td>${r.studentName || r.name || 'Unknown'}</td>
+                                <td>${r.subject}</td>
+                                <td><span class="badge ${statusClass}">${r.status}</span></td>
+                                <td>
+                                    <button class="btn-edit btn-xs" onclick="openEditModal('${r._id}','${r.rollNo}','${r.status}')" style="padding:2px 6px;">Edit</button>
+                                    <button class="btn-del btn-xs" onclick="deleteRecord('${r._id}')" style="padding:2px 6px;">Delete</button>
+                                </td>
+                            </tr>
+                        `;
                 }).join('');
             } catch (e) {
                 showMsg('Failed to load attendance', true);
@@ -4241,7 +3689,7 @@
         }
 
         // ============================================================
-        // DASHBOARD & HISTORY – WITH DAYS ATTENDED PERCENTAGE
+        // DASHBOARD & HISTORY
         // ============================================================
         function calculateRealAttendancePercentage() {
             const startDate = new Date(2026, 6, 15);
@@ -4266,36 +3714,10 @@
                 const sub = r.subject || "";
                 return !sub.includes("LIB") && !sub.includes("Sports") && !sub.includes("Library");
             }).length;
-
-            const presentDaysSet = new Set();
-            globalMyRecords.forEach(r => {
-                const sub = r.subject || "";
-                if (!sub.includes("LIB") && !sub.includes("Sports") && !sub.includes("Library")) {
-                    if (r.status === 'Present' || r.status === 'Duty Leave') {
-                        presentDaysSet.add(r.date);
-                    }
-                }
-            });
-            const daysPresent = presentDaysSet.size;
-            const daysPct = totalWorkingDays > 0 ? Math.round((daysPresent / totalWorkingDays) * 100) : 0;
-
-            if (totalConductedLectures === 0) return {
-                pct: 100,
-                totalWorkingDays,
-                totalConductedLectures,
-                totalAttendedLectures: academicAttendedLectures,
-                daysPresent,
-                daysPct
-            };
+            if (totalConductedLectures === 0) return { pct: 100, totalWorkingDays, totalConductedLectures,
+                totalAttendedLectures: academicAttendedLectures };
             const pct = Math.min(100, ((academicAttendedLectures / totalConductedLectures) * 100)).toFixed(1);
-            return {
-                pct,
-                totalWorkingDays,
-                totalConductedLectures,
-                totalAttendedLectures: academicAttendedLectures,
-                daysPresent,
-                daysPct
-            };
+            return { pct, totalWorkingDays, totalConductedLectures, totalAttendedLectures: academicAttendedLectures };
         }
 
         function renderAttendanceCalendar(historyData) {
@@ -4315,9 +3737,9 @@
                 const firstDayOfWeek = new Date(year, mIdx, 1).getDay();
                 let gridHtml =
                     `<div style="margin-bottom:8px; border-bottom:1px solid var(--card-border); padding-bottom:6px;">
-                            <div style="font-size:10px; font-weight:800; color:var(--primary); margin-bottom:4px;">${monthName} ${year}</div>
-                            <div class="calendar-grid"><div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div>
-                            <div class="cal-day-head">W</div><div class="cal-day-head">T</div><div class="cal-day-head">F</div><div class="cal-day-head">S</div>`;
+                        <div style="font-size:10px; font-weight:800; color:var(--primary); margin-bottom:4px;">${monthName} ${year}</div>
+                        <div class="calendar-grid"><div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div>
+                        <div class="cal-day-head">W</div><div class="cal-day-head">T</div><div class="cal-day-head">F</div><div class="cal-day-head">S</div>`;
                 for (let i = 0; i < firstDayOfWeek; i++) { gridHtml += `<div class="cal-date cal-off"></div>`; }
                 for (let d = 1; d <= daysInMonth; d++) {
                     const dateStr = `2026-${String(mIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -4367,17 +3789,10 @@
                 globalMyRecords = data || [];
                 const tbody = document.querySelector('#myHistoryTable tbody');
                 const calc = calculateRealAttendancePercentage();
-
                 document.getElementById('totalDaysCount').innerText = calc.totalAttendedLectures;
                 const pctEl = document.getElementById('attendancePct');
                 if (pctEl) { pctEl.innerText = `${calc.pct}%`;
                     pctEl.style.color = calc.pct >= 75 ? 'var(--success)' : 'var(--danger)'; }
-
-                document.getElementById('daysPresentCount').innerText = calc.daysPresent || 0;
-                const daysPctEl = document.getElementById('daysPct');
-                if (daysPctEl) { daysPctEl.innerText = `${calc.daysPct || 0}%`;
-                    daysPctEl.style.color = (calc.daysPct || 0) >= 75 ? 'var(--success)' : 'var(--danger)'; }
-
                 const advisorBox = document.getElementById('advisorText');
                 if (advisorBox) {
                     if (calc.pct >= 75) {
@@ -4406,7 +3821,7 @@
         }
 
         // ============================================================
-        // LOAD DASHBOARD STATS (Admin)
+        // LOAD DASHBOARD STATS
         // ============================================================
         async function loadDashboardStats() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -4615,54 +4030,39 @@
         }
 
         // ============================================================
-        // ADMIN MANUAL ATTENDANCE – AUTO BRANCH DETECTION
+        // ADMIN MANUAL ATTENDANCE
         // ============================================================
-        async function autoDetectBranch() {
-            const rollInput = document.getElementById('manualRoll');
-            if (!rollInput) return;
-            const roll = rollInput.value.trim();
-            const warningEl = document.getElementById('manualBranchWarning');
-            if (!roll) {
-                warningEl.style.display = 'none';
-                return;
-            }
-            try {
-                const res = await fetch(`${API_BASE}/api/student/profile/${roll}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    const branch = data.branch || 'CSE';
-                    const branchSelect = document.getElementById('manualBranch');
-                    if (branchSelect) branchSelect.value = branch;
-                    warningEl.style.display = 'none';
-                    loadSubjectsForManual();
-                } else {
-                    warningEl.style.display = 'block';
-                    warningEl.innerText = 'Student not found! Please check roll number.';
-                }
-            } catch (e) {
-                warningEl.style.display = 'none';
-            }
-        }
-
         async function validateStudentBranchForManual() {
-            await autoDetectBranch();
+            const rollNo = document.getElementById('manualRoll').value.trim();
+            const warningEl = document.getElementById('manualBranchWarning');
+            if (!rollNo) { warningEl.style.display = 'none'; return; }
+            try {
+                const res = await fetch(`${API_BASE}/api/student/profile/${rollNo}`);
+                if (!res.ok) { warningEl.style.display = 'none'; return; }
+                const data = await res.json();
+                const studentBranch = data.branch || 'CSE';
+                const selectedBranch = document.getElementById('manualBranch').value;
+                if (selectedBranch.toUpperCase() !== studentBranch.toUpperCase()) {
+                    warningEl.style.display = 'block';
+                    warningEl.innerText =
+                        `⚠️ Student is in ${studentBranch}, but selected ${selectedBranch}. Please select correct branch.`;
+                } else {
+                    warningEl.style.display = 'none';
+                }
+            } catch (e) { warningEl.style.display = 'none'; }
         }
 
         function loadSubjectsForManual() {
-            const date = document.getElementById('manualDate');
-            const branchSelect = document.getElementById('manualBranch');
-            if (!date || !branchSelect) return;
-            const dateVal = date.value;
-            const branch = branchSelect.value;
-            if (!dateVal) return;
-            const parts = dateVal.split('-');
+            const date = document.getElementById('manualDate').value;
+            const branch = document.getElementById('manualBranch').value;
+            if (!date) return;
+            const parts = date.split('-');
             const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
             const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             const dayName = days[dateObj.getDay()];
             const timetable = getBranchTimetable(branch);
             const subjects = timetable[dayName] || ['General Class'];
             const container = document.getElementById('subjectCheckboxContainer');
-            if (!container) return;
             container.innerHTML =
                 `<label class="select-all"><input type="checkbox" id="selectAllSubjects" onchange="toggleAllSubjects()"> Select All (${subjects.length} subjects)</label>`;
             subjects.forEach(sub => { container.innerHTML +=
@@ -4699,7 +4099,8 @@
                 const res = await fetch(`${API_BASE}/api/admin/manual-attendance-bulk`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ requesterRollNo: user.rollNo, studentRollNo, date, subjects, status })
+                    body: JSON.stringify({ requesterRollNo: user.rollNo, studentRollNo, date, subjects, status,
+                        branch })
                 });
                 const data = await res.json();
                 if (res.ok) { showMsg(`✅ ${data.message}`);
@@ -4794,7 +4195,7 @@
         }
 
         // ============================================================
-        // ADMIN TOOLS – Other
+        // ADMIN TOOLS
         // ============================================================
         function toggleFacultyRegistrationFields() {
             const role = document.getElementById('adminRegRole').value;
@@ -5012,7 +4413,7 @@
         }
 
         // ============================================================
-        // BULK REGISTRATION & UPDATE – CSE / AIDS
+        // BULK REGISTRATION & UPDATE – CSE
         // ============================================================
         async function triggerBulkUpdate() {
             if (!confirm(
@@ -5020,10 +4421,12 @@
                 )) return;
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
+
             const btn = document.querySelector('[onclick="triggerBulkUpdate()"]');
             const originalText = btn.innerHTML;
             btn.innerHTML = '⏳ Processing...';
             btn.disabled = true;
+
             showMsg('🔄 Starting CSE bulk update...');
             try {
                 const res = await fetch(`${API_BASE}/api/admin/bulk-register-and-update-attendance`, {
@@ -5051,16 +4454,21 @@
             }
         }
 
+        // ============================================================
+        // BULK REGISTRATION & UPDATE – AIDS
+        // ============================================================
         async function triggerAidsBulkUpdate() {
             if (!confirm(
                     '⚠️ This will register/update all AIDS students and set attendance for 15-30 July.\n\nThis may overwrite existing attendance records for that period.\n\nAre you sure you want to continue?'
                 )) return;
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
+
             const btn = document.querySelector('[onclick="triggerAidsBulkUpdate()"]');
             const originalText = btn.innerHTML;
             btn.innerHTML = '⏳ Processing...';
             btn.disabled = true;
+
             showMsg('🔄 Starting AIDS bulk update...');
             try {
                 const res = await fetch(`${API_BASE}/api/admin/bulk-register-and-update-attendance-aids`, {
@@ -5088,6 +4496,9 @@
             }
         }
 
+        // ============================================================
+        // DELETE USER ACCOUNT
+        // ============================================================
         async function deleteUserAccount() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
@@ -5314,24 +4725,197 @@
         }
 
         // ============================================================
-        // LOADING OVERLAY HELPERS
+        // AUTHENTICATION
         // ============================================================
-        function showLoading(message = 'Processing…') {
-            const overlay = document.getElementById('loadingOverlay');
-            const text = document.getElementById('loadingText');
-            if (overlay && text) {
-                text.textContent = message;
-                overlay.style.display = 'flex';
+        async function handleAuth() {
+            const rawRoll = document.getElementById('rollNo').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const deviceId = getDeviceId();
+            const validation = sanitizeAndValidateRollNo(rawRoll);
+            if (!validation.isValid) { return showMsg('Enter valid ID!', true); }
+            if (!password) { return showMsg('Enter your password!', true); }
+            showMsg('Connecting…');
+            try {
+                if (isRegistering) {
+                    const name = document.getElementById('regName').value.trim();
+                    if (!name) return showMsg('Enter Full Name!', true);
+                    const role = 'student';
+                    if (!isValidStudentRoll(validation.cleanRoll)) {
+                        return showMsg('⚠️ Invalid Roll Number! Use 24CSE01 or 24AIDS01 format.', true);
+                    }
+                    const res = await fetch(`${API_BASE}/api/auth/register`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, rollNo: validation.cleanRoll, password, deviceId, role })
+                    });
+                    const data = await res.json();
+                    if (res.ok) { showMsg('Registered! Login now.');
+                        toggleMode(); } else { showMsg(data.error || 'Registration failed', true); }
+                } else {
+                    const selectedRole = document.getElementById('loginRole').value;
+                    const res = await fetch(`${API_BASE}/api/auth/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ rollNo: validation.cleanRoll, password, deviceId })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        if (data.user.role !== selectedRole) {
+                            return showMsg(`You are registered as ${data.user.role}, not ${selectedRole}. Please select correct role.`,
+                                true);
+                        }
+                        localStorage.setItem('user', JSON.stringify(data.user));
+                        localStorage.setItem('token', data.token);
+                        loadDashboard();
+                    } else { showMsg(data.error || 'Invalid credentials', true); }
+                }
+            } catch (err) { showMsg('Connection timeout!', true); }
+        }
+
+        async function logout() {
+            try { const token = localStorage.getItem('token'); if (token) { await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` } }); } } catch (e) {}
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+            impersonating = false;
+            document.getElementById('impersonationBanner').style.display = 'none';
+            location.reload();
+        }
+
+        // ============================================================
+        // LOAD DASHBOARD
+        // ============================================================
+        function loadDashboard() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user) return;
+
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const monthSelect = document.getElementById('monthSelector');
+            if (monthSelect && currentMonth >= 6 && currentMonth <= 11) {
+                monthSelect.value = currentMonth.toString();
             }
-        }
 
-        function hideLoading() {
-            const overlay = document.getElementById('loadingOverlay');
-            if (overlay) overlay.style.display = 'none';
+            document.getElementById('auth-box').style.display = 'none';
+            document.getElementById('dash-box').style.display = 'block';
+            document.getElementById('headerAvatarBox').style.display = 'flex';
+            document.getElementById('welcomeMsg').innerText = `Hello, ${user.name}!`;
+            const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 'ST';
+            document.getElementById('userAvatarText').innerText = initials;
+            const isAdmin = user.role === 'admin';
+            const isFaculty = user.role === 'faculty';
+            const branch = user.branch || 'CSE';
+            document.getElementById('roleLabel').innerText = "ID";
+            document.getElementById('userRoll').innerText = user.rollNo;
+            document.getElementById('userRoleBadge').innerText = isAdmin ? '👑 Admin' : isFaculty ? '👨‍🏫 Faculty' : '🎓 Student';
+            document.getElementById('userBranchBadge').innerText = `📚 ${branch}`;
+            document.getElementById('studentStatsGrid').style.display = 'grid';
+            document.getElementById('adminStatsGrid').style.display = 'none';
+            document.getElementById('simulatorBox').style.display = 'flex';
+            document.getElementById('studentTabHeader').style.display = 'block';
+
+            if (impersonating) {
+                document.getElementById('impersonationBanner').style.display = 'flex';
+            } else {
+                document.getElementById('impersonationBanner').style.display = 'none';
+            }
+
+            if (isAdmin) {
+                document.getElementById('adminTabHeader').style.display = 'block';
+                document.getElementById('teacherTabHeader').style.display = 'none';
+                document.getElementById('adminLiveDashboard').style.display = 'block';
+                loadDashboardStats();
+                setInterval(loadDashboardStats, 60000);
+                populateStudentSelect();
+                populateTeacherSelect();
+                generatePasscode('full_day');
+                generatePasscode('single_lecture');
+                fetchAllUsers();
+                populateAdminStudentSelect();
+                populateSubjectDropdown();
+                toggleFacultyRegistrationFields();
+                loadAllAttendance();
+                populateBulkStudentSelect();
+            } else if (isFaculty) {
+                document.getElementById('adminTabHeader').style.display = 'none';
+                document.getElementById('teacherTabHeader').style.display = 'block';
+                document.getElementById('adminLiveDashboard').style.display = 'none';
+                loadTeacherSubjects();
+                loadTeacherRecent();
+                fetchTeacherStudents();
+                document.getElementById('teacherPasscodeDisplay').innerText = '—';
+                teacherCurrentPasscode = '—';
+            } else {
+                document.getElementById('adminTabHeader').style.display = 'none';
+                document.getElementById('teacherTabHeader').style.display = 'none';
+                document.getElementById('adminLiveDashboard').style.display = 'none';
+            }
+            switchTab(isAdmin ? 'adminTab' : isFaculty ? 'teacherTab' : 'markTab');
+            fetchHistory(user.rollNo);
+            const todayISO = new Date().toISOString().split('T')[0];
+            document.getElementById('manualDate').value = todayISO;
+            fetchNotices();
+            loadSubjectsForManual();
+            updatePeriodTrackerWidget();
+            setInterval(updatePeriodTrackerWidget, 30000);
+
+            if (!isAdmin && !isFaculty) {
+                fetchMonthlySummary();
+            }
+
+            // Show chat trigger
+            document.getElementById('chatAvatarTrigger').style.display = 'flex';
+            loadChatHistory(user.rollNo);
+            updateWelcomeGreeting();
         }
 
         // ============================================================
-        // BULK MARK & DELETE – WITH LOADING & BRANCH-AWARE
+        // TAB SWITCHING
+        // ============================================================
+        function switchTab(tabId) {
+            const markTab = document.getElementById('markTab');
+            const adminTab = document.getElementById('adminTab');
+            const teacherTab = document.getElementById('teacherTab');
+            markTab.style.display = tabId === 'markTab' ? 'block' : 'none';
+            adminTab.style.display = tabId === 'adminTab' ? 'block' : 'none';
+            teacherTab.style.display = tabId === 'teacherTab' ? 'block' : 'none';
+            markTab.classList.remove('tab-content-active');
+            adminTab.classList.remove('tab-content-active');
+            teacherTab.classList.remove('tab-content-active');
+            if (tabId === 'markTab') markTab.classList.add('tab-content-active');
+            if (tabId === 'adminTab') adminTab.classList.add('tab-content-active');
+            if (tabId === 'teacherTab') teacherTab.classList.add('tab-content-active');
+            const tabs = document.querySelectorAll('.tab-bar .tab-item');
+            tabs.forEach(t => t.classList.remove('active'));
+            if (tabId === 'markTab') tabs[0].classList.add('active');
+            if (tabId === 'adminTab' && tabs[1]) tabs[1].classList.add('active');
+            if (tabId === 'teacherTab' && tabs[2]) tabs[2].classList.add('active');
+        }
+
+        function switchAdminSubTab(subId) {
+            const subTabs = ['subDirectory', 'subAllAttendance', 'subReports', 'subAttendance', 'subHoliday', 'subPasscode',
+                'subTools'
+            ];
+            subTabs.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.style.display = (id === subId) ? 'block' : 'none';
+                    el.classList.remove('tab-content-active');
+                    if (id === subId) el.classList.add('tab-content-active');
+                }
+            });
+            const navItems = document.querySelectorAll('.admin-nav-item');
+            navItems.forEach((item, idx) => { item.classList.toggle('active', subTabs[idx] === subId); });
+            if (subId === 'subPasscode') { generatePasscode('full_day');
+                generatePasscode('single_lecture'); }
+            if (subId === 'subDirectory') { fetchAllUsers(); }
+            if (subId === 'subReports') { populateStudentSelect(); }
+            if (subId === 'subTools') { populateTeacherSelect(); }
+            if (subId === 'subAllAttendance') { loadAllAttendance(); }
+        }
+
+        // ============================================================
+        // BULK MARK & DELETE
         // ============================================================
         async function populateBulkStudentSelect() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -5346,9 +4930,8 @@
                     `<label class="select-all-label"><input type="checkbox" id="bulkSelectAllStudents" onchange="toggleAllBulkStudents()" /> Select All</label>`;
                 students.forEach(s => {
                     const label = document.createElement('label');
-                    const branchHint = s.branch || 'CSE';
                     label.innerHTML =
-                        `<input type="checkbox" class="bulk-student-checkbox" value="${s.rollNo}" data-branch="${branchHint}" /> ${s.rollNo} - ${s.name} <span style="font-size:8px;color:var(--text-muted);">(${branchHint})</span>`;
+                        `<input type="checkbox" class="bulk-student-checkbox" value="${s.rollNo}" /> ${s.rollNo} - ${s.name}`;
                     container.appendChild(label);
                 });
             } catch (e) {}
@@ -5381,11 +4964,11 @@
                 return;
             }
             container.innerHTML = selectedDates.map(d => `
-                        <span class="bulk-date-chip">
-                            ${d}
-                            <span class="remove-date" onclick="removeBulkDate('${d}')">×</span>
-                        </span>
-                    `).join('');
+                    <span class="bulk-date-chip">
+                        ${d}
+                        <span class="remove-date" onclick="removeBulkDate('${d}')">×</span>
+                    </span>
+                `).join('');
         }
 
         async function bulkMarkAttendance() {
@@ -5403,7 +4986,6 @@
                     `Mark ${subjects.length} subjects for ${selectedStudents.length} students on ${selectedDates.length} dates?`
                 )) return;
 
-            showLoading(`Marking attendance for ${selectedStudents.length} students... This may take a moment.`);
             try {
                 const res = await fetch(`${API_BASE}/api/admin/bulk-mark-attendance`, {
                     method: 'POST',
@@ -5423,8 +5005,6 @@
                 }
             } catch (e) {
                 showMsg('Network error!', true);
-            } finally {
-                hideLoading();
             }
         }
 
@@ -5439,7 +5019,6 @@
                     `Delete ALL attendance records for ${selectedStudents.length} students on ${selectedDates.length} dates?`
                 )) return;
 
-            showLoading(`Deleting attendance for ${selectedStudents.length} students...`);
             try {
                 const res = await fetch(`${API_BASE}/api/admin/bulk-delete-attendance`, {
                     method: 'DELETE',
@@ -5458,13 +5037,11 @@
                 }
             } catch (e) {
                 showMsg('Network error!', true);
-            } finally {
-                hideLoading();
             }
         }
 
         // ============================================================
-        // CHAT WIDGET
+        // ===== CHAT WIDGET – COMPACT & CENTERED =====
         // ============================================================
         function toggleChat() {
             chatOpen = !chatOpen;
@@ -5508,11 +5085,11 @@
                 emoji = '🌙'; }
             const name = user?.name || 'Guest';
             greetingEl.innerHTML = `
-                        <span class="greeting-emoji">${emoji}</span>
-                        <div><strong>${greeting}, ${name}!</strong> I'm <strong>BM Bot</strong>, your AI assistant.</div>
-                        <div style="font-size:12px; color:var(--text-muted);">Ask me about attendance, schedule, holidays, or anything!</div>
-                        <div style="font-size:10px; color:var(--text-muted); margin-top:4px;">💡 Try: "What is my attendance?" or "Today's timetable"</div>
-                    `;
+                    <span class="greeting-emoji">${emoji}</span>
+                    <div><strong>${greeting}, ${name}!</strong> I'm <strong>BM Bot</strong>, your AI assistant.</div>
+                    <div style="font-size:12px; color:var(--text-muted);">Ask me about attendance, schedule, holidays, or anything!</div>
+                    <div style="font-size:10px; color:var(--text-muted); margin-top:4px;">💡 Try: "What is my attendance?" or "Today's timetable"</div>
+                `;
         }
 
         async function loadChatHistory(rollNo) {
@@ -5535,24 +5112,24 @@
                 return;
             }
             list.innerHTML = chatHistory.map(chat => `
-                        <div class="chat-item ${chat.threadId === currentThreadId ? 'active' : ''}" onclick="loadChatThread('${chat.threadId}')">
-                            ${chat.title || 'Untitled'}
-                            <span class="delete-chat" onclick="event.stopPropagation(); deleteChatThread('${chat.threadId}')">✕</span>
-                        </div>
-                    `).join('');
+                    <div class="chat-item ${chat.threadId === currentThreadId ? 'active' : ''}" onclick="loadChatThread('${chat.threadId}')">
+                        ${chat.title || 'Untitled'}
+                        <span class="delete-chat" onclick="event.stopPropagation(); deleteChatThread('${chat.threadId}')">✕</span>
+                    </div>
+                `).join('');
         }
 
         function newChat() {
             currentThreadId = null;
             const messagesDiv = document.getElementById('chatMessages');
             messagesDiv.innerHTML = `
-                        <div class="welcome-greeting" id="welcomeGreeting">
-                            <span class="greeting-emoji">👋</span>
-                            <div><strong>Hello!</strong> I'm <strong>BM Bot</strong>, your AI assistant.</div>
-                            <div style="font-size:12px; color:var(--text-muted);">Ask me about attendance, schedule, holidays, or anything!</div>
-                        </div>
-                        <div class="typing-indicator" id="typingIndicator"><span class="dots">...</span></div>
-                    `;
+                    <div class="welcome-greeting" id="welcomeGreeting">
+                        <span class="greeting-emoji">👋</span>
+                        <div><strong>Hello!</strong> I'm <strong>BM Bot</strong>, your AI assistant.</div>
+                        <div style="font-size:12px; color:var(--text-muted);">Ask me about attendance, schedule, holidays, or anything!</div>
+                    </div>
+                    <div class="typing-indicator" id="typingIndicator"><span class="dots">...</span></div>
+                `;
             updateWelcomeGreeting();
             document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
             if (window.innerWidth < 500) toggleSidebar();
@@ -5577,10 +5154,10 @@
                 greetingDiv.className = 'welcome-greeting';
                 greetingDiv.id = 'welcomeGreeting';
                 greetingDiv.innerHTML = `
-                            <span class="greeting-emoji">💬</span>
-                            <div><strong>Continuing conversation...</strong></div>
-                            <div style="font-size:11px; color:var(--text-muted);">${chat.title || 'Chat'}</div>
-                        `;
+                        <span class="greeting-emoji">💬</span>
+                        <div><strong>Continuing conversation...</strong></div>
+                        <div style="font-size:11px; color:var(--text-muted);">${chat.title || 'Chat'}</div>
+                    `;
                 messagesDiv.appendChild(greetingDiv);
 
                 chat.messages.forEach(msg => {
@@ -5720,167 +5297,6 @@
         }
 
         // ============================================================
-        // AUTHENTICATION
-        // ============================================================
-        async function handleAuth() {
-            const rawRoll = document.getElementById('rollNo').value.trim();
-            const password = document.getElementById('password').value.trim();
-            const deviceId = getDeviceId();
-            const validation = sanitizeAndValidateRollNo(rawRoll);
-            if (!validation.isValid) { return showMsg('Enter valid ID!', true); }
-            if (!password) { return showMsg('Enter your password!', true); }
-            showMsg('Connecting…');
-            try {
-                if (isRegistering) {
-                    const name = document.getElementById('regName').value.trim();
-                    if (!name) return showMsg('Enter Full Name!', true);
-                    const role = 'student';
-                    if (!isValidStudentRoll(validation.cleanRoll)) {
-                        return showMsg('⚠️ Invalid Roll Number! Use 24CSE01 or 24AIDS01 format.', true);
-                    }
-                    const res = await fetch(`${API_BASE}/api/auth/register`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name, rollNo: validation.cleanRoll, password, deviceId, role })
-                    });
-                    const data = await res.json();
-                    if (res.ok) { showMsg('Registered! Login now.');
-                        toggleMode(); } else { showMsg(data.error || 'Registration failed', true); }
-                } else {
-                    const selectedRole = document.getElementById('loginRole').value;
-                    const res = await fetch(`${API_BASE}/api/auth/login`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ rollNo: validation.cleanRoll, password, deviceId })
-                    });
-                    const data = await res.json();
-                    if (res.ok) {
-                        if (res.status === 503) {
-                            return showMsg(data.error || 'Server is currently busy with maintenance. Please try again later.',
-                            true);
-                        }
-                        if (data.user.role !== selectedRole) {
-                            return showMsg(`You are registered as ${data.user.role}, not ${selectedRole}. Please select correct role.`,
-                                true);
-                        }
-                        localStorage.setItem('user', JSON.stringify(data.user));
-                        localStorage.setItem('token', data.token);
-                        loadDashboard();
-                    } else { showMsg(data.error || 'Invalid credentials', true); }
-                }
-            } catch (err) { showMsg('Connection timeout!', true); }
-        }
-
-        async function logout() {
-            try { const token = localStorage.getItem('token'); if (token) { await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST',
-                        headers: { 'Authorization': `Bearer ${token}` } }); } } catch (e) {}
-            localStorage.removeItem('user');
-            localStorage.removeItem('token');
-            impersonating = false;
-            document.getElementById('impersonationBanner').style.display = 'none';
-            document.getElementById('serverBusyBanner').style.display = 'none';
-            document.getElementById('studentBusyOverlay').style.display = 'none';
-            location.reload();
-        }
-
-        // ============================================================
-        // LOAD DASHBOARD
-        // ============================================================
-        function loadDashboard() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (!user) return;
-
-            const now = new Date();
-            const currentMonth = now.getMonth();
-            const monthSelect = document.getElementById('monthSelector');
-            if (monthSelect && currentMonth >= 6 && currentMonth <= 11) {
-                monthSelect.value = currentMonth.toString();
-            }
-
-            // Check server busy (only affects students)
-            checkServerBusy();
-
-            document.getElementById('auth-box').style.display = 'none';
-            document.getElementById('dash-box').style.display = 'block';
-            document.getElementById('headerAvatarBox').style.display = 'flex';
-            document.getElementById('welcomeMsg').innerText = `Hello, ${user.name}!`;
-            const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 'ST';
-            document.getElementById('userAvatarText').innerText = initials;
-            document.getElementById('hamburgerBtn').style.display = 'flex';
-
-            const isAdmin = user.role === 'admin';
-            const isFaculty = user.role === 'faculty';
-            const isStudent = user.role === 'student';
-            const branch = user.branch || 'CSE';
-            document.getElementById('roleLabel').innerText = "ID";
-            document.getElementById('userRoll').innerText = user.rollNo;
-            document.getElementById('userRoleBadge').innerText = isAdmin ? '👑 Admin' : isFaculty ? '👨‍🏫 Faculty' : '🎓 Student';
-            document.getElementById('userBranchBadge').innerText = `📚 ${branch}`;
-
-            if (isAdmin || isFaculty) {
-                document.getElementById('studentStatsGrid').style.display = 'none';
-                document.getElementById('adminStatsGrid').style.display = 'grid';
-                document.getElementById('simulatorBox').style.display = 'none';
-                document.getElementById('adminLiveDashboard').style.display = isAdmin ? 'block' : 'none';
-                document.getElementById('markTab').style.display = 'none';
-                document.getElementById('adminContentArea').style.display = 'block';
-                document.getElementById('teacherTab').style.display = isFaculty ? 'block' : 'none';
-                if (isAdmin) {
-                    loadDashboardStats();
-                    setInterval(loadDashboardStats, 60000);
-                    populateStudentSelect();
-                    populateTeacherSelect();
-                    generatePasscode('full_day');
-                    generatePasscode('single_lecture');
-                    fetchAllUsers();
-                    populateAdminStudentSelect();
-                    populateSubjectDropdown();
-                    toggleFacultyRegistrationFields();
-                    loadAllAttendance();
-                    populateBulkStudentSelect();
-                    switchAdminSubTab(currentAdminSubTab || 'subDirectory');
-                } else {
-                    loadTeacherSubjects();
-                    loadTeacherRecent();
-                    fetchTeacherStudents();
-                    document.getElementById('teacherPasscodeDisplay').innerText = '—';
-                    teacherCurrentPasscode = '—';
-                    document.getElementById('teacherTab').style.display = 'block';
-                    document.getElementById('adminContentArea').style.display = 'none';
-                }
-            } else {
-                // Student
-                document.getElementById('studentStatsGrid').style.display = 'grid';
-                document.getElementById('adminStatsGrid').style.display = 'none';
-                document.getElementById('simulatorBox').style.display = 'flex';
-                document.getElementById('adminLiveDashboard').style.display = 'none';
-                document.getElementById('adminContentArea').style.display = 'none';
-                document.getElementById('teacherTab').style.display = 'none';
-                document.getElementById('markTab').style.display = 'block';
-                fetchHistory(user.rollNo);
-                fetchMonthlySummary();
-            }
-
-            if (impersonating) {
-                document.getElementById('impersonationBanner').style.display = 'flex';
-            } else {
-                document.getElementById('impersonationBanner').style.display = 'none';
-            }
-
-            const todayISO = new Date().toISOString().split('T')[0];
-            document.getElementById('manualDate').value = todayISO;
-            fetchNotices();
-            loadSubjectsForManual();
-            updatePeriodTrackerWidget();
-            setInterval(updatePeriodTrackerWidget, 30000);
-
-            document.getElementById('chatAvatarTrigger').style.display = 'flex';
-            loadChatHistory(user.rollNo);
-            updateWelcomeGreeting();
-            buildSideDrawer();
-        }
-
-        // ============================================================
         // INIT
         // ============================================================
         function initMonthSelector() {
@@ -5892,6 +5308,7 @@
             }
         }
 
+        // Attach chat toggle events with both click and touch
         document.addEventListener('DOMContentLoaded', function() {
             const toggleBtn = document.getElementById('chatAvatarTrigger');
             const closeBtn = document.getElementById('chatCloseBtn');
@@ -5908,19 +5325,9 @@
                 avatar.addEventListener('click', toggleChat);
                 avatar.addEventListener('touchstart', toggleChat, { passive: true });
             }
-
-            const manualRoll = document.getElementById('manualRoll');
-            if (manualRoll) {
-                manualRoll.addEventListener('input', autoDetectBranch);
-            }
-
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') closeSideDrawer();
-            });
-
-            document.getElementById('sideDrawerOverlay').addEventListener('click', closeSideDrawer);
         });
 
+        // Main init
         (function() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (user && localStorage.getItem('token')) {
@@ -5946,93 +5353,16 @@
             document.getElementById('teacherReportRange')?.addEventListener('change', toggleTeacherReportRange);
 
             console.log('✅ BM Group ERP Portal loaded successfully!');
-            console.log('✅ AI: Groq API integrated.');
-            console.log('✅ Auto branch detection for manual entry.');
-            console.log('✅ Days attended percentage added.');
-            console.log('✅ Side drawer navigation with animations.');
-            console.log('✅ Server busy mode – ONLY affects Students. Admin & Faculty unaffected.');
-            console.log('✅ Bulk marking uses each student\'s branch timetable.');
-            console.log('✅ Location errors show specific messages.');
+            console.log('🔒 Full Day: 5-digit passcode required.');
+            console.log('🔒 Single Lecture: 4-digit passcode required (valid for current period).');
+            console.log('📊 Teacher reports: date range options available.');
+            console.log('🔒 Roll number validation: 24CSE00 / 24AIDS00 format enforced.');
+            console.log('🛡️ All endpoints aligned with backend.');
+            console.log('🤖 Chat AI: Gemini Pro style with history, time-based greetings, and quick chips.');
+            console.log('📱 Mobile keyboard closes automatically after sending message.');
+            console.log('📏 Chat panel is now centered and occupies ~75% of screen.');
+            console.log('✅ Chat button fixed: removed inline onclick causing double toggle; widget display toggled properly.');
         })();
-
-        // Expose functions globally
-        window.toggleSideDrawer = toggleSideDrawer;
-        window.closeSideDrawer = closeSideDrawer;
-        window.switchMainTab = switchMainTab;
-        window.switchAdminSubTab = switchAdminSubTab;
-        window.loadAllAttendance = loadAllAttendance;
-        window.fetchAllUsers = fetchAllUsers;
-        window.exportExcelGrid = exportExcelGrid;
-        window.downloadGoogleSheetsExport = downloadGoogleSheetsExport;
-        window.downloadSingleStudentAttendance = downloadSingleStudentAttendance;
-        window.adminLoginAsStudent = adminLoginAsStudent;
-        window.generateStudentReport = generateStudentReport;
-        window.generateClassAttendanceReport = generateClassAttendanceReport;
-        window.autoDetectBranch = autoDetectBranch;
-        window.loadSubjectsForManual = loadSubjectsForManual;
-        window.toggleAllSubjects = toggleAllSubjects;
-        window.selectAllSubjects = selectAllSubjects;
-        window.markManualAttendanceBulk = markManualAttendanceBulk;
-        window.markAllSubjectsForDay = markAllSubjectsForDay;
-        window.declareHoliday = declareHoliday;
-        window.generatePasscode = generatePasscode;
-        window.generateTeacherPasscode = generateTeacherPasscode;
-        window.toggleFacultyRegistrationFields = toggleFacultyRegistrationFields;
-        window.adminRegisterUser = adminRegisterUser;
-        window.assignSubjectToTeacher = assignSubjectToTeacher;
-        window.removeSubjectFromTeacher = removeSubjectFromTeacher;
-        window.resetDeviceBinding = resetDeviceBinding;
-        window.updateRollNumberFormat = updateRollNumberFormat;
-        window.resetUserPassword = resetUserPassword;
-        window.triggerBulkUpdate = triggerBulkUpdate;
-        window.triggerAidsBulkUpdate = triggerAidsBulkUpdate;
-        window.deleteUserAccount = deleteUserAccount;
-        window.setServerBusy = setServerBusy;
-        window.toggleSingleMonthWrapper = toggleSingleMonthWrapper;
-        window.populateBulkStudentSelect = populateBulkStudentSelect;
-        window.toggleAllBulkStudents = toggleAllBulkStudents;
-        window.addBulkDate = addBulkDate;
-        window.removeBulkDate = removeBulkDate;
-        window.bulkMarkAttendance = bulkMarkAttendance;
-        window.bulkDeleteAttendance = bulkDeleteAttendance;
-        window.markFullDayAttendance = markFullDayAttendance;
-        window.markActivePeriodAttendance = markActivePeriodAttendance;
-        window.toggleCalendarView = toggleCalendarView;
-        window.fetchMonthlySummary = fetchMonthlySummary;
-        window.openStudentExcelModal = openStudentExcelModal;
-        window.processStudentExcelDownload = processStudentExcelDownload;
-        window.closeStudentExcelModal = closeStudentExcelModal;
-        window.saveEditAttendance = saveEditAttendance;
-        window.closeEditModal = closeEditModal;
-        window.viewStudentProfile = viewStudentProfile;
-        window.closeProfileModal = closeProfileModal;
-        window.deleteRecord = deleteRecord;
-        window.deleteAllForDate = deleteAllForDate;
-        window.viewTeacherStudent = viewTeacherStudent;
-        window.closeTeacherStudentModal = closeTeacherStudentModal;
-        window.generateTeacherReport = generateTeacherReport;
-        window.toggleTeacherReportRange = toggleTeacherReportRange;
-        window.fetchTeacherStudents = fetchTeacherStudents;
-        window.loadTeacherRecent = loadTeacherRecent;
-        window.togglePassword = togglePassword;
-        window.toggleMode = toggleMode;
-        window.handleAuth = handleAuth;
-        window.logout = logout;
-        window.toggleChat = toggleChat;
-        window.toggleSidebar = toggleSidebar;
-        window.sendChatMessage = sendChatMessage;
-        window.sendQuickQuestion = sendQuickQuestion;
-        window.newChat = newChat;
-        window.loadChatThread = loadChatThread;
-        window.deleteChatThread = deleteChatThread;
-        window.fetchHistory = fetchHistory;
-        window.loadDashboardStats = loadDashboardStats;
-        window.postNotice = postNotice;
-        window.clearNotice = clearNotice;
-        window.toggleCalendarView = toggleCalendarView;
-        window.openEditModal = openEditModal;
-        window.switchBackFromImpersonation = switchBackFromImpersonation;
-        window.checkServerBusy = checkServerBusy;
     </script>
 </body>
 </html>
