@@ -16,7 +16,7 @@ app.use(cors());
 // ---------- Environment Variables ----------
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY; // ✅ Now using OpenRouter
+const GROQ_API_KEY = process.env.GROQ_API_KEY; // ✅ Now using Groq
 const COLLEGE_LAT = 28.4509370;
 const COLLEGE_LNG = 76.7688120;
 const COLLEGE_RADIUS = 50;
@@ -515,6 +515,13 @@ const chatSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
+// ========== NEW: System Settings Schema for Server Busy Mode ==========
+const systemSettingsSchema = new mongoose.Schema({
+  key: { type: String, required: true, unique: true },
+  value: { type: mongoose.Schema.Types.Mixed, required: true },
+  updatedAt: { type: Date, default: Date.now }
+});
+
 const User = mongoose.model('User', userSchema);
 const Attendance = mongoose.model('Attendance', attendanceSchema);
 const Holiday = mongoose.model('Holiday', holidaySchema);
@@ -522,6 +529,7 @@ const Notice = mongoose.model('Notice', noticeSchema);
 const Passcode = mongoose.model('Passcode', passcodeSchema);
 const TeacherSubject = mongoose.model('TeacherSubject', teacherSubjectSchema);
 const Chat = mongoose.model('Chat', chatSchema);
+const SystemSettings = mongoose.model('SystemSettings', systemSettingsSchema);
 
 Attendance.createIndexes().catch(err => console.error('Index creation error:', err));
 
@@ -665,6 +673,18 @@ app.post('/api/auth/login', async (req, res) => {
     if (!parseResult.success) return res.status(400).json({ error: parseResult.error.errors[0].message });
     const { rollNo, password, deviceId } = parseResult.data;
     const cleanRoll = rollNo.trim().toUpperCase();
+
+    // ===== CHECK SERVER BUSY MODE =====
+    const serverBusySetting = await SystemSettings.findOne({ key: 'serverBusy' });
+    const isServerBusy = serverBusySetting ? serverBusySetting.value === true : false;
+    if (isServerBusy) {
+      // Allow only admin and faculty to login during server busy
+      const userCheck = await User.findOne({ rollNo: cleanRoll });
+      if (userCheck && userCheck.role !== 'admin' && userCheck.role !== 'faculty') {
+        return res.status(503).json({ error: 'Server is currently busy with maintenance. Please try again later.' });
+      }
+    }
+
     const user = await User.findOne({ rollNo: cleanRoll });
     if (!user) return res.status(400).json({ error: 'User not found!' });
     const isMatch = await bcrypt.compare(password, user.password);
@@ -807,6 +827,28 @@ app.post('/api/admin/login-as-student', async (req, res) => {
     if (!student) return res.status(404).json({ error: 'Student not found!' });
     const token = jwt.sign({ id: student._id, rollNo: student.rollNo, name: student.name, role: 'student' }, JWT_SECRET, { expiresIn: '1h' });
     res.json({ message: `Logged in as ${student.name}`, token, user: { name: student.name, rollNo: student.rollNo, role: 'student' }, isImpersonating: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ========== SERVER BUSY MODE (Admin) ==========
+app.post('/api/admin/set-server-busy', async (req, res) => {
+  try {
+    const { requesterRollNo, busy } = req.body;
+    const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+    if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    await SystemSettings.findOneAndUpdate(
+      { key: 'serverBusy' },
+      { key: 'serverBusy', value: busy === true, updatedAt: new Date() },
+      { upsert: true, new: true }
+    );
+    res.json({ message: `Server busy mode set to ${busy ? 'ON' : 'OFF'}` });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/admin/get-server-busy', async (req, res) => {
+  try {
+    const setting = await SystemSettings.findOne({ key: 'serverBusy' });
+    res.json({ busy: setting ? setting.value === true : false });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -1481,10 +1523,10 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
   }
 });
 
-// ========== MANUAL ATTENDANCE (Admin) – with branch validation and duplicate handling ==========
+// ========== MANUAL ATTENDANCE (Admin) – AUTO BRANCH DETECTION ==========
 app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
   try {
-    const { requesterRollNo, studentRollNo, date, subjects, status, branch } = req.body;
+    const { requesterRollNo, studentRollNo, date, subjects, status } = req.body;
     const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
     if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const parts = date.split('-');
@@ -1496,15 +1538,10 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
     const user = await User.findOne({ rollNo: targetRoll });
     if (!user) return res.status(404).json({ error: `Roll No ${targetRoll} not registered!` });
     
-    if (branch) {
-      const studentBranch = user.branch || 'CSE';
-      if (branch.toUpperCase() !== studentBranch.toUpperCase()) {
-        return res.status(400).json({ error: `Branch mismatch! Student is in ${studentBranch}, but selected ${branch}. Please select correct branch.` });
-      }
-    }
+    // ===== AUTO DETECT BRANCH FROM STUDENT PROFILE =====
+    const actualBranch = user.branch || 'CSE';
     
     let markedCount = 0, markedSubjects = [], alreadyMarked = [];
-    const actualBranch = user.branch || 'CSE';
     const timetable = getTimetableForBranch(actualBranch);
     let subjectsToMark = subjects;
     if (!subjectsToMark || subjectsToMark.length === 0) {
@@ -1536,7 +1573,7 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
       markedCount++;
       markedSubjects.push(fullSub);
     }
-    let message = `✅ Marked ${markedCount} lectures for ${user.name} on ${date}`;
+    let message = `✅ Marked ${markedCount} lectures for ${user.name} on ${date} (Branch: ${actualBranch})`;
     if (alreadyMarked.length > 0) message += `. Already marked: ${alreadyMarked.join(', ')}`;
     res.status(201).json({ message, markedSubjects, alreadyMarked, total: markedCount });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -2094,7 +2131,7 @@ app.post('/api/admin/bulk-register-and-update-attendance-aids', async (req, res)
   }
 });
 
-// ========== UPDATED: BULK MARK ATTENDANCE (Admin) – with duplicate handling ==========
+// ========== UPDATED: BULK MARK ATTENDANCE (Admin) – AUTO BRANCH PER STUDENT ==========
 app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNos, dates, subjects } = req.body;
@@ -2117,11 +2154,14 @@ app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
     if (students.length === 0) return res.status(404).json({ error: 'No valid students found.' });
 
     const results = [];
+    let totalMarked = 0, totalSkipped = 0;
+
     for (const student of students) {
+      // ===== AUTO DETECT BRANCH FROM STUDENT PROFILE =====
       const branch = student.branch || 'CSE';
       const timetable = getTimetableForBranch(branch);
-      let markedCount = 0;
-      let skippedCount = 0;
+      let studentMarked = 0, studentSkipped = 0;
+      
       for (const date of dates) {
         const dateStatus = await checkDateStatus(date);
         if (dateStatus.isBlocked) continue;
@@ -2129,6 +2169,7 @@ app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
         let daySubjects = timetable[dayName] || [];
         let subjectsToMark = subjects && subjects.length > 0 ? subjects : daySubjects.map(s => s.subject);
         const uniqueSubjects = [...new Set(subjectsToMark.filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports')))];
+        
         for (const sub of uniqueSubjects) {
           const exists = await Attendance.findOne({ rollNo: student.rollNo, subject: sub, date });
           if (!exists) {
@@ -2144,32 +2185,35 @@ app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
                 isVerified: true,
                 branch: branch
               }).save();
-              markedCount++;
+              studentMarked++;
             } catch (err) {
               if (err.code === 11000) {
-                skippedCount++;
+                studentSkipped++;
               } else {
                 throw err;
               }
             }
           } else {
-            skippedCount++;
+            studentSkipped++;
           }
         }
       }
-      results.push({ rollNo: student.rollNo, marked: markedCount, skipped: skippedCount });
+      results.push({ rollNo: student.rollNo, branch, marked: studentMarked, skipped: studentSkipped });
+      totalMarked += studentMarked;
+      totalSkipped += studentSkipped;
     }
 
-    const totalMarked = results.reduce((sum, r) => sum + r.marked, 0);
-    const totalSkipped = results.reduce((sum, r) => sum + r.skipped, 0);
-    res.json({ message: `✅ Bulk mark completed. Marked ${totalMarked} new records, skipped ${totalSkipped} existing.`, results });
+    res.json({ 
+      message: `✅ Bulk mark completed. Marked ${totalMarked} new records, skipped ${totalSkipped} existing.`, 
+      results 
+    });
   } catch (err) {
     console.error('Bulk mark error:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// ========== UPDATED: BULK DELETE ATTENDANCE (Admin) – supports specific dates ==========
+// ========== UPDATED: BULK DELETE ATTENDANCE (Admin) ==========
 app.delete('/api/admin/bulk-delete-attendance', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNos, dates } = req.body;
@@ -2260,7 +2304,7 @@ app.delete('/api/chats/:threadId', async (req, res) => {
   }
 });
 
-// ==================== CHAT AI ENDPOINT – USING OPENROUTER API ====================
+// ==================== CHAT AI ENDPOINT – USING GROQ API ====================
 app.post('/api/chat', async (req, res) => {
   try {
     const { message, rollNo, role, name, branch, threadId } = req.body;
@@ -2291,7 +2335,6 @@ app.post('/api/chat', async (req, res) => {
         }
       } catch (err) {
         console.error('Error fetching user data for chat:', err);
-        // continue without data
       }
     }
 
@@ -2346,12 +2389,12 @@ Reply in a clear, conversational, and professional manner.`;
     let reply = '';
     let aiError = false;
 
-    // ===== Call OpenRouter API =====
-    if (OPENROUTER_API_KEY) {
+    // ===== Call GROQ API =====
+    if (GROQ_API_KEY) {
       try {
-        // Use a free model from OpenRouter (e.g., Mistral 7B)
-        const openRouterPayload = {
-          model: 'mistralai/mistral-7b-instruct', // Free tier model
+        // Use Groq's free model: mixtral-8x7b-32768 or llama3-8b-8192
+        const groqPayload = {
+          model: 'mixtral-8x7b-32768',
           messages: messages,
           temperature: 0.7,
           max_tokens: 1000
@@ -2360,33 +2403,31 @@ Reply in a clear, conversational, and professional manner.`;
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 15000);
 
-        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-            'HTTP-Referer': 'https://bm-group-erp.com', // Your app URL
-            'X-Title': 'BM Group ERP'
+            'Authorization': `Bearer ${GROQ_API_KEY}`
           },
-          body: JSON.stringify(openRouterPayload),
+          body: JSON.stringify(groqPayload),
           signal: controller.signal
         });
         clearTimeout(timeout);
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('❌ OpenRouter API error:', response.status, errorText);
+          console.error('❌ Groq API error:', response.status, errorText);
           aiError = true;
         } else {
           const data = await response.json();
           reply = data.choices?.[0]?.message?.content || 'Sorry, I could not understand.';
         }
       } catch (err) {
-        console.error('❌ OpenRouter API exception:', err);
+        console.error('❌ Groq API exception:', err);
         aiError = true;
       }
     } else {
-      console.warn('⚠️ OPENROUTER_API_KEY not set');
+      console.warn('⚠️ GROQ_API_KEY not set');
       aiError = true;
     }
 
