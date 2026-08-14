@@ -4,88 +4,118 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>BM Group – ERP</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous">
     </script>
     <style>
-        /* ===== ROOT & RESET ===== */
+        /* ===== ROOT ===== */
         :root {
-            --bg-body: #f0f4f8;
+            --bg: #f0f4f8;
+            --bg-gradient: linear-gradient(145deg, #f0f4f8 0%, #e2e8f0 100%);
             --primary: #2563eb;
             --primary-hover: #1d4ed8;
+            --primary-light: #dbeafe;
+            --primary-gradient: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
             --success: #16a34a;
+            --success-light: #dcfce7;
             --danger: #dc2626;
+            --danger-light: #fee2e2;
             --warning: #d97706;
+            --warning-light: #fef3c7;
             --card-bg: #ffffff;
             --card-border: #e2e8f0;
-            --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.06);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.10);
+            --shadow-hover: 0 8px 30px rgba(37, 99, 235, 0.12);
             --text-main: #0f172a;
             --text-muted: #64748b;
-            --radius: 12px;
+            --radius: 14px;
             --radius-sm: 8px;
+            --radius-full: 9999px;
             --chat-bg: #f8fafc;
             --chat-user: #2563eb;
             --chat-bot: #e2e8f0;
+            --transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
         }
         * {
             box-sizing: border-box;
-            font-family: 'Plus Jakarta Sans', sans-serif;
             margin: 0;
             padding: 0;
         }
         body {
-            background: var(--bg-body);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-gradient);
             color: var(--text-main);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 16px;
+            padding: 20px;
+            margin: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+            transition: var(--transition);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
         }
         /* ===== TOAST ===== */
         #toast-container {
             position: fixed;
-            top: 20px;
+            top: 24px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 9999;
             width: 90%;
-            max-width: 420px;
+            max-width: 440px;
             pointer-events: none;
         }
         .toast-card {
-            padding: 12px 16px;
+            padding: 14px 20px;
             border-radius: var(--radius);
             font-size: 13px;
             font-weight: 600;
             text-align: center;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            box-shadow: var(--shadow-lg);
             border: 1px solid var(--card-border);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 12px;
             opacity: 0;
-            transform: translateY(-16px) scale(0.96);
-            transition: all 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: translateY(-20px) scale(0.95);
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
             pointer-events: auto;
+            backdrop-filter: blur(8px);
+            background: rgba(255, 255, 255, 0.92);
         }
         .toast-card.show {
             opacity: 1;
             transform: translateY(0) scale(1);
         }
         .toast-card.toast-success {
-            background: #f0fdf4;
+            background: rgba(240, 253, 244, 0.95);
             color: #166534;
             border-color: #bbf7d0;
         }
         .toast-card.toast-error {
-            background: #fef2f2;
+            background: rgba(254, 242, 242, 0.95);
             color: #991b1b;
             border-color: #fecaca;
-            animation: shake 0.4s ease-in-out;
+            animation: shake 0.5s ease;
         }
         @keyframes shake {
             0%,
@@ -94,38 +124,39 @@
             }
             20%,
             60% {
-                transform: translateX(-4px);
+                transform: translateX(-6px);
             }
             40%,
             80% {
-                transform: translateX(4px);
+                transform: translateX(6px);
             }
         }
-        /* ===== APP CONTAINER ===== */
+        /* ===== APP ===== */
         .app-container {
             width: 100%;
-            max-width: 480px;
+            max-width: 500px;
             background: var(--card-bg);
-            border-radius: 20px;
-            box-shadow: var(--shadow-md);
-            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(255, 255, 255, 0.5);
             overflow: hidden;
-            animation: cardScaleUp 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+            animation: appEntrance 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+            backdrop-filter: blur(4px);
         }
-        @keyframes cardScaleUp {
+        @keyframes appEntrance {
             from {
                 opacity: 0;
-                transform: scale(0.95);
+                transform: scale(0.92) translateY(20px);
             }
             to {
                 opacity: 1;
-                transform: scale(1);
+                transform: scale(1) translateY(0);
             }
         }
-        @keyframes fadeInSlide {
+        @keyframes fadeSlide {
             from {
                 opacity: 0;
-                transform: translateY(12px);
+                transform: translateY(14px);
             }
             to {
                 opacity: 1;
@@ -133,28 +164,33 @@
             }
         }
         .tab-content-active {
-            animation: fadeInSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation: fadeSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         /* ===== HEADER ===== */
         .app-header {
-            background: #fff;
-            padding: 16px 18px;
+            background: var(--card-bg);
+            padding: 16px 20px;
             border-bottom: 1px solid var(--card-border);
             display: flex;
             align-items: center;
             justify-content: space-between;
+            backdrop-filter: blur(8px);
         }
         .app-header-title h1 {
-            font-size: 15px;
-            font-weight: 800;
-            color: #0f172a;
+            font-size: 16px;
+            font-weight: 900;
             letter-spacing: -0.3px;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         .app-header-title p {
             font-size: 10px;
             font-weight: 600;
             color: var(--text-muted);
             margin-top: 1px;
+            letter-spacing: 0.3px;
         }
         .header-avatar-badge {
             display: flex;
@@ -162,34 +198,36 @@
             gap: 8px;
         }
         .avatar-circle {
-            width: 32px;
-            height: 32px;
+            width: 38px;
+            height: 38px;
             border-radius: 50%;
-            background: #eff6ff;
-            color: var(--primary);
+            background: var(--primary-gradient);
+            color: #fff;
             font-weight: 700;
-            font-size: 11px;
+            font-size: 13px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 1px solid #dbeafe;
-            transition: all 0.3s;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            transition: var(--transition);
             cursor: pointer;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
         }
         .avatar-circle:hover {
-            transform: scale(1.05);
+            transform: scale(1.06) rotate(-2deg);
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
         }
-        /* ===== NOTICE BANNER ===== */
+        /* ===== BANNERS ===== */
         .notice-banner {
-            background: #fffbeb;
-            border-bottom: 1px solid #fef3c7;
+            background: var(--warning-light);
+            border-bottom: 1px solid #fde68a;
             color: #92400e;
             font-size: 10px;
-            padding: 6px 12px;
+            padding: 8px 14px;
             font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
         .notice-marquee {
             overflow: hidden;
@@ -198,7 +236,7 @@
         }
         .notice-marquee p {
             display: inline-block;
-            animation: marquee 16s linear infinite;
+            animation: marquee 18s linear infinite;
         }
         @keyframes marquee {
             0% {
@@ -208,12 +246,11 @@
                 transform: translateX(-100%);
             }
         }
-        /* ===== IMPERSONATION BANNER ===== */
         .impersonation-banner {
-            background: #fef3c7;
+            background: var(--warning-light);
             border-bottom: 2px solid #f59e0b;
             color: #92400e;
-            padding: 6px 14px;
+            padding: 8px 16px;
             font-size: 11px;
             font-weight: 700;
             display: flex;
@@ -223,142 +260,179 @@
             flex-wrap: wrap;
         }
         .impersonation-banner .switch-back-btn {
-            background: #dc2626;
-            color: white;
+            background: var(--danger);
+            color: #fff;
             border: none;
-            border-radius: 6px;
-            padding: 4px 12px;
+            border-radius: var(--radius-sm);
+            padding: 4px 14px;
             font-size: 10px;
             font-weight: 700;
             cursor: pointer;
-            transition: 0.2s;
+            transition: var(--transition);
         }
         .impersonation-banner .switch-back-btn:hover {
             background: #b91c1c;
+            transform: scale(1.04);
         }
         /* ===== BODY ===== */
         .app-body {
-            padding: 14px;
+            padding: 16px;
         }
         /* ===== FORM ===== */
         input,
         select {
             width: 100%;
-            padding: 9px 12px;
+            padding: 10px 14px;
             margin-bottom: 8px;
             background: #f8fafc;
-            border: 1px solid var(--card-border);
+            border: 1.5px solid var(--card-border);
             border-radius: var(--radius-sm);
-            font-size: 11px;
-            font-weight: 600;
+            font-size: 12px;
+            font-weight: 500;
             color: var(--text-main);
             outline: none;
-            transition: all 0.3s;
+            transition: var(--transition);
+            font-family: inherit;
         }
         select option {
             background: #fff;
-            color: #0f172a;
+            color: var(--text-main);
         }
         input::placeholder {
             color: #94a3b8;
-            font-weight: 500;
+            font-weight: 400;
         }
         input:focus,
         select:focus {
             background: #fff;
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
         }
         .password-wrapper {
             position: relative;
             width: 100%;
         }
         .password-wrapper input {
-            padding-right: 36px;
+            padding-right: 40px;
         }
         .eye-icon {
             position: absolute;
-            right: 10px;
-            top: 38%;
+            right: 12px;
+            top: 50%;
             transform: translateY(-50%);
             cursor: pointer;
             color: var(--text-muted);
-            transition: color 0.3s;
+            transition: var(--transition);
+            padding: 4px;
+            border-radius: 4px;
         }
         .eye-icon:hover {
             color: var(--primary);
+            background: var(--primary-light);
         }
         /* ===== BUTTONS ===== */
         .btn {
             width: 100%;
-            padding: 9px 12px;
+            padding: 10px 16px;
             border-radius: var(--radius-sm);
             font-weight: 700;
-            font-size: 11px;
+            font-size: 12px;
             cursor: pointer;
             margin-top: 4px;
-            transition: all 0.3s;
+            transition: var(--transition);
             border: none;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
+            gap: 8px;
             box-shadow: var(--shadow-sm);
+            font-family: inherit;
+            letter-spacing: 0.2px;
+            position: relative;
+            overflow: hidden;
         }
-        .btn:hover {
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-hover);
+        .btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0);
+            transition: var(--transition);
+        }
+        .btn:hover::after {
+            background: rgba(255, 255, 255, 0.08);
         }
         .btn:active {
-            transform: scale(0.97) translateY(0);
+            transform: scale(0.96);
         }
         .btn-primary {
-            background: var(--primary);
-            color: white;
+            background: var(--primary-gradient);
+            color: #fff;
+            box-shadow: 0 2px 12px rgba(37, 99, 235, 0.30);
         }
         .btn-primary:hover {
-            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(37, 99, 235, 0.35);
         }
         .btn-success {
-            background: var(--success);
-            color: white;
+            background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+            color: #fff;
+            box-shadow: 0 2px 12px rgba(22, 163, 74, 0.30);
+        }
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(22, 163, 74, 0.35);
         }
         .btn-warning {
-            background: var(--warning);
-            color: white;
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+            color: #fff;
+            box-shadow: 0 2px 12px rgba(217, 119, 6, 0.30);
+        }
+        .btn-warning:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(217, 119, 6, 0.35);
         }
         .btn-accent {
-            background: #0284c7;
-            color: white;
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: #fff;
+            box-shadow: 0 2px 12px rgba(2, 132, 199, 0.30);
+        }
+        .btn-accent:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(2, 132, 199, 0.35);
         }
         .btn-outline {
             background: #fff;
-            border: 1px solid var(--card-border);
+            border: 1.5px solid var(--card-border);
             color: var(--text-main);
+            box-shadow: none;
         }
         .btn-outline:hover {
             background: #f8fafc;
             border-color: #cbd5e1;
+            transform: translateY(-1px);
         }
         .btn-danger {
-            background: #fef2f2;
+            background: var(--danger-light);
             color: var(--danger);
-            border: 1px solid #fecaca;
+            border: 1.5px solid #fecaca;
+            box-shadow: none;
         }
         .btn-danger:hover {
             background: #fee2e2;
+            transform: translateY(-1px);
         }
         .btn-sm {
-            padding: 5px 10px;
+            padding: 6px 14px;
             font-size: 10px;
             width: auto;
             margin: 0;
         }
         .btn-xs {
-            padding: 3px 8px;
+            padding: 3px 10px;
             font-size: 8px;
             width: auto;
             margin: 0;
+            border-radius: 4px;
         }
         .btn-ghost {
             background: transparent;
@@ -373,23 +447,24 @@
         }
         /* ===== BADGES ===== */
         .badge {
-            padding: 2px 8px;
-            border-radius: 4px;
+            padding: 3px 10px;
+            border-radius: var(--radius-full);
             font-size: 9px;
             font-weight: 700;
-            transition: all 0.3s;
+            transition: var(--transition);
             display: inline-block;
+            letter-spacing: 0.2px;
         }
         .badge-present {
-            background: #dcfce7;
+            background: var(--success-light);
             color: #15803d;
         }
         .badge-absent {
-            background: #fee2e2;
+            background: var(--danger-light);
             color: #991b1b;
         }
         .badge-active {
-            background: #dbeafe;
+            background: var(--primary-light);
             color: #1d4ed8;
         }
         .badge-role {
@@ -401,158 +476,180 @@
             color: #1e40af;
         }
         .badge-dl {
-            background: #fef3c7;
+            background: var(--warning-light);
             color: #92400e;
         }
         .badge-cse {
-            background: #dbeafe;
+            background: var(--primary-light);
             color: #1e40af;
         }
         .badge-aids {
             background: #fae8ff;
             color: #7c3aed;
         }
-        /* ===== STATS GRID ===== */
+        /* ===== STATS ===== */
         .stats-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin: 10px 0;
+            gap: 10px;
+            margin: 12px 0;
         }
         .stat-card {
             background: #f8fafc;
-            padding: 10px;
+            padding: 14px 12px;
             border-radius: var(--radius);
             text-align: center;
             border: 1px solid var(--card-border);
-            transition: all 0.3s;
+            transition: var(--transition);
         }
         .stat-card:hover {
-            transform: translateY(-1px);
+            transform: translateY(-2px);
             border-color: #cbd5e1;
-            box-shadow: var(--shadow-sm);
+            box-shadow: var(--shadow-md);
         }
         .stat-card .value {
-            font-size: 18px;
-            font-weight: 800;
-            color: var(--primary);
+            font-size: 22px;
+            font-weight: 900;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             letter-spacing: -0.5px;
         }
         .stat-card .label {
             font-size: 9px;
             color: var(--text-muted);
             font-weight: 700;
-            margin-top: 2px;
+            margin-top: 4px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        /* ===== SIMULATOR CARD ===== */
+        /* ===== SIMULATOR ===== */
         .simulator-card {
-            background: #f0f9ff;
+            background: var(--primary-light);
             border: 1px solid #bae6fd;
             border-radius: var(--radius);
-            padding: 8px 12px;
-            margin-bottom: 10px;
+            padding: 10px 14px;
+            margin-bottom: 12px;
             font-size: 10px;
             color: #0369a1;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
+            transition: var(--transition);
+        }
+        .simulator-card:hover {
+            box-shadow: var(--shadow-sm);
         }
         /* ===== QUICK PORTALS ===== */
         .quick-portals-card {
             background: #fff;
             border: 1px solid var(--card-border);
             border-radius: var(--radius);
-            padding: 10px;
-            margin: 10px 0;
+            padding: 12px;
+            margin: 12px 0;
+            transition: var(--transition);
+        }
+        .quick-portals-card:hover {
+            box-shadow: var(--shadow-sm);
         }
         .portal-grid {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
-            gap: 6px;
-            margin-top: 6px;
+            gap: 8px;
+            margin-top: 8px;
         }
         .portal-btn {
             background: #f8fafc;
             border: 1px solid var(--card-border);
             border-radius: var(--radius-sm);
-            padding: 6px 4px;
+            padding: 8px 6px;
             text-align: center;
             font-size: 9px;
             font-weight: 700;
             color: var(--text-main);
             cursor: pointer;
-            transition: all 0.3s;
+            transition: var(--transition);
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 3px;
+            gap: 4px;
         }
         .portal-btn:hover {
             background: #fff;
             border-color: var(--primary);
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-sm);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
             color: var(--primary);
+        }
+        .portal-btn svg {
+            width: 20px;
+            height: 20px;
         }
         /* ===== CALENDAR ===== */
         .calendar-container {
             background: #fff;
             border: 1px solid var(--card-border);
             border-radius: var(--radius);
-            padding: 10px;
-            margin: 10px 0;
+            padding: 12px;
+            margin: 12px 0;
+            transition: var(--transition);
+        }
+        .calendar-container:hover {
+            box-shadow: var(--shadow-sm);
         }
         .calendar-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 800;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             color: var(--text-main);
         }
         .calendar-header select {
             margin-top: 0;
-            padding: 4px 6px;
+            padding: 4px 10px;
             font-size: 10px;
             width: auto;
         }
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            gap: 2px;
+            gap: 3px;
             text-align: center;
-            font-size: 9px;
+            font-size: 10px;
         }
         .cal-day-head {
             font-weight: 700;
             color: var(--text-muted);
-            padding-bottom: 3px;
+            padding-bottom: 4px;
             font-size: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         .cal-date {
-            padding: 4px 1px;
-            border-radius: 4px;
+            padding: 5px 2px;
+            border-radius: 6px;
             font-weight: 600;
             background: #f8fafc;
             border: 1px solid #f1f5f9;
-            transition: all 0.2s;
+            transition: var(--transition);
+            font-size: 10px;
         }
         .cal-date:hover {
-            transform: scale(1.05);
+            transform: scale(1.08);
             z-index: 1;
         }
         .cal-p {
-            background: #dcfce7;
+            background: var(--success-light);
             color: #15803d;
             font-weight: 800;
             border-color: #bbf7d0;
         }
         .cal-a {
-            background: #fee2e2;
-            color: #b91c1c;
+            background: var(--danger-light);
+            color: #991b1b;
             font-weight: 800;
             border-color: #fecaca;
         }
@@ -565,24 +662,28 @@
             display: flex;
             background: #f1f5f9;
             border-radius: var(--radius-sm);
-            padding: 2px;
-            margin-bottom: 10px;
+            padding: 3px;
+            margin-bottom: 12px;
         }
         .tab-item {
             flex: 1;
-            padding: 6px;
+            padding: 8px 6px;
             text-align: center;
             font-size: 10px;
             font-weight: 700;
             cursor: pointer;
             color: var(--text-muted);
             border-radius: 6px;
-            transition: all 0.3s;
+            transition: var(--transition);
         }
         .tab-item.active {
             background: #fff;
             color: var(--primary);
             box-shadow: var(--shadow-sm);
+        }
+        .tab-item:hover:not(.active) {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.4);
         }
         /* ===== ADMIN NAV ===== */
         .admin-nav {
@@ -592,26 +693,27 @@
             background: #f1f5f9;
             padding: 6px;
             border-radius: var(--radius-sm);
-            margin-bottom: 10px;
+            margin-bottom: 12px;
         }
         .admin-nav-item {
             flex: 1 0 auto;
-            min-width: 60px;
+            min-width: 64px;
             text-align: center;
-            padding: 10px 6px;
-            font-size: 11px;
-            font-weight: 800;
+            padding: 8px 6px;
+            font-size: 10px;
+            font-weight: 700;
             cursor: pointer;
             border-radius: 6px;
             color: var(--text-muted);
-            transition: all 0.3s;
+            transition: var(--transition);
             background: transparent;
             border: 1px solid transparent;
             line-height: 1.3;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.2px;
         }
         .admin-nav-item:hover {
-            background: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.5);
+            transform: translateY(-1px);
         }
         .admin-nav-item.active {
             background: #fff;
@@ -621,57 +723,61 @@
         }
         /* ===== PERIOD CARD ===== */
         .period-card {
-            background: #f0f9ff;
+            background: var(--primary-light);
             border: 1px solid #bae6fd;
             border-radius: var(--radius);
-            padding: 10px;
+            padding: 12px 14px;
             margin: 8px 0;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: var(--transition);
+        }
+        .period-card:hover {
+            box-shadow: var(--shadow-sm);
         }
         .action-btn {
             border: none;
             border-radius: 6px;
-            padding: 5px 8px;
+            padding: 6px 12px;
             font-size: 9px;
             font-weight: 700;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
             gap: 4px;
-            transition: all 0.2s;
+            transition: var(--transition);
+            font-family: inherit;
         }
         .action-btn:hover {
-            opacity: 0.9;
             transform: translateY(-1px);
         }
         .btn-del {
-            background: #fef2f2;
-            color: #dc2626;
+            background: var(--danger-light);
+            color: var(--danger);
             border: 1px solid #fecaca;
         }
         .btn-del:hover {
             background: #fee2e2;
         }
         .btn-view {
-            background: #eff6ff;
-            color: #2563eb;
+            background: var(--primary-light);
+            color: var(--primary);
             border: 1px solid #dbeafe;
         }
         .btn-view:hover {
             background: #dbeafe;
         }
         .btn-edit {
-            background: #fefce8;
-            color: #d97706;
+            background: var(--warning-light);
+            color: var(--warning);
             border: 1px solid #fde68a;
         }
         .btn-edit:hover {
             background: #fef3c7;
         }
         .status-holiday {
-            background: #fef3c7;
+            background: var(--warning-light);
             color: #92400e;
             border-color: #fde68a;
         }
@@ -688,6 +794,7 @@
             border-radius: var(--radius-sm);
             margin-top: 6px;
             background: #fff;
+            transition: var(--transition);
         }
         .table-container table {
             width: 100%;
@@ -697,7 +804,7 @@
         .table-container th {
             background: #f8fafc;
             color: var(--text-muted);
-            padding: 6px 8px;
+            padding: 8px 10px;
             text-align: left;
             border-bottom: 1px solid var(--card-border);
             position: sticky;
@@ -705,9 +812,11 @@
             font-weight: 700;
             font-size: 9px;
             z-index: 2;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
         }
         .table-container td {
-            padding: 6px 8px;
+            padding: 8px 10px;
             border-bottom: 1px solid #f1f5f9;
             font-size: 10px;
             vertical-align: middle;
@@ -718,11 +827,15 @@
         /* ===== ADMIN BOXES ===== */
         .admin-box {
             background: #fff;
-            padding: 12px;
+            padding: 14px;
             border-radius: var(--radius);
             border: 1px solid var(--card-border);
-            animation: cardScaleUp 0.5s;
-            margin-bottom: 8px;
+            animation: fadeSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            margin-bottom: 10px;
+            transition: var(--transition);
+        }
+        .admin-box:hover {
+            box-shadow: var(--shadow-sm);
         }
         .admin-box.sub-reports {
             background: #f0fdf4;
@@ -733,7 +846,7 @@
             border-color: #fef08a;
         }
         .admin-box.sub-holiday {
-            background: #fef2f2;
+            background: var(--danger-light);
             border-color: #fecaca;
         }
         .admin-box.sub-passcode {
@@ -757,12 +870,12 @@
             border-color: #bae6fd;
         }
         .sub-section-title {
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 700;
             color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             display: block;
         }
         /* ===== SUBJECT CHECKBOXES ===== */
@@ -770,9 +883,9 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 4px;
-            max-height: 150px;
+            max-height: 160px;
             overflow-y: auto;
-            padding: 4px;
+            padding: 6px;
             background: #f8fafc;
             border-radius: var(--radius-sm);
             border: 1px solid var(--card-border);
@@ -782,16 +895,16 @@
             font-weight: 500;
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 6px;
             cursor: pointer;
-            padding: 3px 6px;
+            padding: 4px 8px;
             background: #fff;
             border-radius: 4px;
             border: 1px solid #e2e8f0;
-            transition: all 0.2s;
+            transition: var(--transition);
         }
         .subject-checkbox-container label:hover {
-            background: #eff6ff;
+            background: var(--primary-light);
             border-color: var(--primary);
         }
         .subject-checkbox-container label input[type="checkbox"] {
@@ -801,7 +914,7 @@
         .subject-checkbox-container .select-all {
             grid-column: span 2;
             background: #e2e8f0;
-            padding: 4px 8px;
+            padding: 6px 10px;
             font-weight: 700;
             border: none;
         }
@@ -811,17 +924,21 @@
         /* ===== PASSCODE DISPLAY ===== */
         .passcode-display {
             background: #f8fafc;
-            padding: 8px;
+            padding: 10px;
             border-radius: var(--radius-sm);
             margin-bottom: 6px;
             border: 1px solid var(--card-border);
             text-align: center;
+            transition: var(--transition);
         }
         .passcode-display h2 {
-            font-size: 20px;
+            font-size: 24px;
             font-weight: 900;
-            color: var(--primary);
-            letter-spacing: 4px;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 6px;
         }
         /* ===== TODAY PRESENT LIST ===== */
         #todayPresentList {
@@ -838,19 +955,20 @@
             font-weight: 700;
             color: var(--text-muted);
             text-transform: uppercase;
-            margin-bottom: 2px;
+            margin-bottom: 3px;
             display: block;
             border-bottom: 1px solid var(--card-border);
-            padding-bottom: 2px;
+            padding-bottom: 3px;
         }
         .present-item {
             display: flex;
             justify-content: space-between;
-            padding: 3px 6px;
+            padding: 4px 8px;
             border-bottom: 1px solid #f1f5f9;
+            transition: var(--transition);
         }
-        .present-item:last-child {
-            border-bottom: none;
+        .present-item:hover {
+            background: #f8fafc;
         }
         .present-item .roll {
             font-weight: 600;
@@ -867,28 +985,38 @@
         }
         .subject-chip {
             background: var(--card-bg);
-            padding: 2px 6px;
+            padding: 3px 8px;
             border-radius: 4px;
             border: 1px solid var(--card-border);
             font-size: 8px;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+        .subject-chip:hover {
+            border-color: var(--primary);
         }
         /* ===== TOOL SUB CARD ===== */
         .tool-sub-card {
             background: #f8fafc;
             border: 1px solid var(--card-border);
             border-radius: var(--radius);
-            padding: 10px;
-            margin-bottom: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            transition: var(--transition);
+        }
+        .tool-sub-card:hover {
+            box-shadow: var(--shadow-sm);
+            border-color: #cbd5e1;
         }
         .tool-title {
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 800;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             display: block;
         }
         .flex-buttons {
             display: flex;
-            gap: 6px;
+            gap: 8px;
         }
         .flex-buttons .btn {
             margin: 0;
@@ -896,8 +1024,8 @@
         }
         /* ===== SVG ICON ===== */
         .svg-icon {
-            width: 14px;
-            height: 14px;
+            width: 16px;
+            height: 16px;
             fill: none;
             stroke: currentColor;
             stroke-width: 2;
@@ -911,6 +1039,9 @@
             width: 12px;
             height: 12px;
         }
+        .btn:hover .svg-icon {
+            transform: scale(1.1);
+        }
         /* ===== MODAL ===== */
         .modal-overlay {
             position: fixed;
@@ -918,28 +1049,48 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(15, 23, 42, 0.5);
-            backdrop-filter: blur(4px);
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             z-index: 10000;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 16px;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
         }
         .modal-card {
             background: #fff;
             width: 100%;
-            max-width: 340px;
-            border-radius: 14px;
-            padding: 16px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-            border: 1px solid var(--card-border);
-            animation: cardScaleUp 0.3s;
+            max-width: 360px;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            animation: modalScale 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes modalScale {
+            from {
+                opacity: 0;
+                transform: scale(0.92) translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
         }
         .modal-card .modal-actions {
             display: flex;
-            gap: 6px;
-            margin-top: 10px;
+            gap: 8px;
+            margin-top: 12px;
         }
         .modal-card .modal-actions .btn {
             flex: 1;
@@ -953,7 +1104,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 4px 0;
+            padding: 6px 0;
             border-bottom: 1px solid #f1f5f9;
         }
         .profile-modal .record-item:last-child {
@@ -962,36 +1113,35 @@
         /* ===== DOWNLOAD PROGRESS ===== */
         .download-progress {
             position: fixed;
-            bottom: 20px;
+            bottom: 24px;
             left: 50%;
             transform: translateX(-50%);
             background: #1e293b;
-            color: white;
-            padding: 10px 20px;
+            color: #fff;
+            padding: 12px 24px;
             border-radius: var(--radius-sm);
             font-size: 12px;
             z-index: 99999;
             display: none;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             max-width: 90%;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            box-shadow: var(--shadow-lg);
+            font-weight: 600;
         }
         .download-progress.show {
             display: flex;
+            animation: fadeSlide 0.3s ease;
         }
         .download-progress .spinner {
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-top: 2px solid white;
+            width: 18px;
+            height: 18px;
+            border: 2.5px solid rgba(255, 255, 255, 0.25);
+            border-top: 2.5px solid #fff;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
         @keyframes spin {
-            from {
-                transform: rotate(0deg);
-            }
             to {
                 transform: rotate(360deg);
             }
@@ -999,39 +1149,54 @@
         /* ===== FILTER ROW ===== */
         .filter-row {
             display: flex;
-            gap: 6px;
+            gap: 8px;
             flex-wrap: wrap;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
         }
         .filter-row select,
         .filter-row input {
             flex: 1;
-            min-width: 80px;
-            padding: 6px 8px;
+            min-width: 70px;
+            padding: 6px 10px;
             font-size: 9px;
             margin: 0;
         }
         /* ===== RESPONSIVE ===== */
         @media (max-width: 480px) {
+            body {
+                padding: 8px;
+            }
             .app-container {
-                border-radius: 12px;
+                border-radius: 16px;
             }
             .stats-grid {
                 grid-template-columns: 1fr 1fr;
                 gap: 6px;
             }
             .admin-nav-item {
-                min-width: 50px;
-                font-size: 10px;
-                padding: 8px 4px;
+                min-width: 48px;
+                font-size: 9px;
+                padding: 6px 4px;
             }
             .filter-row select,
             .filter-row input {
-                min-width: 60px;
+                min-width: 50px;
                 font-size: 8px;
             }
             .profile-modal {
                 max-width: 100%;
+            }
+            .portal-grid {
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 4px;
+            }
+            .app-header-title h1 {
+                font-size: 14px;
+            }
+            .avatar-circle {
+                width: 32px;
+                height: 32px;
+                font-size: 11px;
             }
         }
         /* ===== BULK STUDENT LIST ===== */
@@ -1049,8 +1214,10 @@
             align-items: center;
             gap: 6px;
             font-size: 10px;
-            padding: 2px 4px;
+            padding: 4px 6px;
             cursor: pointer;
+            transition: var(--transition);
+            border-radius: 4px;
         }
         .bulk-student-list label:hover {
             background: #f1f5f9;
@@ -1058,7 +1225,7 @@
         .bulk-student-list .select-all-label {
             font-weight: 700;
             border-bottom: 1px solid var(--card-border);
-            padding-bottom: 4px;
+            padding-bottom: 6px;
             margin-bottom: 4px;
         }
         .bulk-date-chips {
@@ -1069,40 +1236,44 @@
         }
         .bulk-date-chip {
             background: #e2e8f0;
-            padding: 2px 8px;
+            padding: 3px 10px;
             border-radius: 12px;
             font-size: 10px;
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 6px;
+            font-weight: 500;
         }
         .bulk-date-chip .remove-date {
             cursor: pointer;
             color: var(--danger);
             font-weight: 700;
+            transition: var(--transition);
         }
         .bulk-date-chip .remove-date:hover {
             color: #b91c1c;
+            transform: scale(1.2);
         }
         .bulk-date-input-row {
             display: flex;
-            gap: 6px;
+            gap: 8px;
             align-items: center;
             margin-bottom: 4px;
         }
         .bulk-date-input-row input[type="date"] {
             flex: 1;
-            padding: 6px;
+            padding: 6px 10px;
             font-size: 10px;
             margin: 0;
         }
         .bulk-date-input-row button {
-            padding: 6px 12px;
+            padding: 6px 14px;
             font-size: 10px;
             margin: 0;
         }
-
-        /* ===== CHAT WIDGET - COMPACT, CENTERED (75% size) ===== */
+        /* ========================================================== */
+        /* CHAT WIDGET – COMPACT & CENTERED (75% size)                */
+        /* ========================================================== */
         #chatWidget {
             position: fixed;
             top: 50%;
@@ -1111,37 +1282,31 @@
             z-index: 99999;
             display: none;
             width: 75vw;
-            max-width: 700px;
+            max-width: 720px;
             height: 75vh;
-            max-height: 700px;
+            max-height: 720px;
             background: transparent;
             pointer-events: none;
         }
-        #chatWidget .chat-toggle-btn {
-            display: none;
-            /* we use the avatar to toggle */
-        }
-
         .chat-panel {
             width: 100%;
             height: 100%;
             background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             display: none;
             flex-direction: column;
             overflow: hidden;
-            animation: cardScaleUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            animation: modalScale 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             pointer-events: auto;
         }
         .chat-panel.open {
             display: flex !important;
         }
-
         .chat-panel .chat-header {
             background: #fff;
-            padding: 10px 14px;
+            padding: 12px 16px;
             border-bottom: 1px solid var(--card-border);
             display: flex;
             justify-content: space-between;
@@ -1150,55 +1315,57 @@
         }
         .chat-panel .chat-header .chat-title {
             font-weight: 800;
-            font-size: 14px;
+            font-size: 15px;
             color: var(--text-main);
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
         .chat-panel .chat-header .chat-title .ai-badge {
-            background: #dbeafe;
-            color: var(--primary);
+            background: var(--primary-gradient);
+            color: #fff;
             font-size: 8px;
-            padding: 2px 8px;
-            border-radius: 12px;
+            padding: 2px 10px;
+            border-radius: var(--radius-full);
             font-weight: 700;
+            letter-spacing: 0.3px;
         }
         .chat-panel .chat-header .chat-close {
             background: transparent;
             border: none;
-            font-size: 22px;
+            font-size: 24px;
             cursor: pointer;
             color: var(--text-muted);
             padding: 0 6px;
-            transition: 0.2s;
+            transition: var(--transition);
             touch-action: manipulation;
+            line-height: 1;
         }
         .chat-panel .chat-header .chat-close:hover {
             color: var(--danger);
+            transform: rotate(90deg);
         }
-
         .chat-panel .chat-body {
             display: flex;
             flex: 1;
             overflow: hidden;
-            background: var(--chat-bg, #f8fafc);
+            background: var(--chat-bg);
         }
         .chat-panel .chat-sidebar {
             width: 0;
             overflow: hidden;
             background: #f1f5f9;
             border-right: 1px solid var(--card-border);
-            transition: width 0.3s ease;
+            transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
             flex-shrink: 0;
             display: flex;
             flex-direction: column;
         }
         .chat-panel .chat-sidebar.open {
-            width: 160px;
+            width: 170px;
         }
         .chat-panel .chat-sidebar .sidebar-header {
-            padding: 8px 10px;
+            padding: 10px 12px;
             font-size: 10px;
             font-weight: 700;
             color: var(--text-muted);
@@ -1211,17 +1378,18 @@
             flex-shrink: 0;
         }
         .chat-panel .chat-sidebar .sidebar-header .new-chat-btn {
-            background: var(--primary);
+            background: var(--primary-gradient);
             color: #fff;
             border: none;
             border-radius: 4px;
-            padding: 2px 10px;
+            padding: 3px 12px;
             font-size: 9px;
             font-weight: 700;
             cursor: pointer;
+            transition: var(--transition);
         }
         .chat-panel .chat-sidebar .sidebar-header .new-chat-btn:hover {
-            background: var(--primary-hover);
+            transform: scale(1.04);
         }
         .chat-panel .chat-sidebar .sidebar-list {
             flex: 1;
@@ -1229,18 +1397,21 @@
             padding: 6px;
         }
         .chat-panel .chat-sidebar .sidebar-list .chat-item {
-            padding: 6px 10px;
+            padding: 8px 12px;
             border-radius: 6px;
             font-size: 10px;
             font-weight: 600;
             color: var(--text-main);
             cursor: pointer;
-            transition: all 0.2s;
+            transition: var(--transition);
             margin-bottom: 2px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             border: 1px solid transparent;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         .chat-panel .chat-sidebar .sidebar-list .chat-item:hover {
             background: #fff;
@@ -1252,11 +1423,11 @@
             color: var(--primary);
         }
         .chat-panel .chat-sidebar .sidebar-list .chat-item .delete-chat {
-            float: right;
             color: var(--text-muted);
             cursor: pointer;
             font-size: 12px;
             padding: 0 4px;
+            transition: var(--transition);
         }
         .chat-panel .chat-sidebar .sidebar-list .chat-item .delete-chat:hover {
             color: var(--danger);
@@ -1265,9 +1436,8 @@
             text-align: center;
             color: var(--text-muted);
             font-size: 10px;
-            padding: 20px 0;
+            padding: 24px 0;
         }
-
         .chat-panel .chat-main {
             flex: 1;
             display: flex;
@@ -1278,13 +1448,13 @@
         .chat-panel .chat-main .chat-messages {
             flex: 1;
             overflow-y: auto;
-            padding: 10px 12px;
+            padding: 12px 16px;
             font-size: 13px;
             line-height: 1.6;
-            background: var(--chat-bg, #f8fafc);
+            background: var(--chat-bg);
         }
         .chat-panel .chat-main .chat-messages .chat-msg {
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             display: flex;
             flex-direction: column;
         }
@@ -1296,19 +1466,21 @@
         }
         .chat-panel .chat-main .chat-messages .chat-msg .bubble {
             max-width: 85%;
-            padding: 6px 12px;
-            border-radius: 14px;
+            padding: 8px 16px;
+            border-radius: 16px;
             word-wrap: break-word;
             font-size: 12px;
             line-height: 1.5;
+            transition: var(--transition);
         }
         .chat-panel .chat-main .chat-messages .chat-msg.user .bubble {
-            background: var(--chat-user, #2563eb);
+            background: var(--primary-gradient);
             color: #fff;
             border-bottom-right-radius: 4px;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
         }
         .chat-panel .chat-main .chat-messages .chat-msg.bot .bubble {
-            background: var(--chat-bot, #e2e8f0);
+            background: var(--chat-bot);
             color: var(--text-main);
             border-bottom-left-radius: 4px;
         }
@@ -1325,9 +1497,9 @@
         }
         .chat-panel .chat-main .chat-messages .typing-indicator {
             display: none;
-            padding: 6px 12px;
-            background: var(--chat-bot, #e2e8f0);
-            border-radius: 14px;
+            padding: 8px 16px;
+            background: var(--chat-bot);
+            border-radius: 16px;
             border-bottom-left-radius: 4px;
             width: fit-content;
             font-size: 12px;
@@ -1348,183 +1520,188 @@
                 content: '...';
             }
         }
-
         .chat-panel .chat-main .quick-chips {
-            padding: 4px 10px 6px 10px;
+            padding: 6px 12px 8px 12px;
             display: flex;
             flex-wrap: wrap;
             gap: 4px;
             border-top: 1px solid var(--card-border);
             background: #fff;
             flex-shrink: 0;
-            max-height: 90px;
+            max-height: 96px;
             overflow-y: auto;
         }
         .chat-panel .chat-main .quick-chips .chip {
             background: #f1f5f9;
             border: 1px solid var(--card-border);
-            border-radius: 16px;
-            padding: 3px 10px;
+            border-radius: var(--radius-full);
+            padding: 3px 12px;
             font-size: 9px;
             font-weight: 600;
             color: var(--text-main);
             cursor: pointer;
-            transition: all 0.2s;
+            transition: var(--transition);
             white-space: nowrap;
         }
         .chat-panel .chat-main .quick-chips .chip:hover {
-            background: #dbeafe;
+            background: var(--primary-light);
             border-color: var(--primary);
             color: var(--primary);
+            transform: translateY(-1px);
         }
-
         .chat-panel .chat-main .chat-input-row {
             display: flex;
             border-top: 1px solid var(--card-border);
             background: #fff;
             flex-shrink: 0;
-            padding: 6px 10px;
-            gap: 6px;
+            padding: 8px 12px;
+            gap: 8px;
         }
         .chat-panel .chat-main .chat-input-row input {
             flex: 1;
-            padding: 6px 10px;
-            border: 1px solid var(--card-border);
-            border-radius: 20px;
+            padding: 8px 14px;
+            border: 1.5px solid var(--card-border);
+            border-radius: var(--radius-full);
             font-size: 12px;
             outline: none;
             background: #f8fafc;
             margin: 0;
-            transition: 0.2s;
-            min-height: 32px;
+            transition: var(--transition);
+            min-height: 38px;
+            font-family: inherit;
         }
         .chat-panel .chat-main .chat-input-row input:focus {
             border-color: var(--primary);
             background: #fff;
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.06);
         }
         .chat-panel .chat-main .chat-input-row .send-btn {
-            background: var(--primary);
+            background: var(--primary-gradient);
             color: #fff;
             border: none;
             border-radius: 50%;
-            width: 32px;
-            height: 32px;
+            width: 38px;
+            height: 38px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            font-size: 14px;
-            transition: 0.2s;
+            font-size: 16px;
+            transition: var(--transition);
             flex-shrink: 0;
             touch-action: manipulation;
+            box-shadow: 0 2px 12px rgba(37, 99, 235, 0.3);
         }
         .chat-panel .chat-main .chat-input-row .send-btn:hover {
-            background: var(--primary-hover);
-            transform: scale(1.04);
+            transform: scale(1.06);
+            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4);
         }
         .chat-panel .chat-main .chat-input-row .send-btn:disabled {
-            opacity: 0.5;
+            opacity: 0.4;
             cursor: not-allowed;
+            transform: none;
         }
-
         .chat-panel .chat-main .sidebar-toggle {
             background: transparent;
             border: none;
-            font-size: 16px;
+            font-size: 18px;
             cursor: pointer;
             color: var(--text-muted);
-            padding: 0 4px;
-            transition: 0.2s;
+            padding: 0 6px;
+            transition: var(--transition);
             touch-action: manipulation;
         }
         .chat-panel .chat-main .sidebar-toggle:hover {
             color: var(--primary);
         }
-
         .chat-panel .chat-main .chat-messages .welcome-greeting {
             text-align: center;
-            padding: 16px 0;
+            padding: 20px 0;
             color: var(--text-muted);
             font-size: 13px;
             line-height: 1.8;
         }
         .chat-panel .chat-main .chat-messages .welcome-greeting .greeting-emoji {
-            font-size: 28px;
+            font-size: 32px;
             display: block;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
         }
         .chat-panel .chat-main .chat-messages .welcome-greeting .greeting-name {
             font-weight: 700;
             color: var(--text-main);
         }
-
         @media (max-width: 600px) {
             #chatWidget {
-                width: 92vw;
-                height: 85vh;
-                max-height: 90vh;
+                width: 94vw;
+                height: 88vh;
+                max-height: 92vh;
             }
             .chat-panel .chat-sidebar.open {
-                width: 120px;
+                width: 130px;
             }
             .chat-panel .chat-main .quick-chips .chip {
                 font-size: 8px;
-                padding: 2px 8px;
+                padding: 2px 10px;
             }
             .chat-panel .chat-main .chat-messages {
-                padding: 8px 10px;
+                padding: 10px 12px;
                 font-size: 12px;
             }
             .chat-panel .chat-main .chat-input-row input {
                 font-size: 11px;
-                padding: 5px 8px;
+                padding: 6px 12px;
+                min-height: 34px;
             }
             .chat-panel .chat-main .chat-input-row .send-btn {
-                width: 28px;
-                height: 28px;
-                font-size: 12px;
+                width: 34px;
+                height: 34px;
+                font-size: 14px;
             }
         }
-
-        /* ===== Floating Avatar trigger (visible when logged in) ===== */
+        /* ===== Floating Avatar trigger ===== */
         .chat-avatar-trigger {
             position: fixed;
-            bottom: 20px;
-            right: 20px;
+            bottom: 24px;
+            right: 24px;
             z-index: 99998;
             display: none;
-            background: var(--primary);
+            background: var(--primary-gradient);
             color: #fff;
             border: none;
             border-radius: 50%;
-            width: 56px;
-            height: 56px;
+            width: 60px;
+            height: 60px;
             font-size: 28px;
-            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
+            box-shadow: 0 4px 24px rgba(37, 99, 235, 0.35);
             cursor: pointer;
-            transition: all 0.3s;
+            transition: var(--transition);
             touch-action: manipulation;
             align-items: center;
             justify-content: center;
         }
         .chat-avatar-trigger:hover {
-            transform: scale(1.05);
+            transform: scale(1.06);
+            box-shadow: 0 8px 36px rgba(37, 99, 235, 0.45);
         }
         .chat-avatar-trigger .badge-dot {
             position: absolute;
             top: 4px;
             right: 4px;
-            width: 12px;
-            height: 12px;
+            width: 14px;
+            height: 14px;
             background: #22c55e;
             border-radius: 50%;
-            border: 2px solid #fff;
+            border: 2.5px solid #fff;
+            animation: pulse-dot 2s infinite;
         }
-        .chat-avatar-trigger {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
+        @keyframes pulse-dot {
+            0%,
+            100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.15);
+            }
         }
     </style>
 </head>
@@ -1550,14 +1727,14 @@
     <!-- ===== STUDENT EXCEL MODAL ===== -->
     <div id="studentExcelModal" class="modal-overlay" style="display:none;">
         <div class="modal-card">
-            <h3 style="font-size:13px; font-weight:800; margin-bottom:4px;">Download Student Excel Sheet</h3>
-            <p style="font-size:10px; color:var(--text-muted); margin-bottom:10px; font-weight:600;">Select range:</p>
+            <h3 style="font-size:14px; font-weight:800; margin-bottom:4px;">📊 Download Attendance Sheet</h3>
+            <p style="font-size:10px; color:var(--text-muted); margin-bottom:12px; font-weight:500;">Select range:</p>
             <select id="studentExcelRange" style="margin-top:3px;">
                 <option value="CURRENT_MONTH">Current Month</option>
                 <option value="SELECTED_MONTH">Selected Month</option>
                 <option value="FULL_SEMESTER">Full Semester (Jul–Dec 2026)</option>
             </select>
-            <div id="selectedMonthWrapper" style="display:none; margin-top:3px;">
+            <div id="selectedMonthWrapper" style="display:none; margin-top:6px;">
                 <select id="studentExcelMonth">
                     <option value="6">July 2026</option>
                     <option value="7">August 2026</option>
@@ -1577,8 +1754,8 @@
     <!-- ===== EDIT ATTENDANCE MODAL ===== -->
     <div id="editAttendanceModal" class="modal-overlay" style="display:none;">
         <div class="modal-card">
-            <h3 style="font-size:13px; font-weight:800; margin-bottom:4px;">✏️ Edit Attendance</h3>
-            <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">Update status for <span id="editRecordStudent" style="font-weight:700;"></span></p>
+            <h3 style="font-size:14px; font-weight:800; margin-bottom:4px;">✏️ Edit Attendance</h3>
+            <p style="font-size:10px; color:var(--text-muted); margin-bottom:10px;">Update status for <span id="editRecordStudent" style="font-weight:700; color:var(--primary);"></span></p>
             <select id="editStatusSelect" style="padding:8px; font-size:11px;">
                 <option value="Present">Present</option>
                 <option value="Absent">Absent</option>
@@ -1625,7 +1802,7 @@
 
             <!-- ===== AUTH BOX ===== -->
             <div id="auth-box" class="tab-content-active">
-                <h3 style="font-size:14px; font-weight:800; margin-bottom:8px;">Sign In to Web Attendance System</h3>
+                <h3 style="font-size:15px; font-weight:900; margin-bottom:8px; background:var(--primary-gradient); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;">Sign In to Web Attendance</h3>
                 <select id="loginRole" style="margin-bottom:8px;">
                     <option value="student">Student</option>
                     <option value="faculty">Faculty</option>
@@ -1634,7 +1811,7 @@
                 <div id="register-fields" style="display:none;">
                     <input type="text" id="regName" placeholder="Full Name" />
                 </div>
-                <input type="text" id="rollNo" placeholder="Enter Username (Roll/ID)" />
+                <input type="text" id="rollNo" placeholder="Enter Username (Roll / ID)" />
                 <div class="password-wrapper">
                     <input type="password" id="password" placeholder="Enter Password" />
                     <span class="eye-icon" onclick="togglePassword()">
@@ -1645,23 +1822,23 @@
                     </span>
                 </div>
                 <button class="btn btn-primary" id="authBtn" onclick="handleAuth()">Sign In</button>
-                <span style="color:var(--primary); cursor:pointer; font-size:11px; display:block; text-align:center; margin-top:10px; font-weight:600;" id="toggleLink" onclick="toggleMode()">New Student? Register</span>
+                <span style="color:var(--primary); cursor:pointer; font-size:11px; display:block; text-align:center; margin-top:10px; font-weight:600; transition:var(--transition);" id="toggleLink" onclick="toggleMode()">New Student? Register</span>
             </div>
 
             <!-- ===== DASHBOARD ===== -->
             <div id="dash-box" style="display:none;">
 
                 <!-- Welcome + Logout -->
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                     <div>
-                        <h3 style="font-size:13px; font-weight:800;"><span id="welcomeMsg">Welcome!</span></h3>
-                        <p style="font-size:10px; color:var(--text-muted); font-weight:600;">
+                        <h3 style="font-size:14px; font-weight:800;"><span id="welcomeMsg">Welcome!</span></h3>
+                        <p style="font-size:10px; color:var(--text-muted); font-weight:500;">
                             <span id="roleLabel">ID</span>: <span id="userRoll" style="font-weight:700;"></span>
                             <span id="userRoleBadge" style="margin-left:6px; font-weight:700; color:var(--primary);"></span>
-                            <span id="userBranchBadge" style="margin-left:6px; font-weight:600; color:var(--text-muted);"></span>
+                            <span id="userBranchBadge" style="margin-left:6px; font-weight:500; color:var(--text-muted);"></span>
                         </p>
                     </div>
-                    <button class="btn btn-danger" style="width:auto; padding:4px 8px; margin:0; font-size:10px;" onclick="logout()">Logout</button>
+                    <button class="btn btn-danger" style="width:auto; padding:5px 12px; margin:0; font-size:10px;" onclick="logout()">Logout</button>
                 </div>
 
                 <!-- Student Stats -->
@@ -1706,20 +1883,20 @@
                         <div class="stat-card"><div class="value" id="liveTodayAbsent">0</div><div class="label">Absent Today</div></div>
                         <div class="stat-card"><div class="value" id="liveOverallPct">0%</div><div class="label">Overall %</div></div>
                     </div>
-                    <div style="background:#f8fafc; border-radius:var(--radius-sm); padding:8px; border:1px solid var(--card-border);">
-                        <span style="font-size:9px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">📋 Today's Present Students</span>
+                    <div style="background:#f8fafc; border-radius:var(--radius-sm); padding:10px; border:1px solid var(--card-border);">
+                        <span style="font-size:9px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.3px;">📋 Today's Present Students</span>
                         <div id="todayPresentList"></div>
                     </div>
                     <div class="stats-grid" style="margin-top:8px;">
                         <div class="stat-card"><div class="value" id="workingDaysSoFar">0</div><div class="label">Working Days (so far)</div></div>
                         <div class="stat-card"><div class="value" id="totalWorkingDaysSemester">0</div><div class="label">Total Working Days (Semester)</div></div>
                     </div>
-                    <button class="btn btn-outline btn-sm" onclick="loadDashboardStats()" style="padding:4px; font-size:9px;">Refresh Stats</button>
+                    <button class="btn btn-outline btn-sm" onclick="loadDashboardStats()" style="padding:5px; font-size:9px;">🔄 Refresh Stats</button>
                 </div>
 
                 <!-- Quick Portals -->
                 <div class="quick-portals-card">
-                    <span style="font-size:9px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Quick Portals</span>
+                    <span style="font-size:9px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.3px;">Quick Portals</span>
                     <div class="portal-grid">
                         <div class="portal-btn" onclick="window.open('https://erp.bmctm.com/fees','_blank')">
                             <svg class="svg-icon" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
@@ -1745,8 +1922,8 @@
 
                 <!-- ===== MARK TAB (Student) ===== -->
                 <div id="markTab" class="tab-content-active">
-                    <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">
-                        <select id="monthSelector" style="flex:1; padding:6px; font-size:10px; margin:0;" onchange="fetchMonthlySummary()">
+                    <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+                        <select id="monthSelector" style="flex:1; padding:6px 10px; font-size:10px; margin:0;" onchange="fetchMonthlySummary()">
                             <option value="6">July 2026</option>
                             <option value="7">August 2026</option>
                             <option value="8">September 2026</option>
@@ -1754,28 +1931,28 @@
                             <option value="10">November 2026</option>
                             <option value="11">December 2026</option>
                         </select>
-                        <button class="btn btn-primary btn-sm" onclick="fetchMonthlySummary()" style="padding:4px 8px;">View Month</button>
+                        <button class="btn btn-primary btn-sm" onclick="fetchMonthlySummary()" style="padding:5px 12px;">View</button>
                     </div>
-                    <div id="monthlySummaryContainer" style="background:#f8fafc; border-radius:var(--radius-sm); padding:8px; margin-bottom:8px; border:1px solid var(--card-border); display:none;"></div>
+                    <div id="monthlySummaryContainer" style="background:#f8fafc; border-radius:var(--radius-sm); padding:10px; margin-bottom:10px; border:1px solid var(--card-border); display:none;"></div>
 
-                    <button class="btn btn-primary" onclick="markFullDayAttendance()" style="padding:9px; font-size:10px;">
+                    <button class="btn btn-primary" onclick="markFullDayAttendance()" style="padding:10px; font-size:11px;">
                         <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                         Mark Full Day Attendance
                     </button>
 
-                    <div style="text-align:center; font-size:9px; color:var(--text-muted); margin:10px 0 3px 0; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Live Timetable</div>
+                    <div style="text-align:center; font-size:9px; color:var(--text-muted); margin:12px 0 4px 0; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Live Timetable</div>
                     <div class="period-card" id="periodCardBox">
                         <div>
-                            <span style="font-size:8px; font-weight:700; color:var(--text-muted); text-transform:uppercase;" id="periodTimeSlotLabel">CURRENT PERIOD:</span>
-                            <h4 id="activePeriodName" style="font-size:11px; font-weight:800; color:#0f172a; margin-top:1px;">Checking…</h4>
+                            <span style="font-size:8px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.3px;" id="periodTimeSlotLabel">CURRENT PERIOD:</span>
+                            <h4 id="activePeriodName" style="font-size:12px; font-weight:800; color:var(--text-main); margin-top:1px;">Checking…</h4>
                         </div>
-                        <button class="action-btn" id="markPeriodBtn" style="background:var(--success); color:white; padding:5px 10px;" onclick="markActivePeriodAttendance()">Mark</button>
+                        <button class="action-btn" id="markPeriodBtn" style="background:var(--success); color:#fff; padding:6px 14px;" onclick="markActivePeriodAttendance()">Mark</button>
                     </div>
 
                     <div class="calendar-container">
                         <div class="calendar-header">
-                            <span>Attendance Calendar</span>
-                            <select id="calendarViewMode" onchange="toggleCalendarView()" style="padding:3px 6px; font-size:9px; margin:0; width:auto;">
+                            <span>📅 Attendance Calendar</span>
+                            <select id="calendarViewMode" onchange="toggleCalendarView()" style="padding:4px 10px; font-size:9px; margin:0; width:auto;">
                                 <option value="CURRENT_MONTH">Current</option>
                                 <option value="FULL_SEMESTER">Full Semester</option>
                             </select>
@@ -1783,9 +1960,9 @@
                         <div id="calendarDisplayWrapper"></div>
                     </div>
 
-                    <div style="margin-top:8px;">
+                    <div style="margin-top:10px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                            <h4 style="font-size:10px; color:var(--text-muted); font-weight:700;">My Attendance Logs:</h4>
+                            <h4 style="font-size:10px; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.3px;">📋 My Attendance Logs:</h4>
                             <button class="btn btn-success btn-sm" onclick="openStudentExcelModal()">
                                 <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                                 Excel
@@ -1794,7 +1971,7 @@
                         <div class="table-container" style="max-height:200px;">
                             <table id="myHistoryTable">
                                 <thead><tr><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
-                                <tbody><tr><td colspan="3" style="text-align:center; padding:12px;">Loading…</td></tr></tbody>
+                                <tbody><tr><td colspan="3" style="text-align:center; padding:14px; color:var(--text-muted);">Loading…</td></tr></tbody>
                             </table>
                         </div>
                     </div>
@@ -1815,11 +1992,11 @@
                     <!-- SUB: Directory -->
                     <div id="subDirectory" class="admin-box sub-directory tab-content-active">
                         <span class="sub-section-title">👥 Directory – All Users</span>
-                        <button class="btn btn-outline btn-sm" onclick="fetchAllUsers()" style="padding:4px; margin:0;">🔄 Refresh</button>
+                        <button class="btn btn-outline btn-sm" onclick="fetchAllUsers()" style="padding:4px 10px; margin:0;">🔄 Refresh</button>
                         <div class="table-container" style="max-height:350px; margin-top:6px;">
                             <table id="directoryTable">
                                 <thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Device</th><th>Attendance</th><th>Action</th></tr></thead>
-                                <tbody><tr><td colspan="6" style="text-align:center; padding:12px;">Loading users…</td></tr></tbody>
+                                <tbody><tr><td colspan="6" style="text-align:center; padding:14px; color:var(--text-muted);">Loading users…</td></tr></tbody>
                             </table>
                         </div>
                     </div>
@@ -1828,15 +2005,15 @@
                     <div id="subAllAttendance" class="admin-box sub-all-attendance" style="display:none;">
                         <span class="sub-section-title">📊 All Attendance Records – Manage</span>
                         <div class="filter-row">
-                            <input type="text" id="filterAttendanceRoll" placeholder="Filter by Roll No" style="flex:1; min-width:60px; padding:6px 8px; font-size:9px; margin:0;" oninput="loadAllAttendance()" />
-                            <input type="date" id="filterAttendanceDate" style="flex:1; min-width:80px; padding:6px 8px; font-size:9px; margin:0;" onchange="loadAllAttendance()" />
-                            <button class="btn btn-outline btn-sm" onclick="loadAllAttendance()" style="padding:4px 8px; margin:0;">Filter</button>
+                            <input type="text" id="filterAttendanceRoll" placeholder="Filter by Roll No" style="flex:1; min-width:60px; padding:6px 10px; font-size:9px; margin:0;" oninput="loadAllAttendance()" />
+                            <input type="date" id="filterAttendanceDate" style="flex:1; min-width:80px; padding:6px 10px; font-size:9px; margin:0;" onchange="loadAllAttendance()" />
+                            <button class="btn btn-outline btn-sm" onclick="loadAllAttendance()" style="padding:5px 10px; margin:0;">Filter</button>
                         </div>
-                        <button class="btn btn-outline btn-sm" onclick="loadAllAttendance()" style="padding:4px; margin:0 0 4px 0;">🔄 Refresh All</button>
+                        <button class="btn btn-outline btn-sm" onclick="loadAllAttendance()" style="padding:4px 10px; margin:0 0 4px 0;">🔄 Refresh All</button>
                         <div class="table-container" style="max-height:350px;">
                             <table id="allAttendanceTable">
                                 <thead><tr><th>Date</th><th>Roll</th><th>Name</th><th>Subject</th><th>Status</th><th>Actions</th></tr></thead>
-                                <tbody><tr><td colspan="6" style="text-align:center; padding:12px;">Loading records…</td></tr></tbody>
+                                <tbody><tr><td colspan="6" style="text-align:center; padding:14px; color:var(--text-muted);">Loading records…</td></tr></tbody>
                             </table>
                         </div>
                         <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">💡 Click <strong>Edit</strong> to change status, <strong>Delete</strong> to remove record.</p>
@@ -1892,7 +2069,6 @@
                         </button>
                         <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">💡 Bypasses device binding – for admin assistance only.</p>
 
-                        <!-- Individual Student Report for Admin -->
                         <hr style="margin:12px 0; border-color:var(--card-border);" />
                         <span class="sub-section-title">📈 Individual Student Report (PDF/CSV)</span>
                         <select id="adminStudentReportSelect" style="padding:8px; margin-bottom:6px; font-size:10px;">
@@ -1903,10 +2079,9 @@
                             <button class="btn btn-success btn-sm" onclick="generateStudentReport('csv')" style="padding:6px;">CSV</button>
                         </div>
 
-                        <!-- Class Attendance Report (PDF) -->
                         <hr style="margin:12px 0; border-color:var(--card-border);" />
                         <span class="sub-section-title">📋 Class Attendance Report (PDF)</span>
-                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
                             <input type="date" id="classReportStart" style="flex:1; padding:6px; font-size:10px; margin:0;" />
                             <input type="date" id="classReportEnd" style="flex:1; padding:6px; font-size:10px; margin:0;" />
                         </div>
@@ -1949,34 +2124,25 @@
                         <button class="btn btn-success btn-sm" onclick="markAllSubjectsForDay()" style="margin-top:4px; padding:6px; font-size:9px;">📚 Mark All Subjects for this Day</button>
                         <p id="manualBranchWarning" style="font-size:8px; color:var(--danger); margin-top:4px; display:none;"></p>
 
-                        <!-- ===== NEW BULK ACTIONS (multi-select students & dates) ===== -->
-                        <div style="margin-top:14px; border-top: 2px dashed var(--card-border); padding-top:12px;">
-                            <span class="sub-section-title" style="color: var(--primary);">📦 Bulk Actions (Select Students & Dates)</span>
-                            <div style="background: #f8fafc; border: 1px solid var(--card-border); border-radius: var(--radius-sm); padding: 10px; margin-top:4px;">
-
-                                <!-- Student Selection -->
+                        <!-- Bulk Actions -->
+                        <div style="margin-top:14px; border-top:2px dashed var(--card-border); padding-top:12px;">
+                            <span class="sub-section-title" style="color:var(--primary);">📦 Bulk Actions (Select Students & Dates)</span>
+                            <div style="background:#f8fafc; border:1px solid var(--card-border); border-radius:var(--radius-sm); padding:12px; margin-top:4px;">
                                 <div style="margin-bottom:8px;">
                                     <label style="font-size:10px; font-weight:700; display:block; margin-bottom:3px;">👥 Select Students:</label>
                                     <div id="bulkStudentList" class="bulk-student-list">
-                                        <!-- populated by JS -->
                                         <label class="select-all-label"><input type="checkbox" id="bulkSelectAllStudents" onchange="toggleAllBulkStudents()" /> Select All</label>
                                     </div>
                                 </div>
-
-                                <!-- Date Selection -->
                                 <div style="margin-bottom:8px;">
                                     <label style="font-size:10px; font-weight:700; display:block; margin-bottom:3px;">📅 Select Dates:</label>
                                     <div class="bulk-date-input-row">
                                         <input type="date" id="bulkDatePicker" />
-                                        <button class="btn btn-primary btn-sm" onclick="addBulkDate()" style="padding:4px 8px; margin:0;">Add Date</button>
+                                        <button class="btn btn-primary btn-sm" onclick="addBulkDate()" style="padding:4px 12px; margin:0;">Add Date</button>
                                     </div>
-                                    <div id="bulkDateChips" class="bulk-date-chips">
-                                        <!-- dates will appear as chips -->
-                                    </div>
+                                    <div id="bulkDateChips" class="bulk-date-chips"></div>
                                 </div>
-
-                                <!-- Action Buttons -->
-                                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                <div style="display:flex; gap:8px; flex-wrap:wrap;">
                                     <button class="btn btn-success btn-sm" onclick="bulkMarkAttendance()" style="flex:1; padding:6px;">✅ Mark Bulk</button>
                                     <button class="btn btn-danger btn-sm" onclick="bulkDeleteAttendance()" style="flex:1; padding:6px;">🗑️ Delete Bulk</button>
                                 </div>
@@ -1998,19 +2164,15 @@
                     <div id="subPasscode" class="admin-box sub-passcode" style="display:none; text-align:center;">
                         <span class="sub-section-title">📱 Class Passcodes</span>
                         <p style="font-size:9px; color:var(--text-muted); margin-bottom:8px;">Generate passcodes for Full Day (5‑digit) or Single Lecture (4‑digit).</p>
-                        <div style="background:#f8fafc; border-radius:var(--radius-sm); padding:8px; margin-bottom:8px; border:1px solid var(--card-border);">
+                        <div style="background:#f8fafc; border-radius:var(--radius-sm); padding:10px; margin-bottom:8px; border:1px solid var(--card-border);">
                             <span style="font-size:9px; font-weight:700; color:var(--text-muted);">🔵 FULL DAY (5‑digit)</span>
-                            <div class="passcode-display" style="margin-top:4px;">
-                                <h2 id="fullDayPasscodeDisplay">—</h2>
-                            </div>
-                            <button class="btn btn-primary btn-sm" onclick="generatePasscode('full_day')" style="padding:4px 10px; width:auto; margin:0 auto;">Generate Full Day Passcode</button>
+                            <div class="passcode-display" style="margin-top:4px;"><h2 id="fullDayPasscodeDisplay">—</h2></div>
+                            <button class="btn btn-primary btn-sm" onclick="generatePasscode('full_day')" style="padding:4px 14px; width:auto; margin:0 auto;">Generate Full Day Passcode</button>
                         </div>
-                        <div style="background:#f8fafc; border-radius:var(--radius-sm); padding:8px; margin-bottom:8px; border:1px solid var(--card-border);">
+                        <div style="background:#f8fafc; border-radius:var(--radius-sm); padding:10px; margin-bottom:8px; border:1px solid var(--card-border);">
                             <span style="font-size:9px; font-weight:700; color:var(--text-muted);">🟢 SINGLE LECTURE (4‑digit)</span>
-                            <div class="passcode-display" style="margin-top:4px;">
-                                <h2 id="singleLecturePasscodeDisplay">—</h2>
-                            </div>
-                            <button class="btn btn-success btn-sm" onclick="generatePasscode('single_lecture')" style="padding:4px 10px; width:auto; margin:0 auto;">Generate Lecture Passcode</button>
+                            <div class="passcode-display" style="margin-top:4px;"><h2 id="singleLecturePasscodeDisplay">—</h2></div>
+                            <button class="btn btn-success btn-sm" onclick="generatePasscode('single_lecture')" style="padding:4px 14px; width:auto; margin:0 auto;">Generate Lecture Passcode</button>
                         </div>
                         <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">⏳ Each passcode expires after 5 minutes.</p>
                     </div>
@@ -2109,27 +2271,27 @@
 
                 <!-- ===== TEACHER TAB ===== -->
                 <div id="teacherTab" style="display:none;">
-                    <div style="background:#eff6ff; border-radius:var(--radius-sm); padding:10px; border:1px solid #bfdbfe; margin-bottom:10px; text-align:center;">
+                    <div style="background:#eff6ff; border-radius:var(--radius-sm); padding:12px; border:1px solid #bfdbfe; margin-bottom:12px; text-align:center;">
                         <span class="sub-section-title" style="color:#1d4ed8;">🔒 Single Lecture Passcode (4‑digit)</span>
                         <div class="passcode-display" style="margin-top:4px;">
                             <h2 id="teacherPasscodeDisplay">—</h2>
                         </div>
-                        <button class="btn btn-success btn-sm" onclick="generateTeacherPasscode()" style="padding:4px 10px; width:auto; margin:0 auto;">Generate Passcode</button>
+                        <button class="btn btn-success btn-sm" onclick="generateTeacherPasscode()" style="padding:4px 14px; width:auto; margin:0 auto;">Generate Passcode</button>
                         <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">⏳ Expires after 5 minutes – for marking single lecture attendance.</p>
                     </div>
 
                     <div style="margin-bottom:10px;">
                         <h4 style="font-size:11px; font-weight:800;">📋 Students (with your subjects)</h4>
-                        <button class="btn btn-outline btn-sm" onclick="fetchTeacherStudents()" style="padding:4px;">Refresh</button>
+                        <button class="btn btn-outline btn-sm" onclick="fetchTeacherStudents()" style="padding:4px 12px;">Refresh</button>
                         <div class="table-container" style="max-height:200px;">
                             <table id="teacherStudentTable">
                                 <thead><tr><th>Roll</th><th>Name</th><th>Action</th></tr></thead>
-                                <tbody><tr><td colspan="3" style="text-align:center; padding:8px;">Click Refresh</td></tr></tbody>
+                                <tbody><tr><td colspan="3" style="text-align:center; padding:10px; color:var(--text-muted);">Click Refresh</td></tr></tbody>
                             </table>
                         </div>
                     </div>
 
-                    <div style="background:#f0fdf4; border-radius:var(--radius-sm); padding:10px; border:1px solid #bbf7d0; margin-bottom:10px;">
+                    <div style="background:#f0fdf4; border-radius:var(--radius-sm); padding:12px; border:1px solid #bbf7d0; margin-bottom:10px;">
                         <span class="sub-section-title">📈 Student Report (PDF/CSV)</span>
                         <select id="teacherStudentReportSelect" style="padding:8px; margin-bottom:6px; font-size:10px;">
                             <option value="">Select Student…</option>
@@ -2167,7 +2329,7 @@
                         <div class="table-container" style="max-height:150px;">
                             <table id="teacherRecentTable">
                                 <thead><tr><th>Date</th><th>Student</th><th>Subject</th></tr></thead>
-                                <tbody><tr><td colspan="3" style="text-align:center; padding:8px;">No records yet.</td></tr></tbody>
+                                <tbody><tr><td colspan="3" style="text-align:center; padding:10px; color:var(--text-muted);">No records yet.</td></tr></tbody>
                             </table>
                         </div>
                     </div>
@@ -2178,11 +2340,10 @@
     </div>
 
     <!-- ========================================================== -->
-    <!-- CHAT WIDGET – COMPACT, CENTERED                            -->
+    <!-- CHAT WIDGET – COMPACT & CENTERED                            -->
     <!-- ========================================================== -->
     <div id="chatWidget">
         <div class="chat-panel" id="chatPanel">
-            <!-- Header -->
             <div class="chat-header">
                 <div class="chat-title">
                     🤖 BM Bot
@@ -2190,10 +2351,7 @@
                 </div>
                 <button class="chat-close" id="chatCloseBtn">✕</button>
             </div>
-
-            <!-- Body with sidebar -->
             <div class="chat-body">
-                <!-- Sidebar -->
                 <div class="chat-sidebar" id="chatSidebar">
                     <div class="sidebar-header">
                         <span>📋 History</span>
@@ -2203,22 +2361,15 @@
                         <div class="empty-chats">No chats yet.</div>
                     </div>
                 </div>
-
-                <!-- Main -->
                 <div class="chat-main">
-                    <!-- Messages -->
                     <div class="chat-messages" id="chatMessages">
                         <div class="welcome-greeting" id="welcomeGreeting">
                             <span class="greeting-emoji">👋</span>
                             <div>Hello! I'm <strong>BM Bot</strong>, your AI assistant.</div>
                             <div style="font-size:12px; color:var(--text-muted);">Ask me about attendance, schedule, holidays, or anything!</div>
                         </div>
-                        <div class="typing-indicator" id="typingIndicator">
-                            <span class="dots">...</span>
-                        </div>
+                        <div class="typing-indicator" id="typingIndicator"><span class="dots">...</span></div>
                     </div>
-
-                    <!-- Quick Chips – expanded with subject notes -->
                     <div class="quick-chips" id="quickChips">
                         <span class="chip" onclick="sendQuickQuestion('What is my attendance percentage?')">📊 My Attendance</span>
                         <span class="chip" onclick="sendQuickQuestion('What is today\'s timetable?')">📅 Today's Schedule</span>
@@ -2234,8 +2385,6 @@
                         <span class="chip" onclick="sendQuickQuestion('Give me notes for ML - Machine Learning')">📝 Notes ML</span>
                         <span class="chip" onclick="sendQuickQuestion('Help')">❓ Help</span>
                     </div>
-
-                    <!-- Input -->
                     <div class="chat-input-row">
                         <button class="sidebar-toggle" onclick="toggleSidebar()" title="Chat History">☰</button>
                         <input type="text" id="chatInput" placeholder="Ask me anything..." onkeydown="if(event.key==='Enter') sendChatMessage()" />
@@ -2246,20 +2395,20 @@
         </div>
     </div>
 
-    <!-- Floating trigger (avatar) – shown when logged in -->
+    <!-- Floating trigger -->
     <button class="chat-avatar-trigger" id="chatAvatarTrigger">
         💬
         <span class="badge-dot"></span>
     </button>
 
     <!-- ========================================================== -->
-    <!-- JAVASCRIPT – includes all existing logic + fixes          -->
+    <!-- JAVASCRIPT – FULL CLIENT LOGIC (unchanged, only UI polish) -->
     <!-- ========================================================== -->
     <script>
         // ============================================================
         // CONFIGURATION – UPDATE THIS URL TO YOUR BACKEND
         // ============================================================
-        const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com"; // CHANGE THIS
+        const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com";
         const ADMIN_ROLL_NUMBERS = ['24CSE48'];
         let globalAllRecords = [],
             globalMyRecords = [],
@@ -2348,10 +2497,10 @@
         function getBranchTimetable(branch) {
             const CSE = {
                 Monday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'DAA - Design & Analysis of Algorithm',
-                    'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'CN - Computer Network', 'LIB - Library'
+                    'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'CN - Computer Network', 'Sports'
                 ],
                 Tuesday: ['WT - Web Technology', 'ECO - Economics for Engineers', 'Internet Lab (Ms. Geeta)',
-                    'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'BDA - Big Data Analytics'
+                    'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'BDA - Big Data Analytics', 'Sports'
                 ],
                 Wednesday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'FLA - Formal Language & Automata',
                     'WT - Web Technology', 'CN LAB - Computer Network Lab'
@@ -2360,7 +2509,7 @@
                     'DAA - Design & Analysis of Algorithm', 'DAA LAB - Algorithm Lab', 'HRM - Human Resource Mgmt'
                 ],
                 Friday: ['DAA - Design & Analysis of Algorithm', 'CN - Computer Network', 'FLA - Formal Language & Automata',
-                    'BDA - Big Data Analytics', 'WT LAB - Web Technology Lab'
+                    'BDA - Big Data Analytics', 'WT LAB - Web Technology Lab', 'Sports'
                 ]
             };
             const AIDS = {
@@ -2394,7 +2543,7 @@
                 { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
                 { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
                 { start: "13:50", end: "14:35", subject: "CN - Computer Network", period: "P7" },
-                { start: "14:35", end: "15:20", subject: "LIB - Library", period: "P8" }
+                { start: "14:35", end: "15:20", subject: "Sports", period: "P8" }
             ],
             2: [
                 { start: "09:20", end: "10:05", subject: "WT - Web Technology", period: "P1" },
@@ -2404,7 +2553,7 @@
                 { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
                 { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
                 { start: "13:50", end: "14:35", subject: "BDA - Big Data Analytics", period: "P7" },
-                { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
+                { start: "14:35", end: "15:20", subject: "Sports", period: "P8" }
             ],
             3: [
                 { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
@@ -2431,7 +2580,7 @@
                 { start: "11:35", end: "12:20", subject: "BDA - Big Data Analytics", period: "P4" },
                 { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
                 { start: "13:05", end: "14:35", subject: "WT LAB - Web Technology Lab", period: "P6-P7" },
-                { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
+                { start: "14:35", end: "15:20", subject: "Sports", period: "P8" }
             ]
         };
 
@@ -2667,7 +2816,7 @@
         }
 
         // ============================================================
-        // TEACHER FUNCTIONS (unchanged)
+        // TEACHER FUNCTIONS
         // ============================================================
         async function loadTeacherSubjects() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -2695,7 +2844,7 @@
                 const data = await res.json();
                 const tbody = document.querySelector('#teacherStudentTable tbody');
                 if (!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:8px;">No students with your subjects.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:10px; color:var(--text-muted);">No students with your subjects.</td></tr>';
                     return;
                 }
                 tbody.innerHTML = data.map(s => `
@@ -2736,7 +2885,7 @@
                         <div class="modal-card profile-modal">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                                 <h3 style="font-size:14px; font-weight:800;">Attendance – ${rollNo}</h3>
-                                <button class="btn btn-danger btn-sm" onclick="closeTeacherStudentModal()" style="padding:2px 8px;">✕</button>
+                                <button class="btn btn-danger btn-sm" onclick="closeTeacherStudentModal()" style="padding:2px 10px;">✕</button>
                             </div>
                             <div style="max-height:300px; overflow-y:auto;">
                     `;
@@ -2750,7 +2899,7 @@
                                 <div style="border-bottom:1px solid #e2e8f0; margin-bottom:6px; padding-bottom:6px;">
                                     <div style="display:flex; justify-content:space-between; align-items:center;">
                                         <span style="font-weight:700; font-size:11px;">📅 ${date}</span>
-                                        <button class="btn btn-danger btn-xs" onclick="deleteAllForDate('${rollNo}','${date}')" style="padding:2px 6px;">Delete All</button>
+                                        <button class="btn btn-danger btn-xs" onclick="deleteAllForDate('${rollNo}','${date}')" style="padding:2px 8px;">Delete All</button>
                                     </div>
                             `;
                         records.forEach(r => {
@@ -2959,7 +3108,7 @@
                 const data = await res.json();
                 const tbody = document.querySelector('#teacherRecentTable tbody');
                 if (!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:8px;">No records.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:10px; color:var(--text-muted);">No records.</td></tr>';
                     return;
                 }
                 const recent = data.slice(0, 10);
@@ -3419,7 +3568,7 @@
         }
 
         // ============================================================
-        // DELETE RECORD (with confirmation)
+        // DELETE RECORD
         // ============================================================
         async function deleteRecord(recordId) {
             if (!confirm('Delete this attendance record permanently?')) return;
@@ -3468,7 +3617,7 @@
                 const tbody = document.querySelector('#directoryTable tbody');
                 if (!tbody) return;
                 if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:12px;">No users registered</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:14px; color:var(--text-muted);">No users registered</td></tr>';
                     return;
                 }
                 const students = data.filter(u => u.role === 'student').sort((a, b) => a.rollNo.localeCompare(b.rollNo,
@@ -3507,7 +3656,7 @@
                             <td><span class="badge ${s.boundDeviceId ? 'badge-active' : 'badge-present'}">${deviceStatus}</span></td>
                             <td><span class="badge badge-attendance">${attendanceDisplay}</span></td>
                             <td>
-                                ${s.role === 'student' ? `<button class="action-btn btn-view btn-sm" onclick="viewStudentProfile('${s.rollNo}')" style="padding:2px 6px; font-size:8px;"><svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>` : ''}
+                                ${s.role === 'student' ? `<button class="action-btn btn-view btn-sm" onclick="viewStudentProfile('${s.rollNo}')" style="padding:2px 8px; font-size:8px;"><svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>` : ''}
                             </td>
                         </tr>`;
                 }).join('');
@@ -3536,7 +3685,7 @@
                         <div class="modal-card profile-modal">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                                 <h3 style="font-size:14px; font-weight:800;">Attendance – ${rollNo}</h3>
-                                <button class="btn btn-danger btn-sm" onclick="closeProfileModal()" style="padding:2px 8px;">✕</button>
+                                <button class="btn btn-danger btn-sm" onclick="closeProfileModal()" style="padding:2px 10px;">✕</button>
                             </div>
                             <div style="max-height:300px; overflow-y:auto;">
                     `;
@@ -3550,7 +3699,7 @@
                                 <div style="border-bottom:1px solid #e2e8f0; margin-bottom:6px; padding-bottom:6px;">
                                     <div style="display:flex; justify-content:space-between; align-items:center;">
                                         <span style="font-weight:700; font-size:11px;">📅 ${date}</span>
-                                        <button class="btn btn-danger btn-xs" onclick="deleteAllForDate('${rollNo}','${date}')" style="padding:2px 6px;">Delete All</button>
+                                        <button class="btn btn-danger btn-xs" onclick="deleteAllForDate('${rollNo}','${date}')" style="padding:2px 8px;">Delete All</button>
                                     </div>
                             `;
                         records.forEach(r => {
@@ -3609,7 +3758,7 @@
 
                 const tbody = document.querySelector('#allAttendanceTable tbody');
                 if (filtered.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:12px;">No records found.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:14px; color:var(--text-muted);">No records found.</td></tr>';
                     return;
                 }
 
@@ -3624,8 +3773,8 @@
                                 <td>${r.subject}</td>
                                 <td><span class="badge ${statusClass}">${r.status}</span></td>
                                 <td>
-                                    <button class="btn-edit btn-xs" onclick="openEditModal('${r._id}','${r.rollNo}','${r.status}')" style="padding:2px 6px;">Edit</button>
-                                    <button class="btn-del btn-xs" onclick="deleteRecord('${r._id}')" style="padding:2px 6px;">Delete</button>
+                                    <button class="btn-edit btn-xs" onclick="openEditModal('${r._id}','${r.rollNo}','${r.status}')" style="padding:2px 8px;">Edit</button>
+                                    <button class="btn-del btn-xs" onclick="deleteRecord('${r._id}')" style="padding:2px 8px;">Delete</button>
                                 </td>
                             </tr>
                         `;
@@ -3782,7 +3931,7 @@
                     globalMyRecords = [];
                     const tbody = document.querySelector('#myHistoryTable tbody');
                     if (tbody) tbody.innerHTML =
-                        '<tr><td colspan="3" style="text-align:center; padding:12px;">⚠️ Could not load logs</td></tr>';
+                        '<tr><td colspan="3" style="text-align:center; padding:14px; color:var(--text-muted);">⚠️ Could not load logs</td></tr>';
                     return;
                 }
                 const data = await res.json();
@@ -3808,7 +3957,7 @@
                 renderAttendanceCalendar(globalMyRecords);
                 if (!tbody) return;
                 if (data.length === 0) return tbody.innerHTML =
-                    '<tr><td colspan="3" style="text-align:center; padding:12px;">No records</td></tr>';
+                    '<tr><td colspan="3" style="text-align:center; padding:14px; color:var(--text-muted);">No records</td></tr>';
                 tbody.innerHTML = data.slice(0, 50).map(r => {
                     return `<tr><td><b>${r.date}</b></td><td>${r.subject}</td><td><span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span></td></tr>`;
                 }).join('');
@@ -3816,7 +3965,7 @@
                 globalMyRecords = [];
                 const tbody = document.querySelector('#myHistoryTable tbody');
                 if (tbody) tbody.innerHTML =
-                    '<tr><td colspan="3" style="text-align:center; padding:12px;">⚠️ Network error loading logs</td></tr>';
+                    '<tr><td colspan="3" style="text-align:center; padding:14px; color:var(--text-muted);">⚠️ Network error loading logs</td></tr>';
             }
         }
 
@@ -3863,12 +4012,12 @@
                         }
                         if (cseStudents.length === 0 && aidsStudents.length === 0) {
                             html =
-                                '<div style="padding:8px; text-align:center; color:var(--text-muted);">No students present today.</div>';
+                                '<div style="padding:10px; text-align:center; color:var(--text-muted);">No students present today.</div>';
                         }
                         presentList.innerHTML = html;
                     } else {
                         presentList.innerHTML =
-                            '<div style="padding:8px; text-align:center; color:var(--text-muted);">No students present yet today.</div>';
+                            '<div style="padding:10px; text-align:center; color:var(--text-muted);">No students present yet today.</div>';
                     }
                 }
             } catch (e) { console.error('Dashboard stats failed:', e); }
@@ -4863,7 +5012,6 @@
                 fetchMonthlySummary();
             }
 
-            // Show chat trigger
             document.getElementById('chatAvatarTrigger').style.display = 'flex';
             loadChatHistory(user.rollNo);
             updateWelcomeGreeting();
@@ -5041,7 +5189,7 @@
         }
 
         // ============================================================
-        // ===== CHAT WIDGET – COMPACT & CENTERED =====
+        // CHAT WIDGET
         // ============================================================
         function toggleChat() {
             chatOpen = !chatOpen;
@@ -5210,7 +5358,6 @@
             }
         }
 
-        // ===== SEND CHAT MESSAGE – WITH KEYBOARD DISMISS =====
         async function sendChatMessage() {
             const input = document.getElementById('chatInput');
             const msg = input.value.trim();
@@ -5308,7 +5455,6 @@
             }
         }
 
-        // Attach chat toggle events with both click and touch
         document.addEventListener('DOMContentLoaded', function() {
             const toggleBtn = document.getElementById('chatAvatarTrigger');
             const closeBtn = document.getElementById('chatCloseBtn');
@@ -5327,7 +5473,6 @@
             }
         });
 
-        // Main init
         (function() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (user && localStorage.getItem('token')) {
