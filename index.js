@@ -16,7 +16,7 @@ app.use(cors());
 // ---------- Environment Variables ----------
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const GROQ_API_KEY = process.env.GROQ_API_KEY ? process.env.GROQ_API_KEY.trim() : null;
 const COLLEGE_LAT = 28.4509370;
 const COLLEGE_LNG = 76.7688120;
 const COLLEGE_RADIUS = 50;
@@ -27,10 +27,21 @@ if (!MONGO_URI) {
   console.error('❌ FATAL: MONGO_URI environment variable is not set!');
   process.exit(1);
 }
+if (!GROQ_API_KEY) {
+  console.warn('⚠️ GROQ_API_KEY is not set. Chat AI will fallback to static responses.');
+}
 
 // ---------- Rate Limiting ----------
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { error: 'Too many attempts, try again after 15 minutes.' } });
-const apiLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 200, message: { error: 'Too many requests, please slow down.' } });
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { error: 'Too many attempts, try again after 15 minutes.' }
+});
+const apiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 200,
+  message: { error: 'Too many requests, please slow down.' }
+});
 
 app.use('/api/auth/', authLimiter);
 app.use('/api/', apiLimiter);
@@ -436,7 +447,12 @@ function getCurrentPeriod(branch = 'CSE') {
 }
 
 // ---------- MongoDB Connection ----------
-mongoose.connect(MONGO_URI)
+mongoose.connect(MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+})
   .then(() => console.log('✅ MongoDB Connected Successfully!'))
   .catch(err => {
     console.error('❌ MongoDB Connection Error:', err.message);
@@ -610,6 +626,11 @@ async function getStudentSummary(rollNo) {
 // ---------- Routes ----------
 app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active!'));
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // ========== AUTH ==========
 app.post('/api/auth/register', async (req, res) => {
   try {
@@ -663,6 +684,7 @@ app.post('/api/auth/register', async (req, res) => {
       rollNo: cleanRoll
     });
   } catch (err) {
+    console.error('Registration error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -701,7 +723,10 @@ app.post('/api/auth/login', async (req, res) => {
     user.activeSession = token;
     await user.save();
     res.json({ message: 'Login successful!', token, user: { name: user.name, rollNo: user.rollNo, role: user.role, branch: user.branch } });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/auth/logout', async (req, res) => {
@@ -712,7 +737,10 @@ app.post('/api/auth/logout', async (req, res) => {
       if (decoded) await User.findOneAndUpdate({ rollNo: decoded.rollNo }, { activeSession: null });
     }
     res.json({ message: 'Logged out successfully!' });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Logout error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ========== VERIFY PASSCODE ==========
@@ -733,6 +761,7 @@ app.post('/api/auth/verify-passcode', async (req, res) => {
       res.status(400).json({ error: 'Invalid or expired passcode.' });
     }
   } catch (err) {
+    console.error('Verify passcode error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -751,7 +780,10 @@ app.post('/api/student/profile', async (req, res) => {
     if (branch) user.branch = branch;
     await user.save();
     res.json({ message: 'Profile updated successfully!', user: { name: user.name, rollNo: user.rollNo, email: user.email, phone: user.phone, semester: user.semester, branch: user.branch, profilePic: user.profilePic } });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Profile update error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/student/profile/:rollNo', async (req, res) => {
@@ -760,7 +792,10 @@ app.get('/api/student/profile/:rollNo', async (req, res) => {
     const user = await User.findOne({ rollNo: cleanRoll }).select('-password -activeSession');
     if (!user) return res.status(404).json({ error: 'User not found!' });
     res.json(user);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Profile fetch error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ========== ADMIN ROUTES ==========
@@ -774,7 +809,10 @@ app.post('/api/admin/reset-password', async (req, res) => {
     const updated = await User.findOneAndUpdate({ rollNo: cleanRoll }, { password: hashedPassword });
     if (!updated) return res.status(404).json({ error: 'User not found!' });
     res.json({ message: `Password reset for ${cleanRoll}!` });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Reset password error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/admin/reset-device', async (req, res) => {
@@ -788,7 +826,10 @@ app.post('/api/admin/reset-device', async (req, res) => {
     user.boundDeviceId = null;
     await user.save();
     res.json({ message: `✅ Device binding reset for ${cleanRoll}!` });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Reset device error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/admin/update-rollno', async (req, res) => {
@@ -801,7 +842,10 @@ app.post('/api/admin/update-rollno', async (req, res) => {
     await User.findOneAndUpdate({ rollNo: cleanOld }, { rollNo: cleanNew });
     await Attendance.updateMany({ rollNo: cleanOld }, { rollNo: cleanNew });
     res.json({ message: `Roll Number updated from ${cleanOld} to ${cleanNew}!` });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Update roll number error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.delete('/api/admin/delete-user', async (req, res) => {
@@ -814,7 +858,10 @@ app.delete('/api/admin/delete-user', async (req, res) => {
     await Attendance.deleteMany({ rollNo: cleanTarget });
     await TeacherSubject.deleteMany({ teacherRollNo: cleanTarget });
     res.json({ message: `Account and records deleted for ${cleanTarget}!` });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Delete user error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/admin/login-as-student', async (req, res) => {
@@ -827,7 +874,10 @@ app.post('/api/admin/login-as-student', async (req, res) => {
     if (!student) return res.status(404).json({ error: 'Student not found!' });
     const token = jwt.sign({ id: student._id, rollNo: student.rollNo, name: student.name, role: 'student' }, JWT_SECRET, { expiresIn: '1h' });
     res.json({ message: `Logged in as ${student.name}`, token, user: { name: student.name, rollNo: student.rollNo, role: 'student' }, isImpersonating: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Impersonate error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ========== SERVER BUSY MODE (Admin) ==========
@@ -842,14 +892,20 @@ app.post('/api/admin/set-server-busy', async (req, res) => {
       { upsert: true, new: true }
     );
     res.json({ message: `Server busy mode set to ${busy ? 'ON' : 'OFF'}` });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Set server busy error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/admin/get-server-busy', async (req, res) => {
   try {
     const setting = await SystemSettings.findOne({ key: 'serverBusy' });
     res.json({ busy: setting ? setting.value === true : false });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Get server busy error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ========== TEACHER SUBJECT ASSIGNMENT ==========
@@ -865,7 +921,10 @@ app.post('/api/admin/assign-subject', async (req, res) => {
     if (existing) return res.status(400).json({ error: 'Subject already assigned to this teacher.' });
     await TeacherSubject.create({ teacherRollNo: cleanTeacher, subject, assignedBy: requesterRollNo });
     res.json({ message: `Subject "${subject}" assigned to ${cleanTeacher}` });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Assign subject error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/admin/remove-subject', async (req, res) => {
@@ -876,7 +935,10 @@ app.post('/api/admin/remove-subject', async (req, res) => {
     const cleanTeacher = teacherRollNo.trim().toUpperCase();
     await TeacherSubject.findOneAndDelete({ teacherRollNo: cleanTeacher, subject });
     res.json({ message: `Subject "${subject}" removed from ${cleanTeacher}` });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Remove subject error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/teacher/subjects/:rollNo', async (req, res) => {
@@ -884,7 +946,10 @@ app.get('/api/teacher/subjects/:rollNo', async (req, res) => {
     const cleanRoll = req.params.rollNo.trim().toUpperCase();
     const assignments = await TeacherSubject.find({ teacherRollNo: cleanRoll });
     res.json(assignments.map(a => a.subject));
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Get teacher subjects error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ========== TEACHER GET STUDENTS ==========
@@ -899,6 +964,7 @@ app.get('/api/teacher/students/:rollNo', async (req, res) => {
     const students = await User.find({ rollNo: { $in: records }, role: 'student' }).select('name rollNo');
     res.json(students);
   } catch (err) {
+    console.error('Get teacher students error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -936,7 +1002,10 @@ app.post('/api/teacher/mark-attendance', async (req, res) => {
       branch: studentUser.branch || 'CSE'
     }).save();
     res.status(201).json({ message: `✅ Marked ${studentUser.name} (${subject})` });
-  } catch (err) { console.error('Teacher attendance error:', err); res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Teacher mark attendance error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ========== PASSCODE (Admin & Teacher) ==========
@@ -1010,7 +1079,7 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
     
     res.status(400).json({ error: 'Invalid type' });
   } catch (err) {
-    console.error('Passcode error:', err);
+    console.error('Generate passcode error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -1042,6 +1111,7 @@ app.get('/api/admin/current-passcode/:type/:requesterRollNo', async (req, res) =
       return res.json({ passcode: null, message: 'No passcode generated for current period' });
     }
   } catch (err) {
+    console.error('Get current passcode error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -1259,7 +1329,10 @@ app.post('/api/attendance/mark', async (req, res) => {
     user.lastAttendanceLocation = { latitude, longitude };
     await user.save();
     res.status(201).json({ message: `✅ Attendance Marked for ${subject}!` });
-  } catch (err) { console.error('Attendance error:', err); res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Attendance mark error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ========== NOTICES ==========
@@ -1267,7 +1340,10 @@ app.get('/api/notices', async (req, res) => {
   try {
     const notices = await Notice.find().sort({ date: -1 }).limit(10);
     res.json(notices);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Get notices error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/admin/notice', async (req, res) => {
@@ -1278,7 +1354,10 @@ app.post('/api/admin/notice', async (req, res) => {
     if (!message || message.trim() === "") { await Notice.deleteMany({}); return res.json({ message: 'Notices cleared!' }); }
     const newNotice = await new Notice({ title: title || 'Announcement', message }).save();
     res.status(201).json({ message: 'Notice published!', notice: newNotice });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Post notice error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ========== HOLIDAYS ==========
@@ -1295,21 +1374,30 @@ app.post('/api/admin/holiday', async (req, res) => {
     if (dayName === 'Saturday' || dayName === 'Sunday') return res.status(400).json({ error: 'Cannot declare holiday on weekend (Saturday/Sunday)!' });
     await Holiday.findOneAndUpdate({ date }, { date, reason: reason || 'College Holiday' }, { upsert: true, new: true });
     res.json({ message: `✅ Holiday declared for ${date}: ${reason || 'College Holiday'}` });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Declare holiday error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/holidays', async (req, res) => {
   try {
     const holidays = await Holiday.find();
     res.json(holidays);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Get holidays error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/date-status/:date', async (req, res) => {
   try {
     const status = await checkDateStatus(req.params.date);
     res.json(status);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Date status error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ========== DASHBOARD STATS (Admin) ==========
@@ -1339,7 +1427,10 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
     const workingDaysSoFar = await getWorkingDays(semesterStartStr, todayStr);
     const totalWorkingDaysSemester = await getWorkingDays(semesterStartStr, SEMESTER_END.toISOString().split('T')[0]);
     res.json({ totalStudents, todayPresent, todayAbsent, overallAttendance: totalAttendance, overallPct, todayPresentStudents: presentList, workingDaysSoFar, totalWorkingDaysSemester });
-  } catch (err) { console.error('Dashboard stats error:', err); res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Dashboard stats error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ========== ALL USERS (Admin) ==========
@@ -1349,7 +1440,10 @@ app.get('/api/admin/all-users/:requesterRollNo', async (req, res) => {
     if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const users = await User.find().select('name rollNo role boundDeviceId email phone semester branch profilePic facultySubject').sort({ rollNo: 1 });
     res.json(users);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Get all users error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ========== ALL FACULTY (Admin) ==========
@@ -1359,7 +1453,10 @@ app.get('/api/admin/faculty/:requesterRollNo', async (req, res) => {
     if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const faculty = await User.find({ role: 'faculty' }).select('name rollNo email phone facultySubject').sort({ rollNo: 1 });
     res.json(faculty);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Get faculty error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ========== STUDENT ATTENDANCE (Admin/Teacher view) ==========
@@ -1382,7 +1479,10 @@ app.get('/api/attendance/student/:rollNo/:requesterRollNo', async (req, res) => 
       return r;
     });
     res.json(records);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Get student attendance error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ========== DELETE ATTENDANCE RECORD (Admin & Teacher) ==========
@@ -1404,7 +1504,10 @@ app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
     }
     await Attendance.findByIdAndDelete(req.params.id);
     res.json({ message: 'Record deleted!' });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Delete record error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ========== DELETE ALL ATTENDANCE FOR A DATE (Admin & Teacher) ==========
@@ -1428,6 +1531,7 @@ app.delete('/api/attendance/delete-day/:rollNo/:date/:requesterRollNo', async (r
     if (result.deletedCount === 0) return res.status(404).json({ error: 'No records found for this date.' });
     res.json({ message: `Deleted ${result.deletedCount} records for ${cleanRoll} on ${cleanDate}.` });
   } catch (err) {
+    console.error('Delete day error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -1575,7 +1679,10 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
     let message = `✅ Marked ${markedCount} lectures for ${user.name} on ${date} (Branch: ${actualBranch})`;
     if (alreadyMarked.length > 0) message += `. Already marked: ${alreadyMarked.join(', ')}`;
     res.status(201).json({ message, markedSubjects, alreadyMarked, total: markedCount });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Manual attendance bulk error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ========== HISTORY (Student) ==========
@@ -1587,7 +1694,10 @@ app.get('/api/attendance/history/:rollNo', async (req, res) => {
       return r;
     });
     res.json(mapped);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('History error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ========== ALL ATTENDANCE (Admin/Teacher) ==========
@@ -1611,7 +1721,10 @@ app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
       return r;
     });
     res.json(allRecords);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('All attendance error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ========== STUDENT SUMMARY (Overall) ==========
@@ -1693,7 +1806,10 @@ app.get('/api/student/summary/:rollNo', async (req, res) => {
       workingDaysSoFar: totalWorkingDays,
       subjectStats: subjectStatsFinal
     });
-  } catch (err) { console.error('Summary error:', err); res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Student summary error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ========== EXPORT ROUTES ==========
@@ -1710,7 +1826,10 @@ app.get('/api/export/google-sheets/:requesterRollNo', async (req, res) => {
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename=attendance_export.csv');
     res.send(csv);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Google sheets export error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) => {
@@ -1750,7 +1869,10 @@ app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) => {
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename=attendance_${cleanStudent}_${range}.csv`);
     res.send(csv);
-  } catch (err) { console.error('Student export error:', err); res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('Student export error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ========== SUBJECT DROPDOWN API ==========
@@ -1766,6 +1888,7 @@ app.get('/api/timetable/subjects', async (req, res) => {
     const all = [...new Set([...cseSubjects, ...aidsSubjects])].sort();
     res.json(all);
   } catch (err) {
+    console.error('Subjects dropdown error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -1776,6 +1899,7 @@ app.get('/api/timetable/faculty', async (req, res) => {
     const faculty = getTimetableFaculty();
     res.json(faculty);
   } catch (err) {
+    console.error('Timetable faculty error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -1855,7 +1979,7 @@ app.get('/api/admin/class-attendance-report', async (req, res) => {
       totalLectures: overallTotal
     });
   } catch (err) {
-    console.error('Class report error:', err);
+    console.error('Class attendance report error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -2251,6 +2375,7 @@ app.get('/api/chats/:rollNo', async (req, res) => {
     const chats = await Chat.find({ rollNo: cleanRoll }).sort({ updatedAt: -1 });
     res.json(chats);
   } catch (err) {
+    console.error('Get chats error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -2281,6 +2406,7 @@ app.post('/api/chats', async (req, res) => {
       return res.json(chat);
     }
   } catch (err) {
+    console.error('Create/update chat error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -2295,11 +2421,12 @@ app.delete('/api/chats/:threadId', async (req, res) => {
     if (!result) return res.status(404).json({ error: 'Chat not found' });
     res.json({ message: 'Chat deleted' });
   } catch (err) {
+    console.error('Delete chat error:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// ==================== CHAT AI ENDPOINT – GROQ API ====================
+// ==================== CHAT AI ENDPOINT – GROQ API (FIXED) ====================
 app.post('/api/chat', async (req, res) => {
   try {
     const { message, rollNo, role, name, branch, threadId } = req.body;
@@ -2382,41 +2509,62 @@ Reply in a clear, conversational, and professional manner.`;
     let reply = '';
     let aiError = false;
 
-    // ===== Call GROQ API =====
+    // ===== Call GROQ API with fallback models =====
     if (GROQ_API_KEY) {
-      try {
-        const groqPayload = {
-          model: 'mixtral-8x7b-32768',
-          messages: messages,
-          temperature: 0.7,
-          max_tokens: 1000
-        };
+      const models = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+      let usedModel = null;
+      for (const model of models) {
+        try {
+          const groqPayload = {
+            model: model,
+            messages: messages,
+            temperature: 0.7,
+            max_tokens: 1000
+          };
 
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 15000);
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 15000);
 
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${GROQ_API_KEY}`
-          },
-          body: JSON.stringify(groqPayload),
-          signal: controller.signal
-        });
-        clearTimeout(timeout);
+          const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${GROQ_API_KEY}`
+            },
+            body: JSON.stringify(groqPayload),
+            signal: controller.signal
+          });
+          clearTimeout(timeout);
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('❌ Groq API error:', response.status, errorText);
-          aiError = true;
-        } else {
-          const data = await response.json();
-          reply = data.choices?.[0]?.message?.content || 'Sorry, I could not understand.';
+          if (response.ok) {
+            const data = await response.json();
+            reply = data.choices?.[0]?.message?.content || 'Sorry, I could not understand.';
+            usedModel = model;
+            break;
+          } else {
+            const errorText = await response.text();
+            console.warn(`⚠️ Groq model ${model} failed (${response.status}): ${errorText}`);
+            if (response.status === 400 && errorText.includes('model_decommissioned')) {
+              // model decommissioned, try next
+              continue;
+            }
+            // other errors: treat as fatal and stop retrying
+            aiError = true;
+            break;
+          }
+        } catch (err) {
+          console.warn(`⚠️ Groq model ${model} exception:`, err.message);
+          // network errors: try next model
+          continue;
         }
-      } catch (err) {
-        console.error('❌ Groq API exception:', err);
+      }
+
+      if (!reply && !aiError) {
+        // all models failed
         aiError = true;
+      }
+      if (usedModel) {
+        console.log(`✅ Used Groq model: ${usedModel}`);
       }
     } else {
       console.warn('⚠️ GROQ_API_KEY not set');
