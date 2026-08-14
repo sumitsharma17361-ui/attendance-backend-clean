@@ -1102,13 +1102,47 @@
             margin: 0;
         }
 
+        /* ===== LOADING OVERLAY ===== */
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(3px);
+            z-index: 99999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        #loadingOverlay .spinner {
+            width: 48px;
+            height: 48px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-top: 5px solid #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 16px;
+        }
+        #loadingOverlay .loading-text {
+            font-size: 14px;
+            opacity: 0.9;
+            text-align: center;
+            padding: 0 20px;
+        }
+
         /* ===== CHAT WIDGET - COMPACT, CENTERED (75% size) ===== */
         #chatWidget {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            z-index: 99999;
+            z-index: 99998;
             display: none;
             width: 75vw;
             max-width: 700px;
@@ -1492,7 +1526,7 @@
             position: fixed;
             bottom: 20px;
             right: 20px;
-            z-index: 99998;
+            z-index: 99997;
             display: none;
             background: var(--primary);
             color: #fff;
@@ -1539,6 +1573,12 @@
             </svg>
             <span id="toast-msg">System Active</span>
         </div>
+    </div>
+
+    <!-- ===== LOADING OVERLAY ===== -->
+    <div id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text" id="loadingText">Processing…</div>
     </div>
 
     <!-- ===== DOWNLOAD PROGRESS ===== -->
@@ -1925,7 +1965,7 @@
                     <!-- SUB: Entry -->
                     <div id="subAttendance" class="admin-box sub-attendance" style="display:none;">
                         <span class="sub-section-title">📝 Manual Backdate Attendance</span>
-                        <input type="text" id="manualRoll" placeholder="Student Roll No" style="font-size:10px; padding:7px;" onchange="validateStudentBranchForManual()" />
+                        <input type="text" id="manualRoll" placeholder="Student Roll No" style="font-size:10px; padding:7px;" oninput="autoDetectBranch()" />
                         <input type="date" id="manualDate" style="font-size:10px; padding:7px;" onchange="loadSubjectsForManual()" />
                         <select id="manualBranch" style="font-size:10px; padding:7px;">
                             <option value="CSE">CSE</option>
@@ -2017,6 +2057,20 @@
 
                     <!-- SUB: Tools -->
                     <div id="subTools" class="admin-box sub-tools" style="display:none;">
+
+                        <!-- ===== Server Busy Mode ===== -->
+                        <div class="tool-sub-card" style="border-color:#f97316; background:#fff7ed;">
+                            <span class="tool-title" style="color:#ea580c;">🔧 Server Busy Mode</span>
+                            <p style="font-size:8px; color:var(--text-muted); margin-bottom:6px;">
+                                When enabled, only Admin & Faculty can login. Students will see "Server is currently busy with maintenance."
+                            </p>
+                            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                                <button class="btn btn-warning btn-sm" onclick="setServerBusy(true)" style="padding:6px 12px; margin:0;">🔴 Enable Busy Mode</button>
+                                <button class="btn btn-success btn-sm" onclick="setServerBusy(false)" style="padding:6px 12px; margin:0;">🟢 Disable Busy Mode</button>
+                                <span id="serverBusyStatus" style="font-size:10px; font-weight:700; color:var(--text-muted);">Status: Off</span>
+                            </div>
+                        </div>
+
                         <div class="tool-sub-card">
                             <span class="tool-title" style="color:var(--primary);">➕ Register New User</span>
                             <input type="text" id="adminRegName" placeholder="Full Name" style="font-size:10px; padding:7px;" />
@@ -3007,7 +3061,7 @@
         }
 
         // ============================================================
-        // MARK FULL DAY ATTENDANCE
+        // MARK FULL DAY ATTENDANCE – FIXED LOCATION ERRORS
         // ============================================================
         async function markFullDayAttendance() {
             console.log('🚀 markFullDayAttendance called');
@@ -3068,7 +3122,11 @@
                 },
                 (err) => {
                     console.error('❌ GPS error:', err);
-                    showMsg('GPS Access Denied! Please allow location.', true);
+                    let errorMsg = 'GPS Access Denied! Please allow location.';
+                    if (err.code === 1) errorMsg = '❌ Location permission denied. Please enable GPS in browser settings.';
+                    else if (err.code === 2) errorMsg = '❌ Location unavailable. Please check your GPS.';
+                    else if (err.code === 3) errorMsg = '❌ GPS timeout. Please try again.';
+                    showMsg(errorMsg, true);
                 }
             );
         }
@@ -3141,7 +3199,11 @@
                 },
                 (err) => {
                     console.error('❌ GPS error:', err);
-                    showMsg('GPS Access Denied! Please allow location.', true);
+                    let errorMsg = 'GPS Access Denied! Please allow location.';
+                    if (err.code === 1) errorMsg = '❌ Location permission denied. Please enable GPS in browser settings.';
+                    else if (err.code === 2) errorMsg = '❌ Location unavailable. Please check your GPS.';
+                    else if (err.code === 3) errorMsg = '❌ GPS timeout. Please try again.';
+                    showMsg(errorMsg, true);
                 }
             );
         }
@@ -4030,26 +4092,37 @@
         }
 
         // ============================================================
-        // ADMIN MANUAL ATTENDANCE
+        // ADMIN MANUAL ATTENDANCE – AUTO BRANCH DETECTION
         // ============================================================
-        async function validateStudentBranchForManual() {
-            const rollNo = document.getElementById('manualRoll').value.trim();
+        async function autoDetectBranch() {
+            const rollInput = document.getElementById('manualRoll');
+            const roll = rollInput.value.trim();
             const warningEl = document.getElementById('manualBranchWarning');
-            if (!rollNo) { warningEl.style.display = 'none'; return; }
+            if (!roll) {
+                warningEl.style.display = 'none';
+                return;
+            }
             try {
-                const res = await fetch(`${API_BASE}/api/student/profile/${rollNo}`);
-                if (!res.ok) { warningEl.style.display = 'none'; return; }
-                const data = await res.json();
-                const studentBranch = data.branch || 'CSE';
-                const selectedBranch = document.getElementById('manualBranch').value;
-                if (selectedBranch.toUpperCase() !== studentBranch.toUpperCase()) {
-                    warningEl.style.display = 'block';
-                    warningEl.innerText =
-                        `⚠️ Student is in ${studentBranch}, but selected ${selectedBranch}. Please select correct branch.`;
-                } else {
+                const res = await fetch(`${API_BASE}/api/student/profile/${roll}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const branch = data.branch || 'CSE';
+                    document.getElementById('manualBranch').value = branch;
                     warningEl.style.display = 'none';
+                    // Also reload subjects for the selected branch
+                    loadSubjectsForManual();
+                } else {
+                    warningEl.style.display = 'block';
+                    warningEl.innerText = 'Student not found! Please check roll number.';
                 }
-            } catch (e) { warningEl.style.display = 'none'; }
+            } catch (e) {
+                warningEl.style.display = 'none';
+            }
+        }
+
+        async function validateStudentBranchForManual() {
+            // Old function kept for compatibility – now uses autoDetectBranch
+            await autoDetectBranch();
         }
 
         function loadSubjectsForManual() {
@@ -4099,8 +4172,7 @@
                 const res = await fetch(`${API_BASE}/api/admin/manual-attendance-bulk`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ requesterRollNo: user.rollNo, studentRollNo, date, subjects, status,
-                        branch })
+                    body: JSON.stringify({ requesterRollNo: user.rollNo, studentRollNo, date, subjects, status })
                 });
                 const data = await res.json();
                 if (res.ok) { showMsg(`✅ ${data.message}`);
@@ -4195,7 +4267,32 @@
         }
 
         // ============================================================
-        // ADMIN TOOLS
+        // ADMIN TOOLS – Server Busy Mode
+        // ============================================================
+        async function setServerBusy(busy) {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/set-server-busy`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requesterRollNo: user.rollNo, busy })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showMsg(data.message);
+                    document.getElementById('serverBusyStatus').innerText = `Status: ${busy ? '🔴 ON' : '🟢 OFF'}`;
+                    document.getElementById('serverBusyStatus').style.color = busy ? '#dc2626' : '#16a34a';
+                } else {
+                    showMsg(data.error || 'Failed', true);
+                }
+            } catch (e) {
+                showMsg('Server error!', true);
+            }
+        }
+
+        // ============================================================
+        // ADMIN TOOLS – Other
         // ============================================================
         function toggleFacultyRegistrationFields() {
             const role = document.getElementById('adminRegRole').value;
@@ -4725,197 +4822,24 @@
         }
 
         // ============================================================
-        // AUTHENTICATION
+        // LOADING OVERLAY HELPERS
         // ============================================================
-        async function handleAuth() {
-            const rawRoll = document.getElementById('rollNo').value.trim();
-            const password = document.getElementById('password').value.trim();
-            const deviceId = getDeviceId();
-            const validation = sanitizeAndValidateRollNo(rawRoll);
-            if (!validation.isValid) { return showMsg('Enter valid ID!', true); }
-            if (!password) { return showMsg('Enter your password!', true); }
-            showMsg('Connecting…');
-            try {
-                if (isRegistering) {
-                    const name = document.getElementById('regName').value.trim();
-                    if (!name) return showMsg('Enter Full Name!', true);
-                    const role = 'student';
-                    if (!isValidStudentRoll(validation.cleanRoll)) {
-                        return showMsg('⚠️ Invalid Roll Number! Use 24CSE01 or 24AIDS01 format.', true);
-                    }
-                    const res = await fetch(`${API_BASE}/api/auth/register`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name, rollNo: validation.cleanRoll, password, deviceId, role })
-                    });
-                    const data = await res.json();
-                    if (res.ok) { showMsg('Registered! Login now.');
-                        toggleMode(); } else { showMsg(data.error || 'Registration failed', true); }
-                } else {
-                    const selectedRole = document.getElementById('loginRole').value;
-                    const res = await fetch(`${API_BASE}/api/auth/login`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ rollNo: validation.cleanRoll, password, deviceId })
-                    });
-                    const data = await res.json();
-                    if (res.ok) {
-                        if (data.user.role !== selectedRole) {
-                            return showMsg(`You are registered as ${data.user.role}, not ${selectedRole}. Please select correct role.`,
-                                true);
-                        }
-                        localStorage.setItem('user', JSON.stringify(data.user));
-                        localStorage.setItem('token', data.token);
-                        loadDashboard();
-                    } else { showMsg(data.error || 'Invalid credentials', true); }
-                }
-            } catch (err) { showMsg('Connection timeout!', true); }
-        }
-
-        async function logout() {
-            try { const token = localStorage.getItem('token'); if (token) { await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST',
-                        headers: { 'Authorization': `Bearer ${token}` } }); } } catch (e) {}
-            localStorage.removeItem('user');
-            localStorage.removeItem('token');
-            impersonating = false;
-            document.getElementById('impersonationBanner').style.display = 'none';
-            location.reload();
-        }
-
-        // ============================================================
-        // LOAD DASHBOARD
-        // ============================================================
-        function loadDashboard() {
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (!user) return;
-
-            const now = new Date();
-            const currentMonth = now.getMonth();
-            const monthSelect = document.getElementById('monthSelector');
-            if (monthSelect && currentMonth >= 6 && currentMonth <= 11) {
-                monthSelect.value = currentMonth.toString();
+        function showLoading(message = 'Processing…') {
+            const overlay = document.getElementById('loadingOverlay');
+            const text = document.getElementById('loadingText');
+            if (overlay && text) {
+                text.textContent = message;
+                overlay.style.display = 'flex';
             }
+        }
 
-            document.getElementById('auth-box').style.display = 'none';
-            document.getElementById('dash-box').style.display = 'block';
-            document.getElementById('headerAvatarBox').style.display = 'flex';
-            document.getElementById('welcomeMsg').innerText = `Hello, ${user.name}!`;
-            const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 'ST';
-            document.getElementById('userAvatarText').innerText = initials;
-            const isAdmin = user.role === 'admin';
-            const isFaculty = user.role === 'faculty';
-            const branch = user.branch || 'CSE';
-            document.getElementById('roleLabel').innerText = "ID";
-            document.getElementById('userRoll').innerText = user.rollNo;
-            document.getElementById('userRoleBadge').innerText = isAdmin ? '👑 Admin' : isFaculty ? '👨‍🏫 Faculty' : '🎓 Student';
-            document.getElementById('userBranchBadge').innerText = `📚 ${branch}`;
-            document.getElementById('studentStatsGrid').style.display = 'grid';
-            document.getElementById('adminStatsGrid').style.display = 'none';
-            document.getElementById('simulatorBox').style.display = 'flex';
-            document.getElementById('studentTabHeader').style.display = 'block';
-
-            if (impersonating) {
-                document.getElementById('impersonationBanner').style.display = 'flex';
-            } else {
-                document.getElementById('impersonationBanner').style.display = 'none';
-            }
-
-            if (isAdmin) {
-                document.getElementById('adminTabHeader').style.display = 'block';
-                document.getElementById('teacherTabHeader').style.display = 'none';
-                document.getElementById('adminLiveDashboard').style.display = 'block';
-                loadDashboardStats();
-                setInterval(loadDashboardStats, 60000);
-                populateStudentSelect();
-                populateTeacherSelect();
-                generatePasscode('full_day');
-                generatePasscode('single_lecture');
-                fetchAllUsers();
-                populateAdminStudentSelect();
-                populateSubjectDropdown();
-                toggleFacultyRegistrationFields();
-                loadAllAttendance();
-                populateBulkStudentSelect();
-            } else if (isFaculty) {
-                document.getElementById('adminTabHeader').style.display = 'none';
-                document.getElementById('teacherTabHeader').style.display = 'block';
-                document.getElementById('adminLiveDashboard').style.display = 'none';
-                loadTeacherSubjects();
-                loadTeacherRecent();
-                fetchTeacherStudents();
-                document.getElementById('teacherPasscodeDisplay').innerText = '—';
-                teacherCurrentPasscode = '—';
-            } else {
-                document.getElementById('adminTabHeader').style.display = 'none';
-                document.getElementById('teacherTabHeader').style.display = 'none';
-                document.getElementById('adminLiveDashboard').style.display = 'none';
-            }
-            switchTab(isAdmin ? 'adminTab' : isFaculty ? 'teacherTab' : 'markTab');
-            fetchHistory(user.rollNo);
-            const todayISO = new Date().toISOString().split('T')[0];
-            document.getElementById('manualDate').value = todayISO;
-            fetchNotices();
-            loadSubjectsForManual();
-            updatePeriodTrackerWidget();
-            setInterval(updatePeriodTrackerWidget, 30000);
-
-            if (!isAdmin && !isFaculty) {
-                fetchMonthlySummary();
-            }
-
-            // Show chat trigger
-            document.getElementById('chatAvatarTrigger').style.display = 'flex';
-            loadChatHistory(user.rollNo);
-            updateWelcomeGreeting();
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) overlay.style.display = 'none';
         }
 
         // ============================================================
-        // TAB SWITCHING
-        // ============================================================
-        function switchTab(tabId) {
-            const markTab = document.getElementById('markTab');
-            const adminTab = document.getElementById('adminTab');
-            const teacherTab = document.getElementById('teacherTab');
-            markTab.style.display = tabId === 'markTab' ? 'block' : 'none';
-            adminTab.style.display = tabId === 'adminTab' ? 'block' : 'none';
-            teacherTab.style.display = tabId === 'teacherTab' ? 'block' : 'none';
-            markTab.classList.remove('tab-content-active');
-            adminTab.classList.remove('tab-content-active');
-            teacherTab.classList.remove('tab-content-active');
-            if (tabId === 'markTab') markTab.classList.add('tab-content-active');
-            if (tabId === 'adminTab') adminTab.classList.add('tab-content-active');
-            if (tabId === 'teacherTab') teacherTab.classList.add('tab-content-active');
-            const tabs = document.querySelectorAll('.tab-bar .tab-item');
-            tabs.forEach(t => t.classList.remove('active'));
-            if (tabId === 'markTab') tabs[0].classList.add('active');
-            if (tabId === 'adminTab' && tabs[1]) tabs[1].classList.add('active');
-            if (tabId === 'teacherTab' && tabs[2]) tabs[2].classList.add('active');
-        }
-
-        function switchAdminSubTab(subId) {
-            const subTabs = ['subDirectory', 'subAllAttendance', 'subReports', 'subAttendance', 'subHoliday', 'subPasscode',
-                'subTools'
-            ];
-            subTabs.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) {
-                    el.style.display = (id === subId) ? 'block' : 'none';
-                    el.classList.remove('tab-content-active');
-                    if (id === subId) el.classList.add('tab-content-active');
-                }
-            });
-            const navItems = document.querySelectorAll('.admin-nav-item');
-            navItems.forEach((item, idx) => { item.classList.toggle('active', subTabs[idx] === subId); });
-            if (subId === 'subPasscode') { generatePasscode('full_day');
-                generatePasscode('single_lecture'); }
-            if (subId === 'subDirectory') { fetchAllUsers(); }
-            if (subId === 'subReports') { populateStudentSelect(); }
-            if (subId === 'subTools') { populateTeacherSelect(); }
-            if (subId === 'subAllAttendance') { loadAllAttendance(); }
-        }
-
-        // ============================================================
-        // BULK MARK & DELETE
+        // BULK MARK & DELETE – WITH LOADING
         // ============================================================
         async function populateBulkStudentSelect() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -4986,6 +4910,7 @@
                     `Mark ${subjects.length} subjects for ${selectedStudents.length} students on ${selectedDates.length} dates?`
                 )) return;
 
+            showLoading(`Marking attendance for ${selectedStudents.length} students... This may take a moment.`);
             try {
                 const res = await fetch(`${API_BASE}/api/admin/bulk-mark-attendance`, {
                     method: 'POST',
@@ -5005,6 +4930,8 @@
                 }
             } catch (e) {
                 showMsg('Network error!', true);
+            } finally {
+                hideLoading();
             }
         }
 
@@ -5019,6 +4946,7 @@
                     `Delete ALL attendance records for ${selectedStudents.length} students on ${selectedDates.length} dates?`
                 )) return;
 
+            showLoading(`Deleting attendance for ${selectedStudents.length} students...`);
             try {
                 const res = await fetch(`${API_BASE}/api/admin/bulk-delete-attendance`, {
                     method: 'DELETE',
@@ -5037,6 +4965,8 @@
                 }
             } catch (e) {
                 showMsg('Network error!', true);
+            } finally {
+                hideLoading();
             }
         }
 
@@ -5297,6 +5227,209 @@
         }
 
         // ============================================================
+        // AUTHENTICATION
+        // ============================================================
+        async function handleAuth() {
+            const rawRoll = document.getElementById('rollNo').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const deviceId = getDeviceId();
+            const validation = sanitizeAndValidateRollNo(rawRoll);
+            if (!validation.isValid) { return showMsg('Enter valid ID!', true); }
+            if (!password) { return showMsg('Enter your password!', true); }
+            showMsg('Connecting…');
+            try {
+                if (isRegistering) {
+                    const name = document.getElementById('regName').value.trim();
+                    if (!name) return showMsg('Enter Full Name!', true);
+                    const role = 'student';
+                    if (!isValidStudentRoll(validation.cleanRoll)) {
+                        return showMsg('⚠️ Invalid Roll Number! Use 24CSE01 or 24AIDS01 format.', true);
+                    }
+                    const res = await fetch(`${API_BASE}/api/auth/register`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, rollNo: validation.cleanRoll, password, deviceId, role })
+                    });
+                    const data = await res.json();
+                    if (res.ok) { showMsg('Registered! Login now.');
+                        toggleMode(); } else { showMsg(data.error || 'Registration failed', true); }
+                } else {
+                    const selectedRole = document.getElementById('loginRole').value;
+                    const res = await fetch(`${API_BASE}/api/auth/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ rollNo: validation.cleanRoll, password, deviceId })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        // Check if server busy response (status 503) is handled
+                        if (res.status === 503) {
+                            return showMsg(data.error || 'Server is currently busy with maintenance. Please try again later.', true);
+                        }
+                        if (data.user.role !== selectedRole) {
+                            return showMsg(`You are registered as ${data.user.role}, not ${selectedRole}. Please select correct role.`,
+                                true);
+                        }
+                        localStorage.setItem('user', JSON.stringify(data.user));
+                        localStorage.setItem('token', data.token);
+                        loadDashboard();
+                    } else { showMsg(data.error || 'Invalid credentials', true); }
+                }
+            } catch (err) { showMsg('Connection timeout!', true); }
+        }
+
+        async function logout() {
+            try { const token = localStorage.getItem('token'); if (token) { await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` } }); } } catch (e) {}
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+            impersonating = false;
+            document.getElementById('impersonationBanner').style.display = 'none';
+            location.reload();
+        }
+
+        // ============================================================
+        // LOAD DASHBOARD
+        // ============================================================
+        function loadDashboard() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user) return;
+
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const monthSelect = document.getElementById('monthSelector');
+            if (monthSelect && currentMonth >= 6 && currentMonth <= 11) {
+                monthSelect.value = currentMonth.toString();
+            }
+
+            document.getElementById('auth-box').style.display = 'none';
+            document.getElementById('dash-box').style.display = 'block';
+            document.getElementById('headerAvatarBox').style.display = 'flex';
+            document.getElementById('welcomeMsg').innerText = `Hello, ${user.name}!`;
+            const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 'ST';
+            document.getElementById('userAvatarText').innerText = initials;
+            const isAdmin = user.role === 'admin';
+            const isFaculty = user.role === 'faculty';
+            const branch = user.branch || 'CSE';
+            document.getElementById('roleLabel').innerText = "ID";
+            document.getElementById('userRoll').innerText = user.rollNo;
+            document.getElementById('userRoleBadge').innerText = isAdmin ? '👑 Admin' : isFaculty ? '👨‍🏫 Faculty' : '🎓 Student';
+            document.getElementById('userBranchBadge').innerText = `📚 ${branch}`;
+            document.getElementById('studentStatsGrid').style.display = 'grid';
+            document.getElementById('adminStatsGrid').style.display = 'none';
+            document.getElementById('simulatorBox').style.display = 'flex';
+            document.getElementById('studentTabHeader').style.display = 'block';
+
+            if (impersonating) {
+                document.getElementById('impersonationBanner').style.display = 'flex';
+            } else {
+                document.getElementById('impersonationBanner').style.display = 'none';
+            }
+
+            if (isAdmin) {
+                document.getElementById('adminTabHeader').style.display = 'block';
+                document.getElementById('teacherTabHeader').style.display = 'none';
+                document.getElementById('adminLiveDashboard').style.display = 'block';
+                loadDashboardStats();
+                setInterval(loadDashboardStats, 60000);
+                populateStudentSelect();
+                populateTeacherSelect();
+                generatePasscode('full_day');
+                generatePasscode('single_lecture');
+                fetchAllUsers();
+                populateAdminStudentSelect();
+                populateSubjectDropdown();
+                toggleFacultyRegistrationFields();
+                loadAllAttendance();
+                populateBulkStudentSelect();
+                // Check current server busy status
+                fetch(`${API_BASE}/api/admin/get-server-busy`)
+                    .then(res => res.json())
+                    .then(data => {
+                        const busy = data.busy || false;
+                        document.getElementById('serverBusyStatus').innerText = `Status: ${busy ? '🔴 ON' : '🟢 OFF'}`;
+                        document.getElementById('serverBusyStatus').style.color = busy ? '#dc2626' : '#16a34a';
+                    })
+                    .catch(() => {});
+            } else if (isFaculty) {
+                document.getElementById('adminTabHeader').style.display = 'none';
+                document.getElementById('teacherTabHeader').style.display = 'block';
+                document.getElementById('adminLiveDashboard').style.display = 'none';
+                loadTeacherSubjects();
+                loadTeacherRecent();
+                fetchTeacherStudents();
+                document.getElementById('teacherPasscodeDisplay').innerText = '—';
+                teacherCurrentPasscode = '—';
+            } else {
+                document.getElementById('adminTabHeader').style.display = 'none';
+                document.getElementById('teacherTabHeader').style.display = 'none';
+                document.getElementById('adminLiveDashboard').style.display = 'none';
+            }
+            switchTab(isAdmin ? 'adminTab' : isFaculty ? 'teacherTab' : 'markTab');
+            fetchHistory(user.rollNo);
+            const todayISO = new Date().toISOString().split('T')[0];
+            document.getElementById('manualDate').value = todayISO;
+            fetchNotices();
+            loadSubjectsForManual();
+            updatePeriodTrackerWidget();
+            setInterval(updatePeriodTrackerWidget, 30000);
+
+            if (!isAdmin && !isFaculty) {
+                fetchMonthlySummary();
+            }
+
+            // Show chat trigger
+            document.getElementById('chatAvatarTrigger').style.display = 'flex';
+            loadChatHistory(user.rollNo);
+            updateWelcomeGreeting();
+        }
+
+        // ============================================================
+        // TAB SWITCHING
+        // ============================================================
+        function switchTab(tabId) {
+            const markTab = document.getElementById('markTab');
+            const adminTab = document.getElementById('adminTab');
+            const teacherTab = document.getElementById('teacherTab');
+            markTab.style.display = tabId === 'markTab' ? 'block' : 'none';
+            adminTab.style.display = tabId === 'adminTab' ? 'block' : 'none';
+            teacherTab.style.display = tabId === 'teacherTab' ? 'block' : 'none';
+            markTab.classList.remove('tab-content-active');
+            adminTab.classList.remove('tab-content-active');
+            teacherTab.classList.remove('tab-content-active');
+            if (tabId === 'markTab') markTab.classList.add('tab-content-active');
+            if (tabId === 'adminTab') adminTab.classList.add('tab-content-active');
+            if (tabId === 'teacherTab') teacherTab.classList.add('tab-content-active');
+            const tabs = document.querySelectorAll('.tab-bar .tab-item');
+            tabs.forEach(t => t.classList.remove('active'));
+            if (tabId === 'markTab') tabs[0].classList.add('active');
+            if (tabId === 'adminTab' && tabs[1]) tabs[1].classList.add('active');
+            if (tabId === 'teacherTab' && tabs[2]) tabs[2].classList.add('active');
+        }
+
+        function switchAdminSubTab(subId) {
+            const subTabs = ['subDirectory', 'subAllAttendance', 'subReports', 'subAttendance', 'subHoliday', 'subPasscode',
+                'subTools'
+            ];
+            subTabs.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.style.display = (id === subId) ? 'block' : 'none';
+                    el.classList.remove('tab-content-active');
+                    if (id === subId) el.classList.add('tab-content-active');
+                }
+            });
+            const navItems = document.querySelectorAll('.admin-nav-item');
+            navItems.forEach((item, idx) => { item.classList.toggle('active', subTabs[idx] === subId); });
+            if (subId === 'subPasscode') { generatePasscode('full_day');
+                generatePasscode('single_lecture'); }
+            if (subId === 'subDirectory') { fetchAllUsers(); }
+            if (subId === 'subReports') { populateStudentSelect(); }
+            if (subId === 'subTools') { populateTeacherSelect(); }
+            if (subId === 'subAllAttendance') { loadAllAttendance(); }
+        }
+
+        // ============================================================
         // INIT
         // ============================================================
         function initMonthSelector() {
@@ -5324,6 +5457,12 @@
             if (avatar) {
                 avatar.addEventListener('click', toggleChat);
                 avatar.addEventListener('touchstart', toggleChat, { passive: true });
+            }
+
+            // Auto branch detection on manual roll input
+            const manualRoll = document.getElementById('manualRoll');
+            if (manualRoll) {
+                manualRoll.addEventListener('input', autoDetectBranch);
             }
         });
 
@@ -5358,10 +5497,14 @@
             console.log('📊 Teacher reports: date range options available.');
             console.log('🔒 Roll number validation: 24CSE00 / 24AIDS00 format enforced.');
             console.log('🛡️ All endpoints aligned with backend.');
-            console.log('🤖 Chat AI: Gemini Pro style with history, time-based greetings, and quick chips.');
+            console.log('🤖 Chat AI: Groq API with history, time-based greetings, and quick chips.');
             console.log('📱 Mobile keyboard closes automatically after sending message.');
             console.log('📏 Chat panel is now centered and occupies ~75% of screen.');
             console.log('✅ Chat button fixed: removed inline onclick causing double toggle; widget display toggled properly.');
+            console.log('✅ Auto branch detection for manual attendance entry.');
+            console.log('✅ Server busy mode added – admin can block student logins during maintenance.');
+            console.log('✅ Location errors now show specific messages for GPS issues.');
+            console.log('✅ Loading overlay for bulk operations shows progress.');
         })();
     </script>
 </body>
