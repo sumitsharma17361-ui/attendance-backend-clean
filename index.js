@@ -16,7 +16,7 @@ app.use(cors());
 // ---------- Environment Variables ----------
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
-const GROQ_API_KEY = process.env.GROQ_API_KEY; // ✅ Now using Groq
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const COLLEGE_LAT = 28.4509370;
 const COLLEGE_LNG = 76.7688120;
 const COLLEGE_RADIUS = 50;
@@ -420,8 +420,8 @@ function getScheduleForBranch(branch) {
 
 function getCurrentPeriod(branch = 'CSE') {
   const now = new Date();
-  const day = now.getDay(); // 1=Monday, 5=Friday
-  if (day === 0 || day === 6) return null; // weekend
+  const day = now.getDay();
+  if (day === 0 || day === 6) return null;
   const schedule = getScheduleForBranch(branch);
   const daySchedule = schedule[day] || [];
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
@@ -515,7 +515,7 @@ const chatSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
-// ========== NEW: System Settings Schema for Server Busy Mode ==========
+// ========== System Settings Schema for Server Busy Mode ==========
 const systemSettingsSchema = new mongoose.Schema({
   key: { type: String, required: true, unique: true },
   value: { type: mongoose.Schema.Types.Mixed, required: true },
@@ -667,6 +667,7 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
+// ========== LOGIN with Server Busy Check ==========
 app.post('/api/auth/login', async (req, res) => {
   try {
     const parseResult = loginSchema.safeParse(req.body);
@@ -678,7 +679,6 @@ app.post('/api/auth/login', async (req, res) => {
     const serverBusySetting = await SystemSettings.findOne({ key: 'serverBusy' });
     const isServerBusy = serverBusySetting ? serverBusySetting.value === true : false;
     if (isServerBusy) {
-      // Allow only admin and faculty to login during server busy
       const userCheck = await User.findOne({ rollNo: cleanRoll });
       if (userCheck && userCheck.role !== 'admin' && userCheck.role !== 'faculty') {
         return res.status(503).json({ error: 'Server is currently busy with maintenance. Please try again later.' });
@@ -1538,7 +1538,6 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
     const user = await User.findOne({ rollNo: targetRoll });
     if (!user) return res.status(404).json({ error: `Roll No ${targetRoll} not registered!` });
     
-    // ===== AUTO DETECT BRANCH FROM STUDENT PROFILE =====
     const actualBranch = user.branch || 'CSE';
     
     let markedCount = 0, markedSubjects = [], alreadyMarked = [];
@@ -1861,7 +1860,7 @@ app.get('/api/admin/class-attendance-report', async (req, res) => {
   }
 });
 
-// ========== BULK REGISTRATION & ATTENDANCE – CSE (with duplicate skip) ==========
+// ========== BULK REGISTRATION & ATTENDANCE – CSE ==========
 app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
   try {
     const requester = await User.findOne({ rollNo: req.body.requesterRollNo?.trim().toUpperCase() || '' });
@@ -2009,7 +2008,7 @@ app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
   }
 });
 
-// ========== BULK REGISTRATION & ATTENDANCE – AIDS (with duplicate skip) ==========
+// ========== BULK REGISTRATION & ATTENDANCE – AIDS ==========
 app.post('/api/admin/bulk-register-and-update-attendance-aids', async (req, res) => {
   try {
     const requester = await User.findOne({ rollNo: req.body.requesterRollNo?.trim().toUpperCase() || '' });
@@ -2131,7 +2130,7 @@ app.post('/api/admin/bulk-register-and-update-attendance-aids', async (req, res)
   }
 });
 
-// ========== UPDATED: BULK MARK ATTENDANCE (Admin) – AUTO BRANCH PER STUDENT ==========
+// ========== BULK MARK ATTENDANCE (Admin) – BRANCH-AWARE PER STUDENT ==========
 app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNos, dates, subjects } = req.body;
@@ -2213,7 +2212,7 @@ app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
   }
 });
 
-// ========== UPDATED: BULK DELETE ATTENDANCE (Admin) ==========
+// ========== BULK DELETE ATTENDANCE (Admin) ==========
 app.delete('/api/admin/bulk-delete-attendance', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNos, dates } = req.body;
@@ -2245,8 +2244,6 @@ app.delete('/api/admin/bulk-delete-attendance', async (req, res) => {
 });
 
 // ==================== CHAT MANAGEMENT ENDPOINTS ====================
-
-// Get all chat threads for a user
 app.get('/api/chats/:rollNo', async (req, res) => {
   try {
     const { rollNo } = req.params;
@@ -2258,7 +2255,6 @@ app.get('/api/chats/:rollNo', async (req, res) => {
   }
 });
 
-// Create a new chat thread (or update existing)
 app.post('/api/chats', async (req, res) => {
   try {
     const { rollNo, threadId, title, messages } = req.body;
@@ -2289,7 +2285,6 @@ app.post('/api/chats', async (req, res) => {
   }
 });
 
-// Delete a chat thread
 app.delete('/api/chats/:threadId', async (req, res) => {
   try {
     const { threadId } = req.params;
@@ -2304,14 +2299,13 @@ app.delete('/api/chats/:threadId', async (req, res) => {
   }
 });
 
-// ==================== CHAT AI ENDPOINT – USING GROQ API ====================
+// ==================== CHAT AI ENDPOINT – GROQ API ====================
 app.post('/api/chat', async (req, res) => {
   try {
     const { message, rollNo, role, name, branch, threadId } = req.body;
     if (!message) return res.status(400).json({ error: 'Message is required.' });
     const cleanRoll = rollNo?.trim().toUpperCase() || 'guest';
 
-    // Fetch user data and context
     let userData = null;
     let attendanceSummary = null;
     let workingDays = 0;
@@ -2370,7 +2364,6 @@ Do not perform any actions (like marking attendance) – only provide guidance.
 
 Reply in a clear, conversational, and professional manner.`;
 
-    // Manage chat history
     let chatThread = null;
     let existingMessages = [];
     if (threadId && cleanRoll !== 'guest') {
@@ -2392,7 +2385,6 @@ Reply in a clear, conversational, and professional manner.`;
     // ===== Call GROQ API =====
     if (GROQ_API_KEY) {
       try {
-        // Use Groq's free model: mixtral-8x7b-32768 or llama3-8b-8192
         const groqPayload = {
           model: 'mixtral-8x7b-32768',
           messages: messages,
@@ -2450,7 +2442,7 @@ Reply in a clear, conversational, and professional manner.`;
       reply = fallback;
     }
 
-    // Save conversation to thread
+    // Save conversation
     let newThreadId = threadId;
     if (cleanRoll !== 'guest') {
       const newMessages = [
