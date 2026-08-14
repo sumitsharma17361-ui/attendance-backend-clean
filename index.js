@@ -531,12 +531,8 @@ const chatSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
-// ========== System Settings Schema for Server Busy Mode ==========
-const systemSettingsSchema = new mongoose.Schema({
-  key: { type: String, required: true, unique: true },
-  value: { type: mongoose.Schema.Types.Mixed, required: true },
-  updatedAt: { type: Date, default: Date.now }
-});
+// ========== System Settings Schema – REMOVED (no maintenance feature) ==========
+// No more SystemSettings or server busy mode.
 
 const User = mongoose.model('User', userSchema);
 const Attendance = mongoose.model('Attendance', attendanceSchema);
@@ -545,7 +541,6 @@ const Notice = mongoose.model('Notice', noticeSchema);
 const Passcode = mongoose.model('Passcode', passcodeSchema);
 const TeacherSubject = mongoose.model('TeacherSubject', teacherSubjectSchema);
 const Chat = mongoose.model('Chat', chatSchema);
-const SystemSettings = mongoose.model('SystemSettings', systemSettingsSchema);
 
 Attendance.createIndexes().catch(err => console.error('Index creation error:', err));
 
@@ -689,23 +684,13 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// ========== LOGIN with Server Busy Check ==========
+// ========== LOGIN (no server busy check) ==========
 app.post('/api/auth/login', async (req, res) => {
   try {
     const parseResult = loginSchema.safeParse(req.body);
     if (!parseResult.success) return res.status(400).json({ error: parseResult.error.errors[0].message });
     const { rollNo, password, deviceId } = parseResult.data;
     const cleanRoll = rollNo.trim().toUpperCase();
-
-    // ===== CHECK SERVER BUSY MODE =====
-    const serverBusySetting = await SystemSettings.findOne({ key: 'serverBusy' });
-    const isServerBusy = serverBusySetting ? serverBusySetting.value === true : false;
-    if (isServerBusy) {
-      const userCheck = await User.findOne({ rollNo: cleanRoll });
-      if (userCheck && userCheck.role !== 'admin' && userCheck.role !== 'faculty') {
-        return res.status(503).json({ error: 'Server is currently busy with maintenance. Please try again later.' });
-      }
-    }
 
     const user = await User.findOne({ rollNo: cleanRoll });
     if (!user) return res.status(400).json({ error: 'User not found!' });
@@ -876,34 +861,6 @@ app.post('/api/admin/login-as-student', async (req, res) => {
     res.json({ message: `Logged in as ${student.name}`, token, user: { name: student.name, rollNo: student.rollNo, role: 'student' }, isImpersonating: true });
   } catch (err) {
     console.error('Impersonate error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ========== SERVER BUSY MODE (Admin) ==========
-app.post('/api/admin/set-server-busy', async (req, res) => {
-  try {
-    const { requesterRollNo, busy } = req.body;
-    const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
-    if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
-    await SystemSettings.findOneAndUpdate(
-      { key: 'serverBusy' },
-      { key: 'serverBusy', value: busy === true, updatedAt: new Date() },
-      { upsert: true, new: true }
-    );
-    res.json({ message: `Server busy mode set to ${busy ? 'ON' : 'OFF'}` });
-  } catch (err) {
-    console.error('Set server busy error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/admin/get-server-busy', async (req, res) => {
-  try {
-    const setting = await SystemSettings.findOne({ key: 'serverBusy' });
-    res.json({ busy: setting ? setting.value === true : false });
-  } catch (err) {
-    console.error('Get server busy error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -2426,7 +2383,7 @@ app.delete('/api/chats/:threadId', async (req, res) => {
   }
 });
 
-// ==================== CHAT AI ENDPOINT – GROQ API (FIXED) ====================
+// ==================== CHAT AI ENDPOINT – GROQ API ====================
 app.post('/api/chat', async (req, res) => {
   try {
     const { message, rollNo, role, name, branch, threadId } = req.body;
@@ -2545,27 +2502,19 @@ Reply in a clear, conversational, and professional manner.`;
             const errorText = await response.text();
             console.warn(`⚠️ Groq model ${model} failed (${response.status}): ${errorText}`);
             if (response.status === 400 && errorText.includes('model_decommissioned')) {
-              // model decommissioned, try next
               continue;
             }
-            // other errors: treat as fatal and stop retrying
             aiError = true;
             break;
           }
         } catch (err) {
           console.warn(`⚠️ Groq model ${model} exception:`, err.message);
-          // network errors: try next model
           continue;
         }
       }
 
-      if (!reply && !aiError) {
-        // all models failed
-        aiError = true;
-      }
-      if (usedModel) {
-        console.log(`✅ Used Groq model: ${usedModel}`);
-      }
+      if (!reply && !aiError) aiError = true;
+      if (usedModel) console.log(`✅ Used Groq model: ${usedModel}`);
     } else {
       console.warn('⚠️ GROQ_API_KEY not set');
       aiError = true;
