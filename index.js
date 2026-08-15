@@ -148,7 +148,7 @@ const CSE_TIME_TABLE = {
     { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' },
     { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' },
     { subject: 'CN - Computer Network', faculty: 'Mr. Chhetrapal' },
-    { subject: 'LIB - Library', faculty: 'Library Staff' }
+    { subject: 'SPT - Sports', faculty: 'Sports DPT' }
   ],
   Tuesday: [
     { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' },
