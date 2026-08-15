@@ -2402,7 +2402,7 @@
     </button>
 
     <!-- ========================================================== -->
-    <!-- JAVASCRIPT – FULL CLIENT LOGIC (unchanged, only UI polish) -->
+    <!-- JAVASCRIPT – FULL CLIENT LOGIC (with command parser)       -->
     <!-- ========================================================== -->
     <script>
         // ============================================================
@@ -5189,7 +5189,7 @@
         }
 
         // ============================================================
-        // CHAT WIDGET
+        // CHAT WIDGET – with command parser
         // ============================================================
         function toggleChat() {
             chatOpen = !chatOpen;
@@ -5358,10 +5358,13 @@
             }
         }
 
+        // ============================================================
+        // CHAT COMMAND PARSER
+        // ============================================================
         async function sendChatMessage() {
             const input = document.getElementById('chatInput');
-            const msg = input.value.trim();
-            if (!msg) return;
+            const rawMsg = input.value.trim();
+            if (!rawMsg) return;
 
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user) { showMsg('Please login to chat!', true); return; }
@@ -5370,16 +5373,169 @@
             const welcome = document.getElementById('welcomeGreeting');
             if (welcome) welcome.remove();
 
+            // Add user message to UI
             const userDiv = document.createElement('div');
             userDiv.className = 'chat-msg user';
             const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            userDiv.innerHTML = `<div class="bubble">${escapeHtml(msg)}<span class="msg-time">${time}</span></div>`;
+            userDiv.innerHTML = `<div class="bubble">${escapeHtml(rawMsg)}<span class="msg-time">${time}</span></div>`;
             messagesDiv.appendChild(userDiv);
             input.value = '';
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
-
             if (document.activeElement) document.activeElement.blur();
 
+            // ---- Command detection ----
+            const msg = rawMsg.toLowerCase().trim();
+
+            // Helper: show bot message
+            const showBotReply = (text, isError = false) => {
+                const botDiv = document.createElement('div');
+                botDiv.className = 'chat-msg bot';
+                const botTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                botDiv.innerHTML =
+                    `<div class="bubble" style="${isError ? 'color:#b91c1c;' : ''}">${escapeHtml(text)}<span class="msg-time">${botTime}</span></div>`;
+                messagesDiv.appendChild(botDiv);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            };
+
+            // 1. "aaj kon kon present hai" (Admin only)
+            if (msg.includes('aaj kon kon present') || msg.includes('today present') && user.role === 'admin') {
+                try {
+                    const res = await fetch(`${API_BASE}/api/admin/dashboard-stats/${user.rollNo}`, {
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` }
+                    });
+                    const data = await res.json();
+                    if (!res.ok || !data.todayPresentStudents) {
+                        showBotReply('⚠️ Could not fetch present students.', true);
+                        return;
+                    }
+                    const students = data.todayPresentStudents || [];
+                    if (students.length === 0) {
+                        showBotReply('📭 No students present today.');
+                        return;
+                    }
+                    const cse = students.filter(s => s.rollNo && !s.rollNo.includes('AIDS'));
+                    const aids = students.filter(s => s.rollNo && s.rollNo.includes('AIDS'));
+                    let reply = `📋 **Today's Present Students (${new Date().toISOString().split('T')[0]})**\n`;
+                    if (cse.length) {
+                        reply += `\n🟦 **CSE (${cse.length})**: ${cse.map(s => `${s.rollNo} (${s.name})`).join(', ')}`;
+                    }
+                    if (aids.length) {
+                        reply += `\n🟪 **AIDS (${aids.length})**: ${aids.map(s => `${s.rollNo} (${s.name})`).join(', ')}`;
+                    }
+                    if (cse.length + aids.length === 0) reply += '\nNo one present yet.';
+                    showBotReply(reply);
+                } catch (e) {
+                    showBotReply('❌ Failed to fetch present students.', true);
+                }
+                return;
+            }
+
+            // 2. "kal kon kon present tha" (Admin only) – fetch for previous day
+            if (msg.includes('kal kon kon present') || msg.includes('yesterday present') && user.role === 'admin') {
+                const today = new Date();
+                const yesterday = new Date(today);
+                yesterday.setDate(today.getDate() - 1);
+                const dateStr = yesterday.toISOString().split('T')[0];
+                try {
+                    const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`, {
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` }
+                    });
+                    const records = await res.json();
+                    if (!res.ok || !records.length) {
+                        showBotReply('⚠️ Could not fetch attendance.', true);
+                        return;
+                    }
+                    const presentOnDate = records.filter(r => r.date === dateStr && r.status === 'Present');
+                    if (presentOnDate.length === 0) {
+                        showBotReply(`📭 No students present on ${dateStr}.`);
+                        return;
+                    }
+                    const unique = {};
+                    presentOnDate.forEach(r => { if (!unique[r.rollNo]) unique[r.rollNo] = r.studentName || r.name ||
+                            'Unknown'; });
+                    const list = Object.entries(unique).map(([roll, name]) => `${roll} (${name})`);
+                    showBotReply(`📋 **Present on ${dateStr} (${list.length})**:\n${list.join(', ')}`);
+                } catch (e) {
+                    showBotReply('❌ Failed to fetch yesterday\'s attendance.', true);
+                }
+                return;
+            }
+
+            // 3. "mark my attendance" (Student only)
+            if (msg.includes('mark my attendance') && user.role === 'student') {
+                // Trigger full day attendance (asks passcode & GPS)
+                markFullDayAttendance();
+                // The function itself shows prompts and handles flow
+                // We'll just add a note that it's triggered.
+                showBotReply('📌 Initiating Full Day Attendance marking...\nPlease allow location and enter the passcode when prompted.');
+                return;
+            }
+
+            // 4. Timetable queries
+            const timetableMatch = msg.match(/aaj (\d+)(?:th|st|nd|rd)? lecture kiska hai/i) ||
+                msg.match(/(\d+)(?:th|st|nd|rd)? period kya hai/i) ||
+                msg.match(/(\d+):(\d+) ke samay konsa lecture hai/i);
+            if (timetableMatch) {
+                const branch = user.branch || 'CSE';
+                const schedule = getScheduleForBranch(branch);
+                const now = new Date();
+                const day = now.getDay();
+                if (day === 0 || day === 6) {
+                    showBotReply('📅 Weekend – no lectures today.');
+                    return;
+                }
+                const daySchedule = schedule[day] || [];
+                let periodNum = null;
+                let timeMatch = null;
+                if (timetableMatch[1] && timetableMatch[2]) {
+                    // time format
+                    const h = parseInt(timetableMatch[1]);
+                    const m = parseInt(timetableMatch[2]);
+                    const targetMins = h * 60 + m;
+                    for (let slot of daySchedule) {
+                        const sMins = parseInt(slot.start.split(':')[0]) * 60 + parseInt(slot.start.split(':')[1]);
+                        const eMins = parseInt(slot.end.split(':')[0]) * 60 + parseInt(slot.end.split(':')[1]);
+                        if (targetMins >= sMins && targetMins < eMins) {
+                            showBotReply(`📚 At ${slot.start} - ${slot.end}: **${slot.subject}**`);
+                            return;
+                        }
+                    }
+                    showBotReply(`⏳ No class at that time.`);
+                    return;
+                } else if (timetableMatch[1]) {
+                    periodNum = parseInt(timetableMatch[1]);
+                    if (periodNum < 1 || periodNum > 8) {
+                        showBotReply('Invalid period number (1-8).');
+                        return;
+                    }
+                    const slot = daySchedule.find(s => s.period === `P${periodNum}` || s.period === `P${periodNum}-P${periodNum+1}`);
+                    if (slot) {
+                        showBotReply(`📚 Period ${periodNum}: **${slot.subject}** (${slot.start} - ${slot.end})`);
+                    } else {
+                        showBotReply(`⏳ No lecture in period ${periodNum}.`);
+                    }
+                    return;
+                }
+            }
+
+            // 5. "aaj college khula hai" – check holiday/weekend
+            if (msg.includes('aaj college khula') || msg.includes('college open today')) {
+                const today = new Date().toISOString().split('T')[0];
+                try {
+                    const res = await fetch(`${API_BASE}/api/date-status/${today}`);
+                    const status = await res.json();
+                    if (status.isBlocked) {
+                        showBotReply(`📅 ${status.type}: ${status.message}`);
+                    } else {
+                        showBotReply('✅ College is open today.');
+                    }
+                } catch (e) {
+                    showBotReply('⚠️ Could not check status.', true);
+                }
+                return;
+            }
+
+            // If no command matched, proceed to AI chat (normal flow)
             const typing = document.getElementById('typingIndicator');
             if (typing) typing.style.display = 'block';
             const sendBtn = document.getElementById('chatSendBtn');
@@ -5387,7 +5543,7 @@
 
             try {
                 const payload = {
-                    message: msg,
+                    message: rawMsg,
                     rollNo: user.rollNo,
                     role: user.role || 'student',
                     name: user.name || '',
@@ -5503,10 +5659,8 @@
             console.log('📊 Teacher reports: date range options available.');
             console.log('🔒 Roll number validation: 24CSE00 / 24AIDS00 format enforced.');
             console.log('🛡️ All endpoints aligned with backend.');
-            console.log('🤖 Chat AI: Gemini Pro style with history, time-based greetings, and quick chips.');
-            console.log('📱 Mobile keyboard closes automatically after sending message.');
-            console.log('📏 Chat panel is now centered and occupies ~75% of screen.');
-            console.log('✅ Chat button fixed: removed inline onclick causing double toggle; widget display toggled properly.');
+            console.log('🤖 Chat AI: command parser added for actions (present list, mark attendance, timetable, etc.)');
+            console.log('📏 Chat panel is centered and occupies ~75% of screen.');
         })();
     </script>
 </body>
