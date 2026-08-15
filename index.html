@@ -8,41 +8,36 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous">
     </script>
     <style>
-        /* ===== ROOT ===== */
+        /* ============================================================
+           GLASSMORPHISM THEME – Liquid Glass Effect
+           ============================================================ */
         :root {
-            --bg: #f0f4f8;
-            --bg-gradient: linear-gradient(145deg, #f0f4f8 0%, #e2e8f0 100%);
-            --primary: #2563eb;
-            --primary-hover: #1d4ed8;
-            --primary-light: #dbeafe;
-            --primary-gradient: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-            --success: #16a34a;
-            --success-light: #dcfce7;
-            --danger: #dc2626;
-            --danger-light: #fee2e2;
-            --warning: #d97706;
-            --warning-light: #fef3c7;
-            --card-bg: #ffffff;
-            --card-border: #e2e8f0;
-            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
-            --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.10);
-            --shadow-hover: 0 8px 30px rgba(37, 99, 235, 0.12);
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --radius: 14px;
-            --radius-sm: 8px;
+            --glass-bg: rgba(255, 255, 255, 0.12);
+            --glass-border: rgba(255, 255, 255, 0.25);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+            --glass-blur: blur(14px);
+            --primary: #6C63FF;
+            --primary-dark: #5a52d5;
+            --primary-light: rgba(108, 99, 255, 0.20);
+            --success: #00c853;
+            --danger: #ff1744;
+            --warning: #ffab00;
+            --text-main: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.70);
+            --text-dark: #1a1a2e;
+            --radius: 20px;
+            --radius-sm: 12px;
             --radius-full: 9999px;
-            --chat-bg: #f8fafc;
-            --chat-user: #2563eb;
-            --chat-bot: #e2e8f0;
             --transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            --bg-gradient: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
         }
+
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background: var(--bg-gradient);
@@ -51,46 +46,48 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            padding: 16px;
             margin: 0;
             -webkit-font-smoothing: antialiased;
+            background-attachment: fixed;
         }
+
         /* ===== SCROLLBAR ===== */
         ::-webkit-scrollbar {
-            width: 5px;
-            height: 5px;
+            width: 4px;
+            height: 4px;
         }
         ::-webkit-scrollbar-track {
-            background: #f1f5f9;
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 10px;
         }
         ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
+            background: rgba(255, 255, 255, 0.20);
             border-radius: 10px;
-            transition: var(--transition);
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
+            background: rgba(255, 255, 255, 0.35);
         }
+
         /* ===== TOAST ===== */
         #toast-container {
             position: fixed;
-            top: 24px;
+            top: 20px;
             left: 50%;
             transform: translateX(-50%);
-            z-index: 9999;
+            z-index: 99999;
             width: 90%;
-            max-width: 440px;
+            max-width: 420px;
             pointer-events: none;
         }
         .toast-card {
-            padding: 14px 20px;
-            border-radius: var(--radius);
+            padding: 14px 22px;
+            border-radius: var(--radius-sm);
             font-size: 13px;
             font-weight: 600;
             text-align: center;
-            box-shadow: var(--shadow-lg);
-            border: 1px solid var(--card-border);
+            box-shadow: var(--glass-shadow);
+            border: 1px solid var(--glass-border);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -99,88 +96,111 @@
             transform: translateY(-20px) scale(0.95);
             transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
             pointer-events: auto;
-            backdrop-filter: blur(8px);
-            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            background: var(--glass-bg);
+            color: #fff;
         }
         .toast-card.show {
             opacity: 1;
             transform: translateY(0) scale(1);
         }
         .toast-card.toast-success {
-            background: rgba(240, 253, 244, 0.95);
-            color: #166534;
-            border-color: #bbf7d0;
+            background: rgba(0, 200, 83, 0.20);
+            border-color: rgba(0, 200, 83, 0.40);
         }
         .toast-card.toast-error {
-            background: rgba(254, 242, 242, 0.95);
-            color: #991b1b;
-            border-color: #fecaca;
+            background: rgba(255, 23, 68, 0.20);
+            border-color: rgba(255, 23, 68, 0.40);
             animation: shake 0.5s ease;
         }
+        .toast-card.toast-download {
+            background: rgba(108, 99, 255, 0.25);
+            border-color: rgba(108, 99, 255, 0.40);
+        }
         @keyframes shake {
-            0%,
-            100% {
-                transform: translateX(0);
-            }
-            20%,
-            60% {
-                transform: translateX(-6px);
-            }
-            40%,
-            80% {
-                transform: translateX(6px);
-            }
+            0%,100% { transform: translateX(0); }
+            20%,60% { transform: translateX(-6px); }
+            40%,80% { transform: translateX(6px); }
         }
-        /* ===== APP ===== */
-        .app-container {
-            width: 100%;
-            max-width: 500px;
-            background: var(--card-bg);
-            border-radius: 24px;
-            box-shadow: var(--shadow-lg);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            overflow: hidden;
-            animation: appEntrance 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-            backdrop-filter: blur(4px);
+
+        /* ===== DOWNLOAD PROGRESS ===== */
+        #downloadProgress {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.70);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            z-index: 99999;
+            display: none;
+            align-items: center;
+            gap: 14px;
+            max-width: 90%;
+            box-shadow: var(--glass-shadow);
+            font-weight: 600;
+            border: 1px solid var(--glass-border);
         }
-        @keyframes appEntrance {
-            from {
-                opacity: 0;
-                transform: scale(0.92) translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
+        #downloadProgress.show {
+            display: flex;
+            animation: fadeSlide 0.3s ease;
+        }
+        #downloadProgress .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2.5px solid rgba(255,255,255,0.20);
+            border-top: 2.5px solid #6C63FF;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
         @keyframes fadeSlide {
-            from {
-                opacity: 0;
-                transform: translateY(14px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity:0; transform: translateY(14px) translateX(-50%); }
+            to { opacity:1; transform: translateY(0) translateX(-50%); }
         }
-        .tab-content-active {
-            animation: fadeSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+
+        /* ===== APP CONTAINER – GLASS ===== */
+        .app-container {
+            width: 100%;
+            max-width: 520px;
+            background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border-radius: 28px;
+            box-shadow: var(--glass-shadow);
+            border: 1px solid var(--glass-border);
+            overflow: hidden;
+            animation: appEntrance 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
         }
-        /* ===== HEADER ===== */
+        @keyframes appEntrance {
+            from { opacity:0; transform: scale(0.92) translateY(20px); }
+            to { opacity:1; transform: scale(1) translateY(0); }
+        }
+
+        /* ===== HEADER – GLASS ===== */
         .app-header {
-            background: var(--card-bg);
+            background: rgba(255,255,255,0.06);
             padding: 16px 20px;
-            border-bottom: 1px solid var(--card-border);
+            border-bottom: 1px solid var(--glass-border);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            backdrop-filter: blur(8px);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
         }
         .app-header-title h1 {
             font-size: 16px;
             font-weight: 900;
             letter-spacing: -0.3px;
-            background: var(--primary-gradient);
+            background: linear-gradient(135deg, #6C63FF, #a78bfa);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -201,27 +221,28 @@
             width: 38px;
             height: 38px;
             border-radius: 50%;
-            background: var(--primary-gradient);
+            background: linear-gradient(135deg, #6C63FF, #a78bfa);
             color: #fff;
             font-weight: 700;
             font-size: 13px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 2px solid rgba(255, 255, 255, 0.5);
+            border: 2px solid rgba(255,255,255,0.30);
             transition: var(--transition);
             cursor: pointer;
-            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+            box-shadow: 0 2px 12px rgba(108,99,255,0.30);
         }
         .avatar-circle:hover {
-            transform: scale(1.06) rotate(-2deg);
-            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
+            transform: scale(1.06);
+            box-shadow: 0 4px 20px rgba(108,99,255,0.45);
         }
+
         /* ===== BANNERS ===== */
         .notice-banner {
-            background: var(--warning-light);
-            border-bottom: 1px solid #fde68a;
-            color: #92400e;
+            background: rgba(255, 171, 0, 0.15);
+            border-bottom: 1px solid rgba(255, 171, 0, 0.25);
+            color: #ffd54f;
             font-size: 10px;
             padding: 8px 14px;
             font-weight: 600;
@@ -239,17 +260,13 @@
             animation: marquee 18s linear infinite;
         }
         @keyframes marquee {
-            0% {
-                transform: translateX(100%);
-            }
-            100% {
-                transform: translateX(-100%);
-            }
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
         }
         .impersonation-banner {
-            background: var(--warning-light);
-            border-bottom: 2px solid #f59e0b;
-            color: #92400e;
+            background: rgba(255, 171, 0, 0.15);
+            border-bottom: 2px solid rgba(255, 171, 0, 0.30);
+            color: #ffd54f;
             padding: 8px 16px;
             font-size: 11px;
             font-weight: 700;
@@ -260,7 +277,7 @@
             flex-wrap: wrap;
         }
         .impersonation-banner .switch-back-btn {
-            background: var(--danger);
+            background: rgba(255, 23, 68, 0.80);
             color: #fff;
             border: none;
             border-radius: var(--radius-sm);
@@ -271,69 +288,72 @@
             transition: var(--transition);
         }
         .impersonation-banner .switch-back-btn:hover {
-            background: #b91c1c;
+            background: #ff1744;
             transform: scale(1.04);
         }
+
         /* ===== BODY ===== */
         .app-body {
             padding: 16px;
         }
-        /* ===== FORM ===== */
-        input,
-        select {
+
+        /* ===== GLASS INPUTS ===== */
+        input, select {
             width: 100%;
-            padding: 10px 14px;
-            margin-bottom: 8px;
-            background: #f8fafc;
-            border: 1.5px solid var(--card-border);
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            background: rgba(255,255,255,0.08);
+            border: 1.5px solid rgba(255,255,255,0.15);
             border-radius: var(--radius-sm);
             font-size: 12px;
             font-weight: 500;
-            color: var(--text-main);
+            color: #fff;
             outline: none;
             transition: var(--transition);
             font-family: inherit;
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
         }
         select option {
-            background: #fff;
-            color: var(--text-main);
+            background: #1a1a2e;
+            color: #fff;
         }
         input::placeholder {
-            color: #94a3b8;
+            color: rgba(255,255,255,0.45);
             font-weight: 400;
         }
-        input:focus,
-        select:focus {
-            background: #fff;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
+        input:focus, select:focus {
+            background: rgba(255,255,255,0.14);
+            border-color: #6C63FF;
+            box-shadow: 0 0 0 4px rgba(108,99,255,0.15);
         }
         .password-wrapper {
             position: relative;
             width: 100%;
         }
         .password-wrapper input {
-            padding-right: 40px;
+            padding-right: 44px;
         }
         .eye-icon {
             position: absolute;
-            right: 12px;
+            right: 14px;
             top: 50%;
             transform: translateY(-50%);
             cursor: pointer;
-            color: var(--text-muted);
+            color: rgba(255,255,255,0.50);
             transition: var(--transition);
             padding: 4px;
             border-radius: 4px;
         }
         .eye-icon:hover {
-            color: var(--primary);
-            background: var(--primary-light);
+            color: #6C63FF;
+            background: rgba(108,99,255,0.15);
         }
-        /* ===== BUTTONS ===== */
+
+        /* ===== GLASS BUTTONS ===== */
         .btn {
             width: 100%;
-            padding: 10px 16px;
+            padding: 12px 16px;
             border-radius: var(--radius-sm);
             font-weight: 700;
             font-size: 12px;
@@ -345,80 +365,81 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
-            box-shadow: var(--shadow-sm);
             font-family: inherit;
             letter-spacing: 0.2px;
             position: relative;
             overflow: hidden;
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
         }
         .btn::after {
             content: '';
             position: absolute;
             inset: 0;
-            background: rgba(255, 255, 255, 0);
+            background: rgba(255,255,255,0);
             transition: var(--transition);
         }
         .btn:hover::after {
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(255,255,255,0.08);
         }
         .btn:active {
             transform: scale(0.96);
         }
         .btn-primary {
-            background: var(--primary-gradient);
+            background: linear-gradient(135deg, #6C63FF, #5a52d5);
             color: #fff;
-            box-shadow: 0 2px 12px rgba(37, 99, 235, 0.30);
+            box-shadow: 0 4px 20px rgba(108,99,255,0.35);
         }
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 24px rgba(37, 99, 235, 0.35);
+            box-shadow: 0 8px 32px rgba(108,99,255,0.45);
         }
         .btn-success {
-            background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+            background: linear-gradient(135deg, #00c853, #009624);
             color: #fff;
-            box-shadow: 0 2px 12px rgba(22, 163, 74, 0.30);
+            box-shadow: 0 4px 20px rgba(0,200,83,0.30);
         }
         .btn-success:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 24px rgba(22, 163, 74, 0.35);
+            box-shadow: 0 8px 32px rgba(0,200,83,0.40);
         }
         .btn-warning {
-            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+            background: linear-gradient(135deg, #ffab00, #f57f17);
             color: #fff;
-            box-shadow: 0 2px 12px rgba(217, 119, 6, 0.30);
+            box-shadow: 0 4px 20px rgba(255,171,0,0.30);
         }
         .btn-warning:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 24px rgba(217, 119, 6, 0.35);
+            box-shadow: 0 8px 32px rgba(255,171,0,0.40);
         }
         .btn-accent {
-            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            background: linear-gradient(135deg, #00bcd4, #00838f);
             color: #fff;
-            box-shadow: 0 2px 12px rgba(2, 132, 199, 0.30);
+            box-shadow: 0 4px 20px rgba(0,188,212,0.30);
         }
         .btn-accent:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 24px rgba(2, 132, 199, 0.35);
+            box-shadow: 0 8px 32px rgba(0,188,212,0.40);
         }
         .btn-outline {
-            background: #fff;
-            border: 1.5px solid var(--card-border);
-            color: var(--text-main);
+            background: rgba(255,255,255,0.06);
+            border: 1.5px solid rgba(255,255,255,0.20);
+            color: #fff;
             box-shadow: none;
         }
         .btn-outline:hover {
-            background: #f8fafc;
-            border-color: #cbd5e1;
+            background: rgba(255,255,255,0.12);
+            border-color: rgba(255,255,255,0.35);
             transform: translateY(-1px);
         }
         .btn-danger {
-            background: var(--danger-light);
-            color: var(--danger);
-            border: 1.5px solid #fecaca;
+            background: rgba(255,23,68,0.15);
+            color: #ff1744;
+            border: 1.5px solid rgba(255,23,68,0.30);
             box-shadow: none;
         }
         .btn-danger:hover {
-            background: #fee2e2;
+            background: rgba(255,23,68,0.25);
             transform: translateY(-1px);
         }
         .btn-sm {
@@ -432,62 +453,53 @@
             font-size: 8px;
             width: auto;
             margin: 0;
-            border-radius: 4px;
+            border-radius: 6px;
         }
-        .btn-ghost {
-            background: transparent;
-            border: 1px solid transparent;
-            color: var(--text-muted);
-            box-shadow: none;
-        }
-        .btn-ghost:hover {
-            background: #f1f5f9;
-            border-color: var(--card-border);
-            transform: none;
-        }
+
         /* ===== BADGES ===== */
         .badge {
-            padding: 3px 10px;
+            padding: 3px 12px;
             border-radius: var(--radius-full);
             font-size: 9px;
             font-weight: 700;
             transition: var(--transition);
             display: inline-block;
             letter-spacing: 0.2px;
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
         }
         .badge-present {
-            background: var(--success-light);
-            color: #15803d;
+            background: rgba(0,200,83,0.20);
+            color: #69f0ae;
+            border: 1px solid rgba(0,200,83,0.30);
         }
         .badge-absent {
-            background: var(--danger-light);
-            color: #991b1b;
+            background: rgba(255,23,68,0.20);
+            color: #ff8a80;
+            border: 1px solid rgba(255,23,68,0.30);
         }
         .badge-active {
-            background: var(--primary-light);
-            color: #1d4ed8;
+            background: rgba(108,99,255,0.20);
+            color: #b39ddb;
+            border: 1px solid rgba(108,99,255,0.30);
         }
         .badge-role {
-            background: #e2e8f0;
-            color: #475569;
+            background: rgba(255,255,255,0.08);
+            color: var(--text-muted);
+            border: 1px solid rgba(255,255,255,0.10);
         }
         .badge-attendance {
-            background: #e0e7ff;
-            color: #1e40af;
+            background: rgba(0,188,212,0.15);
+            color: #80deea;
+            border: 1px solid rgba(0,188,212,0.25);
         }
         .badge-dl {
-            background: var(--warning-light);
-            color: #92400e;
+            background: rgba(255,171,0,0.20);
+            color: #ffd54f;
+            border: 1px solid rgba(255,171,0,0.30);
         }
-        .badge-cse {
-            background: var(--primary-light);
-            color: #1e40af;
-        }
-        .badge-aids {
-            background: #fae8ff;
-            color: #7c3aed;
-        }
-        /* ===== STATS ===== */
+
+        /* ===== STATS – GLASS ===== */
         .stats-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -495,22 +507,24 @@
             margin: 12px 0;
         }
         .stat-card {
-            background: #f8fafc;
+            background: rgba(255,255,255,0.06);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
             padding: 14px 12px;
             border-radius: var(--radius);
             text-align: center;
-            border: 1px solid var(--card-border);
+            border: 1px solid var(--glass-border);
             transition: var(--transition);
         }
         .stat-card:hover {
             transform: translateY(-2px);
-            border-color: #cbd5e1;
-            box-shadow: var(--shadow-md);
+            border-color: rgba(255,255,255,0.30);
+            box-shadow: var(--glass-shadow);
         }
         .stat-card .value {
             font-size: 22px;
             font-weight: 900;
-            background: var(--primary-gradient);
+            background: linear-gradient(135deg, #6C63FF, #a78bfa);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -524,34 +538,40 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        /* ===== SIMULATOR ===== */
+
+        /* ===== SIMULATOR / ADVISOR ===== */
         .simulator-card {
-            background: var(--primary-light);
-            border: 1px solid #bae6fd;
+            background: rgba(108,99,255,0.10);
+            border: 1px solid rgba(108,99,255,0.20);
             border-radius: var(--radius);
             padding: 10px 14px;
             margin-bottom: 12px;
             font-size: 10px;
-            color: #0369a1;
+            color: #b39ddb;
             display: flex;
             align-items: center;
             gap: 10px;
             transition: var(--transition);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
         }
         .simulator-card:hover {
-            box-shadow: var(--shadow-sm);
+            box-shadow: var(--glass-shadow);
         }
-        /* ===== QUICK PORTALS ===== */
+
+        /* ===== QUICK PORTALS – GLASS ===== */
         .quick-portals-card {
-            background: #fff;
-            border: 1px solid var(--card-border);
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--glass-border);
             border-radius: var(--radius);
             padding: 12px;
             margin: 12px 0;
             transition: var(--transition);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
         }
         .quick-portals-card:hover {
-            box-shadow: var(--shadow-sm);
+            box-shadow: var(--glass-shadow);
         }
         .portal-grid {
             display: grid;
@@ -560,8 +580,8 @@
             margin-top: 8px;
         }
         .portal-btn {
-            background: #f8fafc;
-            border: 1px solid var(--card-border);
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.10);
             border-radius: var(--radius-sm);
             padding: 8px 6px;
             text-align: center;
@@ -576,27 +596,33 @@
             gap: 4px;
         }
         .portal-btn:hover {
-            background: #fff;
-            border-color: var(--primary);
+            background: rgba(255,255,255,0.12);
+            border-color: #6C63FF;
             transform: translateY(-2px);
-            box-shadow: var(--shadow-hover);
-            color: var(--primary);
+            box-shadow: 0 4px 20px rgba(108,99,255,0.20);
+            color: #b39ddb;
         }
         .portal-btn svg {
             width: 20px;
             height: 20px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
         }
-        /* ===== CALENDAR ===== */
+
+        /* ===== CALENDAR – GLASS ===== */
         .calendar-container {
-            background: #fff;
-            border: 1px solid var(--card-border);
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--glass-border);
             border-radius: var(--radius);
             padding: 12px;
             margin: 12px 0;
             transition: var(--transition);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
         }
         .calendar-container:hover {
-            box-shadow: var(--shadow-sm);
+            box-shadow: var(--glass-shadow);
         }
         .calendar-header {
             display: flex;
@@ -612,6 +638,9 @@
             padding: 4px 10px;
             font-size: 10px;
             width: auto;
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.12);
+            color: #fff;
         }
         .calendar-grid {
             display: grid;
@@ -632,8 +661,8 @@
             padding: 5px 2px;
             border-radius: 6px;
             font-weight: 600;
-            background: #f8fafc;
-            border: 1px solid #f1f5f9;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.06);
             transition: var(--transition);
             font-size: 10px;
         }
@@ -642,28 +671,28 @@
             z-index: 1;
         }
         .cal-p {
-            background: var(--success-light);
-            color: #15803d;
-            font-weight: 800;
-            border-color: #bbf7d0;
+            background: rgba(0,200,83,0.20);
+            color: #69f0ae;
+            border-color: rgba(0,200,83,0.30);
         }
         .cal-a {
-            background: var(--danger-light);
-            color: #991b1b;
-            font-weight: 800;
-            border-color: #fecaca;
+            background: rgba(255,23,68,0.20);
+            color: #ff8a80;
+            border-color: rgba(255,23,68,0.30);
         }
         .cal-off {
-            background: #f1f5f9;
-            color: #94a3b8;
+            background: rgba(255,255,255,0.03);
+            color: rgba(255,255,255,0.30);
         }
-        /* ===== TABS ===== */
+
+        /* ===== TABS – GLASS ===== */
         .tab-bar {
             display: flex;
-            background: #f1f5f9;
+            background: rgba(255,255,255,0.06);
             border-radius: var(--radius-sm);
             padding: 3px;
             margin-bottom: 12px;
+            border: 1px solid var(--glass-border);
         }
         .tab-item {
             flex: 1;
@@ -673,37 +702,39 @@
             font-weight: 700;
             cursor: pointer;
             color: var(--text-muted);
-            border-radius: 6px;
+            border-radius: 8px;
             transition: var(--transition);
         }
         .tab-item.active {
-            background: #fff;
-            color: var(--primary);
-            box-shadow: var(--shadow-sm);
+            background: rgba(108,99,255,0.25);
+            color: #fff;
+            box-shadow: 0 2px 12px rgba(108,99,255,0.15);
         }
         .tab-item:hover:not(.active) {
-            color: var(--text-main);
-            background: rgba(255, 255, 255, 0.4);
+            color: #fff;
+            background: rgba(255,255,255,0.06);
         }
-        /* ===== ADMIN NAV ===== */
+
+        /* ===== ADMIN NAV – GLASS ===== */
         .admin-nav {
             display: flex;
             flex-wrap: wrap;
             gap: 4px;
-            background: #f1f5f9;
+            background: rgba(255,255,255,0.04);
             padding: 6px;
             border-radius: var(--radius-sm);
             margin-bottom: 12px;
+            border: 1px solid var(--glass-border);
         }
         .admin-nav-item {
             flex: 1 0 auto;
-            min-width: 64px;
+            min-width: 56px;
             text-align: center;
             padding: 8px 6px;
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 700;
             cursor: pointer;
-            border-radius: 6px;
+            border-radius: 8px;
             color: var(--text-muted);
             transition: var(--transition);
             background: transparent;
@@ -712,19 +743,20 @@
             letter-spacing: 0.2px;
         }
         .admin-nav-item:hover {
-            background: rgba(255, 255, 255, 0.5);
+            background: rgba(255,255,255,0.06);
             transform: translateY(-1px);
         }
         .admin-nav-item.active {
-            background: #fff;
-            color: var(--primary);
-            box-shadow: var(--shadow-sm);
-            border-color: var(--card-border);
+            background: rgba(108,99,255,0.20);
+            color: #fff;
+            box-shadow: 0 2px 12px rgba(108,99,255,0.10);
+            border-color: rgba(108,99,255,0.20);
         }
-        /* ===== PERIOD CARD ===== */
+
+        /* ===== PERIOD CARD – GLASS ===== */
         .period-card {
-            background: var(--primary-light);
-            border: 1px solid #bae6fd;
+            background: rgba(108,99,255,0.10);
+            border: 1px solid rgba(108,99,255,0.20);
             border-radius: var(--radius);
             padding: 12px 14px;
             margin: 8px 0;
@@ -732,9 +764,11 @@
             justify-content: space-between;
             align-items: center;
             transition: var(--transition);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
         }
         .period-card:hover {
-            box-shadow: var(--shadow-sm);
+            box-shadow: var(--glass-shadow);
         }
         .action-btn {
             border: none;
@@ -753,47 +787,48 @@
             transform: translateY(-1px);
         }
         .btn-del {
-            background: var(--danger-light);
-            color: var(--danger);
-            border: 1px solid #fecaca;
+            background: rgba(255,23,68,0.15);
+            color: #ff8a80;
+            border: 1px solid rgba(255,23,68,0.25);
         }
         .btn-del:hover {
-            background: #fee2e2;
+            background: rgba(255,23,68,0.25);
         }
         .btn-view {
-            background: var(--primary-light);
-            color: var(--primary);
-            border: 1px solid #dbeafe;
+            background: rgba(108,99,255,0.15);
+            color: #b39ddb;
+            border: 1px solid rgba(108,99,255,0.20);
         }
         .btn-view:hover {
-            background: #dbeafe;
+            background: rgba(108,99,255,0.25);
         }
         .btn-edit {
-            background: var(--warning-light);
-            color: var(--warning);
-            border: 1px solid #fde68a;
+            background: rgba(255,171,0,0.15);
+            color: #ffd54f;
+            border: 1px solid rgba(255,171,0,0.25);
         }
         .btn-edit:hover {
-            background: #fef3c7;
+            background: rgba(255,171,0,0.25);
         }
         .status-holiday {
-            background: var(--warning-light);
-            color: #92400e;
-            border-color: #fde68a;
+            background: rgba(255,171,0,0.15);
+            color: #ffd54f;
+            border-color: rgba(255,171,0,0.25);
         }
         .status-weekend {
-            background: #e2e8f0;
-            color: #475569;
-            border-color: #cbd5e1;
+            background: rgba(255,255,255,0.05);
+            color: var(--text-muted);
+            border-color: rgba(255,255,255,0.10);
         }
-        /* ===== TABLES ===== */
+
+        /* ===== TABLES – GLASS ===== */
         .table-container {
             max-height: 300px;
             overflow-y: auto;
-            border: 1px solid var(--card-border);
+            border: 1px solid var(--glass-border);
             border-radius: var(--radius-sm);
             margin-top: 6px;
-            background: #fff;
+            background: rgba(255,255,255,0.03);
             transition: var(--transition);
         }
         .table-container table {
@@ -802,11 +837,11 @@
             font-size: 10px;
         }
         .table-container th {
-            background: #f8fafc;
+            background: rgba(255,255,255,0.06);
             color: var(--text-muted);
             padding: 8px 10px;
             text-align: left;
-            border-bottom: 1px solid var(--card-border);
+            border-bottom: 1px solid var(--glass-border);
             position: sticky;
             top: 0;
             font-weight: 700;
@@ -814,61 +849,42 @@
             z-index: 2;
             text-transform: uppercase;
             letter-spacing: 0.3px;
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
         }
         .table-container td {
             padding: 8px 10px;
-            border-bottom: 1px solid #f1f5f9;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
             font-size: 10px;
             vertical-align: middle;
+            color: var(--text-main);
         }
         .table-container tr:hover td {
-            background: #f8fafc;
+            background: rgba(255,255,255,0.04);
         }
-        /* ===== ADMIN BOXES ===== */
+
+        /* ===== ADMIN BOXES – GLASS ===== */
         .admin-box {
-            background: #fff;
+            background: rgba(255,255,255,0.04);
             padding: 14px;
             border-radius: var(--radius);
-            border: 1px solid var(--card-border);
-            animation: fadeSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            border: 1px solid var(--glass-border);
+            animation: fadeSlide 0.4s cubic-bezier(0.16,1,0.3,1);
             margin-bottom: 10px;
             transition: var(--transition);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
         }
         .admin-box:hover {
-            box-shadow: var(--shadow-sm);
+            box-shadow: var(--glass-shadow);
         }
-        .admin-box.sub-reports {
-            background: #f0fdf4;
-            border-color: #bbf7d0;
-        }
-        .admin-box.sub-attendance {
-            background: #fefce8;
-            border-color: #fef08a;
-        }
-        .admin-box.sub-holiday {
-            background: var(--danger-light);
-            border-color: #fecaca;
-        }
-        .admin-box.sub-passcode {
-            background: #eff6ff;
-            border-color: #bfdbfe;
-        }
-        .admin-box.sub-tools {
-            background: #f5f3ff;
-            border-color: #ddd6fe;
-        }
-        .admin-box.sub-directory {
-            background: #fce7f3;
-            border-color: #fbcfe8;
-        }
-        .admin-box.sub-all-attendance {
-            background: #ecfdf5;
-            border-color: #a7f3d0;
-        }
-        .admin-box.sub-bulk {
-            background: #f0f9ff;
-            border-color: #bae6fd;
-        }
+        .admin-box.sub-reports { background: rgba(0,200,83,0.06); border-color: rgba(0,200,83,0.15); }
+        .admin-box.sub-attendance { background: rgba(255,171,0,0.06); border-color: rgba(255,171,0,0.15); }
+        .admin-box.sub-holiday { background: rgba(255,23,68,0.06); border-color: rgba(255,23,68,0.15); }
+        .admin-box.sub-passcode { background: rgba(108,99,255,0.06); border-color: rgba(108,99,255,0.15); }
+        .admin-box.sub-tools { background: rgba(156,39,176,0.06); border-color: rgba(156,39,176,0.15); }
+        .admin-box.sub-directory { background: rgba(233,30,99,0.06); border-color: rgba(233,30,99,0.15); }
+        .admin-box.sub-all-attendance { background: rgba(0,188,212,0.06); border-color: rgba(0,188,212,0.15); }
         .sub-section-title {
             font-size: 11px;
             font-weight: 700;
@@ -878,7 +894,8 @@
             margin-bottom: 8px;
             display: block;
         }
-        /* ===== SUBJECT CHECKBOXES ===== */
+
+        /* ===== SUBJECT CHECKBOXES – GLASS ===== */
         .subject-checkbox-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -886,9 +903,9 @@
             max-height: 160px;
             overflow-y: auto;
             padding: 6px;
-            background: #f8fafc;
+            background: rgba(255,255,255,0.04);
             border-radius: var(--radius-sm);
-            border: 1px solid var(--card-border);
+            border: 1px solid var(--glass-border);
         }
         .subject-checkbox-container label {
             font-size: 9px;
@@ -898,48 +915,52 @@
             gap: 6px;
             cursor: pointer;
             padding: 4px 8px;
-            background: #fff;
+            background: rgba(255,255,255,0.04);
             border-radius: 4px;
-            border: 1px solid #e2e8f0;
+            border: 1px solid rgba(255,255,255,0.06);
             transition: var(--transition);
+            color: var(--text-main);
         }
         .subject-checkbox-container label:hover {
-            background: var(--primary-light);
-            border-color: var(--primary);
+            background: rgba(108,99,255,0.12);
+            border-color: rgba(108,99,255,0.20);
         }
         .subject-checkbox-container label input[type="checkbox"] {
             width: auto;
             margin: 0;
+            accent-color: #6C63FF;
         }
         .subject-checkbox-container .select-all {
             grid-column: span 2;
-            background: #e2e8f0;
+            background: rgba(255,255,255,0.06);
             padding: 6px 10px;
             font-weight: 700;
-            border: none;
+            border: 1px solid var(--glass-border);
         }
         .subject-checkbox-container .select-all:hover {
-            background: #cbd5e1;
+            background: rgba(255,255,255,0.10);
         }
-        /* ===== PASSCODE DISPLAY ===== */
+
+        /* ===== PASSCODE DISPLAY – GLASS ===== */
         .passcode-display {
-            background: #f8fafc;
+            background: rgba(255,255,255,0.04);
             padding: 10px;
             border-radius: var(--radius-sm);
             margin-bottom: 6px;
-            border: 1px solid var(--card-border);
+            border: 1px solid var(--glass-border);
             text-align: center;
             transition: var(--transition);
         }
         .passcode-display h2 {
             font-size: 24px;
             font-weight: 900;
-            background: var(--primary-gradient);
+            background: linear-gradient(135deg, #6C63FF, #a78bfa);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
             letter-spacing: 6px;
         }
+
         /* ===== TODAY PRESENT LIST ===== */
         #todayPresentList {
             max-height: 180px;
@@ -957,18 +978,18 @@
             text-transform: uppercase;
             margin-bottom: 3px;
             display: block;
-            border-bottom: 1px solid var(--card-border);
+            border-bottom: 1px solid var(--glass-border);
             padding-bottom: 3px;
         }
         .present-item {
             display: flex;
             justify-content: space-between;
             padding: 4px 8px;
-            border-bottom: 1px solid #f1f5f9;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
             transition: var(--transition);
         }
         .present-item:hover {
-            background: #f8fafc;
+            background: rgba(255,255,255,0.04);
         }
         .present-item .roll {
             font-weight: 600;
@@ -976,6 +997,7 @@
         .present-item .name {
             color: var(--text-muted);
         }
+
         /* ===== SUBJECT CHIPS ===== */
         .subject-chips {
             display: flex;
@@ -984,35 +1006,39 @@
             margin-top: 4px;
         }
         .subject-chip {
-            background: var(--card-bg);
+            background: rgba(255,255,255,0.06);
             padding: 3px 8px;
             border-radius: 4px;
-            border: 1px solid var(--card-border);
+            border: 1px solid rgba(255,255,255,0.08);
             font-size: 8px;
             font-weight: 500;
             transition: var(--transition);
+            color: var(--text-muted);
         }
         .subject-chip:hover {
-            border-color: var(--primary);
+            border-color: rgba(108,99,255,0.30);
+            color: #fff;
         }
-        /* ===== TOOL SUB CARD ===== */
+
+        /* ===== TOOL SUB CARD – GLASS ===== */
         .tool-sub-card {
-            background: #f8fafc;
-            border: 1px solid var(--card-border);
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--glass-border);
             border-radius: var(--radius);
             padding: 12px;
             margin-bottom: 10px;
             transition: var(--transition);
         }
         .tool-sub-card:hover {
-            box-shadow: var(--shadow-sm);
-            border-color: #cbd5e1;
+            box-shadow: var(--glass-shadow);
+            border-color: rgba(255,255,255,0.20);
         }
         .tool-title {
             font-size: 11px;
             font-weight: 800;
             margin-bottom: 8px;
             display: block;
+            color: var(--text-main);
         }
         .flex-buttons {
             display: flex;
@@ -1022,6 +1048,7 @@
             margin: 0;
             flex: 1;
         }
+
         /* ===== SVG ICON ===== */
         .svg-icon {
             width: 16px;
@@ -1042,16 +1069,17 @@
         .btn:hover .svg-icon {
             transform: scale(1.1);
         }
-        /* ===== MODAL ===== */
+
+        /* ===== MODAL – GLASS ===== */
         .modal-overlay {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(15, 23, 42, 0.55);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            background: rgba(0,0,0,0.50);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             z-index: 10000;
             display: flex;
             align-items: center;
@@ -1060,32 +1088,35 @@
             animation: fadeIn 0.3s ease;
         }
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
+            from { opacity:0; }
+            to { opacity:1; }
         }
         .modal-card {
-            background: #fff;
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
             width: 100%;
-            max-width: 360px;
-            border-radius: 16px;
-            padding: 20px;
-            box-shadow: var(--shadow-lg);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            animation: modalScale 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            max-width: 380px;
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: var(--glass-shadow);
+            border: 1px solid var(--glass-border);
+            animation: modalScale 0.35s cubic-bezier(0.16,1,0.3,1);
         }
         @keyframes modalScale {
-            from {
-                opacity: 0;
-                transform: scale(0.92) translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
+            from { opacity:0; transform: scale(0.92) translateY(10px); }
+            to { opacity:1; transform: scale(1) translateY(0); }
+        }
+        .modal-card h3 {
+            color: #fff;
+            font-size: 14px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+        .modal-card p {
+            color: var(--text-muted);
+            font-size: 10px;
+            margin-bottom: 12px;
         }
         .modal-card .modal-actions {
             display: flex;
@@ -1105,108 +1136,20 @@
             justify-content: space-between;
             align-items: center;
             padding: 6px 0;
-            border-bottom: 1px solid #f1f5f9;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
         }
         .profile-modal .record-item:last-child {
             border-bottom: none;
         }
-        /* ===== DOWNLOAD PROGRESS ===== */
-        .download-progress {
-            position: fixed;
-            bottom: 24px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #1e293b;
-            color: #fff;
-            padding: 12px 24px;
-            border-radius: var(--radius-sm);
-            font-size: 12px;
-            z-index: 99999;
-            display: none;
-            align-items: center;
-            gap: 12px;
-            max-width: 90%;
-            box-shadow: var(--shadow-lg);
-            font-weight: 600;
-        }
-        .download-progress.show {
-            display: flex;
-            animation: fadeSlide 0.3s ease;
-        }
-        .download-progress .spinner {
-            width: 18px;
-            height: 18px;
-            border: 2.5px solid rgba(255, 255, 255, 0.25);
-            border-top: 2.5px solid #fff;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-        /* ===== FILTER ROW ===== */
-        .filter-row {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-bottom: 8px;
-        }
-        .filter-row select,
-        .filter-row input {
-            flex: 1;
-            min-width: 70px;
-            padding: 6px 10px;
-            font-size: 9px;
-            margin: 0;
-        }
-        /* ===== RESPONSIVE ===== */
-        @media (max-width: 480px) {
-            body {
-                padding: 8px;
-            }
-            .app-container {
-                border-radius: 16px;
-            }
-            .stats-grid {
-                grid-template-columns: 1fr 1fr;
-                gap: 6px;
-            }
-            .admin-nav-item {
-                min-width: 48px;
-                font-size: 9px;
-                padding: 6px 4px;
-            }
-            .filter-row select,
-            .filter-row input {
-                min-width: 50px;
-                font-size: 8px;
-            }
-            .profile-modal {
-                max-width: 100%;
-            }
-            .portal-grid {
-                grid-template-columns: 1fr 1fr 1fr;
-                gap: 4px;
-            }
-            .app-header-title h1 {
-                font-size: 14px;
-            }
-            .avatar-circle {
-                width: 32px;
-                height: 32px;
-                font-size: 11px;
-            }
-        }
+
         /* ===== BULK STUDENT LIST ===== */
         .bulk-student-list {
             max-height: 150px;
             overflow-y: auto;
-            border: 1px solid var(--card-border);
+            border: 1px solid var(--glass-border);
             border-radius: var(--radius-sm);
             padding: 6px;
-            background: #fff;
+            background: rgba(255,255,255,0.03);
             margin-bottom: 6px;
         }
         .bulk-student-list label {
@@ -1218,13 +1161,14 @@
             cursor: pointer;
             transition: var(--transition);
             border-radius: 4px;
+            color: var(--text-main);
         }
         .bulk-student-list label:hover {
-            background: #f1f5f9;
+            background: rgba(255,255,255,0.06);
         }
         .bulk-student-list .select-all-label {
             font-weight: 700;
-            border-bottom: 1px solid var(--card-border);
+            border-bottom: 1px solid var(--glass-border);
             padding-bottom: 6px;
             margin-bottom: 4px;
         }
@@ -1235,7 +1179,7 @@
             margin-top: 4px;
         }
         .bulk-date-chip {
-            background: #e2e8f0;
+            background: rgba(255,255,255,0.08);
             padding: 3px 10px;
             border-radius: 12px;
             font-size: 10px;
@@ -1243,15 +1187,17 @@
             align-items: center;
             gap: 6px;
             font-weight: 500;
+            color: var(--text-main);
+            border: 1px solid var(--glass-border);
         }
         .bulk-date-chip .remove-date {
             cursor: pointer;
-            color: var(--danger);
+            color: #ff8a80;
             font-weight: 700;
             transition: var(--transition);
         }
         .bulk-date-chip .remove-date:hover {
-            color: #b91c1c;
+            color: #ff1744;
             transform: scale(1.2);
         }
         .bulk-date-input-row {
@@ -1271,8 +1217,9 @@
             font-size: 10px;
             margin: 0;
         }
+
         /* ========================================================== */
-        /* CHAT WIDGET – COMPACT & CENTERED (75% size)                */
+        /* CHAT WIDGET – GLASS STYLE                                    */
         /* ========================================================== */
         #chatWidget {
             position: fixed;
@@ -1291,23 +1238,25 @@
         .chat-panel {
             width: 100%;
             height: 100%;
-            background: #fff;
-            border-radius: 20px;
-            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255,255,255,0.06);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border-radius: 24px;
+            box-shadow: 0 24px 80px rgba(0,0,0,0.50);
+            border: 1px solid var(--glass-border);
             display: none;
             flex-direction: column;
             overflow: hidden;
-            animation: modalScale 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            animation: modalScale 0.4s cubic-bezier(0.16,1,0.3,1);
             pointer-events: auto;
         }
         .chat-panel.open {
             display: flex !important;
         }
         .chat-panel .chat-header {
-            background: #fff;
+            background: rgba(255,255,255,0.04);
             padding: 12px 16px;
-            border-bottom: 1px solid var(--card-border);
+            border-bottom: 1px solid var(--glass-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -1316,13 +1265,13 @@
         .chat-panel .chat-header .chat-title {
             font-weight: 800;
             font-size: 15px;
-            color: var(--text-main);
+            color: #fff;
             display: flex;
             align-items: center;
             gap: 10px;
         }
         .chat-panel .chat-header .chat-title .ai-badge {
-            background: var(--primary-gradient);
+            background: linear-gradient(135deg, #6C63FF, #5a52d5);
             color: #fff;
             font-size: 8px;
             padding: 2px 10px;
@@ -1342,21 +1291,21 @@
             line-height: 1;
         }
         .chat-panel .chat-header .chat-close:hover {
-            color: var(--danger);
+            color: #ff8a80;
             transform: rotate(90deg);
         }
         .chat-panel .chat-body {
             display: flex;
             flex: 1;
             overflow: hidden;
-            background: var(--chat-bg);
+            background: rgba(0,0,0,0.15);
         }
         .chat-panel .chat-sidebar {
             width: 0;
             overflow: hidden;
-            background: #f1f5f9;
-            border-right: 1px solid var(--card-border);
-            transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            background: rgba(255,255,255,0.04);
+            border-right: 1px solid var(--glass-border);
+            transition: width 0.35s cubic-bezier(0.16,1,0.3,1);
             flex-shrink: 0;
             display: flex;
             flex-direction: column;
@@ -1371,14 +1320,14 @@
             color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            border-bottom: 1px solid var(--card-border);
+            border-bottom: 1px solid var(--glass-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-shrink: 0;
         }
         .chat-panel .chat-sidebar .sidebar-header .new-chat-btn {
-            background: var(--primary-gradient);
+            background: linear-gradient(135deg, #6C63FF, #5a52d5);
             color: #fff;
             border: none;
             border-radius: 4px;
@@ -1412,15 +1361,16 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            background: rgba(255,255,255,0.03);
         }
         .chat-panel .chat-sidebar .sidebar-list .chat-item:hover {
-            background: #fff;
-            border-color: var(--card-border);
+            background: rgba(255,255,255,0.08);
+            border-color: var(--glass-border);
         }
         .chat-panel .chat-sidebar .sidebar-list .chat-item.active {
-            background: #fff;
-            border-color: var(--primary);
-            color: var(--primary);
+            background: rgba(108,99,255,0.15);
+            border-color: rgba(108,99,255,0.25);
+            color: #b39ddb;
         }
         .chat-panel .chat-sidebar .sidebar-list .chat-item .delete-chat {
             color: var(--text-muted);
@@ -1430,7 +1380,7 @@
             transition: var(--transition);
         }
         .chat-panel .chat-sidebar .sidebar-list .chat-item .delete-chat:hover {
-            color: var(--danger);
+            color: #ff8a80;
         }
         .chat-panel .chat-sidebar .sidebar-list .empty-chats {
             text-align: center;
@@ -1443,7 +1393,7 @@
             display: flex;
             flex-direction: column;
             min-width: 0;
-            background: #fff;
+            background: rgba(0,0,0,0.10);
         }
         .chat-panel .chat-main .chat-messages {
             flex: 1;
@@ -1451,7 +1401,6 @@
             padding: 12px 16px;
             font-size: 13px;
             line-height: 1.6;
-            background: var(--chat-bg);
         }
         .chat-panel .chat-main .chat-messages .chat-msg {
             margin-bottom: 10px;
@@ -1472,17 +1421,20 @@
             font-size: 12px;
             line-height: 1.5;
             transition: var(--transition);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
         }
         .chat-panel .chat-main .chat-messages .chat-msg.user .bubble {
-            background: var(--primary-gradient);
+            background: linear-gradient(135deg, #6C63FF, #5a52d5);
             color: #fff;
             border-bottom-right-radius: 4px;
-            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+            box-shadow: 0 2px 12px rgba(108,99,255,0.30);
         }
         .chat-panel .chat-main .chat-messages .chat-msg.bot .bubble {
-            background: var(--chat-bot);
-            color: var(--text-main);
+            background: rgba(255,255,255,0.08);
+            color: #fff;
             border-bottom-left-radius: 4px;
+            border: 1px solid var(--glass-border);
         }
         .chat-panel .chat-main .chat-messages .chat-msg .bubble .msg-time {
             font-size: 8px;
@@ -1493,47 +1445,42 @@
             opacity: 0.7;
         }
         .chat-panel .chat-main .chat-messages .chat-msg.user .bubble .msg-time {
-            color: rgba(255, 255, 255, 0.7);
+            color: rgba(255,255,255,0.60);
         }
         .chat-panel .chat-main .chat-messages .typing-indicator {
             display: none;
             padding: 8px 16px;
-            background: var(--chat-bot);
+            background: rgba(255,255,255,0.06);
             border-radius: 16px;
             border-bottom-left-radius: 4px;
             width: fit-content;
             font-size: 12px;
             color: var(--text-muted);
+            border: 1px solid var(--glass-border);
         }
         .chat-panel .chat-main .chat-messages .typing-indicator .dots {
             display: inline-block;
             animation: typingDots 1.4s infinite;
         }
         @keyframes typingDots {
-            0% {
-                content: '.';
-            }
-            33% {
-                content: '..';
-            }
-            66% {
-                content: '...';
-            }
+            0% { content: '.'; }
+            33% { content: '..'; }
+            66% { content: '...'; }
         }
         .chat-panel .chat-main .quick-chips {
             padding: 6px 12px 8px 12px;
             display: flex;
             flex-wrap: wrap;
             gap: 4px;
-            border-top: 1px solid var(--card-border);
-            background: #fff;
+            border-top: 1px solid var(--glass-border);
+            background: rgba(255,255,255,0.03);
             flex-shrink: 0;
             max-height: 96px;
             overflow-y: auto;
         }
         .chat-panel .chat-main .quick-chips .chip {
-            background: #f1f5f9;
-            border: 1px solid var(--card-border);
+            background: rgba(255,255,255,0.06);
+            border: 1px solid var(--glass-border);
             border-radius: var(--radius-full);
             padding: 3px 12px;
             font-size: 9px;
@@ -1544,15 +1491,15 @@
             white-space: nowrap;
         }
         .chat-panel .chat-main .quick-chips .chip:hover {
-            background: var(--primary-light);
-            border-color: var(--primary);
-            color: var(--primary);
+            background: rgba(108,99,255,0.15);
+            border-color: #6C63FF;
+            color: #b39ddb;
             transform: translateY(-1px);
         }
         .chat-panel .chat-main .chat-input-row {
             display: flex;
-            border-top: 1px solid var(--card-border);
-            background: #fff;
+            border-top: 1px solid var(--glass-border);
+            background: rgba(255,255,255,0.03);
             flex-shrink: 0;
             padding: 8px 12px;
             gap: 8px;
@@ -1560,23 +1507,27 @@
         .chat-panel .chat-main .chat-input-row input {
             flex: 1;
             padding: 8px 14px;
-            border: 1.5px solid var(--card-border);
+            border: 1.5px solid rgba(255,255,255,0.12);
             border-radius: var(--radius-full);
             font-size: 12px;
             outline: none;
-            background: #f8fafc;
+            background: rgba(255,255,255,0.06);
             margin: 0;
             transition: var(--transition);
             min-height: 38px;
             font-family: inherit;
+            color: #fff;
+        }
+        .chat-panel .chat-main .chat-input-row input::placeholder {
+            color: rgba(255,255,255,0.40);
         }
         .chat-panel .chat-main .chat-input-row input:focus {
-            border-color: var(--primary);
-            background: #fff;
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.06);
+            border-color: #6C63FF;
+            background: rgba(255,255,255,0.10);
+            box-shadow: 0 0 0 4px rgba(108,99,255,0.10);
         }
         .chat-panel .chat-main .chat-input-row .send-btn {
-            background: var(--primary-gradient);
+            background: linear-gradient(135deg, #6C63FF, #5a52d5);
             color: #fff;
             border: none;
             border-radius: 50%;
@@ -1590,11 +1541,11 @@
             transition: var(--transition);
             flex-shrink: 0;
             touch-action: manipulation;
-            box-shadow: 0 2px 12px rgba(37, 99, 235, 0.3);
+            box-shadow: 0 2px 12px rgba(108,99,255,0.35);
         }
         .chat-panel .chat-main .chat-input-row .send-btn:hover {
             transform: scale(1.06);
-            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4);
+            box-shadow: 0 4px 24px rgba(108,99,255,0.50);
         }
         .chat-panel .chat-main .chat-input-row .send-btn:disabled {
             opacity: 0.4;
@@ -1612,7 +1563,7 @@
             touch-action: manipulation;
         }
         .chat-panel .chat-main .sidebar-toggle:hover {
-            color: var(--primary);
+            color: #6C63FF;
         }
         .chat-panel .chat-main .chat-messages .welcome-greeting {
             text-align: center;
@@ -1628,60 +1579,44 @@
         }
         .chat-panel .chat-main .chat-messages .welcome-greeting .greeting-name {
             font-weight: 700;
-            color: var(--text-main);
+            color: #fff;
         }
         @media (max-width: 600px) {
-            #chatWidget {
-                width: 94vw;
-                height: 88vh;
-                max-height: 92vh;
-            }
-            .chat-panel .chat-sidebar.open {
-                width: 130px;
-            }
-            .chat-panel .chat-main .quick-chips .chip {
-                font-size: 8px;
-                padding: 2px 10px;
-            }
-            .chat-panel .chat-main .chat-messages {
-                padding: 10px 12px;
-                font-size: 12px;
-            }
-            .chat-panel .chat-main .chat-input-row input {
-                font-size: 11px;
-                padding: 6px 12px;
-                min-height: 34px;
-            }
-            .chat-panel .chat-main .chat-input-row .send-btn {
-                width: 34px;
-                height: 34px;
-                font-size: 14px;
-            }
+            #chatWidget { width: 94vw; height: 88vh; max-height: 92vh; }
+            .chat-panel .chat-sidebar.open { width: 130px; }
+            .chat-panel .chat-main .quick-chips .chip { font-size: 8px; padding: 2px 10px; }
+            .chat-panel .chat-main .chat-messages { padding: 10px 12px; font-size: 12px; }
+            .chat-panel .chat-main .chat-input-row input { font-size: 11px; padding: 6px 12px; min-height: 34px; }
+            .chat-panel .chat-main .chat-input-row .send-btn { width: 34px; height: 34px; font-size: 14px; }
         }
-        /* ===== Floating Avatar trigger ===== */
+
+        /* ===== FLOATING CHAT TRIGGER – GLASS ===== */
         .chat-avatar-trigger {
             position: fixed;
             bottom: 24px;
             right: 24px;
             z-index: 99998;
             display: none;
-            background: var(--primary-gradient);
+            background: linear-gradient(135deg, #6C63FF, #5a52d5);
             color: #fff;
             border: none;
             border-radius: 50%;
             width: 60px;
             height: 60px;
             font-size: 28px;
-            box-shadow: 0 4px 24px rgba(37, 99, 235, 0.35);
+            box-shadow: 0 4px 24px rgba(108,99,255,0.40);
             cursor: pointer;
             transition: var(--transition);
             touch-action: manipulation;
             align-items: center;
             justify-content: center;
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--glass-border);
         }
         .chat-avatar-trigger:hover {
             transform: scale(1.06);
-            box-shadow: 0 8px 36px rgba(37, 99, 235, 0.45);
+            box-shadow: 0 8px 40px rgba(108,99,255,0.55);
         }
         .chat-avatar-trigger .badge-dot {
             position: absolute;
@@ -1689,23 +1624,94 @@
             right: 4px;
             width: 14px;
             height: 14px;
-            background: #22c55e;
+            background: #00c853;
             border-radius: 50%;
-            border: 2.5px solid #fff;
+            border: 2.5px solid rgba(255,255,255,0.30);
             animation: pulse-dot 2s infinite;
         }
         @keyframes pulse-dot {
-            0%,
-            100% {
-                transform: scale(1);
-            }
-            50% {
-                transform: scale(1.15);
-            }
+            0%,100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 480px) {
+            body { padding: 8px; }
+            .app-container { border-radius: 20px; }
+            .stats-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+            .admin-nav-item { min-width: 44px; font-size: 8px; padding: 6px 4px; }
+            .portal-grid { grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+            .app-header-title h1 { font-size: 14px; }
+            .avatar-circle { width: 32px; height: 32px; font-size: 11px; }
+            .chat-avatar-trigger { width: 52px; height: 52px; font-size: 24px; bottom: 16px; right: 16px; }
+        }
+
+        /* ===== AUTH BOX – GLASS SPECIAL ===== */
+        #auth-box {
+            padding: 8px 4px;
+        }
+        #auth-box h3 {
+            font-size: 18px;
+            font-weight: 900;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #6C63FF, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-align: center;
+        }
+        #toggleLink {
+            color: #b39ddb !important;
+            cursor: pointer;
+            font-size: 11px;
+            display: block;
+            text-align: center;
+            margin-top: 10px;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+        #toggleLink:hover {
+            color: #6C63FF !important;
+        }
+
+        /* ===== LOGIN PAGE SPECIAL GLASS ===== */
+        .login-glass-bg {
+            position: relative;
+            overflow: hidden;
+        }
+        .login-glass-bg::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 30% 40%, rgba(108,99,255,0.15) 0%, transparent 60%),
+                        radial-gradient(circle at 70% 60%, rgba(167,139,250,0.10) 0%, transparent 50%);
+            animation: glassOrb 12s ease-in-out infinite alternate;
+            pointer-events: none;
+        }
+        @keyframes glassOrb {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(5%, 5%) scale(1.2); }
+        }
+        .login-glass-bg .app-container {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ===== DASHBOARD TIME ===== */
+        #dashboardCurrentTime {
+            font-weight: 700;
+            color: #b39ddb;
+        }
+        #dashboardCurrentDate {
+            font-weight: 600;
+            color: var(--text-muted);
         }
     </style>
 </head>
-<body>
+<body class="login-glass-bg">
 
     <!-- ===== TOAST ===== -->
     <div id="toast-container">
@@ -1727,15 +1733,15 @@
     <!-- ===== STUDENT EXCEL MODAL ===== -->
     <div id="studentExcelModal" class="modal-overlay" style="display:none;">
         <div class="modal-card">
-            <h3 style="font-size:14px; font-weight:800; margin-bottom:4px;">📊 Download Attendance Sheet</h3>
-            <p style="font-size:10px; color:var(--text-muted); margin-bottom:12px; font-weight:500;">Select range:</p>
-            <select id="studentExcelRange" style="margin-top:3px;">
+            <h3>📊 Download Attendance Sheet</h3>
+            <p>Select range:</p>
+            <select id="studentExcelRange" style="margin-top:3px; background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.12); color:#fff;">
                 <option value="CURRENT_MONTH">Current Month</option>
                 <option value="SELECTED_MONTH">Selected Month</option>
                 <option value="FULL_SEMESTER">Full Semester (Jul–Dec 2026)</option>
             </select>
             <div id="selectedMonthWrapper" style="display:none; margin-top:6px;">
-                <select id="studentExcelMonth">
+                <select id="studentExcelMonth" style="background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.12); color:#fff;">
                     <option value="6">July 2026</option>
                     <option value="7">August 2026</option>
                     <option value="8">September 2026</option>
@@ -1745,8 +1751,8 @@
                 </select>
             </div>
             <div class="modal-actions">
-                <button class="btn btn-outline" onclick="closeStudentExcelModal()">Cancel</button>
-                <button class="btn btn-success" onclick="processStudentExcelDownload()">Download</button>
+                <button class="btn btn-outline btn-sm" onclick="closeStudentExcelModal()">Cancel</button>
+                <button class="btn btn-success btn-sm" onclick="processStudentExcelDownload()">Download</button>
             </div>
         </div>
     </div>
@@ -1754,16 +1760,16 @@
     <!-- ===== EDIT ATTENDANCE MODAL ===== -->
     <div id="editAttendanceModal" class="modal-overlay" style="display:none;">
         <div class="modal-card">
-            <h3 style="font-size:14px; font-weight:800; margin-bottom:4px;">✏️ Edit Attendance</h3>
-            <p style="font-size:10px; color:var(--text-muted); margin-bottom:10px;">Update status for <span id="editRecordStudent" style="font-weight:700; color:var(--primary);"></span></p>
-            <select id="editStatusSelect" style="padding:8px; font-size:11px;">
+            <h3>✏️ Edit Attendance</h3>
+            <p>Update status for <span id="editRecordStudent" style="font-weight:700; color:#b39ddb;"></span></p>
+            <select id="editStatusSelect" style="padding:8px; font-size:11px; background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.12); color:#fff;">
                 <option value="Present">Present</option>
                 <option value="Absent">Absent</option>
                 <option value="Duty Leave">Duty Leave</option>
             </select>
             <div class="modal-actions">
-                <button class="btn btn-outline" onclick="closeEditModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="saveEditAttendance()">Save</button>
+                <button class="btn btn-outline btn-sm" onclick="closeEditModal()">Cancel</button>
+                <button class="btn btn-primary btn-sm" onclick="saveEditAttendance()">Save</button>
             </div>
         </div>
     </div>
@@ -1802,7 +1808,7 @@
 
             <!-- ===== AUTH BOX ===== -->
             <div id="auth-box" class="tab-content-active">
-                <h3 style="font-size:15px; font-weight:900; margin-bottom:8px; background:var(--primary-gradient); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;">Sign In to Web Attendance</h3>
+                <h3>🔐 Sign In to Web Attendance</h3>
                 <select id="loginRole" style="margin-bottom:8px;">
                     <option value="student">Student</option>
                     <option value="faculty">Faculty</option>
@@ -1822,7 +1828,7 @@
                     </span>
                 </div>
                 <button class="btn btn-primary" id="authBtn" onclick="handleAuth()">Sign In</button>
-                <span style="color:var(--primary); cursor:pointer; font-size:11px; display:block; text-align:center; margin-top:10px; font-weight:600; transition:var(--transition);" id="toggleLink" onclick="toggleMode()">New Student? Register</span>
+                <span id="toggleLink" onclick="toggleMode()">New Student? Register</span>
             </div>
 
             <!-- ===== DASHBOARD ===== -->
@@ -1832,13 +1838,17 @@
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                     <div>
                         <h3 style="font-size:14px; font-weight:800;"><span id="welcomeMsg">Welcome!</span></h3>
+                        <p style="font-size:11px; color:var(--text-muted); font-weight:600; margin-top:2px;">
+                            🕐 <span id="dashboardCurrentTime" style="font-weight:700; color:#b39ddb;">--:--:--</span>
+                            &nbsp;|&nbsp; 📅 <span id="dashboardCurrentDate" style="font-weight:600;">--</span>
+                        </p>
                         <p style="font-size:10px; color:var(--text-muted); font-weight:500;">
                             <span id="roleLabel">ID</span>: <span id="userRoll" style="font-weight:700;"></span>
-                            <span id="userRoleBadge" style="margin-left:6px; font-weight:700; color:var(--primary);"></span>
+                            <span id="userRoleBadge" style="margin-left:6px; font-weight:700; color:#b39ddb;"></span>
                             <span id="userBranchBadge" style="margin-left:6px; font-weight:500; color:var(--text-muted);"></span>
                         </p>
                     </div>
-                    <button class="btn btn-danger" style="width:auto; padding:5px 12px; margin:0; font-size:10px;" onclick="logout()">Logout</button>
+                    <button class="btn btn-danger btn-sm" style="width:auto; padding:5px 12px; margin:0; font-size:10px;" onclick="logout()">Logout</button>
                 </div>
 
                 <!-- Student Stats -->
@@ -1883,7 +1893,7 @@
                         <div class="stat-card"><div class="value" id="liveTodayAbsent">0</div><div class="label">Absent Today</div></div>
                         <div class="stat-card"><div class="value" id="liveOverallPct">0%</div><div class="label">Overall %</div></div>
                     </div>
-                    <div style="background:#f8fafc; border-radius:var(--radius-sm); padding:10px; border:1px solid var(--card-border);">
+                    <div style="background:rgba(255,255,255,0.04); border-radius:var(--radius-sm); padding:10px; border:1px solid var(--glass-border);">
                         <span style="font-size:9px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.3px;">📋 Today's Present Students</span>
                         <div id="todayPresentList"></div>
                     </div>
@@ -1933,7 +1943,7 @@
                         </select>
                         <button class="btn btn-primary btn-sm" onclick="fetchMonthlySummary()" style="padding:5px 12px;">View</button>
                     </div>
-                    <div id="monthlySummaryContainer" style="background:#f8fafc; border-radius:var(--radius-sm); padding:10px; margin-bottom:10px; border:1px solid var(--card-border); display:none;"></div>
+                    <div id="monthlySummaryContainer" style="background:rgba(255,255,255,0.04); border-radius:var(--radius-sm); padding:10px; margin-bottom:10px; border:1px solid var(--glass-border); display:none;"></div>
 
                     <button class="btn btn-primary" onclick="markFullDayAttendance()" style="padding:10px; font-size:11px;">
                         <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
@@ -1946,7 +1956,7 @@
                             <span style="font-size:8px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.3px;" id="periodTimeSlotLabel">CURRENT PERIOD:</span>
                             <h4 id="activePeriodName" style="font-size:12px; font-weight:800; color:var(--text-main); margin-top:1px;">Checking…</h4>
                         </div>
-                        <button class="action-btn" id="markPeriodBtn" style="background:var(--success); color:#fff; padding:6px 14px;" onclick="markActivePeriodAttendance()">Mark</button>
+                        <button class="action-btn" id="markPeriodBtn" style="background:rgba(0,200,83,0.70); color:#fff; padding:6px 14px; backdrop-filter:var(--glass-blur);" onclick="markActivePeriodAttendance()">Mark</button>
                     </div>
 
                     <div class="calendar-container">
@@ -2004,7 +2014,7 @@
                     <!-- SUB: All Attendance -->
                     <div id="subAllAttendance" class="admin-box sub-all-attendance" style="display:none;">
                         <span class="sub-section-title">📊 All Attendance Records – Manage</span>
-                        <div class="filter-row">
+                        <div class="filter-row" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
                             <input type="text" id="filterAttendanceRoll" placeholder="Filter by Roll No" style="flex:1; min-width:60px; padding:6px 10px; font-size:9px; margin:0;" oninput="loadAllAttendance()" />
                             <input type="date" id="filterAttendanceDate" style="flex:1; min-width:80px; padding:6px 10px; font-size:9px; margin:0;" onchange="loadAllAttendance()" />
                             <button class="btn btn-outline btn-sm" onclick="loadAllAttendance()" style="padding:5px 10px; margin:0;">Filter</button>
@@ -2036,7 +2046,7 @@
                             <svg class="svg-icon" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="12" x2="12" y1="4" y2="20"/></svg>
                             Export to Google Sheets (CSV)
                         </button>
-                        <hr style="margin:12px 0; border-color:var(--card-border);" />
+                        <hr style="margin:12px 0; border-color:var(--glass-border);" />
                         <span class="sub-section-title">👤 Single Student Attendance</span>
                         <select id="singleStudentSelect" style="padding:8px; margin-bottom:6px; font-size:10px;">
                             <option value="">Select Student…</option>
@@ -2060,7 +2070,7 @@
                             <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                             Download Student CSV
                         </button>
-                        <hr style="margin:12px 0; border-color:var(--card-border);" />
+                        <hr style="margin:12px 0; border-color:var(--glass-border);" />
                         <span class="sub-section-title">🔑 Login as Student (Impersonate)</span>
                         <input type="text" id="impersonateRoll" placeholder="Student Roll No" style="font-size:10px; padding:7px;" />
                         <button class="btn btn-warning btn-sm" onclick="adminLoginAsStudent()" style="padding:7px; margin:0;">
@@ -2069,7 +2079,7 @@
                         </button>
                         <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">💡 Bypasses device binding – for admin assistance only.</p>
 
-                        <hr style="margin:12px 0; border-color:var(--card-border);" />
+                        <hr style="margin:12px 0; border-color:var(--glass-border);" />
                         <span class="sub-section-title">📈 Individual Student Report (PDF/CSV)</span>
                         <select id="adminStudentReportSelect" style="padding:8px; margin-bottom:6px; font-size:10px;">
                             <option value="">Select Student…</option>
@@ -2079,7 +2089,7 @@
                             <button class="btn btn-success btn-sm" onclick="generateStudentReport('csv')" style="padding:6px;">CSV</button>
                         </div>
 
-                        <hr style="margin:12px 0; border-color:var(--card-border);" />
+                        <hr style="margin:12px 0; border-color:var(--glass-border);" />
                         <span class="sub-section-title">📋 Class Attendance Report (PDF)</span>
                         <div style="display:flex; gap:8px; flex-wrap:wrap;">
                             <input type="date" id="classReportStart" style="flex:1; padding:6px; font-size:10px; margin:0;" />
@@ -2122,20 +2132,20 @@
                             <button class="btn btn-outline btn-sm" onclick="selectAllSubjects(false)" style="padding:7px; flex:1;">Clear</button>
                         </div>
                         <button class="btn btn-success btn-sm" onclick="markAllSubjectsForDay()" style="margin-top:4px; padding:6px; font-size:9px;">📚 Mark All Subjects for this Day</button>
-                        <p id="manualBranchWarning" style="font-size:8px; color:var(--danger); margin-top:4px; display:none;"></p>
+                        <p id="manualBranchWarning" style="font-size:8px; color:#ff8a80; margin-top:4px; display:none;"></p>
 
                         <!-- Bulk Actions -->
-                        <div style="margin-top:14px; border-top:2px dashed var(--card-border); padding-top:12px;">
-                            <span class="sub-section-title" style="color:var(--primary);">📦 Bulk Actions (Select Students & Dates)</span>
-                            <div style="background:#f8fafc; border:1px solid var(--card-border); border-radius:var(--radius-sm); padding:12px; margin-top:4px;">
+                        <div style="margin-top:14px; border-top:2px dashed var(--glass-border); padding-top:12px;">
+                            <span class="sub-section-title" style="color:#b39ddb;">📦 Bulk Actions (Select Students & Dates)</span>
+                            <div style="background:rgba(255,255,255,0.04); border:1px solid var(--glass-border); border-radius:var(--radius-sm); padding:12px; margin-top:4px;">
                                 <div style="margin-bottom:8px;">
-                                    <label style="font-size:10px; font-weight:700; display:block; margin-bottom:3px;">👥 Select Students:</label>
+                                    <label style="font-size:10px; font-weight:700; display:block; margin-bottom:3px; color:var(--text-muted);">👥 Select Students:</label>
                                     <div id="bulkStudentList" class="bulk-student-list">
                                         <label class="select-all-label"><input type="checkbox" id="bulkSelectAllStudents" onchange="toggleAllBulkStudents()" /> Select All</label>
                                     </div>
                                 </div>
                                 <div style="margin-bottom:8px;">
-                                    <label style="font-size:10px; font-weight:700; display:block; margin-bottom:3px;">📅 Select Dates:</label>
+                                    <label style="font-size:10px; font-weight:700; display:block; margin-bottom:3px; color:var(--text-muted);">📅 Select Dates:</label>
                                     <div class="bulk-date-input-row">
                                         <input type="date" id="bulkDatePicker" />
                                         <button class="btn btn-primary btn-sm" onclick="addBulkDate()" style="padding:4px 12px; margin:0;">Add Date</button>
@@ -2164,12 +2174,12 @@
                     <div id="subPasscode" class="admin-box sub-passcode" style="display:none; text-align:center;">
                         <span class="sub-section-title">📱 Class Passcodes</span>
                         <p style="font-size:9px; color:var(--text-muted); margin-bottom:8px;">Generate passcodes for Full Day (5‑digit) or Single Lecture (4‑digit).</p>
-                        <div style="background:#f8fafc; border-radius:var(--radius-sm); padding:10px; margin-bottom:8px; border:1px solid var(--card-border);">
+                        <div style="background:rgba(255,255,255,0.04); border-radius:var(--radius-sm); padding:10px; margin-bottom:8px; border:1px solid var(--glass-border);">
                             <span style="font-size:9px; font-weight:700; color:var(--text-muted);">🔵 FULL DAY (5‑digit)</span>
                             <div class="passcode-display" style="margin-top:4px;"><h2 id="fullDayPasscodeDisplay">—</h2></div>
                             <button class="btn btn-primary btn-sm" onclick="generatePasscode('full_day')" style="padding:4px 14px; width:auto; margin:0 auto;">Generate Full Day Passcode</button>
                         </div>
-                        <div style="background:#f8fafc; border-radius:var(--radius-sm); padding:10px; margin-bottom:8px; border:1px solid var(--card-border);">
+                        <div style="background:rgba(255,255,255,0.04); border-radius:var(--radius-sm); padding:10px; margin-bottom:8px; border:1px solid var(--glass-border);">
                             <span style="font-size:9px; font-weight:700; color:var(--text-muted);">🟢 SINGLE LECTURE (4‑digit)</span>
                             <div class="passcode-display" style="margin-top:4px;"><h2 id="singleLecturePasscodeDisplay">—</h2></div>
                             <button class="btn btn-success btn-sm" onclick="generatePasscode('single_lecture')" style="padding:4px 14px; width:auto; margin:0 auto;">Generate Lecture Passcode</button>
@@ -2180,7 +2190,7 @@
                     <!-- SUB: Tools -->
                     <div id="subTools" class="admin-box sub-tools" style="display:none;">
                         <div class="tool-sub-card">
-                            <span class="tool-title" style="color:var(--primary);">➕ Register New User</span>
+                            <span class="tool-title">➕ Register New User</span>
                             <input type="text" id="adminRegName" placeholder="Full Name" style="font-size:10px; padding:7px;" />
                             <input type="text" id="adminRegRoll" placeholder="Roll/ID" style="font-size:10px; padding:7px;" />
                             <select id="adminRegRole" style="font-size:10px; padding:7px;" onchange="toggleFacultyRegistrationFields()">
@@ -2199,7 +2209,7 @@
                         </div>
 
                         <div class="tool-sub-card">
-                            <span class="tool-title" style="color:#1d4ed8;">📚 Assign Subject to Teacher</span>
+                            <span class="tool-title">📚 Assign Subject to Teacher</span>
                             <select id="teacherSelect" style="font-size:10px; padding:7px;">
                                 <option value="">Select Teacher…</option>
                             </select>
@@ -2212,14 +2222,14 @@
                             </div>
                         </div>
 
-                        <div class="tool-sub-card" style="border-color:#93c5fd; background:#eff6ff;">
-                            <span class="tool-title" style="color:#1d4ed8;">🔓 Reset Device Binding (Student Only)</span>
+                        <div class="tool-sub-card" style="border-color:rgba(108,99,255,0.25);">
+                            <span class="tool-title">🔓 Reset Device Binding (Student Only)</span>
                             <input type="text" id="resetDeviceRoll" placeholder="Student Roll No" style="font-size:10px; padding:7px;" />
                             <button class="btn btn-primary btn-sm" onclick="resetDeviceBinding()" style="padding:7px; margin:0;">Reset</button>
                         </div>
 
                         <div class="tool-sub-card">
-                            <span class="tool-title" style="color:var(--text-main);">📢 Broadcast Notice</span>
+                            <span class="tool-title">📢 Broadcast Notice</span>
                             <input type="text" id="noticeMsg" placeholder="Notice text…" style="font-size:10px; padding:7px;" />
                             <div class="flex-buttons">
                                 <button class="btn btn-primary btn-sm" onclick="postNotice()" style="padding:6px;">Publish</button>
@@ -2228,21 +2238,21 @@
                         </div>
 
                         <div class="tool-sub-card">
-                            <span class="tool-title" style="color:var(--primary);">🔄 Update Roll Number</span>
+                            <span class="tool-title">🔄 Update Roll Number</span>
                             <input type="text" id="oldRollFormat" placeholder="Old ID" style="font-size:10px; padding:7px;" />
                             <input type="text" id="newRollFormat" placeholder="New ID" style="font-size:10px; padding:7px;" />
                             <button class="btn btn-primary btn-sm" onclick="updateRollNumberFormat()" style="padding:7px; margin:0;">Update</button>
                         </div>
 
                         <div class="tool-sub-card">
-                            <span class="tool-title" style="color:var(--warning);">🔑 Reset Password</span>
+                            <span class="tool-title">🔑 Reset Password</span>
                             <input type="text" id="resetRoll" placeholder="ID" style="font-size:10px; padding:7px;" />
                             <input type="text" id="resetPass" placeholder="New Password" style="font-size:10px; padding:7px;" />
                             <button class="btn btn-warning btn-sm" onclick="resetUserPassword()" style="padding:7px; margin:0;">Reset</button>
                         </div>
 
-                        <div class="tool-sub-card" style="border-color:#60a5fa; background:#eff6ff;">
-                            <span class="tool-title" style="color:#1d4ed8;">📋 CSE Bulk Register & Update Attendance</span>
+                        <div class="tool-sub-card" style="border-color:rgba(96,165,250,0.25);">
+                            <span class="tool-title">📋 CSE Bulk Register & Update Attendance</span>
                             <p style="font-size:8px; color:var(--text-muted); margin-bottom:6px;">Register all CSE students (15-30 July) & set attendance as per records. Password: 123456</p>
                             <button class="btn btn-primary btn-sm" onclick="triggerBulkUpdate()" style="padding:7px; margin:0;">
                                 <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 12v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
@@ -2251,18 +2261,18 @@
                             <p id="bulkStatus" style="font-size:8px; color:var(--text-muted); margin-top:4px;">⚠️ Overwrites 15-30 July attendance.</p>
                         </div>
 
-                        <div class="tool-sub-card" style="border-color:#a78bfa; background:#f5f3ff;">
-                            <span class="tool-title" style="color:#7c3aed;">📋 AIDS Bulk Register & Update Attendance</span>
+                        <div class="tool-sub-card" style="border-color:rgba(167,139,250,0.25);">
+                            <span class="tool-title">📋 AIDS Bulk Register & Update Attendance</span>
                             <p style="font-size:8px; color:var(--text-muted); margin-bottom:6px;">Register all AIDS students (15-30 July) & set attendance as per records. Password: 123456</p>
-                            <button class="btn btn-primary btn-sm" onclick="triggerAidsBulkUpdate()" style="padding:7px; margin:0; background:#7c3aed;">
+                            <button class="btn btn-primary btn-sm" onclick="triggerAidsBulkUpdate()" style="padding:7px; margin:0; background:linear-gradient(135deg,#7c3aed,#6d28d9);">
                                 <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 12v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                                 ▶️ Run AIDS Bulk Update
                             </button>
                             <p id="aidsBulkStatus" style="font-size:8px; color:var(--text-muted); margin-top:4px;">⚠️ Overwrites 15-30 July attendance.</p>
                         </div>
 
-                        <div class="tool-sub-card" style="border-color:#fecaca; background:#fef2f2;">
-                            <span class="tool-title" style="color:#b91c1c;">🗑️ Delete Account</span>
+                        <div class="tool-sub-card" style="border-color:rgba(255,23,68,0.25);">
+                            <span class="tool-title">🗑️ Delete Account</span>
                             <input type="text" id="deleteUserRoll" placeholder="ID to Delete" style="font-size:10px; padding:7px;" />
                             <button class="btn btn-danger btn-sm" onclick="deleteUserAccount()" style="padding:7px; margin:0;">Delete Permanently</button>
                         </div>
@@ -2271,8 +2281,8 @@
 
                 <!-- ===== TEACHER TAB ===== -->
                 <div id="teacherTab" style="display:none;">
-                    <div style="background:#eff6ff; border-radius:var(--radius-sm); padding:12px; border:1px solid #bfdbfe; margin-bottom:12px; text-align:center;">
-                        <span class="sub-section-title" style="color:#1d4ed8;">🔒 Single Lecture Passcode (4‑digit)</span>
+                    <div style="background:rgba(108,99,255,0.08); border-radius:var(--radius-sm); padding:12px; border:1px solid rgba(108,99,255,0.15); margin-bottom:12px; text-align:center;">
+                        <span class="sub-section-title" style="color:#b39ddb;">🔒 Single Lecture Passcode (4‑digit)</span>
                         <div class="passcode-display" style="margin-top:4px;">
                             <h2 id="teacherPasscodeDisplay">—</h2>
                         </div>
@@ -2291,7 +2301,7 @@
                         </div>
                     </div>
 
-                    <div style="background:#f0fdf4; border-radius:var(--radius-sm); padding:12px; border:1px solid #bbf7d0; margin-bottom:10px;">
+                    <div style="background:rgba(0,200,83,0.06); border-radius:var(--radius-sm); padding:12px; border:1px solid rgba(0,200,83,0.15); margin-bottom:10px;">
                         <span class="sub-section-title">📈 Student Report (PDF/CSV)</span>
                         <select id="teacherStudentReportSelect" style="padding:8px; margin-bottom:6px; font-size:10px;">
                             <option value="">Select Student…</option>
@@ -2340,7 +2350,7 @@
     </div>
 
     <!-- ========================================================== -->
-    <!-- CHAT WIDGET – COMPACT & CENTERED                            -->
+    <!-- CHAT WIDGET – GLASS STYLE                                   -->
     <!-- ========================================================== -->
     <div id="chatWidget">
         <div class="chat-panel" id="chatPanel">
@@ -2402,11 +2412,11 @@
     </button>
 
     <!-- ========================================================== -->
-    <!-- JAVASCRIPT – FULL CLIENT LOGIC (with command parser)       -->
+    <!-- JAVASCRIPT – FULL CLIENT LOGIC with GLASS UI               -->
     <!-- ========================================================== -->
     <script>
         // ============================================================
-        // CONFIGURATION – UPDATE THIS URL TO YOUR BACKEND
+        // CONFIGURATION
         // ============================================================
         const API_BASE = "https://attendance-backend-clean-l2bu.onrender.com";
         const ADMIN_ROLL_NUMBERS = ['24CSE48'];
@@ -2429,6 +2439,7 @@
         let currentThreadId = null;
         let chatHistory = [];
         let sidebarOpen = false;
+        let chatGreeted = false;
 
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
@@ -2445,7 +2456,7 @@
         // ============================================================
         // TOAST / UI HELPERS
         // ============================================================
-        function showMsg(text, isError = false) {
+        function showMsg(text, isError = false, type = '') {
             const toast = document.getElementById('toast');
             const toastMsg = document.getElementById('toast-msg');
             const toastIcon = document.getElementById('toast-icon');
@@ -2454,12 +2465,14 @@
             toastIcon.setAttribute("viewBox", "0 0 24 24");
             if (isError) {
                 toastIcon.innerHTML = `<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>`;
+            } else if (type === 'download') {
+                toastIcon.innerHTML = `<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>`;
             } else {
                 toastIcon.innerHTML = `<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>`;
             }
-            toast.className = `toast-card ${isError ? 'toast-error' : 'toast-success'} show`;
+            toast.className = `toast-card ${isError ? 'toast-error' : type === 'download' ? 'toast-download' : 'toast-success'} show`;
             if (toastTimeout) clearTimeout(toastTimeout);
-            toastTimeout = setTimeout(() => { toast.classList.remove('show'); }, 3500);
+            toastTimeout = setTimeout(() => { toast.classList.remove('show'); }, 4000);
         }
 
         function sanitizeAndValidateRollNo(rawRoll) {
@@ -2492,7 +2505,7 @@
         }
 
         // ============================================================
-        // TIMETABLE & PERIOD TRACKER (branch-aware)
+        // TIMETABLE & PERIOD TRACKER
         // ============================================================
         function getBranchTimetable(branch) {
             const CSE = {
@@ -2668,9 +2681,9 @@
                 const status = await res.json();
                 if (status.isBlocked) {
                     if (labelEl) { labelEl.innerText = status.type + ":"; labelEl.style.color = status.type === 'HOLIDAY' ?
-                            '#d97706' : '#64748b'; }
+                            '#ffd54f' : 'rgba(255,255,255,0.50)'; }
                     if (nameEl) { nameEl.innerText = status.message; nameEl.style.color = status.type === 'HOLIDAY' ?
-                            '#92400e' : '#475569'; }
+                            '#ffd54f' : 'rgba(255,255,255,0.50)'; }
                     if (btn) { btn.disabled = true;
                         btn.style.opacity = "0.5"; }
                     activeSubjectSubjectCode = "";
@@ -2681,8 +2694,8 @@
             } catch (e) {}
             document.getElementById('periodCardBox').className = 'period-card';
             if (dayOfWeek === 0 || dayOfWeek === 6) {
-                if (labelEl) { labelEl.innerText = "WEEKEND:"; labelEl.style.color = '#64748b'; }
-                if (nameEl) { nameEl.innerText = "College Closed"; nameEl.style.color = '#475569'; }
+                if (labelEl) { labelEl.innerText = "WEEKEND:"; labelEl.style.color = 'rgba(255,255,255,0.50)'; }
+                if (nameEl) { nameEl.innerText = "College Closed"; nameEl.style.color = 'rgba(255,255,255,0.50)'; }
                 if (btn) { btn.disabled = true;
                     btn.style.opacity = "0.5"; }
                 activeSubjectSubjectCode = "";
@@ -2702,24 +2715,24 @@
                     break;
                 }
             }
-            if (labelEl) labelEl.style.color = '#64748b';
+            if (labelEl) labelEl.style.color = 'rgba(255,255,255,0.50)';
             if (foundSlot) {
                 if (foundSlot.period === "LUNCH") {
                     if (labelEl) labelEl.innerText = "LUNCH BREAK:";
-                    if (nameEl) { nameEl.innerText = "Lunch Time"; nameEl.style.color = '#0f172a'; }
+                    if (nameEl) { nameEl.innerText = "Lunch Time"; nameEl.style.color = '#fff'; }
                     if (btn) { btn.disabled = true;
                         btn.style.opacity = "0.5"; }
                     activeSubjectSubjectCode = "";
                 } else {
                     if (labelEl) labelEl.innerText = `ACTIVE (${foundSlot.start} - ${foundSlot.end}):`;
-                    if (nameEl) { nameEl.innerText = foundSlot.subject; nameEl.style.color = '#0f172a'; }
+                    if (nameEl) { nameEl.innerText = foundSlot.subject; nameEl.style.color = '#fff'; }
                     if (btn) { btn.disabled = false;
                         btn.style.opacity = "1"; }
                     activeSubjectSubjectCode = foundSlot.subject;
                 }
             } else {
                 if (labelEl) labelEl.innerText = "COLLEGE STATUS:";
-                if (nameEl) { nameEl.innerText = "Off Hours / No Class"; nameEl.style.color = '#64748b'; }
+                if (nameEl) { nameEl.innerText = "Off Hours / No Class"; nameEl.style.color = 'rgba(255,255,255,0.50)'; }
                 if (btn) { btn.disabled = true;
                     btn.style.opacity = "0.5"; }
                 activeSubjectSubjectCode = "";
@@ -2762,9 +2775,6 @@
             }
         }
 
-        // ============================================================
-        // TEACHER PASSCODE
-        // ============================================================
         async function generateTeacherPasscode() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'faculty') return showMsg('Teacher access required!', true);
@@ -2788,9 +2798,6 @@
             }
         }
 
-        // ============================================================
-        // VERIFY PASSCODE
-        // ============================================================
         async function verifyPasscode(passcode, type) {
             console.log(`🔍 Verifying ${type} passcode: ${passcode}`);
             try {
@@ -2884,7 +2891,7 @@
                 let html = `
                         <div class="modal-card profile-modal">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                                <h3 style="font-size:14px; font-weight:800;">Attendance – ${rollNo}</h3>
+                                <h3>Attendance – ${rollNo}</h3>
                                 <button class="btn btn-danger btn-sm" onclick="closeTeacherStudentModal()" style="padding:2px 10px;">✕</button>
                             </div>
                             <div style="max-height:300px; overflow-y:auto;">
@@ -2896,9 +2903,9 @@
                     sortedDates.forEach(date => {
                         const records = grouped[date];
                         html += `
-                                <div style="border-bottom:1px solid #e2e8f0; margin-bottom:6px; padding-bottom:6px;">
+                                <div style="border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:6px; padding-bottom:6px;">
                                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                                        <span style="font-weight:700; font-size:11px;">📅 ${date}</span>
+                                        <span style="font-weight:700; font-size:11px; color:#fff;">📅 ${date}</span>
                                         <button class="btn btn-danger btn-xs" onclick="deleteAllForDate('${rollNo}','${date}')" style="padding:2px 8px;">Delete All</button>
                                     </div>
                             `;
@@ -2906,7 +2913,7 @@
                             html += `
                                     <div class="record-item">
                                         <div>
-                                            <span style="font-weight:600;">${r.subject}</span>
+                                            <span style="font-weight:600; color:#fff;">${r.subject}</span>
                                             <span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span>
                                         </div>
                                         <button class="btn btn-del btn-xs" onclick="deleteRecord('${r._id}')">Delete</button>
@@ -3043,31 +3050,31 @@
 
                 if (format === 'pdf') {
                     const content = `
-                            <div style="font-family:Arial; padding:20px;">
-                                <h1 style="color:#2563eb;">BM Group of Institutions</h1>
-                                <h2>Student Attendance Report – ${studentRoll}</h2>
-                                <p>Teacher: ${user.name} (${user.rollNo})</p>
-                                <p>Generated: ${new Date().toLocaleString()}</p>
-                                <p>Branch: ${branch}</p>
-                                <p>Range: ${startStr} to ${endStr}</p>
-                                <hr>
-                                <h3>Summary</h3>
-                                <p><strong>Total Lectures Conducted:</strong> ${totalConducted}</p>
-                                <p><strong>Lectures Attended:</strong> ${totalAttended}</p>
-                                <p><strong>Attendance %:</strong> ${pct}%</p>
-                                <h3>Subject-wise</h3>
-                                <ul>
+                            <div style="font-family:Arial; padding:20px; background:#1a1a2e; color:#fff;">
+                                <h1 style="color:#6C63FF;">BM Group of Institutions</h1>
+                                <h2 style="color:#b39ddb;">Student Attendance Report – ${studentRoll}</h2>
+                                <p style="color:rgba(255,255,255,0.70);">Teacher: ${user.name} (${user.rollNo})</p>
+                                <p style="color:rgba(255,255,255,0.70);">Generated: ${new Date().toLocaleString()}</p>
+                                <p style="color:rgba(255,255,255,0.70);">Branch: ${branch}</p>
+                                <p style="color:rgba(255,255,255,0.70);">Range: ${startStr} to ${endStr}</p>
+                                <hr style="border-color:rgba(255,255,255,0.10);">
+                                <h3 style="color:#b39ddb;">Summary</h3>
+                                <p style="color:#fff;"><strong>Total Lectures Conducted:</strong> ${totalConducted}</p>
+                                <p style="color:#fff;"><strong>Lectures Attended:</strong> ${totalAttended}</p>
+                                <p style="color:#fff;"><strong>Attendance %:</strong> ${pct}%</p>
+                                <h3 style="color:#b39ddb;">Subject-wise</h3>
+                                <ul style="color:#fff;">
                                     ${Object.entries(subjectStats).map(([sub, st]) => `
                                             <li>${sub}: ${st.present}/${st.total} (${st.percentage}%)</li>
                                         `).join('')}
                                 </ul>
-                                <hr>
-                                <h3>Detailed Records</h3>
-                                <table style="width:100%; border-collapse:collapse; border:1px solid #ccc;">
-                                    <thead><tr style="background:#f0f0f0;"><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
+                                <hr style="border-color:rgba(255,255,255,0.10);">
+                                <h3 style="color:#b39ddb;">Detailed Records</h3>
+                                <table style="width:100%; border-collapse:collapse; border:1px solid rgba(255,255,255,0.10);">
+                                    <thead><tr style="background:rgba(108,99,255,0.20);"><th style="padding:8px; text-align:left; color:#b39ddb;">Date</th><th style="padding:8px; text-align:left; color:#b39ddb;">Subject</th><th style="padding:8px; text-align:left; color:#b39ddb;">Status</th></tr></thead>
                                     <tbody>
                                         ${records.map(r => `
-                                                <tr><td>${r.date}</td><td>${r.subject}</td><td>${r.status}</td></tr>
+                                                <tr><td style="padding:6px 8px; border-bottom:1px solid rgba(255,255,255,0.05); color:#fff;">${r.date}</td><td style="padding:6px 8px; border-bottom:1px solid rgba(255,255,255,0.05); color:#fff;">${r.subject}</td><td style="padding:6px 8px; border-bottom:1px solid rgba(255,255,255,0.05); color:#fff;">${r.status}</td></tr>
                                             `).join('')}
                                     </tbody>
                                 </table>
@@ -3132,10 +3139,10 @@
                 if (res.ok) {
                     container.style.display = 'block';
                     const pct = data.attendancePercentage || 0;
-                    const color = pct >= 75 ? 'var(--success)' : 'var(--danger)';
+                    const color = pct >= 75 ? '#69f0ae' : '#ff8a80';
                     let html = `
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                                <span style="font-weight:700; font-size:11px;">${MONTH_NAMES[parseInt(month)]} 2026</span>
+                                <span style="font-weight:700; font-size:11px; color:#fff;">${MONTH_NAMES[parseInt(month)]} 2026</span>
                                 <span style="font-size:12px; font-weight:800; color:${color};">${pct}%</span>
                             </div>
                             <div style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">Attended ${data.totalAttended} / ${data.totalConducted} lectures</div>
@@ -3367,30 +3374,30 @@
 
                 if (format === 'pdf') {
                     const content = `
-                            <div style="font-family:Arial; padding:20px;">
-                                <h1 style="color:#2563eb;">BM Group of Institutions</h1>
-                                <h2>Student Attendance Report – ${studentRoll}</h2>
-                                <p>Generated: ${new Date().toLocaleString()}</p>
-                                <p>Branch: ${branch}</p>
-                                <p>Range: 15 July 2026 to ${today.toISOString().split('T')[0]}</p>
-                                <hr>
-                                <h3>Summary</h3>
-                                <p><strong>Total Lectures Conducted:</strong> ${totalConducted}</p>
-                                <p><strong>Lectures Attended:</strong> ${totalAttended}</p>
-                                <p><strong>Attendance %:</strong> ${pct}%</p>
-                                <h3>Subject-wise</h3>
-                                <ul>
+                            <div style="font-family:Arial; padding:20px; background:#1a1a2e; color:#fff;">
+                                <h1 style="color:#6C63FF;">BM Group of Institutions</h1>
+                                <h2 style="color:#b39ddb;">Student Attendance Report – ${studentRoll}</h2>
+                                <p style="color:rgba(255,255,255,0.70);">Generated: ${new Date().toLocaleString()}</p>
+                                <p style="color:rgba(255,255,255,0.70);">Branch: ${branch}</p>
+                                <p style="color:rgba(255,255,255,0.70);">Range: 15 July 2026 to ${today.toISOString().split('T')[0]}</p>
+                                <hr style="border-color:rgba(255,255,255,0.10);">
+                                <h3 style="color:#b39ddb;">Summary</h3>
+                                <p style="color:#fff;"><strong>Total Lectures Conducted:</strong> ${totalConducted}</p>
+                                <p style="color:#fff;"><strong>Lectures Attended:</strong> ${totalAttended}</p>
+                                <p style="color:#fff;"><strong>Attendance %:</strong> ${pct}%</p>
+                                <h3 style="color:#b39ddb;">Subject-wise</h3>
+                                <ul style="color:#fff;">
                                     ${Object.entries(subjectStats).map(([sub, st]) => `
                                             <li>${sub}: ${st.present}/${st.total} (${st.percentage}%)</li>
                                         `).join('')}
                                 </ul>
-                                <hr>
-                                <h3>Detailed Records</h3>
-                                <table style="width:100%; border-collapse:collapse; border:1px solid #ccc;">
-                                    <thead><tr style="background:#f0f0f0;"><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
+                                <hr style="border-color:rgba(255,255,255,0.10);">
+                                <h3 style="color:#b39ddb;">Detailed Records</h3>
+                                <table style="width:100%; border-collapse:collapse; border:1px solid rgba(255,255,255,0.10);">
+                                    <thead><tr style="background:rgba(108,99,255,0.20);"><th style="padding:8px; text-align:left; color:#b39ddb;">Date</th><th style="padding:8px; text-align:left; color:#b39ddb;">Subject</th><th style="padding:8px; text-align:left; color:#b39ddb;">Status</th></tr></thead>
                                     <tbody>
                                         ${records.map(r => `
-                                                <tr><td>${r.date}</td><td>${r.subject}</td><td>${r.status}</td></tr>
+                                                <tr><td style="padding:6px 8px; border-bottom:1px solid rgba(255,255,255,0.05); color:#fff;">${r.date}</td><td style="padding:6px 8px; border-bottom:1px solid rgba(255,255,255,0.05); color:#fff;">${r.subject}</td><td style="padding:6px 8px; border-bottom:1px solid rgba(255,255,255,0.05); color:#fff;">${r.status}</td></tr>
                                             `).join('')}
                                     </tbody>
                                 </table>
@@ -3458,11 +3465,11 @@
 
                 let tableRows = students.map((s, idx) => `
                         <tr>
-                            <td style="padding:6px 8px; border:1px solid #ccc; text-align:center;">${idx + 1}</td>
-                            <td style="padding:6px 8px; border:1px solid #ccc; text-align:left;">${s.rollNo || 'N/A'}</td>
-                            <td style="padding:6px 8px; border:1px solid #ccc; text-align:left;">${s.name || 'Unknown'}</td>
-                            <td style="padding:6px 8px; border:1px solid #ccc; text-align:center;">${s.totalPresent || 0}</td>
-                            <td style="padding:6px 8px; border:1px solid #ccc; text-align:center;">${s.percentage || 0}%</td>
+                            <td style="padding:6px 8px; border:1px solid rgba(255,255,255,0.10); text-align:center; color:#fff;">${idx + 1}</td>
+                            <td style="padding:6px 8px; border:1px solid rgba(255,255,255,0.10); text-align:left; color:#fff;">${s.rollNo || 'N/A'}</td>
+                            <td style="padding:6px 8px; border:1px solid rgba(255,255,255,0.10); text-align:left; color:#fff;">${s.name || 'Unknown'}</td>
+                            <td style="padding:6px 8px; border:1px solid rgba(255,255,255,0.10); text-align:center; color:#fff;">${s.totalPresent || 0}</td>
+                            <td style="padding:6px 8px; border:1px solid rgba(255,255,255,0.10); text-align:center; color:#fff;">${s.percentage || 0}%</td>
                         </tr>
                     `).join('');
 
@@ -3473,22 +3480,22 @@
                             <meta charset="UTF-8">
                             <title>Class Attendance Report</title>
                             <style>
-                                body { font-family: Arial, sans-serif; padding: 20px; }
-                                h1 { color: #2563eb; text-align: center; }
-                                h2 { text-align: center; }
+                                body { font-family: Arial, sans-serif; padding: 20px; background: #1a1a2e; color: #fff; }
+                                h1 { color: #6C63FF; text-align: center; }
+                                h2 { color: #b39ddb; text-align: center; }
                                 table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
-                                th, td { padding: 6px 8px; border: 1px solid #ccc; }
-                                th { background: #f0f0f0; text-align: center; }
-                                td { text-align: left; }
+                                th, td { padding: 6px 8px; border: 1px solid rgba(255,255,255,0.10); }
+                                th { background: rgba(108,99,255,0.20); text-align: center; color: #b39ddb; }
+                                td { text-align: left; color: #fff; }
                                 td.center { text-align: center; }
-                                .footer { text-align: center; font-size: 10px; color: #999; margin-top: 20px; }
-                                .summary { text-align: center; font-size: 14px; color: #666; }
+                                .footer { text-align: center; font-size: 10px; color: rgba(255,255,255,0.50); margin-top: 20px; }
+                                .summary { text-align: center; font-size: 14px; color: rgba(255,255,255,0.70); }
                             </style>
                         </head>
                         <body>
                             <h1>BM Group of Institutions</h1>
                             <h2>${branchName} – 5th Semester</h2>
-                            <p style="text-align:center;">Attendance from ${startDate} to ${endDate}</p>
+                            <p style="text-align:center; color:rgba(255,255,255,0.70);">Attendance from ${startDate} to ${endDate}</p>
                             <p class="summary">Total Lectures Conducted: ${totalLectures}</p>
                             <table>
                                 <thead>
@@ -3650,8 +3657,8 @@
                         attendanceDisplay = `${attended}/${conducted} (${pct}%)`;
                     }
                     return `<tr>
-                            <td><b>${s.rollNo || 'N/A'}</b></td>
-                            <td>${s.name || 'Unknown'}</td>
+                            <td><b style="color:#fff;">${s.rollNo || 'N/A'}</b></td>
+                            <td style="color:#fff;">${s.name || 'Unknown'}</td>
                             <td><span class="badge badge-role">${roleBadge}</span></td>
                             <td><span class="badge ${s.boundDeviceId ? 'badge-active' : 'badge-present'}">${deviceStatus}</span></td>
                             <td><span class="badge badge-attendance">${attendanceDisplay}</span></td>
@@ -3684,7 +3691,7 @@
                 let html = `
                         <div class="modal-card profile-modal">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                                <h3 style="font-size:14px; font-weight:800;">Attendance – ${rollNo}</h3>
+                                <h3>Attendance – ${rollNo}</h3>
                                 <button class="btn btn-danger btn-sm" onclick="closeProfileModal()" style="padding:2px 10px;">✕</button>
                             </div>
                             <div style="max-height:300px; overflow-y:auto;">
@@ -3696,9 +3703,9 @@
                     sortedDates.forEach(date => {
                         const records = grouped[date];
                         html += `
-                                <div style="border-bottom:1px solid #e2e8f0; margin-bottom:6px; padding-bottom:6px;">
+                                <div style="border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:6px; padding-bottom:6px;">
                                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                                        <span style="font-weight:700; font-size:11px;">📅 ${date}</span>
+                                        <span style="font-weight:700; font-size:11px; color:#fff;">📅 ${date}</span>
                                         <button class="btn btn-danger btn-xs" onclick="deleteAllForDate('${rollNo}','${date}')" style="padding:2px 8px;">Delete All</button>
                                     </div>
                             `;
@@ -3706,7 +3713,7 @@
                             html += `
                                     <div class="record-item">
                                         <div>
-                                            <span style="font-weight:600;">${r.subject}</span>
+                                            <span style="font-weight:600; color:#fff;">${r.subject}</span>
                                             <span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span>
                                         </div>
                                         <button class="btn btn-del btn-xs" onclick="deleteRecord('${r._id}')">Delete</button>
@@ -3767,10 +3774,10 @@
                         'badge-dl' : 'badge-absent';
                     return `
                             <tr>
-                                <td><b>${r.date}</b></td>
-                                <td>${r.rollNo}</td>
-                                <td>${r.studentName || r.name || 'Unknown'}</td>
-                                <td>${r.subject}</td>
+                                <td><b style="color:#fff;">${r.date}</b></td>
+                                <td style="color:#fff;">${r.rollNo}</td>
+                                <td style="color:#fff;">${r.studentName || r.name || 'Unknown'}</td>
+                                <td style="color:#fff;">${r.subject}</td>
                                 <td><span class="badge ${statusClass}">${r.status}</span></td>
                                 <td>
                                     <button class="btn-edit btn-xs" onclick="openEditModal('${r._id}','${r.rollNo}','${r.status}')" style="padding:2px 8px;">Edit</button>
@@ -3885,8 +3892,8 @@
                 const daysInMonth = new Date(year, mIdx + 1, 0).getDate();
                 const firstDayOfWeek = new Date(year, mIdx, 1).getDay();
                 let gridHtml =
-                    `<div style="margin-bottom:8px; border-bottom:1px solid var(--card-border); padding-bottom:6px;">
-                        <div style="font-size:10px; font-weight:800; color:var(--primary); margin-bottom:4px;">${monthName} ${year}</div>
+                    `<div style="margin-bottom:8px; border-bottom:1px solid var(--glass-border); padding-bottom:6px;">
+                        <div style="font-size:10px; font-weight:800; color:#b39ddb; margin-bottom:4px;">${monthName} ${year}</div>
                         <div class="calendar-grid"><div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div>
                         <div class="cal-day-head">W</div><div class="cal-day-head">T</div><div class="cal-day-head">F</div><div class="cal-day-head">S</div>`;
                 for (let i = 0; i < firstDayOfWeek; i++) { gridHtml += `<div class="cal-date cal-off"></div>`; }
@@ -3897,7 +3904,7 @@
                     const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
                     const isHoliday = holidayDatesSet.has(dateStr);
                     if (isWeekend) { gridHtml += `<div class="cal-date cal-off">${d}</div>`; } else if (isHoliday) { gridHtml +=
-                            `<div class="cal-date cal-off" style="background:#fef3c7; color:#92400e; font-weight:800; border-color:#fde68a;" title="Holiday">${d}</div>`; } else if (
+                            `<div class="cal-date cal-off" style="background:rgba(255,171,0,0.15); color:#ffd54f; font-weight:800; border-color:rgba(255,171,0,0.20);" title="Holiday">${d}</div>`; } else if (
                         attendedDates.has(dateStr)) { gridHtml += `<div class="cal-date cal-p">${d}</div>`; } else if (dtObj <=
                         today) { gridHtml += `<div class="cal-date cal-a">${d}</div>`; } else { gridHtml +=
                             `<div class="cal-date cal-off">${d}</div>`; }
@@ -3941,17 +3948,17 @@
                 document.getElementById('totalDaysCount').innerText = calc.totalAttendedLectures;
                 const pctEl = document.getElementById('attendancePct');
                 if (pctEl) { pctEl.innerText = `${calc.pct}%`;
-                    pctEl.style.color = calc.pct >= 75 ? 'var(--success)' : 'var(--danger)'; }
+                    pctEl.style.color = calc.pct >= 75 ? '#69f0ae' : '#ff8a80'; }
                 const advisorBox = document.getElementById('advisorText');
                 if (advisorBox) {
                     if (calc.pct >= 75) {
                         const safeLectures = Math.floor(calc.totalAttendedLectures - 0.75 * calc.totalConductedLectures);
                         const safeDays = Math.floor(safeLectures / 6);
-                        advisorBox.innerHTML = `Safe Zone (<b>${calc.pct}%</b>). Skip approx <b>${Math.max(0, safeDays)}</b> days safely.`;
+                        advisorBox.innerHTML = `Safe Zone (<b style="color:#69f0ae;">${calc.pct}%</b>). Skip approx <b style="color:#fff;">${Math.max(0, safeDays)}</b> days safely.`;
                     } else {
                         const neededLectures = Math.ceil(0.75 * calc.totalConductedLectures - calc.totalAttendedLectures);
                         advisorBox.innerHTML =
-                            `Low Attendance (<b>${calc.pct}%</b>). Need <b>${Math.max(0, neededLectures)}</b> more lectures.`;
+                            `Low Attendance (<b style="color:#ff8a80;">${calc.pct}%</b>). Need <b style="color:#fff;">${Math.max(0, neededLectures)}</b> more lectures.`;
                     }
                 }
                 renderAttendanceCalendar(globalMyRecords);
@@ -3959,7 +3966,7 @@
                 if (data.length === 0) return tbody.innerHTML =
                     '<tr><td colspan="3" style="text-align:center; padding:14px; color:var(--text-muted);">No records</td></tr>';
                 tbody.innerHTML = data.slice(0, 50).map(r => {
-                    return `<tr><td><b>${r.date}</b></td><td>${r.subject}</td><td><span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span></td></tr>`;
+                    return `<tr><td><b style="color:#fff;">${r.date}</b></td><td style="color:#fff;">${r.subject}</td><td><span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span></td></tr>`;
                 }).join('');
             } catch (e) {
                 globalMyRecords = [];
@@ -3998,7 +4005,7 @@
                             html += `<div class="present-group"><span class="group-title">🟦 CSE (${cseStudents.length})</span>`;
                             cseStudents.forEach(s => {
                                 html +=
-                                    `<div class="present-item"><span class="roll">${s.rollNo}</span><span class="name">${s.name}</span></div>`;
+                                    `<div class="present-item"><span class="roll" style="color:#fff;">${s.rollNo}</span><span class="name" style="color:var(--text-muted);">${s.name}</span></div>`;
                             });
                             html += `</div>`;
                         }
@@ -4006,7 +4013,7 @@
                             html += `<div class="present-group"><span class="group-title">🟪 AIDS (${aidsStudents.length})</span>`;
                             aidsStudents.forEach(s => {
                                 html +=
-                                    `<div class="present-item"><span class="roll">${s.rollNo}</span><span class="name">${s.name}</span></div>`;
+                                    `<div class="present-item"><span class="roll" style="color:#fff;">${s.rollNo}</span><span class="name" style="color:var(--text-muted);">${s.name}</span></div>`;
                             });
                             html += `</div>`;
                         }
@@ -4833,12 +4840,15 @@
         }
 
         // ============================================================
-        // DOWNLOAD HELPER
+        // DOWNLOAD HELPER – with notification
         // ============================================================
         function downloadFile(content, fileName, mimeType = 'text/csv') {
             console.log('📥 Downloading:', fileName);
             showDownloadProgress('Preparing file…');
             try {
+                // Show toast notification
+                showMsg(`📥 Downloading ${fileName}...`, false, 'download');
+
                 const blob = new Blob(['\uFEFF' + content], { type: `${mimeType};charset=utf-8;` });
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
@@ -4848,10 +4858,13 @@
                 link.style.display = 'none';
                 document.body.appendChild(link);
                 link.click();
-                setTimeout(() => { document.body.removeChild(link);
-                    URL.revokeObjectURL(url); }, 2000);
+                setTimeout(() => {
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                }, 3000);
+
                 hideDownloadProgress();
-                showMsg("✅ Download started!");
+                showMsg(`✅ ${fileName} downloaded successfully!`, false, 'download');
                 return true;
             } catch (e) {
                 console.error('Download failed:', e);
@@ -4929,6 +4942,29 @@
             impersonating = false;
             document.getElementById('impersonationBanner').style.display = 'none';
             location.reload();
+        }
+
+        // ============================================================
+        // DASHBOARD TIME UPDATER
+        // ============================================================
+        function updateDashboardTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-IN', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            });
+            const dateStr = now.toLocaleDateString('en-IN', {
+                weekday: 'short',
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric'
+            });
+            const timeEl = document.getElementById('dashboardCurrentTime');
+            const dateEl = document.getElementById('dashboardCurrentDate');
+            if (timeEl) timeEl.innerText = timeStr;
+            if (dateEl) dateEl.innerText = dateStr;
         }
 
         // ============================================================
@@ -5011,6 +5047,10 @@
             if (!isAdmin && !isFaculty) {
                 fetchMonthlySummary();
             }
+
+            // Update dashboard time
+            updateDashboardTime();
+            setInterval(updateDashboardTime, 1000);
 
             document.getElementById('chatAvatarTrigger').style.display = 'flex';
             loadChatHistory(user.rollNo);
@@ -5189,7 +5229,7 @@
         }
 
         // ============================================================
-        // CHAT WIDGET – with command parser
+        // CHAT WIDGET – all queries go to backend
         // ============================================================
         function toggleChat() {
             chatOpen = !chatOpen;
@@ -5202,6 +5242,9 @@
                 panel.classList.toggle('open', chatOpen);
             }
             if (chatOpen) {
+                const messagesDiv = document.getElementById('chatMessages');
+                const hasMessages = messagesDiv && messagesDiv.children.length > 1;
+                if (!hasMessages) chatGreeted = false;
                 const input = document.getElementById('chatInput');
                 if (input) {
                     setTimeout(() => input.focus(), 100);
@@ -5223,6 +5266,11 @@
             const user = JSON.parse(localStorage.getItem('user'));
             const greetingEl = document.getElementById('welcomeGreeting');
             if (!greetingEl) return;
+            const messagesDiv = document.getElementById('chatMessages');
+            if (messagesDiv && messagesDiv.children.length > 1) {
+                greetingEl.style.display = 'none';
+                return;
+            }
             const now = new Date();
             const hour = now.getHours();
             let greeting = 'Hello';
@@ -5238,6 +5286,7 @@
                     <div style="font-size:12px; color:var(--text-muted);">Ask me about attendance, schedule, holidays, or anything!</div>
                     <div style="font-size:10px; color:var(--text-muted); margin-top:4px;">💡 Try: "What is my attendance?" or "Today's timetable"</div>
                 `;
+            greetingEl.style.display = 'block';
         }
 
         async function loadChatHistory(rollNo) {
@@ -5269,6 +5318,7 @@
 
         function newChat() {
             currentThreadId = null;
+            chatGreeted = false;
             const messagesDiv = document.getElementById('chatMessages');
             messagesDiv.innerHTML = `
                     <div class="welcome-greeting" id="welcomeGreeting">
@@ -5296,6 +5346,7 @@
                 if (!chat) return showMsg('Chat not found!', true);
 
                 currentThreadId = threadId;
+                chatGreeted = true;
                 const messagesDiv = document.getElementById('chatMessages');
                 messagesDiv.innerHTML = '';
                 const greetingDiv = document.createElement('div');
@@ -5359,7 +5410,7 @@
         }
 
         // ============================================================
-        // CHAT COMMAND PARSER
+        // CHAT MESSAGE – ALL QUERIES GO TO BACKEND
         // ============================================================
         async function sendChatMessage() {
             const input = document.getElementById('chatInput');
@@ -5371,7 +5422,9 @@
 
             const messagesDiv = document.getElementById('chatMessages');
             const welcome = document.getElementById('welcomeGreeting');
-            if (welcome) welcome.remove();
+            if (welcome && welcome.style.display !== 'none') {
+                welcome.remove();
+            }
 
             // Add user message to UI
             const userDiv = document.createElement('div');
@@ -5383,159 +5436,28 @@
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
             if (document.activeElement) document.activeElement.blur();
 
-            // ---- Command detection ----
-            const msg = rawMsg.toLowerCase().trim();
-
-            // Helper: show bot message
+            // ---- Helper: show bot message ----
             const showBotReply = (text, isError = false) => {
                 const botDiv = document.createElement('div');
                 botDiv.className = 'chat-msg bot';
                 const botTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 botDiv.innerHTML =
-                    `<div class="bubble" style="${isError ? 'color:#b91c1c;' : ''}">${escapeHtml(text)}<span class="msg-time">${botTime}</span></div>`;
+                    `<div class="bubble" style="${isError ? 'color:#ff8a80;' : ''}">${escapeHtml(text)}<span class="msg-time">${botTime}</span></div>`;
                 messagesDiv.appendChild(botDiv);
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
             };
 
-            // 1. "aaj kon kon present hai" (Admin only)
-            if (msg.includes('aaj kon kon present') || msg.includes('today present') && user.role === 'admin') {
-                try {
-                    const res = await fetch(`${API_BASE}/api/admin/dashboard-stats/${user.rollNo}`, {
-                        headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` }
-                    });
-                    const data = await res.json();
-                    if (!res.ok || !data.todayPresentStudents) {
-                        showBotReply('⚠️ Could not fetch present students.', true);
-                        return;
-                    }
-                    const students = data.todayPresentStudents || [];
-                    if (students.length === 0) {
-                        showBotReply('📭 No students present today.');
-                        return;
-                    }
-                    const cse = students.filter(s => s.rollNo && !s.rollNo.includes('AIDS'));
-                    const aids = students.filter(s => s.rollNo && s.rollNo.includes('AIDS'));
-                    let reply = `📋 **Today's Present Students (${new Date().toISOString().split('T')[0]})**\n`;
-                    if (cse.length) {
-                        reply += `\n🟦 **CSE (${cse.length})**: ${cse.map(s => `${s.rollNo} (${s.name})`).join(', ')}`;
-                    }
-                    if (aids.length) {
-                        reply += `\n🟪 **AIDS (${aids.length})**: ${aids.map(s => `${s.rollNo} (${s.name})`).join(', ')}`;
-                    }
-                    if (cse.length + aids.length === 0) reply += '\nNo one present yet.';
-                    showBotReply(reply);
-                } catch (e) {
-                    showBotReply('❌ Failed to fetch present students.', true);
-                }
-                return;
-            }
+            const msg = rawMsg.toLowerCase().trim();
 
-            // 2. "kal kon kon present tha" (Admin only) – fetch for previous day
-            if (msg.includes('kal kon kon present') || msg.includes('yesterday present') && user.role === 'admin') {
-                const today = new Date();
-                const yesterday = new Date(today);
-                yesterday.setDate(today.getDate() - 1);
-                const dateStr = yesterday.toISOString().split('T')[0];
-                try {
-                    const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`, {
-                        headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` }
-                    });
-                    const records = await res.json();
-                    if (!res.ok || !records.length) {
-                        showBotReply('⚠️ Could not fetch attendance.', true);
-                        return;
-                    }
-                    const presentOnDate = records.filter(r => r.date === dateStr && r.status === 'Present');
-                    if (presentOnDate.length === 0) {
-                        showBotReply(`📭 No students present on ${dateStr}.`);
-                        return;
-                    }
-                    const unique = {};
-                    presentOnDate.forEach(r => { if (!unique[r.rollNo]) unique[r.rollNo] = r.studentName || r.name ||
-                            'Unknown'; });
-                    const list = Object.entries(unique).map(([roll, name]) => `${roll} (${name})`);
-                    showBotReply(`📋 **Present on ${dateStr} (${list.length})**:\n${list.join(', ')}`);
-                } catch (e) {
-                    showBotReply('❌ Failed to fetch yesterday\'s attendance.', true);
-                }
-                return;
-            }
-
-            // 3. "mark my attendance" (Student only)
+            // ---- ONLY ONE FRONTEND COMMAND: "mark my attendance" ----
+            // Because this requires GPS + passcode prompt which backend can't do
             if (msg.includes('mark my attendance') && user.role === 'student') {
-                // Trigger full day attendance (asks passcode & GPS)
-                markFullDayAttendance();
-                // The function itself shows prompts and handles flow
-                // We'll just add a note that it's triggered.
                 showBotReply('📌 Initiating Full Day Attendance marking...\nPlease allow location and enter the passcode when prompted.');
+                markFullDayAttendance();
                 return;
             }
 
-            // 4. Timetable queries
-            const timetableMatch = msg.match(/aaj (\d+)(?:th|st|nd|rd)? lecture kiska hai/i) ||
-                msg.match(/(\d+)(?:th|st|nd|rd)? period kya hai/i) ||
-                msg.match(/(\d+):(\d+) ke samay konsa lecture hai/i);
-            if (timetableMatch) {
-                const branch = user.branch || 'CSE';
-                const schedule = getScheduleForBranch(branch);
-                const now = new Date();
-                const day = now.getDay();
-                if (day === 0 || day === 6) {
-                    showBotReply('📅 Weekend – no lectures today.');
-                    return;
-                }
-                const daySchedule = schedule[day] || [];
-                let periodNum = null;
-                let timeMatch = null;
-                if (timetableMatch[1] && timetableMatch[2]) {
-                    // time format
-                    const h = parseInt(timetableMatch[1]);
-                    const m = parseInt(timetableMatch[2]);
-                    const targetMins = h * 60 + m;
-                    for (let slot of daySchedule) {
-                        const sMins = parseInt(slot.start.split(':')[0]) * 60 + parseInt(slot.start.split(':')[1]);
-                        const eMins = parseInt(slot.end.split(':')[0]) * 60 + parseInt(slot.end.split(':')[1]);
-                        if (targetMins >= sMins && targetMins < eMins) {
-                            showBotReply(`📚 At ${slot.start} - ${slot.end}: **${slot.subject}**`);
-                            return;
-                        }
-                    }
-                    showBotReply(`⏳ No class at that time.`);
-                    return;
-                } else if (timetableMatch[1]) {
-                    periodNum = parseInt(timetableMatch[1]);
-                    if (periodNum < 1 || periodNum > 8) {
-                        showBotReply('Invalid period number (1-8).');
-                        return;
-                    }
-                    const slot = daySchedule.find(s => s.period === `P${periodNum}` || s.period === `P${periodNum}-P${periodNum+1}`);
-                    if (slot) {
-                        showBotReply(`📚 Period ${periodNum}: **${slot.subject}** (${slot.start} - ${slot.end})`);
-                    } else {
-                        showBotReply(`⏳ No lecture in period ${periodNum}.`);
-                    }
-                    return;
-                }
-            }
-
-            // 5. "aaj college khula hai" – check holiday/weekend
-            if (msg.includes('aaj college khula') || msg.includes('college open today')) {
-                const today = new Date().toISOString().split('T')[0];
-                try {
-                    const res = await fetch(`${API_BASE}/api/date-status/${today}`);
-                    const status = await res.json();
-                    if (status.isBlocked) {
-                        showBotReply(`📅 ${status.type}: ${status.message}`);
-                    } else {
-                        showBotReply('✅ College is open today.');
-                    }
-                } catch (e) {
-                    showBotReply('⚠️ Could not check status.', true);
-                }
-                return;
-            }
-
-            // If no command matched, proceed to AI chat (normal flow)
+            // ---- ALL OTHER QUERIES GO TO BACKEND ----
             const typing = document.getElementById('typingIndicator');
             if (typing) typing.style.display = 'block';
             const sendBtn = document.getElementById('chatSendBtn');
@@ -5548,7 +5470,8 @@
                     role: user.role || 'student',
                     name: user.name || '',
                     branch: user.branch || 'CSE',
-                    threadId: currentThreadId
+                    threadId: currentThreadId,
+                    skipGreeting: chatGreeted
                 };
 
                 const res = await fetch(`${API_BASE}/api/chat`, {
@@ -5559,6 +5482,8 @@
 
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Failed to get response');
+
+                chatGreeted = true;
 
                 if (data.threadId) {
                     currentThreadId = data.threadId;
@@ -5579,7 +5504,7 @@
                 const errDiv = document.createElement('div');
                 errDiv.className = 'chat-msg bot';
                 errDiv.innerHTML =
-                    `<div class="bubble" style="color:#b91c1c;">⚠️ ${e.message || 'Network error. Please try again.'}</div>`;
+                    `<div class="bubble" style="color:#ff8a80;">⚠️ ${e.message || 'Network error. Please try again.'}</div>`;
                 messagesDiv.appendChild(errDiv);
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
             } finally {
@@ -5611,22 +5536,32 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
+        function setupChatButton() {
             const toggleBtn = document.getElementById('chatAvatarTrigger');
             const closeBtn = document.getElementById('chatCloseBtn');
+            const avatar = document.getElementById('userAvatarText');
+
+            const handleToggle = (e) => {
+                e.preventDefault();
+                toggleChat();
+            };
+
             if (toggleBtn) {
-                toggleBtn.addEventListener('click', toggleChat);
-                toggleBtn.addEventListener('touchstart', toggleChat, { passive: true });
+                toggleBtn.addEventListener('click', handleToggle);
+                toggleBtn.addEventListener('touchstart', handleToggle, { passive: false });
             }
             if (closeBtn) {
-                closeBtn.addEventListener('click', toggleChat);
-                closeBtn.addEventListener('touchstart', toggleChat, { passive: true });
+                closeBtn.addEventListener('click', handleToggle);
+                closeBtn.addEventListener('touchstart', handleToggle, { passive: false });
             }
-            const avatar = document.getElementById('userAvatarText');
             if (avatar) {
-                avatar.addEventListener('click', toggleChat);
-                avatar.addEventListener('touchstart', toggleChat, { passive: true });
+                avatar.addEventListener('click', handleToggle);
+                avatar.addEventListener('touchstart', handleToggle, { passive: false });
             }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setupChatButton();
         });
 
         (function() {
@@ -5659,8 +5594,10 @@
             console.log('📊 Teacher reports: date range options available.');
             console.log('🔒 Roll number validation: 24CSE00 / 24AIDS00 format enforced.');
             console.log('🛡️ All endpoints aligned with backend.');
-            console.log('🤖 Chat AI: command parser added for actions (present list, mark attendance, timetable, etc.)');
-            console.log('📏 Chat panel is centered and occupies ~75% of screen.');
+            console.log('🤖 Chat AI: ALL queries go to backend. Only "mark my attendance" is handled frontend.');
+            console.log('✅ Greeting is controlled by backend via skipGreeting flag.');
+            console.log('📱 Download with notification popup.');
+            console.log('✨ Glassmorphism UI applied.');
         })();
     </script>
 </body>
