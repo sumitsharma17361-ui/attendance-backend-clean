@@ -148,7 +148,7 @@ const CSE_TIME_TABLE = {
     { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' },
     { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' },
     { subject: 'CN - Computer Network', faculty: 'Mr. Chhetrapal' },
-    { subject: 'SPT - Sports', faculty: 'Sports DPT' }
+    { subject: 'LIB - Library', faculty: 'Library Staff' }
   ],
   Tuesday: [
     { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' },
@@ -333,7 +333,7 @@ const CSE_SCHEDULE = {
     { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
     { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
     { start: "13:50", end: "14:35", subject: "CN - Computer Network", period: "P7" },
-    { start: "14:35", end: "15:20", subject: "SPT -Sports ", period: "P8" }
+    { start: "14:35", end: "15:20", subject: "LIB - Library", period: "P8" }
   ],
   2: [
     { start: "09:20", end: "10:05", subject: "WT - Web Technology", period: "P1" },
@@ -446,6 +446,16 @@ function getCurrentPeriod(branch = 'CSE') {
   return null;
 }
 
+// ---------- Helper: get timetable for a specific date ----------
+function getTimetableForDate(dateStr, branch = 'CSE') {
+  const parts = dateStr.split('-');
+  const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const dayName = dayNames[dateObj.getDay()];
+  const timetable = getTimetableForBranch(branch);
+  return timetable[dayName] || [];
+}
+
 // ---------- MongoDB Connection ----------
 mongoose.connect(MONGO_URI, {
   useNewUrlParser: true,
@@ -530,9 +540,6 @@ const chatSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
-
-// ========== System Settings Schema – REMOVED (no maintenance feature) ==========
-// No more SystemSettings or server busy mode.
 
 const User = mongoose.model('User', userSchema);
 const Attendance = mongoose.model('Attendance', attendanceSchema);
@@ -2386,10 +2393,11 @@ app.delete('/api/chats/:threadId', async (req, res) => {
 // ==================== CHAT AI ENDPOINT – GROQ API ====================
 app.post('/api/chat', async (req, res) => {
   try {
-    const { message, rollNo, role, name, branch, threadId } = req.body;
+    const { message, rollNo, role, name, branch, threadId, skipGreeting } = req.body;
     if (!message) return res.status(400).json({ error: 'Message is required.' });
     const cleanRoll = rollNo?.trim().toUpperCase() || 'guest';
 
+    // ---------- Fetch all relevant data ----------
     let userData = null;
     let attendanceSummary = null;
     let workingDays = 0;
@@ -2416,57 +2424,140 @@ app.post('/api/chat', async (req, res) => {
       }
     }
 
+    // ---------- Parse user message for date/timetable ----------
+    let requestedDate = null;
+    let requestedDay = null;
+    const msgLower = message.toLowerCase();
+    // Detect "kal", "aaj", "today", "tomorrow"
+    if (msgLower.includes('kal') || msgLower.includes('tomorrow')) {
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      requestedDate = d.toISOString().split('T')[0];
+    } else if (msgLower.includes('aaj') || msgLower.includes('today')) {
+      requestedDate = new Date().toISOString().split('T')[0];
+    } else {
+      // Try to parse a date like "17 August" or "August 17"
+      const dateMatch = message.match(/(\d{1,2})\s+([A-Za-z]+)/) || message.match(/([A-Za-z]+)\s+(\d{1,2})/);
+      if (dateMatch) {
+        const dayNum = parseInt(dateMatch[1] || dateMatch[2]);
+        const monthName = dateMatch[2] || dateMatch[1];
+        const monthMap = {
+          'january': 0, 'february': 1, 'march': 2, 'april': 3, 'may': 4, 'june': 5,
+          'july': 6, 'august': 7, 'september': 8, 'october': 9, 'november': 10, 'december': 11
+        };
+        const monthIdx = monthMap[monthName.toLowerCase()];
+        if (monthIdx !== undefined && dayNum >= 1 && dayNum <= 31) {
+          const year = 2026; // assume 2026
+          const d = new Date(year, monthIdx, dayNum);
+          if (!isNaN(d)) {
+            requestedDate = d.toISOString().split('T')[0];
+          }
+        }
+      }
+      // Also check for day names like "Monday"
+      const dayNames = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+      for (const dn of dayNames) {
+        if (msgLower.includes(dn)) {
+          requestedDay = dn.charAt(0).toUpperCase() + dn.slice(1);
+          break;
+        }
+      }
+    }
+
+    // If we have a requested date, fetch its timetable and status
+    let requestedTimetable = null;
+    let requestedStatus = null;
+    if (requestedDate) {
+      const status = await checkDateStatus(requestedDate);
+      requestedStatus = status;
+      if (!status.isBlocked) {
+        const branchName = userData?.branch || branch || 'CSE';
+        requestedTimetable = getTimetableForDate(requestedDate, branchName);
+      }
+    } else if (requestedDay) {
+      // Use the day name directly (assume current week? or just provide that day's timetable)
+      const branchName = userData?.branch || branch || 'CSE';
+      const timetable = getTimetableForBranch(branchName);
+      requestedTimetable = timetable[requestedDay] || [];
+    }
+
+    // ---------- Build system prompt ----------
     const now = new Date();
     const hour = now.getHours();
     let greeting = '';
     let emoji = '';
-    if (hour < 12) { greeting = 'Good morning'; emoji = '🌞'; }
-    else if (hour < 17) { greeting = 'Good afternoon'; emoji = '🌤️'; }
-    else { greeting = 'Good evening'; emoji = '🌙'; }
-
+    if (!skipGreeting) {
+      if (hour < 12) { greeting = 'Good morning'; emoji = '🌞'; }
+      else if (hour < 17) { greeting = 'Good afternoon'; emoji = '🌤️'; }
+      else { greeting = 'Good evening'; emoji = '🌙'; }
+    }
     const userName = userData?.name || name || 'Guest';
     const userRole = userData?.role || role || 'student';
-    const systemPrompt = `You are an AI assistant for BM Group of Institutions attendance portal.
-Your name is "BM Bot".
-Current date/time: ${now.toLocaleString()}
-User: ${userName} (Roll: ${cleanRoll}, Role: ${userRole})
-Branch: ${userData?.branch || branch || 'CSE'}
 
-Attendance summary: ${attendanceSummary ? JSON.stringify(attendanceSummary, null, 2) : 'Not available'}
-Working days so far (since 15 July 2026): ${workingDays}
-Holidays: ${holidays.map(h => `${h.date} (${h.reason})`).join(', ') || 'None'}
-Today's timetable: ${JSON.stringify(timetable, null, 2)}
-Current lecture period: ${currentPeriod ? `${currentPeriod.subject} (${currentPeriod.start} - ${currentPeriod.end})` : 'No class now'}
+    // Build context string
+    let contextStr = `Current date/time: ${now.toLocaleString()}\n`;
+    contextStr += `User: ${userName} (Roll: ${cleanRoll}, Role: ${userRole})\n`;
+    contextStr += `Branch: ${userData?.branch || branch || 'CSE'}\n`;
+    if (attendanceSummary) {
+      contextStr += `Attendance summary: ${JSON.stringify(attendanceSummary, null, 2)}\n`;
+    }
+    contextStr += `Working days so far (since 15 July 2026): ${workingDays}\n`;
+    if (holidays.length) {
+      contextStr += `Holidays: ${holidays.map(h => `${h.date} (${h.reason})`).join(', ')}\n`;
+    }
+    // Add today's timetable
+    const todayDay = now.toLocaleString('en', { weekday: 'long' });
+    const todayTimetable = getTimetableForBranch(userData?.branch || branch || 'CSE')[todayDay] || [];
+    contextStr += `Today's timetable (${todayDay}): ${todayTimetable.map(s => s.subject).join(', ')}\n`;
+    if (currentPeriod) {
+      contextStr += `Current lecture period: ${currentPeriod.subject} (${currentPeriod.start} - ${currentPeriod.end})\n`;
+    } else {
+      contextStr += `Current lecture period: No class now\n`;
+    }
 
-You have full knowledge of the attendance system, college schedule, and can answer any related queries.
-Be friendly, concise, and use emojis where appropriate.
-If the user asks for notes, assignments, or study materials, provide a detailed and helpful response with bullet points or sections.
-If the user asks for a flowchart, describe it in text using ASCII art or step-by-step instructions.
-Always greet the user with ${greeting}, ${userName} ${emoji} at the start of the conversation (unless it's a follow-up within the same thread).
-If the user asks for help, provide a list of common commands or questions they can ask.
-Do not perform any actions (like marking attendance) – only provide guidance.
-
-Reply in a clear, conversational, and professional manner.`;
-
-    let chatThread = null;
-    let existingMessages = [];
-    if (threadId && cleanRoll !== 'guest') {
-      chatThread = await Chat.findOne({ threadId, rollNo: cleanRoll });
-      if (chatThread) {
-        existingMessages = chatThread.messages.map(m => ({ role: m.role, content: m.content }));
+    // Add requested date timetable if available
+    if (requestedDate) {
+      const status = requestedStatus;
+      if (status && status.isBlocked) {
+        contextStr += `Requested date ${requestedDate} is ${status.type}: ${status.message}\n`;
+      } else if (requestedTimetable && requestedTimetable.length) {
+        contextStr += `Timetable for ${requestedDate} (${status ? status.dayName : ''}): ${requestedTimetable.map(s => s.subject).join(', ')}\n`;
+      } else {
+        contextStr += `No timetable available for ${requestedDate}.\n`;
+      }
+    } else if (requestedDay) {
+      const dayTimetable = requestedTimetable;
+      if (dayTimetable && dayTimetable.length) {
+        contextStr += `Timetable for ${requestedDay}: ${dayTimetable.map(s => s.subject).join(', ')}\n`;
+      } else {
+        contextStr += `No timetable available for ${requestedDay}.\n`;
       }
     }
 
-    const messages = [
-      { role: 'system', content: systemPrompt },
-      ...existingMessages,
-      { role: 'user', content: message }
-    ];
+    // Build system prompt
+    let systemPrompt = `You are an AI assistant for BM Group of Institutions attendance portal.
+Your name is "BM Bot".
+${greeting ? `${greeting}, ${userName} ${emoji}!` : ''}
+You have the following context:
 
+${contextStr}
+
+Your task:
+- Answer the user's query using the provided context.
+- If the user asks for timetable on a specific date, use the timetable data given above.
+- If the user asks about attendance, use the attendance summary.
+- If the user asks about holidays, use the holiday list.
+- Always be friendly, concise, and use emojis where appropriate.
+- Do not perform actions (like marking attendance) – only provide information.
+- Respond in the same language as the user (Hindi/English).
+- If the user asks for notes or study material, provide helpful content with bullet points.
+
+Now respond to the user's message: "${message}"`;
+
+    // ---------- Call GROQ API ----------
     let reply = '';
     let aiError = false;
 
-    // ===== Call GROQ API with fallback models =====
     if (GROQ_API_KEY) {
       const models = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
       let usedModel = null;
@@ -2474,7 +2565,10 @@ Reply in a clear, conversational, and professional manner.`;
         try {
           const groqPayload = {
             model: model,
-            messages: messages,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: message }
+            ],
             temperature: 0.7,
             max_tokens: 1000
           };
@@ -2520,46 +2614,75 @@ Reply in a clear, conversational, and professional manner.`;
       aiError = true;
     }
 
-    // Fallback
+    // ---------- Fallback ----------
     if (aiError || !reply) {
-      let fallback = `${greeting}, ${userName} ${emoji}! I'm your BM Bot. `;
-      if (attendanceSummary) {
-        const pct = attendanceSummary.attendancePercentage || 0;
-        const attended = attendanceSummary.totalAcademicLectures || 0;
-        const total = attendanceSummary.totalConductedLectures || 0;
-        fallback += `Your attendance is ${pct}% (${attended}/${total} lectures). `;
+      let fallback = '';
+      if (greeting) fallback = `${greeting}, ${userName} ${emoji}! `;
+      if (requestedDate) {
+        if (requestedStatus && requestedStatus.isBlocked) {
+          fallback += `📅 ${requestedStatus.message}. `;
+        } else if (requestedTimetable && requestedTimetable.length) {
+          fallback += `📖 Timetable for ${requestedDate} (${requestedStatus ? requestedStatus.dayName : ''}): `;
+          fallback += requestedTimetable.map(s => s.subject).join(', ');
+        } else {
+          fallback += `No timetable available for ${requestedDate}. `;
+        }
+      } else if (requestedDay) {
+        if (requestedTimetable && requestedTimetable.length) {
+          fallback += `📖 Timetable for ${requestedDay}: ${requestedTimetable.map(s => s.subject).join(', ')}`;
+        } else {
+          fallback += `No timetable available for ${requestedDay}. `;
+        }
+      } else {
+        // General fallback
+        if (attendanceSummary) {
+          const pct = attendanceSummary.attendancePercentage || 0;
+          const attended = attendanceSummary.totalAcademicLectures || 0;
+          const total = attendanceSummary.totalConductedLectures || 0;
+          fallback += `Your attendance is ${pct}% (${attended}/${total} lectures). `;
+        }
+        if (workingDays > 0) {
+          fallback += `Working days so far: ${workingDays}. `;
+        }
+        if (holidays.length > 0) {
+          fallback += `Upcoming holidays: ${holidays.map(h => `${h.date} (${h.reason})`).join(', ')}. `;
+        }
+        fallback += `How can I assist you today?`;
       }
-      if (workingDays > 0) {
-        fallback += `Working days so far: ${workingDays}. `;
-      }
-      if (holidays.length > 0) {
-        fallback += `Upcoming holidays: ${holidays.map(h => `${h.date} (${h.reason})`).join(', ')}. `;
-      }
-      fallback += `How can I assist you today? (AI service is currently unavailable, but I can still help with basic info.)`;
       reply = fallback;
     }
 
-    // Save conversation
+    // ---------- Save conversation ----------
     let newThreadId = threadId;
     if (cleanRoll !== 'guest') {
+      const existingMessages = [];
+      if (threadId) {
+        const chatThread = await Chat.findOne({ threadId, rollNo: cleanRoll });
+        if (chatThread) {
+          existingMessages.push(...chatThread.messages.map(m => ({ role: m.role, content: m.content })));
+        }
+      }
       const newMessages = [
-        ...(existingMessages || []),
+        ...existingMessages,
         { role: 'user', content: message },
         { role: 'assistant', content: reply }
       ];
       let title = '';
-      if (chatThread) {
-        chatThread.messages = newMessages;
-        chatThread.updatedAt = new Date();
-        if (!chatThread.title || chatThread.title === 'New Chat') {
-          const firstUserMsg = newMessages.find(m => m.role === 'user');
-          if (firstUserMsg) {
-            chatThread.title = firstUserMsg.content.substring(0, 50);
+      if (threadId) {
+        const chatThread = await Chat.findOne({ threadId, rollNo: cleanRoll });
+        if (chatThread) {
+          chatThread.messages = newMessages;
+          chatThread.updatedAt = new Date();
+          if (!chatThread.title || chatThread.title === 'New Chat') {
+            const firstUserMsg = newMessages.find(m => m.role === 'user');
+            if (firstUserMsg) {
+              chatThread.title = firstUserMsg.content.substring(0, 50);
+            }
           }
+          await chatThread.save();
+          title = chatThread.title;
+          newThreadId = chatThread.threadId;
         }
-        await chatThread.save();
-        title = chatThread.title;
-        newThreadId = chatThread.threadId;
       } else {
         const firstUserMsg = newMessages.find(m => m.role === 'user');
         const autoTitle = firstUserMsg ? firstUserMsg.content.substring(0, 50) : 'New Chat';
@@ -2572,15 +2695,14 @@ Reply in a clear, conversational, and professional manner.`;
         await newThread.save();
         newThreadId = newThread.threadId;
         title = autoTitle;
-        chatThread = newThread;
       }
     }
 
     res.json({
       reply,
       threadId: newThreadId || null,
-      title: chatThread?.title || 'New Chat',
-      messages: chatThread?.messages || []
+      title: 'Chat',
+      messages: []
     });
 
   } catch (err) {
