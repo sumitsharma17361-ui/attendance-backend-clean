@@ -9,12 +9,12 @@
     </script>
     <style>
         /* ============================================================
-           GLASSMORPHISM THEME – Liquid Glass Effect
+           GLASSMORPHISM THEME – Mobile Scroll Fix
            ============================================================ */
         :root {
-            --glass-bg: rgba(255, 255, 255, 0.12);
-            --glass-border: rgba(255, 255, 255, 0.25);
-            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+            --glass-bg: rgba(255, 255, 255, 0.10);
+            --glass-border: rgba(255, 255, 255, 0.18);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
             --glass-blur: blur(14px);
             --primary: #6C63FF;
             --primary-dark: #5a52d5;
@@ -38,18 +38,61 @@
             padding: 0;
         }
 
+        /* ---- Glass Orb Background (fixed, no scroll interference) ---- */
+        .glass-orb-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 0;
+            background: var(--bg-gradient);
+            overflow: hidden;
+        }
+        .glass-orb-bg::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 30% 40%, rgba(108,99,255,0.20) 0%, transparent 60%),
+                        radial-gradient(circle at 70% 60%, rgba(167,139,250,0.15) 0%, transparent 50%);
+            animation: glassOrb 12s ease-in-out infinite alternate;
+        }
+        @keyframes glassOrb {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(5%, 5%) scale(1.2); }
+        }
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-gradient);
             color: var(--text-main);
             min-height: 100vh;
             display: flex;
+            align-items: flex-start;      /* content starts at top */
             justify-content: center;
-            align-items: center;
-            padding: 16px;
+            padding: 16px 12px;
             margin: 0;
             -webkit-font-smoothing: antialiased;
-            background-attachment: fixed;
+            overflow-y: auto;              /* main scroll */
+            overflow-x: hidden;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ===== Fallback for browsers without backdrop-filter ===== */
+        @supports not (backdrop-filter: blur(1px)) {
+            .app-container,
+            .chat-panel,
+            .modal-card,
+            .toast-card,
+            #downloadProgress {
+                background: rgba(26, 26, 46, 0.85) !important;
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+            }
         }
 
         /* ===== SCROLLBAR ===== */
@@ -170,6 +213,7 @@
         .app-container {
             width: 100%;
             max-width: 520px;
+            margin: 0 auto;
             background: var(--glass-bg);
             backdrop-filter: var(--glass-blur);
             -webkit-backdrop-filter: var(--glass-blur);
@@ -179,6 +223,7 @@
             overflow: hidden;
             animation: appEntrance 0.7s cubic-bezier(0.16, 1, 0.3, 1);
             position: relative;
+            /* no fixed height — expands with content */
         }
         @keyframes appEntrance {
             from { opacity:0; transform: scale(0.92) translateY(20px); }
@@ -1674,32 +1719,6 @@
             color: #6C63FF !important;
         }
 
-        /* ===== LOGIN PAGE SPECIAL GLASS ===== */
-        .login-glass-bg {
-            position: relative;
-            overflow: hidden;
-        }
-        .login-glass-bg::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle at 30% 40%, rgba(108,99,255,0.15) 0%, transparent 60%),
-                        radial-gradient(circle at 70% 60%, rgba(167,139,250,0.10) 0%, transparent 50%);
-            animation: glassOrb 12s ease-in-out infinite alternate;
-            pointer-events: none;
-        }
-        @keyframes glassOrb {
-            0% { transform: translate(0, 0) scale(1); }
-            100% { transform: translate(5%, 5%) scale(1.2); }
-        }
-        .login-glass-bg .app-container {
-            position: relative;
-            z-index: 1;
-        }
-
         /* ===== DASHBOARD TIME ===== */
         #dashboardCurrentTime {
             font-weight: 700;
@@ -1711,7 +1730,10 @@
         }
     </style>
 </head>
-<body class="login-glass-bg">
+<body>
+
+    <!-- Fixed Glass Orb Background (no scroll interference) -->
+    <div class="glass-orb-bg"></div>
 
     <!-- ===== TOAST ===== -->
     <div id="toast-container">
@@ -2412,7 +2434,7 @@
     </button>
 
     <!-- ========================================================== -->
-    <!-- JAVASCRIPT – FULL CLIENT LOGIC with GLASS UI               -->
+    <!-- JAVASCRIPT – FULL CLIENT LOGIC with GLASS UI + SCROLL FIX  -->
     <!-- ========================================================== -->
     <script>
         // ============================================================
@@ -5598,6 +5620,7 @@
             console.log('✅ Greeting is controlled by backend via skipGreeting flag.');
             console.log('📱 Download with notification popup.');
             console.log('✨ Glassmorphism UI applied.');
+            console.log('📱 Mobile scrolling fixed – body align-items: flex-start and overflow-y: auto.');
         })();
     </script>
 </body>
