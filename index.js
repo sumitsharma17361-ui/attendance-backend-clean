@@ -333,7 +333,7 @@ const CSE_SCHEDULE = {
     { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
     { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
     { start: "13:50", end: "14:35", subject: "CN - Computer Network", period: "P7" },
-    { start: "14:35", end: "15:20", subject: "LIB - Library", period: "P8" }
+    { start: "14:35", end: "15:20", subject: "SPT -Sports ", period: "P8" }
   ],
   2: [
     { start: "09:20", end: "10:05", subject: "WT - Web Technology", period: "P1" },
