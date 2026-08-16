@@ -9,27 +9,27 @@
     </script>
     <style>
         /* ============================================================
-           GLASSMORPHISM THEME – Mobile Scroll Fix
+           LIGHT BLUE GLASS THEME – Smooth & Lag-Free
            ============================================================ */
         :root {
-            --glass-bg: rgba(255, 255, 255, 0.10);
-            --glass-border: rgba(255, 255, 255, 0.18);
-            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-            --glass-blur: blur(14px);
-            --primary: #6C63FF;
-            --primary-dark: #5a52d5;
-            --primary-light: rgba(108, 99, 255, 0.20);
+            --glass-bg: rgba(255, 255, 255, 0.18);
+            --glass-border: rgba(255, 255, 255, 0.30);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.10);
+            --glass-blur: blur(16px);
+            --primary: #0288d1;
+            --primary-dark: #0277bd;
+            --primary-light: rgba(2, 136, 209, 0.15);
             --success: #00c853;
             --danger: #ff1744;
             --warning: #ffab00;
-            --text-main: #ffffff;
-            --text-muted: rgba(255, 255, 255, 0.70);
+            --text-main: #1a1a2e;
+            --text-muted: rgba(26, 26, 46, 0.70);
             --text-dark: #1a1a2e;
             --radius: 20px;
             --radius-sm: 12px;
             --radius-full: 9999px;
-            --transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-            --bg-gradient: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            --transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            --bg-gradient: linear-gradient(135deg, #e0f7fa, #b2ebf2, #80deea);
         }
 
         * {
@@ -38,7 +38,7 @@
             padding: 0;
         }
 
-        /* ---- Glass Orb Background (fixed, no scroll interference) ---- */
+        /* ---- Glass Orb Background (light blue) ---- */
         .glass-orb-bg {
             position: fixed;
             top: 0;
@@ -57,9 +57,10 @@
             left: -50%;
             width: 200%;
             height: 200%;
-            background: radial-gradient(circle at 30% 40%, rgba(108,99,255,0.20) 0%, transparent 60%),
-                        radial-gradient(circle at 70% 60%, rgba(167,139,250,0.15) 0%, transparent 50%);
-            animation: glassOrb 12s ease-in-out infinite alternate;
+            background: radial-gradient(circle at 30% 40%, rgba(2, 136, 209, 0.25) 0%, transparent 60%),
+                        radial-gradient(circle at 70% 60%, rgba(0, 188, 212, 0.20) 0%, transparent 50%);
+            animation: glassOrb 14s ease-in-out infinite alternate;
+            will-change: transform;
         }
         @keyframes glassOrb {
             0% { transform: translate(0, 0) scale(1); }
@@ -71,12 +72,12 @@
             color: var(--text-main);
             min-height: 100vh;
             display: flex;
-            align-items: flex-start;      /* content starts at top */
+            align-items: flex-start;
             justify-content: center;
             padding: 16px 12px;
             margin: 0;
             -webkit-font-smoothing: antialiased;
-            overflow-y: auto;              /* main scroll */
+            overflow-y: auto;
             overflow-x: hidden;
             position: relative;
             z-index: 1;
@@ -89,7 +90,7 @@
             .modal-card,
             .toast-card,
             #downloadProgress {
-                background: rgba(26, 26, 46, 0.85) !important;
+                background: rgba(255, 255, 255, 0.85) !important;
                 backdrop-filter: none !important;
                 -webkit-backdrop-filter: none !important;
             }
@@ -101,15 +102,16 @@
             height: 4px;
         }
         ::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(0, 0, 0, 0.05);
             border-radius: 10px;
         }
         ::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.20);
+            background: rgba(2, 136, 209, 0.30);
             border-radius: 10px;
+            transition: var(--transition);
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.35);
+            background: rgba(2, 136, 209, 0.50);
         }
 
         /* ===== TOAST ===== */
@@ -142,7 +144,7 @@
             backdrop-filter: var(--glass-blur);
             -webkit-backdrop-filter: var(--glass-blur);
             background: var(--glass-bg);
-            color: #fff;
+            color: var(--text-main);
         }
         .toast-card.show {
             opacity: 1;
@@ -158,8 +160,8 @@
             animation: shake 0.5s ease;
         }
         .toast-card.toast-download {
-            background: rgba(108, 99, 255, 0.25);
-            border-color: rgba(108, 99, 255, 0.40);
+            background: rgba(2, 136, 209, 0.20);
+            border-color: rgba(2, 136, 209, 0.40);
         }
         @keyframes shake {
             0%,100% { transform: translateX(0); }
@@ -173,10 +175,10 @@
             bottom: 24px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0,0,0,0.70);
+            background: rgba(255,255,255,0.85);
             backdrop-filter: var(--glass-blur);
             -webkit-backdrop-filter: var(--glass-blur);
-            color: #fff;
+            color: var(--text-main);
             padding: 12px 24px;
             border-radius: var(--radius-sm);
             font-size: 12px;
@@ -196,8 +198,8 @@
         #downloadProgress .spinner {
             width: 20px;
             height: 20px;
-            border: 2.5px solid rgba(255,255,255,0.20);
-            border-top: 2.5px solid #6C63FF;
+            border: 2.5px solid rgba(0,0,0,0.10);
+            border-top: 2.5px solid #0288d1;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
@@ -212,7 +214,7 @@
         /* ===== APP CONTAINER – GLASS ===== */
         .app-container {
             width: 100%;
-            max-width: 520px;
+            max-width: 540px;
             margin: 0 auto;
             background: var(--glass-bg);
             backdrop-filter: var(--glass-blur);
@@ -221,19 +223,35 @@
             box-shadow: var(--glass-shadow);
             border: 1px solid var(--glass-border);
             overflow: hidden;
-            animation: appEntrance 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+            animation: appEntrance 0.6s cubic-bezier(0.16, 1, 0.3, 1);
             position: relative;
-            /* no fixed height — expands with content */
+            will-change: transform, opacity;
         }
         @keyframes appEntrance {
             from { opacity:0; transform: scale(0.92) translateY(20px); }
             to { opacity:1; transform: scale(1) translateY(0); }
         }
 
+        /* ===== CENTER LOGIN BOX ===== */
+        #auth-box {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 70vh;
+            padding: 20px 16px;
+        }
+        #auth-box h3 {
+            text-align: center;
+            font-size: 20px;
+            font-weight: 900;
+            margin-bottom: 16px;
+            color: var(--text-main);
+        }
+
         /* ===== HEADER – GLASS ===== */
         .app-header {
-            background: rgba(255,255,255,0.06);
-            padding: 16px 20px;
+            background: rgba(255,255,255,0.10);
+            padding: 14px 18px;
             border-bottom: 1px solid var(--glass-border);
             display: flex;
             align-items: center;
@@ -242,16 +260,13 @@
             -webkit-backdrop-filter: var(--glass-blur);
         }
         .app-header-title h1 {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 900;
             letter-spacing: -0.3px;
-            background: linear-gradient(135deg, #6C63FF, #a78bfa);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: var(--text-main);
         }
         .app-header-title p {
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 600;
             color: var(--text-muted);
             margin-top: 1px;
@@ -261,33 +276,35 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            flex-shrink: 0;
         }
         .avatar-circle {
-            width: 38px;
-            height: 38px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #6C63FF, #a78bfa);
+            background: linear-gradient(135deg, #0288d1, #00bcd4);
             color: #fff;
             font-weight: 700;
-            font-size: 13px;
+            font-size: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             border: 2px solid rgba(255,255,255,0.30);
             transition: var(--transition);
             cursor: pointer;
-            box-shadow: 0 2px 12px rgba(108,99,255,0.30);
+            box-shadow: 0 2px 12px rgba(2,136,209,0.30);
+            will-change: transform;
         }
         .avatar-circle:hover {
             transform: scale(1.06);
-            box-shadow: 0 4px 20px rgba(108,99,255,0.45);
+            box-shadow: 0 4px 20px rgba(2,136,209,0.45);
         }
 
         /* ===== BANNERS ===== */
         .notice-banner {
             background: rgba(255, 171, 0, 0.15);
             border-bottom: 1px solid rgba(255, 171, 0, 0.25);
-            color: #ffd54f;
+            color: #f57f17;
             font-size: 10px;
             padding: 8px 14px;
             font-weight: 600;
@@ -311,8 +328,8 @@
         .impersonation-banner {
             background: rgba(255, 171, 0, 0.15);
             border-bottom: 2px solid rgba(255, 171, 0, 0.30);
-            color: #ffd54f;
-            padding: 8px 16px;
+            color: #f57f17;
+            padding: 8px 14px;
             font-size: 11px;
             font-weight: 700;
             display: flex;
@@ -339,20 +356,20 @@
 
         /* ===== BODY ===== */
         .app-body {
-            padding: 16px;
+            padding: 14px;
         }
 
         /* ===== GLASS INPUTS ===== */
         input, select {
             width: 100%;
-            padding: 12px 16px;
-            margin-bottom: 10px;
-            background: rgba(255,255,255,0.08);
-            border: 1.5px solid rgba(255,255,255,0.15);
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            background: rgba(255,255,255,0.30);
+            border: 1.5px solid rgba(255,255,255,0.40);
             border-radius: var(--radius-sm);
             font-size: 12px;
             font-weight: 500;
-            color: #fff;
+            color: var(--text-main);
             outline: none;
             transition: var(--transition);
             font-family: inherit;
@@ -360,17 +377,17 @@
             -webkit-backdrop-filter: var(--glass-blur);
         }
         select option {
-            background: #1a1a2e;
-            color: #fff;
+            background: #fff;
+            color: var(--text-main);
         }
         input::placeholder {
-            color: rgba(255,255,255,0.45);
+            color: rgba(26,26,46,0.45);
             font-weight: 400;
         }
         input:focus, select:focus {
-            background: rgba(255,255,255,0.14);
-            border-color: #6C63FF;
-            box-shadow: 0 0 0 4px rgba(108,99,255,0.15);
+            background: rgba(255,255,255,0.50);
+            border-color: #0288d1;
+            box-shadow: 0 0 0 4px rgba(2,136,209,0.15);
         }
         .password-wrapper {
             position: relative;
@@ -385,20 +402,20 @@
             top: 50%;
             transform: translateY(-50%);
             cursor: pointer;
-            color: rgba(255,255,255,0.50);
+            color: rgba(26,26,46,0.50);
             transition: var(--transition);
             padding: 4px;
             border-radius: 4px;
         }
         .eye-icon:hover {
-            color: #6C63FF;
-            background: rgba(108,99,255,0.15);
+            color: #0288d1;
+            background: rgba(2,136,209,0.15);
         }
 
         /* ===== GLASS BUTTONS ===== */
         .btn {
             width: 100%;
-            padding: 12px 16px;
+            padding: 10px 16px;
             border-radius: var(--radius-sm);
             font-weight: 700;
             font-size: 12px;
@@ -416,6 +433,7 @@
             overflow: hidden;
             backdrop-filter: var(--glass-blur);
             -webkit-backdrop-filter: var(--glass-blur);
+            will-change: transform;
         }
         .btn::after {
             content: '';
@@ -425,19 +443,19 @@
             transition: var(--transition);
         }
         .btn:hover::after {
-            background: rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.10);
         }
         .btn:active {
             transform: scale(0.96);
         }
         .btn-primary {
-            background: linear-gradient(135deg, #6C63FF, #5a52d5);
+            background: linear-gradient(135deg, #0288d1, #0277bd);
             color: #fff;
-            box-shadow: 0 4px 20px rgba(108,99,255,0.35);
+            box-shadow: 0 4px 20px rgba(2,136,209,0.35);
         }
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 32px rgba(108,99,255,0.45);
+            box-shadow: 0 8px 32px rgba(2,136,209,0.45);
         }
         .btn-success {
             background: linear-gradient(135deg, #00c853, #009624);
@@ -467,19 +485,19 @@
             box-shadow: 0 8px 32px rgba(0,188,212,0.40);
         }
         .btn-outline {
-            background: rgba(255,255,255,0.06);
-            border: 1.5px solid rgba(255,255,255,0.20);
-            color: #fff;
+            background: rgba(255,255,255,0.20);
+            border: 1.5px solid rgba(255,255,255,0.40);
+            color: var(--text-main);
             box-shadow: none;
         }
         .btn-outline:hover {
-            background: rgba(255,255,255,0.12);
-            border-color: rgba(255,255,255,0.35);
+            background: rgba(255,255,255,0.35);
+            border-color: rgba(255,255,255,0.60);
             transform: translateY(-1px);
         }
         .btn-danger {
             background: rgba(255,23,68,0.15);
-            color: #ff1744;
+            color: #d50000;
             border: 1.5px solid rgba(255,23,68,0.30);
             box-shadow: none;
         }
@@ -488,13 +506,13 @@
             transform: translateY(-1px);
         }
         .btn-sm {
-            padding: 6px 14px;
+            padding: 5px 12px;
             font-size: 10px;
             width: auto;
             margin: 0;
         }
         .btn-xs {
-            padding: 3px 10px;
+            padding: 3px 8px;
             font-size: 8px;
             width: auto;
             margin: 0;
@@ -503,9 +521,9 @@
 
         /* ===== BADGES ===== */
         .badge {
-            padding: 3px 12px;
+            padding: 3px 10px;
             border-radius: var(--radius-full);
-            font-size: 9px;
+            font-size: 8px;
             font-weight: 700;
             transition: var(--transition);
             display: inline-block;
@@ -515,32 +533,32 @@
         }
         .badge-present {
             background: rgba(0,200,83,0.20);
-            color: #69f0ae;
+            color: #00796b;
             border: 1px solid rgba(0,200,83,0.30);
         }
         .badge-absent {
             background: rgba(255,23,68,0.20);
-            color: #ff8a80;
+            color: #b71c1c;
             border: 1px solid rgba(255,23,68,0.30);
         }
         .badge-active {
-            background: rgba(108,99,255,0.20);
-            color: #b39ddb;
-            border: 1px solid rgba(108,99,255,0.30);
+            background: rgba(2,136,209,0.20);
+            color: #01579b;
+            border: 1px solid rgba(2,136,209,0.30);
         }
         .badge-role {
-            background: rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.20);
             color: var(--text-muted);
-            border: 1px solid rgba(255,255,255,0.10);
+            border: 1px solid rgba(255,255,255,0.20);
         }
         .badge-attendance {
             background: rgba(0,188,212,0.15);
-            color: #80deea;
+            color: #006064;
             border: 1px solid rgba(0,188,212,0.25);
         }
         .badge-dl {
             background: rgba(255,171,0,0.20);
-            color: #ffd54f;
+            color: #e65100;
             border: 1px solid rgba(255,171,0,0.30);
         }
 
@@ -552,7 +570,7 @@
             margin: 12px 0;
         }
         .stat-card {
-            background: rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.15);
             backdrop-filter: var(--glass-blur);
             -webkit-backdrop-filter: var(--glass-blur);
             padding: 14px 12px;
@@ -560,16 +578,17 @@
             text-align: center;
             border: 1px solid var(--glass-border);
             transition: var(--transition);
+            will-change: transform;
         }
         .stat-card:hover {
             transform: translateY(-2px);
-            border-color: rgba(255,255,255,0.30);
+            border-color: rgba(255,255,255,0.50);
             box-shadow: var(--glass-shadow);
         }
         .stat-card .value {
             font-size: 22px;
             font-weight: 900;
-            background: linear-gradient(135deg, #6C63FF, #a78bfa);
+            background: linear-gradient(135deg, #0288d1, #00bcd4);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -586,13 +605,13 @@
 
         /* ===== SIMULATOR / ADVISOR ===== */
         .simulator-card {
-            background: rgba(108,99,255,0.10);
-            border: 1px solid rgba(108,99,255,0.20);
+            background: rgba(2,136,209,0.08);
+            border: 1px solid rgba(2,136,209,0.15);
             border-radius: var(--radius);
             padding: 10px 14px;
             margin-bottom: 12px;
             font-size: 10px;
-            color: #b39ddb;
+            color: #01579b;
             display: flex;
             align-items: center;
             gap: 10px;
@@ -606,7 +625,7 @@
 
         /* ===== QUICK PORTALS – GLASS ===== */
         .quick-portals-card {
-            background: rgba(255,255,255,0.04);
+            background: rgba(255,255,255,0.08);
             border: 1px solid var(--glass-border);
             border-radius: var(--radius);
             padding: 12px;
@@ -625,8 +644,8 @@
             margin-top: 8px;
         }
         .portal-btn {
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.10);
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.15);
             border-radius: var(--radius-sm);
             padding: 8px 6px;
             text-align: center;
@@ -639,13 +658,14 @@
             flex-direction: column;
             align-items: center;
             gap: 4px;
+            will-change: transform;
         }
         .portal-btn:hover {
-            background: rgba(255,255,255,0.12);
-            border-color: #6C63FF;
+            background: rgba(255,255,255,0.25);
+            border-color: #0288d1;
             transform: translateY(-2px);
-            box-shadow: 0 4px 20px rgba(108,99,255,0.20);
-            color: #b39ddb;
+            box-shadow: 0 4px 20px rgba(2,136,209,0.20);
+            color: #0288d1;
         }
         .portal-btn svg {
             width: 20px;
@@ -657,7 +677,7 @@
 
         /* ===== CALENDAR – GLASS ===== */
         .calendar-container {
-            background: rgba(255,255,255,0.04);
+            background: rgba(255,255,255,0.08);
             border: 1px solid var(--glass-border);
             border-radius: var(--radius);
             padding: 12px;
@@ -683,9 +703,9 @@
             padding: 4px 10px;
             font-size: 10px;
             width: auto;
-            background: rgba(255,255,255,0.08);
-            border-color: rgba(255,255,255,0.12);
-            color: #fff;
+            background: rgba(255,255,255,0.20);
+            border-color: rgba(255,255,255,0.30);
+            color: var(--text-main);
         }
         .calendar-grid {
             display: grid;
@@ -706,10 +726,11 @@
             padding: 5px 2px;
             border-radius: 6px;
             font-weight: 600;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.10);
+            border: 1px solid rgba(255,255,255,0.08);
             transition: var(--transition);
             font-size: 10px;
+            color: var(--text-main);
         }
         .cal-date:hover {
             transform: scale(1.08);
@@ -717,23 +738,23 @@
         }
         .cal-p {
             background: rgba(0,200,83,0.20);
-            color: #69f0ae;
+            color: #00796b;
             border-color: rgba(0,200,83,0.30);
         }
         .cal-a {
             background: rgba(255,23,68,0.20);
-            color: #ff8a80;
+            color: #b71c1c;
             border-color: rgba(255,23,68,0.30);
         }
         .cal-off {
-            background: rgba(255,255,255,0.03);
-            color: rgba(255,255,255,0.30);
+            background: rgba(255,255,255,0.05);
+            color: rgba(26,26,46,0.30);
         }
 
         /* ===== TABS – GLASS ===== */
         .tab-bar {
             display: flex;
-            background: rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.10);
             border-radius: var(--radius-sm);
             padding: 3px;
             margin-bottom: 12px;
@@ -749,33 +770,49 @@
             color: var(--text-muted);
             border-radius: 8px;
             transition: var(--transition);
+            will-change: background, color, box-shadow;
         }
         .tab-item.active {
-            background: rgba(108,99,255,0.25);
-            color: #fff;
-            box-shadow: 0 2px 12px rgba(108,99,255,0.15);
+            background: rgba(2,136,209,0.25);
+            color: #0288d1;
+            box-shadow: 0 2px 12px rgba(2,136,209,0.10);
         }
         .tab-item:hover:not(.active) {
-            color: #fff;
-            background: rgba(255,255,255,0.06);
+            color: var(--text-main);
+            background: rgba(255,255,255,0.10);
         }
 
-        /* ===== ADMIN NAV – GLASS ===== */
+        /* ===== ADMIN NAV – SCROLLABLE HORIZONTAL ===== */
         .admin-nav {
             display: flex;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            overflow-y: hidden;
             gap: 4px;
-            background: rgba(255,255,255,0.04);
-            padding: 6px;
+            background: rgba(255,255,255,0.08);
+            padding: 6px 8px;
             border-radius: var(--radius-sm);
             margin-bottom: 12px;
             border: 1px solid var(--glass-border);
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(2,136,209,0.30) transparent;
+        }
+        .admin-nav::-webkit-scrollbar {
+            height: 3px;
+        }
+        .admin-nav::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .admin-nav::-webkit-scrollbar-thumb {
+            background: rgba(2,136,209,0.30);
+            border-radius: 10px;
         }
         .admin-nav-item {
-            flex: 1 0 auto;
+            flex: 0 0 auto;
             min-width: 56px;
             text-align: center;
-            padding: 8px 6px;
+            padding: 8px 10px;
             font-size: 9px;
             font-weight: 700;
             cursor: pointer;
@@ -786,22 +823,24 @@
             border: 1px solid transparent;
             line-height: 1.3;
             letter-spacing: 0.2px;
+            white-space: nowrap;
+            will-change: background, color, box-shadow;
         }
         .admin-nav-item:hover {
-            background: rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.10);
             transform: translateY(-1px);
         }
         .admin-nav-item.active {
-            background: rgba(108,99,255,0.20);
-            color: #fff;
-            box-shadow: 0 2px 12px rgba(108,99,255,0.10);
-            border-color: rgba(108,99,255,0.20);
+            background: rgba(2,136,209,0.20);
+            color: #0288d1;
+            box-shadow: 0 2px 12px rgba(2,136,209,0.08);
+            border-color: rgba(2,136,209,0.20);
         }
 
         /* ===== PERIOD CARD – GLASS ===== */
         .period-card {
-            background: rgba(108,99,255,0.10);
-            border: 1px solid rgba(108,99,255,0.20);
+            background: rgba(2,136,209,0.08);
+            border: 1px solid rgba(2,136,209,0.15);
             border-radius: var(--radius);
             padding: 12px 14px;
             margin: 8px 0;
@@ -833,35 +872,35 @@
         }
         .btn-del {
             background: rgba(255,23,68,0.15);
-            color: #ff8a80;
-            border: 1px solid rgba(255,23,68,0.25);
+            color: #b71c1c;
+            border: 1px solid rgba(255,23,68,0.20);
         }
         .btn-del:hover {
             background: rgba(255,23,68,0.25);
         }
         .btn-view {
-            background: rgba(108,99,255,0.15);
-            color: #b39ddb;
-            border: 1px solid rgba(108,99,255,0.20);
+            background: rgba(2,136,209,0.15);
+            color: #01579b;
+            border: 1px solid rgba(2,136,209,0.20);
         }
         .btn-view:hover {
-            background: rgba(108,99,255,0.25);
+            background: rgba(2,136,209,0.25);
         }
         .btn-edit {
             background: rgba(255,171,0,0.15);
-            color: #ffd54f;
-            border: 1px solid rgba(255,171,0,0.25);
+            color: #e65100;
+            border: 1px solid rgba(255,171,0,0.20);
         }
         .btn-edit:hover {
             background: rgba(255,171,0,0.25);
         }
         .status-holiday {
             background: rgba(255,171,0,0.15);
-            color: #ffd54f;
+            color: #e65100;
             border-color: rgba(255,171,0,0.25);
         }
         .status-weekend {
-            background: rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.08);
             color: var(--text-muted);
             border-color: rgba(255,255,255,0.10);
         }
@@ -873,7 +912,7 @@
             border: 1px solid var(--glass-border);
             border-radius: var(--radius-sm);
             margin-top: 6px;
-            background: rgba(255,255,255,0.03);
+            background: rgba(255,255,255,0.06);
             transition: var(--transition);
         }
         .table-container table {
@@ -882,7 +921,7 @@
             font-size: 10px;
         }
         .table-container th {
-            background: rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.12);
             color: var(--text-muted);
             padding: 8px 10px;
             text-align: left;
@@ -899,18 +938,18 @@
         }
         .table-container td {
             padding: 8px 10px;
-            border-bottom: 1px solid rgba(255,255,255,0.04);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
             font-size: 10px;
             vertical-align: middle;
             color: var(--text-main);
         }
         .table-container tr:hover td {
-            background: rgba(255,255,255,0.04);
+            background: rgba(255,255,255,0.06);
         }
 
         /* ===== ADMIN BOXES – GLASS ===== */
         .admin-box {
-            background: rgba(255,255,255,0.04);
+            background: rgba(255,255,255,0.08);
             padding: 14px;
             border-radius: var(--radius);
             border: 1px solid var(--glass-border);
@@ -919,6 +958,7 @@
             transition: var(--transition);
             backdrop-filter: var(--glass-blur);
             -webkit-backdrop-filter: var(--glass-blur);
+            will-change: opacity, transform;
         }
         .admin-box:hover {
             box-shadow: var(--glass-shadow);
@@ -926,7 +966,7 @@
         .admin-box.sub-reports { background: rgba(0,200,83,0.06); border-color: rgba(0,200,83,0.15); }
         .admin-box.sub-attendance { background: rgba(255,171,0,0.06); border-color: rgba(255,171,0,0.15); }
         .admin-box.sub-holiday { background: rgba(255,23,68,0.06); border-color: rgba(255,23,68,0.15); }
-        .admin-box.sub-passcode { background: rgba(108,99,255,0.06); border-color: rgba(108,99,255,0.15); }
+        .admin-box.sub-passcode { background: rgba(2,136,209,0.06); border-color: rgba(2,136,209,0.15); }
         .admin-box.sub-tools { background: rgba(156,39,176,0.06); border-color: rgba(156,39,176,0.15); }
         .admin-box.sub-directory { background: rgba(233,30,99,0.06); border-color: rgba(233,30,99,0.15); }
         .admin-box.sub-all-attendance { background: rgba(0,188,212,0.06); border-color: rgba(0,188,212,0.15); }
@@ -948,7 +988,7 @@
             max-height: 160px;
             overflow-y: auto;
             padding: 6px;
-            background: rgba(255,255,255,0.04);
+            background: rgba(255,255,255,0.08);
             border-radius: var(--radius-sm);
             border: 1px solid var(--glass-border);
         }
@@ -960,35 +1000,35 @@
             gap: 6px;
             cursor: pointer;
             padding: 4px 8px;
-            background: rgba(255,255,255,0.04);
+            background: rgba(255,255,255,0.08);
             border-radius: 4px;
-            border: 1px solid rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.10);
             transition: var(--transition);
             color: var(--text-main);
         }
         .subject-checkbox-container label:hover {
-            background: rgba(108,99,255,0.12);
-            border-color: rgba(108,99,255,0.20);
+            background: rgba(2,136,209,0.12);
+            border-color: rgba(2,136,209,0.20);
         }
         .subject-checkbox-container label input[type="checkbox"] {
             width: auto;
             margin: 0;
-            accent-color: #6C63FF;
+            accent-color: #0288d1;
         }
         .subject-checkbox-container .select-all {
             grid-column: span 2;
-            background: rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.12);
             padding: 6px 10px;
             font-weight: 700;
             border: 1px solid var(--glass-border);
         }
         .subject-checkbox-container .select-all:hover {
-            background: rgba(255,255,255,0.10);
+            background: rgba(255,255,255,0.20);
         }
 
         /* ===== PASSCODE DISPLAY – GLASS ===== */
         .passcode-display {
-            background: rgba(255,255,255,0.04);
+            background: rgba(255,255,255,0.08);
             padding: 10px;
             border-radius: var(--radius-sm);
             margin-bottom: 6px;
@@ -999,7 +1039,7 @@
         .passcode-display h2 {
             font-size: 24px;
             font-weight: 900;
-            background: linear-gradient(135deg, #6C63FF, #a78bfa);
+            background: linear-gradient(135deg, #0288d1, #00bcd4);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -1030,11 +1070,11 @@
             display: flex;
             justify-content: space-between;
             padding: 4px 8px;
-            border-bottom: 1px solid rgba(255,255,255,0.04);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
             transition: var(--transition);
         }
         .present-item:hover {
-            background: rgba(255,255,255,0.04);
+            background: rgba(255,255,255,0.06);
         }
         .present-item .roll {
             font-weight: 600;
@@ -1051,23 +1091,23 @@
             margin-top: 4px;
         }
         .subject-chip {
-            background: rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.10);
             padding: 3px 8px;
             border-radius: 4px;
-            border: 1px solid rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.10);
             font-size: 8px;
             font-weight: 500;
             transition: var(--transition);
             color: var(--text-muted);
         }
         .subject-chip:hover {
-            border-color: rgba(108,99,255,0.30);
-            color: #fff;
+            border-color: #0288d1;
+            color: var(--text-main);
         }
 
         /* ===== TOOL SUB CARD – GLASS ===== */
         .tool-sub-card {
-            background: rgba(255,255,255,0.04);
+            background: rgba(255,255,255,0.08);
             border: 1px solid var(--glass-border);
             border-radius: var(--radius);
             padding: 12px;
@@ -1076,7 +1116,7 @@
         }
         .tool-sub-card:hover {
             box-shadow: var(--glass-shadow);
-            border-color: rgba(255,255,255,0.20);
+            border-color: rgba(255,255,255,0.30);
         }
         .tool-title {
             font-size: 11px;
@@ -1122,9 +1162,9 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.50);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            background: rgba(0,0,0,0.30);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             z-index: 10000;
             display: flex;
             align-items: center;
@@ -1137,7 +1177,7 @@
             to { opacity:1; }
         }
         .modal-card {
-            background: rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.20);
             backdrop-filter: var(--glass-blur);
             -webkit-backdrop-filter: var(--glass-blur);
             width: 100%;
@@ -1153,7 +1193,7 @@
             to { opacity:1; transform: scale(1) translateY(0); }
         }
         .modal-card h3 {
-            color: #fff;
+            color: var(--text-main);
             font-size: 14px;
             font-weight: 800;
             margin-bottom: 4px;
@@ -1181,7 +1221,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 6px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
+            border-bottom: 1px solid rgba(255,255,255,0.10);
         }
         .profile-modal .record-item:last-child {
             border-bottom: none;
@@ -1194,7 +1234,7 @@
             border: 1px solid var(--glass-border);
             border-radius: var(--radius-sm);
             padding: 6px;
-            background: rgba(255,255,255,0.03);
+            background: rgba(255,255,255,0.06);
             margin-bottom: 6px;
         }
         .bulk-student-list label {
@@ -1209,7 +1249,7 @@
             color: var(--text-main);
         }
         .bulk-student-list label:hover {
-            background: rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.10);
         }
         .bulk-student-list .select-all-label {
             font-weight: 700;
@@ -1224,7 +1264,7 @@
             margin-top: 4px;
         }
         .bulk-date-chip {
-            background: rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.12);
             padding: 3px 10px;
             border-radius: 12px;
             font-size: 10px;
@@ -1237,7 +1277,7 @@
         }
         .bulk-date-chip .remove-date {
             cursor: pointer;
-            color: #ff8a80;
+            color: #d50000;
             font-weight: 700;
             transition: var(--transition);
         }
@@ -1283,11 +1323,11 @@
         .chat-panel {
             width: 100%;
             height: 100%;
-            background: rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.20);
             backdrop-filter: var(--glass-blur);
             -webkit-backdrop-filter: var(--glass-blur);
             border-radius: 24px;
-            box-shadow: 0 24px 80px rgba(0,0,0,0.50);
+            box-shadow: 0 24px 80px rgba(0,0,0,0.20);
             border: 1px solid var(--glass-border);
             display: none;
             flex-direction: column;
@@ -1299,7 +1339,7 @@
             display: flex !important;
         }
         .chat-panel .chat-header {
-            background: rgba(255,255,255,0.04);
+            background: rgba(255,255,255,0.10);
             padding: 12px 16px;
             border-bottom: 1px solid var(--glass-border);
             display: flex;
@@ -1310,13 +1350,13 @@
         .chat-panel .chat-header .chat-title {
             font-weight: 800;
             font-size: 15px;
-            color: #fff;
+            color: var(--text-main);
             display: flex;
             align-items: center;
             gap: 10px;
         }
         .chat-panel .chat-header .chat-title .ai-badge {
-            background: linear-gradient(135deg, #6C63FF, #5a52d5);
+            background: linear-gradient(135deg, #0288d1, #0277bd);
             color: #fff;
             font-size: 8px;
             padding: 2px 10px;
@@ -1336,19 +1376,19 @@
             line-height: 1;
         }
         .chat-panel .chat-header .chat-close:hover {
-            color: #ff8a80;
+            color: #d50000;
             transform: rotate(90deg);
         }
         .chat-panel .chat-body {
             display: flex;
             flex: 1;
             overflow: hidden;
-            background: rgba(0,0,0,0.15);
+            background: rgba(255,255,255,0.05);
         }
         .chat-panel .chat-sidebar {
             width: 0;
             overflow: hidden;
-            background: rgba(255,255,255,0.04);
+            background: rgba(255,255,255,0.08);
             border-right: 1px solid var(--glass-border);
             transition: width 0.35s cubic-bezier(0.16,1,0.3,1);
             flex-shrink: 0;
@@ -1372,7 +1412,7 @@
             flex-shrink: 0;
         }
         .chat-panel .chat-sidebar .sidebar-header .new-chat-btn {
-            background: linear-gradient(135deg, #6C63FF, #5a52d5);
+            background: linear-gradient(135deg, #0288d1, #0277bd);
             color: #fff;
             border: none;
             border-radius: 4px;
@@ -1406,16 +1446,16 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: rgba(255,255,255,0.03);
+            background: rgba(255,255,255,0.06);
         }
         .chat-panel .chat-sidebar .sidebar-list .chat-item:hover {
-            background: rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.15);
             border-color: var(--glass-border);
         }
         .chat-panel .chat-sidebar .sidebar-list .chat-item.active {
-            background: rgba(108,99,255,0.15);
-            border-color: rgba(108,99,255,0.25);
-            color: #b39ddb;
+            background: rgba(2,136,209,0.15);
+            border-color: rgba(2,136,209,0.25);
+            color: #0288d1;
         }
         .chat-panel .chat-sidebar .sidebar-list .chat-item .delete-chat {
             color: var(--text-muted);
@@ -1425,7 +1465,7 @@
             transition: var(--transition);
         }
         .chat-panel .chat-sidebar .sidebar-list .chat-item .delete-chat:hover {
-            color: #ff8a80;
+            color: #d50000;
         }
         .chat-panel .chat-sidebar .sidebar-list .empty-chats {
             text-align: center;
@@ -1438,7 +1478,7 @@
             display: flex;
             flex-direction: column;
             min-width: 0;
-            background: rgba(0,0,0,0.10);
+            background: rgba(255,255,255,0.05);
         }
         .chat-panel .chat-main .chat-messages {
             flex: 1;
@@ -1470,14 +1510,14 @@
             -webkit-backdrop-filter: var(--glass-blur);
         }
         .chat-panel .chat-main .chat-messages .chat-msg.user .bubble {
-            background: linear-gradient(135deg, #6C63FF, #5a52d5);
+            background: linear-gradient(135deg, #0288d1, #0277bd);
             color: #fff;
             border-bottom-right-radius: 4px;
-            box-shadow: 0 2px 12px rgba(108,99,255,0.30);
+            box-shadow: 0 2px 12px rgba(2,136,209,0.30);
         }
         .chat-panel .chat-main .chat-messages .chat-msg.bot .bubble {
-            background: rgba(255,255,255,0.08);
-            color: #fff;
+            background: rgba(255,255,255,0.20);
+            color: var(--text-main);
             border-bottom-left-radius: 4px;
             border: 1px solid var(--glass-border);
         }
@@ -1495,7 +1535,7 @@
         .chat-panel .chat-main .chat-messages .typing-indicator {
             display: none;
             padding: 8px 16px;
-            background: rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.10);
             border-radius: 16px;
             border-bottom-left-radius: 4px;
             width: fit-content;
@@ -1518,13 +1558,13 @@
             flex-wrap: wrap;
             gap: 4px;
             border-top: 1px solid var(--glass-border);
-            background: rgba(255,255,255,0.03);
+            background: rgba(255,255,255,0.06);
             flex-shrink: 0;
             max-height: 96px;
             overflow-y: auto;
         }
         .chat-panel .chat-main .quick-chips .chip {
-            background: rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.10);
             border: 1px solid var(--glass-border);
             border-radius: var(--radius-full);
             padding: 3px 12px;
@@ -1536,15 +1576,15 @@
             white-space: nowrap;
         }
         .chat-panel .chat-main .quick-chips .chip:hover {
-            background: rgba(108,99,255,0.15);
-            border-color: #6C63FF;
-            color: #b39ddb;
+            background: rgba(2,136,209,0.15);
+            border-color: #0288d1;
+            color: #0288d1;
             transform: translateY(-1px);
         }
         .chat-panel .chat-main .chat-input-row {
             display: flex;
             border-top: 1px solid var(--glass-border);
-            background: rgba(255,255,255,0.03);
+            background: rgba(255,255,255,0.06);
             flex-shrink: 0;
             padding: 8px 12px;
             gap: 8px;
@@ -1552,27 +1592,27 @@
         .chat-panel .chat-main .chat-input-row input {
             flex: 1;
             padding: 8px 14px;
-            border: 1.5px solid rgba(255,255,255,0.12);
+            border: 1.5px solid rgba(255,255,255,0.20);
             border-radius: var(--radius-full);
             font-size: 12px;
             outline: none;
-            background: rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.12);
             margin: 0;
             transition: var(--transition);
             min-height: 38px;
             font-family: inherit;
-            color: #fff;
+            color: var(--text-main);
         }
         .chat-panel .chat-main .chat-input-row input::placeholder {
-            color: rgba(255,255,255,0.40);
+            color: rgba(26,26,46,0.40);
         }
         .chat-panel .chat-main .chat-input-row input:focus {
-            border-color: #6C63FF;
-            background: rgba(255,255,255,0.10);
-            box-shadow: 0 0 0 4px rgba(108,99,255,0.10);
+            border-color: #0288d1;
+            background: rgba(255,255,255,0.20);
+            box-shadow: 0 0 0 4px rgba(2,136,209,0.10);
         }
         .chat-panel .chat-main .chat-input-row .send-btn {
-            background: linear-gradient(135deg, #6C63FF, #5a52d5);
+            background: linear-gradient(135deg, #0288d1, #0277bd);
             color: #fff;
             border: none;
             border-radius: 50%;
@@ -1586,11 +1626,11 @@
             transition: var(--transition);
             flex-shrink: 0;
             touch-action: manipulation;
-            box-shadow: 0 2px 12px rgba(108,99,255,0.35);
+            box-shadow: 0 2px 12px rgba(2,136,209,0.35);
         }
         .chat-panel .chat-main .chat-input-row .send-btn:hover {
             transform: scale(1.06);
-            box-shadow: 0 4px 24px rgba(108,99,255,0.50);
+            box-shadow: 0 4px 24px rgba(2,136,209,0.50);
         }
         .chat-panel .chat-main .chat-input-row .send-btn:disabled {
             opacity: 0.4;
@@ -1608,7 +1648,7 @@
             touch-action: manipulation;
         }
         .chat-panel .chat-main .sidebar-toggle:hover {
-            color: #6C63FF;
+            color: #0288d1;
         }
         .chat-panel .chat-main .chat-messages .welcome-greeting {
             text-align: center;
@@ -1624,7 +1664,7 @@
         }
         .chat-panel .chat-main .chat-messages .welcome-greeting .greeting-name {
             font-weight: 700;
-            color: #fff;
+            color: var(--text-main);
         }
         @media (max-width: 600px) {
             #chatWidget { width: 94vw; height: 88vh; max-height: 92vh; }
@@ -1642,14 +1682,14 @@
             right: 24px;
             z-index: 99998;
             display: none;
-            background: linear-gradient(135deg, #6C63FF, #5a52d5);
+            background: linear-gradient(135deg, #0288d1, #0277bd);
             color: #fff;
             border: none;
             border-radius: 50%;
             width: 60px;
             height: 60px;
             font-size: 28px;
-            box-shadow: 0 4px 24px rgba(108,99,255,0.40);
+            box-shadow: 0 4px 24px rgba(2,136,209,0.40);
             cursor: pointer;
             transition: var(--transition);
             touch-action: manipulation;
@@ -1661,7 +1701,7 @@
         }
         .chat-avatar-trigger:hover {
             transform: scale(1.06);
-            box-shadow: 0 8px 40px rgba(108,99,255,0.55);
+            box-shadow: 0 8px 40px rgba(2,136,209,0.55);
         }
         .chat-avatar-trigger .badge-dot {
             position: absolute;
@@ -1684,29 +1724,24 @@
             body { padding: 8px; }
             .app-container { border-radius: 20px; }
             .stats-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
-            .admin-nav-item { min-width: 44px; font-size: 8px; padding: 6px 4px; }
+            .admin-nav-item { min-width: 48px; font-size: 8px; padding: 6px 8px; }
             .portal-grid { grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
             .app-header-title h1 { font-size: 14px; }
             .avatar-circle { width: 32px; height: 32px; font-size: 11px; }
             .chat-avatar-trigger { width: 52px; height: 52px; font-size: 24px; bottom: 16px; right: 16px; }
+            #auth-box { min-height: 60vh; }
         }
 
         /* ===== AUTH BOX – GLASS SPECIAL ===== */
-        #auth-box {
-            padding: 8px 4px;
-        }
         #auth-box h3 {
-            font-size: 18px;
+            font-size: 20px;
             font-weight: 900;
-            margin-bottom: 12px;
-            background: linear-gradient(135deg, #6C63FF, #a78bfa);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            margin-bottom: 16px;
+            color: var(--text-main);
             text-align: center;
         }
         #toggleLink {
-            color: #b39ddb !important;
+            color: #0288d1 !important;
             cursor: pointer;
             font-size: 11px;
             display: block;
@@ -1716,13 +1751,13 @@
             transition: var(--transition);
         }
         #toggleLink:hover {
-            color: #6C63FF !important;
+            color: #01579b !important;
         }
 
         /* ===== DASHBOARD TIME ===== */
         #dashboardCurrentTime {
             font-weight: 700;
-            color: #b39ddb;
+            color: #0288d1;
         }
         #dashboardCurrentDate {
             font-weight: 600;
@@ -1732,7 +1767,7 @@
 </head>
 <body>
 
-    <!-- Fixed Glass Orb Background (no scroll interference) -->
+    <!-- Fixed Glass Orb Background -->
     <div class="glass-orb-bg"></div>
 
     <!-- ===== TOAST ===== -->
@@ -1757,13 +1792,13 @@
         <div class="modal-card">
             <h3>📊 Download Attendance Sheet</h3>
             <p>Select range:</p>
-            <select id="studentExcelRange" style="margin-top:3px; background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.12); color:#fff;">
+            <select id="studentExcelRange" style="margin-top:3px; background:rgba(255,255,255,0.20); border-color:rgba(255,255,255,0.30); color:var(--text-main);">
                 <option value="CURRENT_MONTH">Current Month</option>
                 <option value="SELECTED_MONTH">Selected Month</option>
                 <option value="FULL_SEMESTER">Full Semester (Jul–Dec 2026)</option>
             </select>
             <div id="selectedMonthWrapper" style="display:none; margin-top:6px;">
-                <select id="studentExcelMonth" style="background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.12); color:#fff;">
+                <select id="studentExcelMonth" style="background:rgba(255,255,255,0.20); border-color:rgba(255,255,255,0.30); color:var(--text-main);">
                     <option value="6">July 2026</option>
                     <option value="7">August 2026</option>
                     <option value="8">September 2026</option>
@@ -1783,8 +1818,8 @@
     <div id="editAttendanceModal" class="modal-overlay" style="display:none;">
         <div class="modal-card">
             <h3>✏️ Edit Attendance</h3>
-            <p>Update status for <span id="editRecordStudent" style="font-weight:700; color:#b39ddb;"></span></p>
-            <select id="editStatusSelect" style="padding:8px; font-size:11px; background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.12); color:#fff;">
+            <p>Update status for <span id="editRecordStudent" style="font-weight:700; color:#0288d1;"></span></p>
+            <select id="editStatusSelect" style="padding:8px; font-size:11px; background:rgba(255,255,255,0.20); border-color:rgba(255,255,255,0.30); color:var(--text-main);">
                 <option value="Present">Present</option>
                 <option value="Absent">Absent</option>
                 <option value="Duty Leave">Duty Leave</option>
@@ -1861,12 +1896,12 @@
                     <div>
                         <h3 style="font-size:14px; font-weight:800;"><span id="welcomeMsg">Welcome!</span></h3>
                         <p style="font-size:11px; color:var(--text-muted); font-weight:600; margin-top:2px;">
-                            🕐 <span id="dashboardCurrentTime" style="font-weight:700; color:#b39ddb;">--:--:--</span>
+                            🕐 <span id="dashboardCurrentTime" style="font-weight:700; color:#0288d1;">--:--:--</span>
                             &nbsp;|&nbsp; 📅 <span id="dashboardCurrentDate" style="font-weight:600;">--</span>
                         </p>
                         <p style="font-size:10px; color:var(--text-muted); font-weight:500;">
                             <span id="roleLabel">ID</span>: <span id="userRoll" style="font-weight:700;"></span>
-                            <span id="userRoleBadge" style="margin-left:6px; font-weight:700; color:#b39ddb;"></span>
+                            <span id="userRoleBadge" style="margin-left:6px; font-weight:700; color:#0288d1;"></span>
                             <span id="userBranchBadge" style="margin-left:6px; font-weight:500; color:var(--text-muted);"></span>
                         </p>
                     </div>
@@ -1915,7 +1950,7 @@
                         <div class="stat-card"><div class="value" id="liveTodayAbsent">0</div><div class="label">Absent Today</div></div>
                         <div class="stat-card"><div class="value" id="liveOverallPct">0%</div><div class="label">Overall %</div></div>
                     </div>
-                    <div style="background:rgba(255,255,255,0.04); border-radius:var(--radius-sm); padding:10px; border:1px solid var(--glass-border);">
+                    <div style="background:rgba(255,255,255,0.08); border-radius:var(--radius-sm); padding:10px; border:1px solid var(--glass-border);">
                         <span style="font-size:9px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.3px;">📋 Today's Present Students</span>
                         <div id="todayPresentList"></div>
                     </div>
@@ -1965,7 +2000,7 @@
                         </select>
                         <button class="btn btn-primary btn-sm" onclick="fetchMonthlySummary()" style="padding:5px 12px;">View</button>
                     </div>
-                    <div id="monthlySummaryContainer" style="background:rgba(255,255,255,0.04); border-radius:var(--radius-sm); padding:10px; margin-bottom:10px; border:1px solid var(--glass-border); display:none;"></div>
+                    <div id="monthlySummaryContainer" style="background:rgba(255,255,255,0.08); border-radius:var(--radius-sm); padding:10px; margin-bottom:10px; border:1px solid var(--glass-border); display:none;"></div>
 
                     <button class="btn btn-primary" onclick="markFullDayAttendance()" style="padding:10px; font-size:11px;">
                         <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
@@ -2011,7 +2046,8 @@
 
                 <!-- ===== ADMIN TAB ===== -->
                 <div id="adminTab" style="display:none;">
-                    <div class="admin-nav">
+                    <!-- ADMIN NAV – SCROLLABLE HORIZONTAL -->
+                    <div class="admin-nav" id="adminNav">
                         <div class="admin-nav-item active" onclick="switchAdminSubTab('subDirectory')">📋 Directory</div>
                         <div class="admin-nav-item" onclick="switchAdminSubTab('subAllAttendance')">📊 All Attend</div>
                         <div class="admin-nav-item" onclick="switchAdminSubTab('subReports')">📤 Excel</div>
@@ -2154,12 +2190,12 @@
                             <button class="btn btn-outline btn-sm" onclick="selectAllSubjects(false)" style="padding:7px; flex:1;">Clear</button>
                         </div>
                         <button class="btn btn-success btn-sm" onclick="markAllSubjectsForDay()" style="margin-top:4px; padding:6px; font-size:9px;">📚 Mark All Subjects for this Day</button>
-                        <p id="manualBranchWarning" style="font-size:8px; color:#ff8a80; margin-top:4px; display:none;"></p>
+                        <p id="manualBranchWarning" style="font-size:8px; color:#d50000; margin-top:4px; display:none;"></p>
 
                         <!-- Bulk Actions -->
                         <div style="margin-top:14px; border-top:2px dashed var(--glass-border); padding-top:12px;">
-                            <span class="sub-section-title" style="color:#b39ddb;">📦 Bulk Actions (Select Students & Dates)</span>
-                            <div style="background:rgba(255,255,255,0.04); border:1px solid var(--glass-border); border-radius:var(--radius-sm); padding:12px; margin-top:4px;">
+                            <span class="sub-section-title" style="color:#0288d1;">📦 Bulk Actions (Select Students & Dates)</span>
+                            <div style="background:rgba(255,255,255,0.08); border:1px solid var(--glass-border); border-radius:var(--radius-sm); padding:12px; margin-top:4px;">
                                 <div style="margin-bottom:8px;">
                                     <label style="font-size:10px; font-weight:700; display:block; margin-bottom:3px; color:var(--text-muted);">👥 Select Students:</label>
                                     <div id="bulkStudentList" class="bulk-student-list">
@@ -2196,12 +2232,12 @@
                     <div id="subPasscode" class="admin-box sub-passcode" style="display:none; text-align:center;">
                         <span class="sub-section-title">📱 Class Passcodes</span>
                         <p style="font-size:9px; color:var(--text-muted); margin-bottom:8px;">Generate passcodes for Full Day (5‑digit) or Single Lecture (4‑digit).</p>
-                        <div style="background:rgba(255,255,255,0.04); border-radius:var(--radius-sm); padding:10px; margin-bottom:8px; border:1px solid var(--glass-border);">
+                        <div style="background:rgba(255,255,255,0.08); border-radius:var(--radius-sm); padding:10px; margin-bottom:8px; border:1px solid var(--glass-border);">
                             <span style="font-size:9px; font-weight:700; color:var(--text-muted);">🔵 FULL DAY (5‑digit)</span>
                             <div class="passcode-display" style="margin-top:4px;"><h2 id="fullDayPasscodeDisplay">—</h2></div>
                             <button class="btn btn-primary btn-sm" onclick="generatePasscode('full_day')" style="padding:4px 14px; width:auto; margin:0 auto;">Generate Full Day Passcode</button>
                         </div>
-                        <div style="background:rgba(255,255,255,0.04); border-radius:var(--radius-sm); padding:10px; margin-bottom:8px; border:1px solid var(--glass-border);">
+                        <div style="background:rgba(255,255,255,0.08); border-radius:var(--radius-sm); padding:10px; margin-bottom:8px; border:1px solid var(--glass-border);">
                             <span style="font-size:9px; font-weight:700; color:var(--text-muted);">🟢 SINGLE LECTURE (4‑digit)</span>
                             <div class="passcode-display" style="margin-top:4px;"><h2 id="singleLecturePasscodeDisplay">—</h2></div>
                             <button class="btn btn-success btn-sm" onclick="generatePasscode('single_lecture')" style="padding:4px 14px; width:auto; margin:0 auto;">Generate Lecture Passcode</button>
@@ -2244,7 +2280,7 @@
                             </div>
                         </div>
 
-                        <div class="tool-sub-card" style="border-color:rgba(108,99,255,0.25);">
+                        <div class="tool-sub-card" style="border-color:rgba(2,136,209,0.25);">
                             <span class="tool-title">🔓 Reset Device Binding (Student Only)</span>
                             <input type="text" id="resetDeviceRoll" placeholder="Student Roll No" style="font-size:10px; padding:7px;" />
                             <button class="btn btn-primary btn-sm" onclick="resetDeviceBinding()" style="padding:7px; margin:0;">Reset</button>
@@ -2303,8 +2339,8 @@
 
                 <!-- ===== TEACHER TAB ===== -->
                 <div id="teacherTab" style="display:none;">
-                    <div style="background:rgba(108,99,255,0.08); border-radius:var(--radius-sm); padding:12px; border:1px solid rgba(108,99,255,0.15); margin-bottom:12px; text-align:center;">
-                        <span class="sub-section-title" style="color:#b39ddb;">🔒 Single Lecture Passcode (4‑digit)</span>
+                    <div style="background:rgba(2,136,209,0.08); border-radius:var(--radius-sm); padding:12px; border:1px solid rgba(2,136,209,0.15); margin-bottom:12px; text-align:center;">
+                        <span class="sub-section-title" style="color:#0288d1;">🔒 Single Lecture Passcode (4‑digit)</span>
                         <div class="passcode-display" style="margin-top:4px;">
                             <h2 id="teacherPasscodeDisplay">—</h2>
                         </div>
@@ -2434,7 +2470,7 @@
     </button>
 
     <!-- ========================================================== -->
-    <!-- JAVASCRIPT – FULL CLIENT LOGIC with GLASS UI + SCROLL FIX  -->
+    <!-- JAVASCRIPT – FULL CLIENT LOGIC (unchanged, works with new theme) -->
     <!-- ========================================================== -->
     <script>
         // ============================================================
@@ -2703,9 +2739,9 @@
                 const status = await res.json();
                 if (status.isBlocked) {
                     if (labelEl) { labelEl.innerText = status.type + ":"; labelEl.style.color = status.type === 'HOLIDAY' ?
-                            '#ffd54f' : 'rgba(255,255,255,0.50)'; }
+                            '#e65100' : 'var(--text-muted)'; }
                     if (nameEl) { nameEl.innerText = status.message; nameEl.style.color = status.type === 'HOLIDAY' ?
-                            '#ffd54f' : 'rgba(255,255,255,0.50)'; }
+                            '#e65100' : 'var(--text-muted)'; }
                     if (btn) { btn.disabled = true;
                         btn.style.opacity = "0.5"; }
                     activeSubjectSubjectCode = "";
@@ -2716,8 +2752,8 @@
             } catch (e) {}
             document.getElementById('periodCardBox').className = 'period-card';
             if (dayOfWeek === 0 || dayOfWeek === 6) {
-                if (labelEl) { labelEl.innerText = "WEEKEND:"; labelEl.style.color = 'rgba(255,255,255,0.50)'; }
-                if (nameEl) { nameEl.innerText = "College Closed"; nameEl.style.color = 'rgba(255,255,255,0.50)'; }
+                if (labelEl) { labelEl.innerText = "WEEKEND:"; labelEl.style.color = 'var(--text-muted)'; }
+                if (nameEl) { nameEl.innerText = "College Closed"; nameEl.style.color = 'var(--text-muted)'; }
                 if (btn) { btn.disabled = true;
                     btn.style.opacity = "0.5"; }
                 activeSubjectSubjectCode = "";
@@ -2737,24 +2773,24 @@
                     break;
                 }
             }
-            if (labelEl) labelEl.style.color = 'rgba(255,255,255,0.50)';
+            if (labelEl) labelEl.style.color = 'var(--text-muted)';
             if (foundSlot) {
                 if (foundSlot.period === "LUNCH") {
                     if (labelEl) labelEl.innerText = "LUNCH BREAK:";
-                    if (nameEl) { nameEl.innerText = "Lunch Time"; nameEl.style.color = '#fff'; }
+                    if (nameEl) { nameEl.innerText = "Lunch Time"; nameEl.style.color = 'var(--text-main)'; }
                     if (btn) { btn.disabled = true;
                         btn.style.opacity = "0.5"; }
                     activeSubjectSubjectCode = "";
                 } else {
                     if (labelEl) labelEl.innerText = `ACTIVE (${foundSlot.start} - ${foundSlot.end}):`;
-                    if (nameEl) { nameEl.innerText = foundSlot.subject; nameEl.style.color = '#fff'; }
+                    if (nameEl) { nameEl.innerText = foundSlot.subject; nameEl.style.color = 'var(--text-main)'; }
                     if (btn) { btn.disabled = false;
                         btn.style.opacity = "1"; }
                     activeSubjectSubjectCode = foundSlot.subject;
                 }
             } else {
                 if (labelEl) labelEl.innerText = "COLLEGE STATUS:";
-                if (nameEl) { nameEl.innerText = "Off Hours / No Class"; nameEl.style.color = 'rgba(255,255,255,0.50)'; }
+                if (nameEl) { nameEl.innerText = "Off Hours / No Class"; nameEl.style.color = 'var(--text-muted)'; }
                 if (btn) { btn.disabled = true;
                     btn.style.opacity = "0.5"; }
                 activeSubjectSubjectCode = "";
@@ -2925,9 +2961,9 @@
                     sortedDates.forEach(date => {
                         const records = grouped[date];
                         html += `
-                                <div style="border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:6px; padding-bottom:6px;">
+                                <div style="border-bottom:1px solid rgba(255,255,255,0.10); margin-bottom:6px; padding-bottom:6px;">
                                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                                        <span style="font-weight:700; font-size:11px; color:#fff;">📅 ${date}</span>
+                                        <span style="font-weight:700; font-size:11px; color:var(--text-main);">📅 ${date}</span>
                                         <button class="btn btn-danger btn-xs" onclick="deleteAllForDate('${rollNo}','${date}')" style="padding:2px 8px;">Delete All</button>
                                     </div>
                             `;
@@ -2935,7 +2971,7 @@
                             html += `
                                     <div class="record-item">
                                         <div>
-                                            <span style="font-weight:600; color:#fff;">${r.subject}</span>
+                                            <span style="font-weight:600; color:var(--text-main);">${r.subject}</span>
                                             <span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span>
                                         </div>
                                         <button class="btn btn-del btn-xs" onclick="deleteRecord('${r._id}')">Delete</button>
@@ -3072,31 +3108,31 @@
 
                 if (format === 'pdf') {
                     const content = `
-                            <div style="font-family:Arial; padding:20px; background:#1a1a2e; color:#fff;">
-                                <h1 style="color:#6C63FF;">BM Group of Institutions</h1>
-                                <h2 style="color:#b39ddb;">Student Attendance Report – ${studentRoll}</h2>
-                                <p style="color:rgba(255,255,255,0.70);">Teacher: ${user.name} (${user.rollNo})</p>
-                                <p style="color:rgba(255,255,255,0.70);">Generated: ${new Date().toLocaleString()}</p>
-                                <p style="color:rgba(255,255,255,0.70);">Branch: ${branch}</p>
-                                <p style="color:rgba(255,255,255,0.70);">Range: ${startStr} to ${endStr}</p>
-                                <hr style="border-color:rgba(255,255,255,0.10);">
-                                <h3 style="color:#b39ddb;">Summary</h3>
-                                <p style="color:#fff;"><strong>Total Lectures Conducted:</strong> ${totalConducted}</p>
-                                <p style="color:#fff;"><strong>Lectures Attended:</strong> ${totalAttended}</p>
-                                <p style="color:#fff;"><strong>Attendance %:</strong> ${pct}%</p>
-                                <h3 style="color:#b39ddb;">Subject-wise</h3>
-                                <ul style="color:#fff;">
+                            <div style="font-family:Arial; padding:20px; background:#e3f2fd; color:#1a1a2e;">
+                                <h1 style="color:#0288d1;">BM Group of Institutions</h1>
+                                <h2 style="color:#0277bd;">Student Attendance Report – ${studentRoll}</h2>
+                                <p style="color:rgba(0,0,0,0.60);">Teacher: ${user.name} (${user.rollNo})</p>
+                                <p style="color:rgba(0,0,0,0.60);">Generated: ${new Date().toLocaleString()}</p>
+                                <p style="color:rgba(0,0,0,0.60);">Branch: ${branch}</p>
+                                <p style="color:rgba(0,0,0,0.60);">Range: ${startStr} to ${endStr}</p>
+                                <hr style="border-color:rgba(0,0,0,0.10);">
+                                <h3 style="color:#0277bd;">Summary</h3>
+                                <p><strong>Total Lectures Conducted:</strong> ${totalConducted}</p>
+                                <p><strong>Lectures Attended:</strong> ${totalAttended}</p>
+                                <p><strong>Attendance %:</strong> ${pct}%</p>
+                                <h3 style="color:#0277bd;">Subject-wise</h3>
+                                <ul>
                                     ${Object.entries(subjectStats).map(([sub, st]) => `
                                             <li>${sub}: ${st.present}/${st.total} (${st.percentage}%)</li>
                                         `).join('')}
                                 </ul>
-                                <hr style="border-color:rgba(255,255,255,0.10);">
-                                <h3 style="color:#b39ddb;">Detailed Records</h3>
-                                <table style="width:100%; border-collapse:collapse; border:1px solid rgba(255,255,255,0.10);">
-                                    <thead><tr style="background:rgba(108,99,255,0.20);"><th style="padding:8px; text-align:left; color:#b39ddb;">Date</th><th style="padding:8px; text-align:left; color:#b39ddb;">Subject</th><th style="padding:8px; text-align:left; color:#b39ddb;">Status</th></tr></thead>
+                                <hr style="border-color:rgba(0,0,0,0.10);">
+                                <h3 style="color:#0277bd;">Detailed Records</h3>
+                                <table style="width:100%; border-collapse:collapse; border:1px solid #ccc;">
+                                    <thead><tr style="background:rgba(2,136,209,0.10);"><th style="padding:8px; text-align:left;">Date</th><th style="padding:8px; text-align:left;">Subject</th><th style="padding:8px; text-align:left;">Status</th></tr></thead>
                                     <tbody>
                                         ${records.map(r => `
-                                                <tr><td style="padding:6px 8px; border-bottom:1px solid rgba(255,255,255,0.05); color:#fff;">${r.date}</td><td style="padding:6px 8px; border-bottom:1px solid rgba(255,255,255,0.05); color:#fff;">${r.subject}</td><td style="padding:6px 8px; border-bottom:1px solid rgba(255,255,255,0.05); color:#fff;">${r.status}</td></tr>
+                                                <tr><td style="padding:6px 8px; border-bottom:1px solid #eee;">${r.date}</td><td style="padding:6px 8px; border-bottom:1px solid #eee;">${r.subject}</td><td style="padding:6px 8px; border-bottom:1px solid #eee;">${r.status}</td></tr>
                                             `).join('')}
                                     </tbody>
                                 </table>
@@ -3161,10 +3197,10 @@
                 if (res.ok) {
                     container.style.display = 'block';
                     const pct = data.attendancePercentage || 0;
-                    const color = pct >= 75 ? '#69f0ae' : '#ff8a80';
+                    const color = pct >= 75 ? '#00796b' : '#b71c1c';
                     let html = `
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                                <span style="font-weight:700; font-size:11px; color:#fff;">${MONTH_NAMES[parseInt(month)]} 2026</span>
+                                <span style="font-weight:700; font-size:11px; color:var(--text-main);">${MONTH_NAMES[parseInt(month)]} 2026</span>
                                 <span style="font-size:12px; font-weight:800; color:${color};">${pct}%</span>
                             </div>
                             <div style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">Attended ${data.totalAttended} / ${data.totalConducted} lectures</div>
@@ -3396,30 +3432,30 @@
 
                 if (format === 'pdf') {
                     const content = `
-                            <div style="font-family:Arial; padding:20px; background:#1a1a2e; color:#fff;">
-                                <h1 style="color:#6C63FF;">BM Group of Institutions</h1>
-                                <h2 style="color:#b39ddb;">Student Attendance Report – ${studentRoll}</h2>
-                                <p style="color:rgba(255,255,255,0.70);">Generated: ${new Date().toLocaleString()}</p>
-                                <p style="color:rgba(255,255,255,0.70);">Branch: ${branch}</p>
-                                <p style="color:rgba(255,255,255,0.70);">Range: 15 July 2026 to ${today.toISOString().split('T')[0]}</p>
-                                <hr style="border-color:rgba(255,255,255,0.10);">
-                                <h3 style="color:#b39ddb;">Summary</h3>
-                                <p style="color:#fff;"><strong>Total Lectures Conducted:</strong> ${totalConducted}</p>
-                                <p style="color:#fff;"><strong>Lectures Attended:</strong> ${totalAttended}</p>
-                                <p style="color:#fff;"><strong>Attendance %:</strong> ${pct}%</p>
-                                <h3 style="color:#b39ddb;">Subject-wise</h3>
-                                <ul style="color:#fff;">
+                            <div style="font-family:Arial; padding:20px; background:#e3f2fd; color:#1a1a2e;">
+                                <h1 style="color:#0288d1;">BM Group of Institutions</h1>
+                                <h2 style="color:#0277bd;">Student Attendance Report – ${studentRoll}</h2>
+                                <p style="color:rgba(0,0,0,0.60);">Generated: ${new Date().toLocaleString()}</p>
+                                <p style="color:rgba(0,0,0,0.60);">Branch: ${branch}</p>
+                                <p style="color:rgba(0,0,0,0.60);">Range: 15 July 2026 to ${today.toISOString().split('T')[0]}</p>
+                                <hr style="border-color:rgba(0,0,0,0.10);">
+                                <h3 style="color:#0277bd;">Summary</h3>
+                                <p><strong>Total Lectures Conducted:</strong> ${totalConducted}</p>
+                                <p><strong>Lectures Attended:</strong> ${totalAttended}</p>
+                                <p><strong>Attendance %:</strong> ${pct}%</p>
+                                <h3 style="color:#0277bd;">Subject-wise</h3>
+                                <ul>
                                     ${Object.entries(subjectStats).map(([sub, st]) => `
                                             <li>${sub}: ${st.present}/${st.total} (${st.percentage}%)</li>
                                         `).join('')}
                                 </ul>
-                                <hr style="border-color:rgba(255,255,255,0.10);">
-                                <h3 style="color:#b39ddb;">Detailed Records</h3>
-                                <table style="width:100%; border-collapse:collapse; border:1px solid rgba(255,255,255,0.10);">
-                                    <thead><tr style="background:rgba(108,99,255,0.20);"><th style="padding:8px; text-align:left; color:#b39ddb;">Date</th><th style="padding:8px; text-align:left; color:#b39ddb;">Subject</th><th style="padding:8px; text-align:left; color:#b39ddb;">Status</th></tr></thead>
+                                <hr style="border-color:rgba(0,0,0,0.10);">
+                                <h3 style="color:#0277bd;">Detailed Records</h3>
+                                <table style="width:100%; border-collapse:collapse; border:1px solid #ccc;">
+                                    <thead><tr style="background:rgba(2,136,209,0.10);"><th style="padding:8px; text-align:left;">Date</th><th style="padding:8px; text-align:left;">Subject</th><th style="padding:8px; text-align:left;">Status</th></tr></thead>
                                     <tbody>
                                         ${records.map(r => `
-                                                <tr><td style="padding:6px 8px; border-bottom:1px solid rgba(255,255,255,0.05); color:#fff;">${r.date}</td><td style="padding:6px 8px; border-bottom:1px solid rgba(255,255,255,0.05); color:#fff;">${r.subject}</td><td style="padding:6px 8px; border-bottom:1px solid rgba(255,255,255,0.05); color:#fff;">${r.status}</td></tr>
+                                                <tr><td style="padding:6px 8px; border-bottom:1px solid #eee;">${r.date}</td><td style="padding:6px 8px; border-bottom:1px solid #eee;">${r.subject}</td><td style="padding:6px 8px; border-bottom:1px solid #eee;">${r.status}</td></tr>
                                             `).join('')}
                                     </tbody>
                                 </table>
@@ -3487,11 +3523,11 @@
 
                 let tableRows = students.map((s, idx) => `
                         <tr>
-                            <td style="padding:6px 8px; border:1px solid rgba(255,255,255,0.10); text-align:center; color:#fff;">${idx + 1}</td>
-                            <td style="padding:6px 8px; border:1px solid rgba(255,255,255,0.10); text-align:left; color:#fff;">${s.rollNo || 'N/A'}</td>
-                            <td style="padding:6px 8px; border:1px solid rgba(255,255,255,0.10); text-align:left; color:#fff;">${s.name || 'Unknown'}</td>
-                            <td style="padding:6px 8px; border:1px solid rgba(255,255,255,0.10); text-align:center; color:#fff;">${s.totalPresent || 0}</td>
-                            <td style="padding:6px 8px; border:1px solid rgba(255,255,255,0.10); text-align:center; color:#fff;">${s.percentage || 0}%</td>
+                            <td style="padding:6px 8px; border:1px solid rgba(0,0,0,0.10); text-align:center;">${idx + 1}</td>
+                            <td style="padding:6px 8px; border:1px solid rgba(0,0,0,0.10); text-align:left;">${s.rollNo || 'N/A'}</td>
+                            <td style="padding:6px 8px; border:1px solid rgba(0,0,0,0.10); text-align:left;">${s.name || 'Unknown'}</td>
+                            <td style="padding:6px 8px; border:1px solid rgba(0,0,0,0.10); text-align:center;">${s.totalPresent || 0}</td>
+                            <td style="padding:6px 8px; border:1px solid rgba(0,0,0,0.10); text-align:center;">${s.percentage || 0}%</td>
                         </tr>
                     `).join('');
 
@@ -3502,22 +3538,22 @@
                             <meta charset="UTF-8">
                             <title>Class Attendance Report</title>
                             <style>
-                                body { font-family: Arial, sans-serif; padding: 20px; background: #1a1a2e; color: #fff; }
-                                h1 { color: #6C63FF; text-align: center; }
-                                h2 { color: #b39ddb; text-align: center; }
+                                body { font-family: Arial, sans-serif; padding: 20px; background: #e3f2fd; color: #1a1a2e; }
+                                h1 { color: #0288d1; text-align: center; }
+                                h2 { color: #0277bd; text-align: center; }
                                 table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
-                                th, td { padding: 6px 8px; border: 1px solid rgba(255,255,255,0.10); }
-                                th { background: rgba(108,99,255,0.20); text-align: center; color: #b39ddb; }
-                                td { text-align: left; color: #fff; }
+                                th, td { padding: 6px 8px; border: 1px solid rgba(0,0,0,0.10); }
+                                th { background: rgba(2,136,209,0.10); text-align: center; }
+                                td { text-align: left; }
                                 td.center { text-align: center; }
-                                .footer { text-align: center; font-size: 10px; color: rgba(255,255,255,0.50); margin-top: 20px; }
-                                .summary { text-align: center; font-size: 14px; color: rgba(255,255,255,0.70); }
+                                .footer { text-align: center; font-size: 10px; color: rgba(0,0,0,0.50); margin-top: 20px; }
+                                .summary { text-align: center; font-size: 14px; color: rgba(0,0,0,0.60); }
                             </style>
                         </head>
                         <body>
                             <h1>BM Group of Institutions</h1>
                             <h2>${branchName} – 5th Semester</h2>
-                            <p style="text-align:center; color:rgba(255,255,255,0.70);">Attendance from ${startDate} to ${endDate}</p>
+                            <p style="text-align:center; color:rgba(0,0,0,0.60);">Attendance from ${startDate} to ${endDate}</p>
                             <p class="summary">Total Lectures Conducted: ${totalLectures}</p>
                             <table>
                                 <thead>
@@ -3679,8 +3715,8 @@
                         attendanceDisplay = `${attended}/${conducted} (${pct}%)`;
                     }
                     return `<tr>
-                            <td><b style="color:#fff;">${s.rollNo || 'N/A'}</b></td>
-                            <td style="color:#fff;">${s.name || 'Unknown'}</td>
+                            <td><b style="color:var(--text-main);">${s.rollNo || 'N/A'}</b></td>
+                            <td style="color:var(--text-main);">${s.name || 'Unknown'}</td>
                             <td><span class="badge badge-role">${roleBadge}</span></td>
                             <td><span class="badge ${s.boundDeviceId ? 'badge-active' : 'badge-present'}">${deviceStatus}</span></td>
                             <td><span class="badge badge-attendance">${attendanceDisplay}</span></td>
@@ -3725,9 +3761,9 @@
                     sortedDates.forEach(date => {
                         const records = grouped[date];
                         html += `
-                                <div style="border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:6px; padding-bottom:6px;">
+                                <div style="border-bottom:1px solid rgba(255,255,255,0.10); margin-bottom:6px; padding-bottom:6px;">
                                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                                        <span style="font-weight:700; font-size:11px; color:#fff;">📅 ${date}</span>
+                                        <span style="font-weight:700; font-size:11px; color:var(--text-main);">📅 ${date}</span>
                                         <button class="btn btn-danger btn-xs" onclick="deleteAllForDate('${rollNo}','${date}')" style="padding:2px 8px;">Delete All</button>
                                     </div>
                             `;
@@ -3735,7 +3771,7 @@
                             html += `
                                     <div class="record-item">
                                         <div>
-                                            <span style="font-weight:600; color:#fff;">${r.subject}</span>
+                                            <span style="font-weight:600; color:var(--text-main);">${r.subject}</span>
                                             <span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span>
                                         </div>
                                         <button class="btn btn-del btn-xs" onclick="deleteRecord('${r._id}')">Delete</button>
@@ -3796,10 +3832,10 @@
                         'badge-dl' : 'badge-absent';
                     return `
                             <tr>
-                                <td><b style="color:#fff;">${r.date}</b></td>
-                                <td style="color:#fff;">${r.rollNo}</td>
-                                <td style="color:#fff;">${r.studentName || r.name || 'Unknown'}</td>
-                                <td style="color:#fff;">${r.subject}</td>
+                                <td><b style="color:var(--text-main);">${r.date}</b></td>
+                                <td style="color:var(--text-main);">${r.rollNo}</td>
+                                <td style="color:var(--text-main);">${r.studentName || r.name || 'Unknown'}</td>
+                                <td style="color:var(--text-main);">${r.subject}</td>
                                 <td><span class="badge ${statusClass}">${r.status}</span></td>
                                 <td>
                                     <button class="btn-edit btn-xs" onclick="openEditModal('${r._id}','${r.rollNo}','${r.status}')" style="padding:2px 8px;">Edit</button>
@@ -3915,7 +3951,7 @@
                 const firstDayOfWeek = new Date(year, mIdx, 1).getDay();
                 let gridHtml =
                     `<div style="margin-bottom:8px; border-bottom:1px solid var(--glass-border); padding-bottom:6px;">
-                        <div style="font-size:10px; font-weight:800; color:#b39ddb; margin-bottom:4px;">${monthName} ${year}</div>
+                        <div style="font-size:10px; font-weight:800; color:#0288d1; margin-bottom:4px;">${monthName} ${year}</div>
                         <div class="calendar-grid"><div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div>
                         <div class="cal-day-head">W</div><div class="cal-day-head">T</div><div class="cal-day-head">F</div><div class="cal-day-head">S</div>`;
                 for (let i = 0; i < firstDayOfWeek; i++) { gridHtml += `<div class="cal-date cal-off"></div>`; }
@@ -3926,7 +3962,7 @@
                     const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
                     const isHoliday = holidayDatesSet.has(dateStr);
                     if (isWeekend) { gridHtml += `<div class="cal-date cal-off">${d}</div>`; } else if (isHoliday) { gridHtml +=
-                            `<div class="cal-date cal-off" style="background:rgba(255,171,0,0.15); color:#ffd54f; font-weight:800; border-color:rgba(255,171,0,0.20);" title="Holiday">${d}</div>`; } else if (
+                            `<div class="cal-date cal-off" style="background:rgba(255,171,0,0.15); color:#e65100; font-weight:800; border-color:rgba(255,171,0,0.20);" title="Holiday">${d}</div>`; } else if (
                         attendedDates.has(dateStr)) { gridHtml += `<div class="cal-date cal-p">${d}</div>`; } else if (dtObj <=
                         today) { gridHtml += `<div class="cal-date cal-a">${d}</div>`; } else { gridHtml +=
                             `<div class="cal-date cal-off">${d}</div>`; }
@@ -3970,17 +4006,17 @@
                 document.getElementById('totalDaysCount').innerText = calc.totalAttendedLectures;
                 const pctEl = document.getElementById('attendancePct');
                 if (pctEl) { pctEl.innerText = `${calc.pct}%`;
-                    pctEl.style.color = calc.pct >= 75 ? '#69f0ae' : '#ff8a80'; }
+                    pctEl.style.color = calc.pct >= 75 ? '#00796b' : '#b71c1c'; }
                 const advisorBox = document.getElementById('advisorText');
                 if (advisorBox) {
                     if (calc.pct >= 75) {
                         const safeLectures = Math.floor(calc.totalAttendedLectures - 0.75 * calc.totalConductedLectures);
                         const safeDays = Math.floor(safeLectures / 6);
-                        advisorBox.innerHTML = `Safe Zone (<b style="color:#69f0ae;">${calc.pct}%</b>). Skip approx <b style="color:#fff;">${Math.max(0, safeDays)}</b> days safely.`;
+                        advisorBox.innerHTML = `Safe Zone (<b style="color:#00796b;">${calc.pct}%</b>). Skip approx <b style="color:var(--text-main);">${Math.max(0, safeDays)}</b> days safely.`;
                     } else {
                         const neededLectures = Math.ceil(0.75 * calc.totalConductedLectures - calc.totalAttendedLectures);
                         advisorBox.innerHTML =
-                            `Low Attendance (<b style="color:#ff8a80;">${calc.pct}%</b>). Need <b style="color:#fff;">${Math.max(0, neededLectures)}</b> more lectures.`;
+                            `Low Attendance (<b style="color:#b71c1c;">${calc.pct}%</b>). Need <b style="color:var(--text-main);">${Math.max(0, neededLectures)}</b> more lectures.`;
                     }
                 }
                 renderAttendanceCalendar(globalMyRecords);
@@ -3988,7 +4024,7 @@
                 if (data.length === 0) return tbody.innerHTML =
                     '<tr><td colspan="3" style="text-align:center; padding:14px; color:var(--text-muted);">No records</td></tr>';
                 tbody.innerHTML = data.slice(0, 50).map(r => {
-                    return `<tr><td><b style="color:#fff;">${r.date}</b></td><td style="color:#fff;">${r.subject}</td><td><span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span></td></tr>`;
+                    return `<tr><td><b style="color:var(--text-main);">${r.date}</b></td><td style="color:var(--text-main);">${r.subject}</td><td><span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span></td></tr>`;
                 }).join('');
             } catch (e) {
                 globalMyRecords = [];
@@ -4027,7 +4063,7 @@
                             html += `<div class="present-group"><span class="group-title">🟦 CSE (${cseStudents.length})</span>`;
                             cseStudents.forEach(s => {
                                 html +=
-                                    `<div class="present-item"><span class="roll" style="color:#fff;">${s.rollNo}</span><span class="name" style="color:var(--text-muted);">${s.name}</span></div>`;
+                                    `<div class="present-item"><span class="roll" style="color:var(--text-main);">${s.rollNo}</span><span class="name" style="color:var(--text-muted);">${s.name}</span></div>`;
                             });
                             html += `</div>`;
                         }
@@ -4035,7 +4071,7 @@
                             html += `<div class="present-group"><span class="group-title">🟪 AIDS (${aidsStudents.length})</span>`;
                             aidsStudents.forEach(s => {
                                 html +=
-                                    `<div class="present-item"><span class="roll" style="color:#fff;">${s.rollNo}</span><span class="name" style="color:var(--text-muted);">${s.name}</span></div>`;
+                                    `<div class="present-item"><span class="roll" style="color:var(--text-main);">${s.rollNo}</span><span class="name" style="color:var(--text-muted);">${s.name}</span></div>`;
                             });
                             html += `</div>`;
                         }
@@ -5464,7 +5500,7 @@
                 botDiv.className = 'chat-msg bot';
                 const botTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 botDiv.innerHTML =
-                    `<div class="bubble" style="${isError ? 'color:#ff8a80;' : ''}">${escapeHtml(text)}<span class="msg-time">${botTime}</span></div>`;
+                    `<div class="bubble" style="${isError ? 'color:#d50000;' : ''}">${escapeHtml(text)}<span class="msg-time">${botTime}</span></div>`;
                 messagesDiv.appendChild(botDiv);
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
             };
@@ -5526,7 +5562,7 @@
                 const errDiv = document.createElement('div');
                 errDiv.className = 'chat-msg bot';
                 errDiv.innerHTML =
-                    `<div class="bubble" style="color:#ff8a80;">⚠️ ${e.message || 'Network error. Please try again.'}</div>`;
+                    `<div class="bubble" style="color:#d50000;">⚠️ ${e.message || 'Network error. Please try again.'}</div>`;
                 messagesDiv.appendChild(errDiv);
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
             } finally {
@@ -5619,8 +5655,8 @@
             console.log('🤖 Chat AI: ALL queries go to backend. Only "mark my attendance" is handled frontend.');
             console.log('✅ Greeting is controlled by backend via skipGreeting flag.');
             console.log('📱 Download with notification popup.');
-            console.log('✨ Glassmorphism UI applied.');
-            console.log('📱 Mobile scrolling fixed – body align-items: flex-start and overflow-y: auto.');
+            console.log('✨ Light Blue Glass theme applied.');
+            console.log('📱 Mobile scrolling fixed and login centered.');
         })();
     </script>
 </body>
