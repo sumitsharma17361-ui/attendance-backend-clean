@@ -154,7 +154,7 @@ Wednesday: [
 Thursday: [
 { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
 { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' },
-{ subject: 'CN - Computer Network', fac ulty: 'Mr. Chhetrapal' },
+{ subject: 'CN - Computer Network', faculty: 'Mr. Chhetrapal' },
 { subject: 'DAA - Design  & Analysis of Algorithm', faculty: 'Ms. Rashmi' },
 { subject: 'DAA LAB - Algorithm Lab', faculty: 'Ms. Rashmi' },
 { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }
@@ -536,7 +536,7 @@ if (!user)  return null;
 const branch = user.branch || 'CSE';
 const timetable = getTimetableForBranch(branch);
 const allRecords = await Attendance.find({ rollNo }).lean();
-const holidays = aw ait Holiday.find({}).lean();
+const holidays = await Holiday.find({}).lean();
 const holidaySet = new Set(holidays.map(h = > h.date));
 const today = new Date();
 const semesterStart = new Date(2026, 6, 15);
