@@ -144,7 +144,7 @@ Tuesday: [
 { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' },
 { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }
 ],
-Wednesd ay: [
+Wednesday: [
 { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
 { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' },
 { subject: 'FLA - Formal Language  & Automata', faculty: 'Ms. Nisha Yadav' },
