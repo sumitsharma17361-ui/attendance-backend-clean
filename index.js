@@ -537,7 +537,7 @@ const branch = user.branch || 'CSE';
 const timetable = getTimetableForBranch(branch);
 const allRecords = await Attendance.find({ rollNo }).lean();
 const holidays = await Holiday.find({}).lean();
-const holidaySet = new Set(holidays.map(h = > h.date));
+const holidaySet = new Set(holidays.map(h => h.date));
 const today = new Date();
 const semesterStart = new Date(2026, 6, 15);
 let current = new Date(semesterStart);
@@ -548,51 +548,51 @@ const dayAcademicSubjects = {};
 for (let d = 0; d  < 7; d++) {
 const dayName = dayNameMap[d];
 const subjects = timetable[dayName] || [];
-const academic = subjects.filter(entry = > !entry.subject.includes( "LIB ")  & & !entry.subject.includes( "Library ")  & & !entry.subject.includes( "Sports "));
-dayAcademicSubjects[dayName] = academic.map(entry = > entry.subject);
+const academic = subjects.filter(entry => !entry.subject.includes("LIB") && !entry.subject.includes("Library") && !entry.subject.includes("Sports"));
+dayAcademicSubjects[dayName] = academic.map(entry => entry.subject);
 }
-while (current  <= today) {
+while (current <= today) {
 const dateStr = current.toISOString().split('T')[0];
 const dayOfWeek = current.getDay();
 const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-const isHoliday = holid aySet.has(dateStr);
-if (!isWeekend  & & !isHoliday) {
+const isHoliday = holidaySet.has(dateStr);
+if (!isWeekend && !isHoliday) {
 const dayName = dayNameMap[dayOfWeek];
 const academicSubjects = dayAcademicSubjects[dayName] || [];
 totalConductedAcademicSubjects += academicSubjects.length;
-acade micSubjects.forEach(sub = > {
+academicSubjects.forEach(sub => {
 if (!subjectStats[sub]) subjectStats[sub] = { total: 0, present: 0 };
 subjectStats[sub].total = (subjectStats[sub].total || 0) + 1;
 });
 }
-current.setDate(current.getDate() + 1) ;
+current.setDate(current.getDate() + 1);
 }
 const subjectPresentCount = {};
-allRecords.forEach(rec = > {
+allRecords.forEach(rec => {
 const sub = getFullSubjectName(rec.subject);
-if (sub.includes( "LIB ") || sub.includes( "Library ") || sub.includes( "Sports ")) return;
+if (sub.includes("LIB") || sub.includes("Library") || sub.includes("Sports")) return;
 if (rec.status === 'Present' || rec.status === 'Duty Leave') {
 if (!subjectPresentCount[sub]) subjectPresentCount[sub] = 0;
-subjectPresentCount[sub] = (subjectPresentCo unt[sub] || 0) + 1;
+subjectPresentCount[sub] = (subjectPresentCount[sub] || 0) + 1;
 }
 });
-Object.keys(subjectPresentCount).forEach(sub = > {
+Object.keys(subjectPresentCount).forEach(sub => {
 if (subjectStats[sub]) subjectStats[sub].present = subjectPresentCount[sub];
 });
 let totalAcademicLecturesAttended = 0;
-Object.values(subjectPresentCount).forEach(v = > totalAcademicLecturesAttended += v);
-const pct = totalConductedAcademicSubjects  > 0 ? Math.round((totalAcademicLecturesAttended / totalConductedAcademicSubjects) * 100) : 0;
+Object.values(subjectPresentCount).forEach(v => totalAcademicLecturesAttended += v);
+const pct = totalConductedAcademicSubjects > 0 ? Math.round((totalAcademicLecturesAttended / totalConductedAcademicSubjects) * 100) : 0;
 const subjectStatsFinal = {};
 for (let [sub, stats] of Object.entries(subjectStats)) { 
 subjectStatsFinal[sub] = {
 present: stats.present || 0,
 total: stats.total || 0,
-percentage: stats.total  > 0 ? Math.round(((stats.present || 0) / stats.total) * 100) : 0
+percentage: stats.total > 0 ? Math.round(((stats.present || 0) / stats.total) * 100) : 0
 };
 }
 return {
 totalAcademicLectures: totalAcademicLecturesAttended,
-totalConductedLectures: totalConductedAcademicS ubjects,
+totalConductedLectures: totalConductedAcademicSubjects,
 attendancePercentage: pct,
 subjectStats: subjectStatsFinal
 };
@@ -885,26 +885,26 @@ res.status(500).json({ error: err.message });
 }
 });
 // ========== TEACHER MARK ATTENDANCE ==========
-app.post('/api/teacher/mark-attendance', async (req, res) = > {
+app.post('/api/teacher/mark-attendance', async (req, res) => {
 try {
 const { rollNo, name, subject, latitude, longitude, studentRollNo } = req.body;
 const today = new Date();
 const todayDate = today.toISOString().split('T')[0];
-const dateS tatus = await checkDateStatus(todayDate);
+const dateStatus = await checkDateStatus(todayDate);
 if (dateStatus.isBlocked) return res.status(400).json({ error: dateStatus.message });
 const cleanRoll = rollNo.trim().toUpperCase();
-const  teacher = await User.findOne({ rollNo: cleanRoll, role: 'faculty' });
+const teacher = await User.findOne({ rollNo: cleanRoll, role: 'faculty' });
 if (!teacher) return res.status(403).json({ error: 'Only faculty can mark attendance.' });
-const assignment =  await TeacherSubject.findOne({ teacherRollNo: cleanRoll, subject });
-if (!assignment) return res.status(403).json({ error:  `Not authorized for "${subject}".`  });
+const assignment = await TeacherSubject.findOne({ teacherRollNo: cleanRoll, subject });
+if (!assignment) return res.status(403).json({ error: `Not authorized for "${subject}".` });
 const locCheck = checkLocation(latitude, longitude);
-if (!locCheck.isInside) return res.status(400).json({ error:  `Outside College Boundary! (${locCheck.distance}m away)`  });
+if (!locCheck.isInside) return res.status(400).json({ error: `Outside College Boundary! (${locCheck.distance}m away)` });
 if (!studentRollNo) return res.status(400).json({ error: 'Student roll number required.' });
 const cleanStudent = studentRollNo.trim().toUpperCase();
-const studentUser = await  User.findOne({ rollNo: cleanStudent, role: 'student' });
+const studentUser = await User.findOne({ rollNo: cleanStudent, role: 'student' });
 if (!studentUser) return res.status(404).json({ error: 'Student not found!' });
-const exists = await Attendance.findOne({  rollNo: cleanStudent, subject, date: todayDate });
-if (exists) return res.status(400).json({ error:  `Already marked for ${subject} today.`  });
+const exists = await Attendance.findOne({ rollNo: cleanStudent, subject, date: todayDate });
+if (exists) return res.status(400).json({ error: `Already marked for ${subject} today.` });
 await new Attendance({
 rollNo: cleanStudent,
 studentName: studentUser.name,
@@ -913,10 +913,10 @@ date: todayDate,
 status: 'Present',
 location: { latitude, longitude },
 ipAddress: req.ip,
- isVerified: true,
+isVerified: true,
 branch: studentUser.branch || 'CSE'
 }).save();
-res.status(201).json({ message:  `✅ Marked ${studentUser.name} (${subject})`  });
+res.status(201).json({ message: `✅ Marked ${studentUser.name} (${subject})` });
 } catch (err) {
 console.error('Teacher mark attendance error:', err);
 res.status(500).json({ error: err.message });
@@ -1184,23 +1184,23 @@ res.status(500).json({ error: err.message });
 }
 });
 // ========== STUDENT ATTENDANCE MARKING (without passcode) ==========
-app.post('/api/attendance/mark', async (req, res) = > {
+app.post('/api/attendance/mark', async (req, res) => {
 try {
 const { rollNo, name, subject, latitude, longitude } = req.body;
 const today = new Date();
 const todayDate = today.toISOString().split('T')[0];
-const dateStatus = await c heckDateStatus(todayDate);
+const dateStatus = await checkDateStatus(todayDate);
 if (dateStatus.isBlocked) return res.status(400).json({ error: dateStatus.message });
 const cleanRoll = rollNo.trim().toUpperCase();
-const blockCheck = a wait checkStudentBlocked(cleanRoll);
+const blockCheck = await checkStudentBlocked(cleanRoll);
 if (blockCheck.blocked) return res.status(403).json({ error: blockCheck.message });
 const locCheck = checkLocation(latitude, longitude);
-if (!l ocCheck.isInside) { await incrementFailedAttempts(cleanRoll); return res.status(400).json({ error:  `Outside College Boundary! (${locCheck.distance}m away)`  }); }
+if (!locCheck.isInside) { await incrementFailedAttempts(cleanRoll); return res.status(400).json({ error: `Outside College Boundary! (${locCheck.distance}m away)` }); }
 const user = await User.findOne({ rollNo: cleanRoll });
 if (!user) return res.status(404).json({ error: 'Student not found!' });
-const isLab = subject.includes( "LAB ") || subject.includes( "Lab ");
+const isLab = subject.includes("LAB") || subject.includes("Lab");
 const todayEntries = await Attendance.find({ rollNo: cleanRoll, subject, date: todayDate });
-if (isLab  & & todayEntries.length  >= 1) return res.status(400).json({ error:  `Already marked for ${subject} today! (Lab - 1 lecture only)`  });
+if (isLab && todayEntries.length >= 1) return res.status(400).json({ error: `Already marked for ${subject} today! (Lab - 1 lecture only)` });
 user.failedAttempts = 0;
 user.blockUntil = null;
 await new Attendance({
@@ -1209,15 +1209,15 @@ studentName: name,
 subject,
 date: todayDate,
 status: 'Present',
-location: { latitude , longitude },
+location: { latitude, longitude },
 ipAddress: req.ip,
 isVerified: true,
 branch: user.branch || 'CSE'
 }).save();
 user.lastAttendanceTime = new Date();
-user.lastAttendanceLocation = { latitude, longitud e };
+user.lastAttendanceLocation = { latitude, longitude };
 await user.save();
-res.status(201).json({ message:  `✅ Attendance Marked for ${subject}!`  });
+res.status(201).json({ message: `✅ Attendance Marked for ${subject}!` });
 } catch (err) {
 console.error('Attendance mark error:', err);
 res.status(500).json({ error: err.message });
@@ -1413,39 +1413,39 @@ res.status(500).json({ error: err.message });
 }
 });
 // ========== STUDENT MONTHLY SUMMARY (Branch-aware) ==========
-app.get('/api/student/monthly-summary/:rollNo', async (req, res) = > {
+app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
 try {
 const cleanRoll = req.params.rollNo.trim().toUpperCase();
 const { month } = req.query;
-if (month === undefined || isNaN(parseInt(month))) return res.status(400).json({ er ror: 'Month parameter (0-11) required' });
+if (month === undefined || isNaN(parseInt(month))) return res.status(400).json({ error: 'Month parameter (0-11) required' });
 const m = parseInt(month);
-if (m  < 0 || m  > 11) return res.status(400).json({ error: 'Invalid month' });
+if (m < 0 || m > 11) return res.status(400).json({ error: 'Invalid month' });
 const user = await User.findOne({ rollNo: cleanRoll });
-if (!user) return res.status(404).json({ error: 'User not fou nd' });
+if (!user) return res.status(404).json({ error: 'User not found' });
 const branch = user.branch || 'CSE';
 const timetable = getTimetableForBranch(branch);
 const year = 2026;
 const startDate = new Date(year, m, 1);
-const endDate = new Date(ye ar, m + 1, 0);
+const endDate = new Date(year, m + 1, 0);
 const startStr = startDate.toISOString().split('T')[0];
 const endStr = endDate.toISOString().split('T')[0];
-const records = await Attendance.find({ rollNo: cleanRoll , date: { $gte: startStr, $lte: endStr } }).lean();
+const records = await Attendance.find({ rollNo: cleanRoll, date: { $gte: startStr, $lte: endStr } }).lean();
 const subjectSet = new Set();
 let totalConducted = 0;
 let cur = new Date(startDate);
-const dayNameMap = ['Sunday','Monday','Tues day','Wednesday','Thursday','Friday','Saturday'];
-const holidaySet = new Set((await Holiday.find({ date: { $gte: startStr, $lte: endStr } })).map(h = > h.date));
-while (cur  <= endDate) {
+const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const holidaySet = new Set((await Holiday.find({ date: { $gte: startStr, $lte: endStr } })).map(h => h.date));
+while (cur <= endDate) {
 const dateStr = cur.toISOString().split('T')[0];
 const dayOfWeek = cur.getDay();
 const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-const isHoliday = holidaySet. has(dateStr);
-if (!isWeekend  & & !isHoliday) {
+const isHoliday = holidaySet.has(dateStr);
+if (!isWeekend && !isHoliday) {
 const dayName = dayNameMap[dayOfWeek];
 const subjects = timetable[dayName] || [];
-subjects.forEach(entry = > {
+subjects.forEach(entry => {
 const sub = entry.subject;
-if (!sub.includes('Sports')  & & !sub.includes('LIB')  & & !sub.includes('Library')) {
+if (!sub.includes('Sports') && !sub.includes('LIB') && !sub.includes('Library')) {
 subjectSet.add(sub);
 totalConducted++;
 }
@@ -1454,40 +1454,40 @@ totalConducted++;
 cur.setDate(cur.getDate() + 1);
 }
 const subjectStats = {};
-subjectSet.forEach(sub = > { subjectStats[sub] = { total: 0, present: 0 }; });
+subjectSet.forEach(sub => { subjectStats[sub] = { total: 0, present: 0 }; });
 cur = new Date(startDate);
-while (cur  <= endDate) {
+while (cur <= endDate) {
 const dateStr = cur.toISOString().split('T')[0];
 const dayOfWeek = cur.getDay();
 const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-const isHoliday = holidaySet. has(dateStr);
-if (!isWeekend  & & !isHoliday) {
+const isHoliday = holidaySet.has(dateStr);
+if (!isWeekend && !isHoliday) {
 const dayName = dayNameMap[dayOfWeek];
 const subjects = timetable[dayName] || [];
-subjects.forEach(entry = > {
+subjects.forEach(entry => {
 const sub = entry.subject;
 if (subjectStats[sub]) subjectStats[sub].total++;
 });
 }
 cur.setDate(cur.getDate() + 1);
 }
-records.forEach(rec = > {
+records.forEach(rec => {
 const fullSub = getFullSubjectName(rec.subject);
-if (subjectStats[fullSub]  & & (rec.status === 'Present' || rec.status === 'Duty Leave')) {
+if (subjectStats[fullSub] && (rec.status === 'Present' || rec.status === 'Duty Leave')) {
 subjectStats[fullSub].present++;
 }
 });
 let totalAttended = 0;
-Object.values(subjectStats).forEach(st = > totalAttended += st.present);
-const pct = totalConducted  > 0 ? Math.round((totalAttended / totalConducted) * 100) : 0;
-const presentDays = new Set(records.filter(r = > r.status === 'Present' || r.status === 'Duty Leave').map(r = > r.date));
+Object.values(subjectStats).forEach(st => totalAttended += st.present);
+const pct = totalConducted > 0 ? Math.round((totalAttended / totalConducted) * 100) : 0;
+const presentDays = new Set(records.filter(r => r.status === 'Present' || r.status === 'Duty Leave').map(r => r.date));
 const subjectStatsWithPct = {};
-Object.keys(subjectStats).forEach(sub = > {
+Object.keys(subjectStats).forEach(sub => {
 const st = subjectStats[sub];
 subjectStatsWithPct[sub] = {
 total: st.total,
 present: st.present,
-percentage: st.total  > 0 ? Math.round((st.present / st.total) * 100) : 0
+percentage: st.total > 0 ? Math.round((st.present / st.total) * 100) : 0
 };
 });
 res.json({
@@ -1495,7 +1495,7 @@ totalConducted,
 totalAttended,
 attendancePercentage: pct,
 daysPresent: presentDays.size,
-subjectStats: subject StatsWithPct
+subjectStats: subjectStatsWithPct
 });
 } catch (err) {
 console.error('Monthly summary error:', err);
@@ -1598,78 +1598,78 @@ res.status(500).json({ error: err.message });
 }
 });
 // ========== STUDENT SUMMARY (Overall) ==========
-app.get('/api/student/summary/:rollNo', async (req, res) = > {
+app.get('/api/student/summary/:rollNo', async (req, res) => {
 try {
 const cleanRoll = req.params.rollNo.trim().toUpperCase();
 const user = await User.findOne({ rollNo: cleanRoll });
-if (!user) return res.status(404).json({ error: 'Student  not found!' });
+if (!user) return res.status(404).json({ error: 'Student not found!' });
 const branch = user.branch || 'CSE';
 const timetable = getTimetableForBranch(branch);
 const allRecords = await Attendance.find({ rollNo: cleanRoll }).lean();
-const  holidays = await Holiday.find({}).lean();
-const holidaySet = new Set(holidays.map(h = > h.date));
+const holidays = await Holiday.find({}).lean();
+const holidaySet = new Set(holidays.map(h => h.date));
 const today = new Date();
 const semesterStart = new Date(2026, 6, 15);
 let current = new Date(semesterStart);
 let totalConductedAcademicSubjects = 0;
-const academicDays Set = new Set();
+const academicDaysSet = new Set();
 const subjectStats = {};
 const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const dayAcademicSubjects = {};
-for (let d =  0; d  < 7; d++) {
+for (let d = 0; d < 7; d++) {
 const dayName = dayNameMap[d];
 const subjects = timetable[dayName] || [];
-const academic = subjects.filter(entry = > !entry.subject.includes( "LIB ")  & & !entry.subject.includes( "Library ")  & & !entry.subject.includes( "Sports "));
-dayAcademicSubjects[dayName] = academic.map(entry = > entry.subject);
+const academic = subjects.filter(entry => !entry.subject.includes("LIB") && !entry.subject.includes("Library") && !entry.subject.includes("Sports"));
+dayAcademicSubjects[dayName] = academic.map(entry => entry.subject);
 }
-while (current  <= today) {
+while (current <= today) {
 const dateStr = current.toISOString().split('T')[0];
 const dayOfWeek = current.getDay();
 const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-const isHoliday = holid aySet.has(dateStr);
-if (!isWeekend  & & !isHoliday) {
+const isHoliday = holidaySet.has(dateStr);
+if (!isWeekend && !isHoliday) {
 academicDaysSet.add(dateStr);
 const dayName = dayNameMap[dayOfWeek];
 const academicSubjects = dayAcademicSubjects[dayName] || [];
-totalConductedAcademicSubjects +=  academicSubjects.length;
-academicSubjects.forEach(sub = > {
+totalConductedAcademicSubjects += academicSubjects.length;
+academicSubjects.forEach(sub => {
 if (!subjectStats[sub]) subjectStats[sub] = { total: 0, present: 0 };
 subjectStats[sub].total = (subjectStats[sub].total || 0) + 1;
 });
 }
-current.setDate(current.getDate() + 1) ;
+current.setDate(current.getDate() + 1);
 }
 const presentDaysSet = new Set();
 const subjectPresentCount = {};
-allRecords.forEach(rec = > {
+allRecords.forEach(rec => {
 const sub = getFullSubjectName(rec.subject);
-if (sub.includes( "LIB ") || sub.includes( "Library ") || sub.includes( "Sports ")) return;
+if (sub.includes("LIB") || sub.includes("Library") || sub.includes("Sports")) return;
 if (rec.status === 'Present' || rec.status === 'Duty Leave') {
 if (!subjectPresentCount[sub]) subjectPresentCount[sub] = 0;
-subjectPresentCount[sub] = (subjectPresentCo unt[sub] || 0) + 1;
+subjectPresentCount[sub] = (subjectPresentCount[sub] || 0) + 1;
 presentDaysSet.add(rec.date);
 }
 });
-Object.keys(subjectPresentCount).forEach(sub = > {
+Object.keys(subjectPresentCount).forEach(sub => {
 if (subjectStats[sub]) subjectStats[sub].present = subjectPresentCount[sub];
 });
 let totalAcademicLecturesAttended = 0;
-Object.values(subjectPresentCount).forEach(v = > totalAcademicLecturesAttended += v);
-const pct = totalConductedAcademicSubjects  > 0 ? Math.round((totalAcademicLecturesAttended / totalConductedAcademicSubjects) * 100) : 0;
+Object.values(subjectPresentCount).forEach(v => totalAcademicLecturesAttended += v);
+const pct = totalConductedAcademicSubjects > 0 ? Math.round((totalAcademicLecturesAttended / totalConductedAcademicSubjects) * 100) : 0;
 const daysPresent = presentDaysSet.size;
-const totalWorkingDays = academicDaysSet.size ;
+const totalWorkingDays = academicDaysSet.size;
 const daysAbsent = totalWorkingDays - daysPresent;
 const subjectStatsFinal = {};
 for (let [sub, stats] of Object.entries(subjectStats)) {
 subjectStatsFinal[sub] = {
-present: stat s.present || 0,
+present: stats.present || 0,
 total: stats.total || 0,
-percentage: stats.total  > 0 ? Math.round(((stats.present || 0) / stats.total) * 100) : 0
+percentage: stats.total > 0 ? Math.round(((stats.present || 0) / stats.total) * 100) : 0
 };
 }
 res.json({
 totalAcademicLectures: totalAcademicLecturesAttended,
-totalConductedLectures: totalConductedAcademi cSubjects,
+totalConductedLectures: totalConductedAcademicSubjects,
 attendancePercentage: pct,
 daysPresent,
 daysAbsent,
@@ -1677,7 +1677,7 @@ workingDaysSoFar: totalWorkingDays,
 subjectStats: subjectStatsFinal
 });
 } catch (err) {
-console.error('Student summar y error:', err);
+console.error('Student summary error:', err);
 res.status(500).json({ error: err.message });
 }
 });
@@ -1700,42 +1700,42 @@ console.error('Google sheets export error:', err);
 res.status(500).json({ error: err.message });
 }
 });
-app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) = > {
+app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) => {
 try {
 const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
 const requester = await User.findOne({ rollNo: requesterRollNo });
-if (!requester) return res.sta tus(403).json({ error: 'Access Denied' });
+if (!requester) return res.status(403).json({ error: 'Access Denied' });
 const isAdmin = requester.role === 'admin';
 const isTeacher = requester.role === 'faculty';
-if (!isAdmin  & & !isTeacher) return res.status(403).json({ error: 'Access Denied: Admin or Teacher only!' });
+if (!isAdmin && !isTeacher) return res.status(403).json({ error: 'Access Denied: Admin or Teacher only!' });
 const { studentRollNo, range, month } = req.query;
-if (!studentRollNo) return res.sta tus(400).json({ error: 'studentRollNo is required' });
+if (!studentRollNo) return res.status(400).json({ error: 'studentRollNo is required' });
 const cleanStudent = studentRollNo.trim().toUpperCase();
 const today = new Date();
 let startDate, endDate;
-if (range === 'CUR RENT_MONTH') { startDate = new Date(today.getFullYear(), today.getMonth(), 1); endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0); }
-else if (range === 'SELECTED_MONT H') { const m = parseInt(month); if (isNaN(m) || m  < 0 || m  > 11) return res.status(400).json({ error: 'Invalid month' }); startDate = new Date(2026, m, 1); endDate = new Date(2026, m + 1, 0); }
-else { startDate = new Date(SEMESTER_START);  endDate = new Date(SEMESTER_END); }
+if (range === 'CURRENT_MONTH') { startDate = new Date(today.getFullYear(), today.getMonth(), 1); endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0); }
+else if (range === 'SELECTED_MONTH') { const m = parseInt(month); if (isNaN(m) || m < 0 || m > 11) return res.status(400).json({ error: 'Invalid month' }); startDate = new Date(2026, m, 1); endDate = new Date(2026, m + 1, 0); }
+else { startDate = new Date(SEMESTER_START); endDate = new Date(SEMESTER_END); }
 const startStr = startDate.toISOString().split('T')[0];
 const endStr = endDate.toISOString().split('T')[0];
-let records = await Attendance.find( { rollNo: cleanStudent, date: { $gte: startStr, $lte: endStr } }).sort({ date: 1 });
+let records = await Attendance.find({ rollNo: cleanStudent, date: { $gte: startStr, $lte: endStr } }).sort({ date: 1 });
 if (isTeacher) {
-const subjects = await TeacherSubject.find({ teacherRollNo: requesterRollNo }) .distinct('subject');
-records = records.filter(r = > subjects.includes(r.subject));
+const subjects = await TeacherSubject.find({ teacherRollNo: requesterRollNo }).distinct('subject');
+records = records.filter(r => subjects.includes(r.subject));
 }
 if (records.length === 0) return res.status(404).json({ error: 'No records found for this student in the selected range.' });
-const studentName =  records[0].studentName || 'Unknown';
-let csv =  `Student Attendance Report\nStudent: ${studentName} (${cleanStudent})\nRange: ${startStr} to ${endStr}\nGenerated: ${new Date().toLocaleString()}\n\nDate,Subject,Status,Location,IP Address\n` ;
-records.forEach(r = > {
-const loc = r.location ?  `(${r.location.latitude}, ${r.location.longitude})`  : 'N/A';
-csv +=  `${r.date},${getFullSubjectName(r.subject)},${r.status},${loc},${r.ipAddress || 'N/A'}\n` ;
+const studentName = records[0].studentName || 'Unknown';
+let csv = `Student Attendance Report\nStudent: ${studentName} (${cleanStudent})\nRange: ${startStr} to ${endStr}\nGenerated: ${new Date().toLocaleString()}\n\nDate,Subject,Status,Location,IP Address\n`;
+records.forEach(r => {
+const loc = r.location ? `(${r.location.latitude}, ${r.location.longitude})` : 'N/A';
+csv += `${r.date},${getFullSubjectName(r.subject)},${r.status},${loc},${r.ipAddress || 'N/A'}\n`;
 });
 const total = records.length;
-const present = records.filter(r = > r.status === 'Present').length;
-const pct = total  > 0 ? Math.round((present / total) * 100) : 0;
-csv +=  `\nTotal Lectures: ${total}, Present: ${present}, Attendance %: ${pct}%\n` ;
+const present = records.filter(r => r.status === 'Present').length;
+const pct = total > 0 ? Math.round((present / total) * 100) : 0;
+csv += `\nTotal Lectures: ${total}, Present: ${present}, Attendance %: ${pct}%\n`;
 res.setHeader('Content-Type', 'text/csv');
-res.setHeader('Content-Disposition',  `attachment; filename=attendance_${cleanStudent}_${range}.csv` );
+res.setHeader('Content-Disposition', `attachment; filename=attendance_${cleanStudent}_${range}.csv`);
 res.send(csv);
 } catch (err) {
 console.error('Student export error:', err);
@@ -2108,7 +2108,6 @@ if (students.length === 0) return res.status(404).json({ error: 'No valid studen
 const results = [];
  let totalMarked = 0, totalSkipped = 0;
  for (const student of students) {
-   // ===== AUTO DETECT BRANCH FROM STUDENT PROFILE =====
    const branch = student.branch || 'CSE';
    const timetable = getTimetableForBranch(branch);
    let studentMarked = 0, studentSkipped = 0;
@@ -2418,7 +2417,7 @@ const cleanRoll = rollNo?.trim().toUpperCase() || 'guest';
        workingDays = await getWorkingDays(startStr, todayStr);
        holidays = await Holiday.find({ date: { $gte: startStr, $lte: todayStr } });
        const branchName = userData.branch || 'CSE';
-       timetable = getBranchTimetable(branchName);
+       timetable = getTimetableForBranch(branchName);
        currentPeriod = getCurrentPeriod(branchName);
      }
    } catch (err) {
