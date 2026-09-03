@@ -513,7 +513,7 @@ const Chat = mongoose.model('Chat', chatSchema);
 Attendance.createIndexes().catch(err => console.error('Index creation error:', err));
 
 // ============================================================
-//  NEW SCHEMA: LEAVE APPLICATION (NEW FEATURE)
+//  NEW SCHEMA: LEAVE APPLICATION
 // ============================================================
 const leaveSchema = new mongoose.Schema({
   rollNo:      { type: String, required: true },
@@ -528,7 +528,7 @@ const leaveSchema = new mongoose.Schema({
 }, { timestamps: true });
 const Leave = mongoose.model('Leave', leaveSchema);
 
-// ---------- Helper function for student summary (used in chat) ----------
+// ---------- Helper function for student summary ----------
 async function getStudentSummary(rollNo) {
 try {
 const user = await User.findOne({ rollNo });
@@ -590,11 +590,14 @@ total: stats.total || 0,
 percentage: stats.total > 0 ? Math.round(((stats.present || 0) / stats.total) * 100) : 0
 };
 }
+const daysPresent = allRecords.filter(r => r.status === 'Present' || r.status === 'Duty Leave').length; // approximate
 return {
 totalAcademicLectures: totalAcademicLecturesAttended,
 totalConductedLectures: totalConductedAcademicSubjects,
 attendancePercentage: pct,
-subjectStats: subjectStatsFinal
+subjectStats: subjectStatsFinal,
+daysPresent,
+workingDaysSoFar: (await getWorkingDays(semesterStart, today))
 };
 } catch (e) {
 console.error('Error in getStudentSummary:', e);
@@ -603,7 +606,6 @@ return null;
 }
 // ---------- Routes ----------
 app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active!'));
-// Health check endpoint
 app.get('/health', (req, res) => {
 res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
@@ -657,7 +659,7 @@ console.error('Registration error:', err);
 res.status(500).json({ error: err.message });
 }
 });
-// ========== LOGIN (no server busy check) ==========
+// ========== LOGIN ==========
 app.post('/api/auth/login', async (req, res) => {
 try {
 const parseResult = loginSchema.safeParse(req.body);
@@ -884,6 +886,24 @@ console.error('Get teacher students error:', err);
 res.status(500).json({ error: err.message });
 }
 });
+// ========== TEACHER CLASS AVERAGE ==========
+app.get('/api/teacher/class-average/:rollNo', async (req, res) => {
+try {
+const cleanRoll = req.params.rollNo.trim().toUpperCase();
+const teacher = await User.findOne({ rollNo: cleanRoll, role: 'faculty' });
+if (!teacher) return res.status(403).json({ error: 'Teacher not found!' });
+const subjects = await TeacherSubject.find({ teacherRollNo: cleanRoll }).distinct('subject');
+if (subjects.length === 0) return res.json({ average: 0 });
+const records = await Attendance.find({ subject: { $in: subjects } });
+const total = records.length;
+const present = records.filter(r => r.status === 'Present' || r.status === 'Duty Leave').length;
+const avg = total > 0 ? Math.round((present / total) * 100) : 0;
+res.json({ average: avg });
+} catch (err) {
+console.error('Class average error:', err);
+res.status(500).json({ error: err.message });
+}
+});
 // ========== TEACHER MARK ATTENDANCE ==========
 app.post('/api/teacher/mark-attendance', async (req, res) => {
 try {
@@ -922,7 +942,7 @@ console.error('Teacher mark attendance error:', err);
 res.status(500).json({ error: err.message });
 }
 });
-// ========== PASSCODE (Admin & Teacher) ==========
+// ========== PASSCODE ==========
 app.post('/api/admin/generate-passcode', async (req, res) => {
 try {
 const { requesterRollNo, type } = req.body;
@@ -1092,7 +1112,7 @@ console.error('Mark lecture error:', err);
 res.status(500).json({ error: err.message });
 }
 });
-// ========== FULL DAY ATTENDANCE (Branch-aware) WITH PASSCODE ==========
+// ========== FULL DAY ATTENDANCE ==========
 app.post('/api/attendance/mark-fullday', async (req, res) => {
 try {
 const { rollNo, name, latitude, longitude, passcode } = req.body;
@@ -1265,6 +1285,20 @@ console.error('Declare holiday error:', err);
 res.status(500).json({ error: err.message });
 }
 });
+app.delete('/api/admin/holiday/:date', async (req, res) => {
+try {
+const { requesterRollNo } = req.body;
+const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+const date = req.params.date;
+const result = await Holiday.findOneAndDelete({ date });
+if (!result) return res.status(404).json({ error: 'Holiday not found!' });
+res.json({ message: `Holiday on ${date} deleted.` });
+} catch (err) {
+console.error('Delete holiday error:', err);
+res.status(500).json({ error: err.message });
+}
+});
 app.get('/api/holidays', async (req, res) => {
 try {
 const holidays = await Holiday.find();
@@ -1339,7 +1373,7 @@ console.error('Get faculty error:', err);
 res.status(500).json({ error: err.message });
 }
 });
-// ========== STUDENT ATTENDANCE (Admin/Teacher view) ==========
+// ========== STUDENT ATTENDANCE ==========
 app.get('/api/attendance/student/:rollNo/:requesterRollNo', async (req, res) => {
 try {
 const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
@@ -1364,7 +1398,7 @@ console.error('Get student attendance error:', err);
 res.status(500).json({ error: err.message });
 }
 });
-// ========== DELETE ATTENDANCE RECORD (Admin & Teacher) ==========
+// ========== DELETE ATTENDANCE RECORD ==========
 app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
 try {
 const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
@@ -1388,7 +1422,33 @@ console.error('Delete record error:', err);
 res.status(500).json({ error: err.message });
 }
 });
-// ========== DELETE ALL ATTENDANCE FOR A DATE (Admin & Teacher) ==========
+// ========== UPDATE ATTENDANCE RECORD ==========
+app.put('/api/attendance/update/:id', async (req, res) => {
+try {
+const { status, requesterRollNo } = req.body;
+const recordId = req.params.id;
+const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+if (!requester) return res.status(403).json({ error: 'Access Denied' });
+const isAdmin = requester.role === 'admin';
+const isTeacher = requester.role === 'faculty';
+if (!isAdmin && !isTeacher) return res.status(403).json({ error: 'Access Denied: Admin or Teacher only!' });
+const record = await Attendance.findById(recordId);
+if (!record) return res.status(404).json({ error: 'Record not found' });
+if (isTeacher) {
+const subjects = await TeacherSubject.find({ teacherRollNo: requesterRollNo }).distinct('subject');
+if (!subjects.includes(record.subject)) {
+return res.status(403).json({ error: 'Not authorized to edit this record.' });
+}
+}
+record.status = status;
+await record.save();
+res.json({ message: 'Record updated successfully!' });
+} catch (err) {
+console.error('Update record error:', err);
+res.status(500).json({ error: err.message });
+}
+});
+// ========== DELETE ALL ATTENDANCE FOR A DATE ==========
 app.delete('/api/attendance/delete-day/:rollNo/:date/:requesterRollNo', async (req, res) => {
 try {
 const { rollNo, date, requesterRollNo } = req.params;
@@ -1412,7 +1472,7 @@ console.error('Delete day error:', err);
 res.status(500).json({ error: err.message });
 }
 });
-// ========== STUDENT MONTHLY SUMMARY (Branch-aware) ==========
+// ========== STUDENT MONTHLY SUMMARY ==========
 app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
 try {
 const cleanRoll = req.params.rollNo.trim().toUpperCase();
@@ -1502,7 +1562,7 @@ console.error('Monthly summary error:', err);
 res.status(500).json({ error: err.message });
 }
 });
-// ========== MANUAL ATTENDANCE (Admin) – AUTO BRANCH DETECTION ==========
+// ========== MANUAL ATTENDANCE (Admin) ==========
 app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
 try {
 const { requesterRollNo, studentRollNo, date, subjects, status } = req.body;
@@ -1571,7 +1631,7 @@ console.error('History error:', err);
 res.status(500).json({ error: err.message });
 }
 });
-// ========== ALL ATTENDANCE (Admin/Teacher) ==========
+// ========== ALL ATTENDANCE ==========
 app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
 try {
 const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
@@ -1769,7 +1829,7 @@ console.error('Timetable faculty error:', err);
 res.status(500).json({ error: err.message });
 }
 });
-// ========== CLASS ATTENDANCE REPORT (Admin) – WITH BRANCH FILTER ==========
+// ========== CLASS ATTENDANCE REPORT ==========
 app.get('/api/admin/class-attendance-report', async (req, res) => {
 try {
 const { requesterRollNo, startDate, endDate, branch } = req.query;
@@ -2084,7 +2144,7 @@ console.error('AIDS Bulk update error:', err);
 res.status(500).json({ error: err.message });
 }
 });
-// ========== BULK MARK ATTENDANCE (Admin) – BRANCH-AWARE PER STUDENT ==========
+// ========== BULK MARK ATTENDANCE ==========
 app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
 try {
 const { requesterRollNo, studentRollNos, dates, subjects } = req.body;
@@ -2159,7 +2219,7 @@ console.error('Bulk mark error:', err);
 res.status(500).json({ error: err.message });
 }
 });
-// ========== BULK DELETE ATTENDANCE (Admin) ==========
+// ========== BULK DELETE ATTENDANCE ==========
 app.delete('/api/admin/bulk-delete-attendance', async (req, res) => {
 try {
 const { requesterRollNo, studentRollNos, dates } = req.body;
@@ -2246,9 +2306,8 @@ res.status(500).json({ error: err.message });
 });
 
 // ============================================================
-//  NEW FEATURE 1: LEAVE APPLICATION SYSTEM
+//  LEAVE APPLICATION SYSTEM
 // ============================================================
-// Student applies for leave
 app.post('/api/leave/apply', async (req, res) => {
   try {
     const { rollNo, fromDate, toDate, reason, leaveType } = req.body;
@@ -2271,7 +2330,6 @@ app.post('/api/leave/apply', async (req, res) => {
   }
 });
 
-// Student views own leaves
 app.get('/api/leave/my/:rollNo', async (req, res) => {
   try {
     const leaves = await Leave.find({ rollNo: req.params.rollNo.trim().toUpperCase() })
@@ -2282,7 +2340,6 @@ app.get('/api/leave/my/:rollNo', async (req, res) => {
   }
 });
 
-// Admin views all leave requests
 app.get('/api/leave/requests/:requesterRollNo', async (req, res) => {
   try {
     const requester = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
@@ -2295,10 +2352,9 @@ app.get('/api/leave/requests/:requesterRollNo', async (req, res) => {
   }
 });
 
-// Admin approves / rejects a leave
 app.post('/api/leave/action/:id', async (req, res) => {
   try {
-    const { requesterRollNo, action, adminNote } = req.body; // action = 'Approved' | 'Rejected'
+    const { requesterRollNo, action, adminNote } = req.body;
     const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
     if (!requester || requester.role !== 'admin')
       return res.status(403).json({ error: 'Access Denied: Admin Only!' });
@@ -2310,7 +2366,6 @@ app.post('/api/leave/action/:id', async (req, res) => {
     leave.adminNote = adminNote || '';
     await leave.save();
 
-    // If approved → auto-mark Duty Leave for all academic subjects in that date range
     if (action === 'Approved') {
       let cur = new Date(leave.fromDate);
       const end = new Date(leave.toDate);
@@ -2343,12 +2398,12 @@ app.post('/api/leave/action/:id', async (req, res) => {
 });
 
 // ============================================================
-//  NEW FEATURE 2: ATTENDANCE TREND (for charts)
+//  ATTENDANCE TREND
 // ============================================================
 app.get('/api/student/trend/:rollNo', async (req, res) => {
   try {
     const cleanRoll = req.params.rollNo.trim().toUpperCase();
-    const months = [6,7,8,9,10,11]; // Jul–Dec 2026
+    const months = [6,7,8,9,10,11];
     const labels = ['Jul','Aug','Sep','Oct','Nov','Dec'];
     const data = [];
     for (const m of months) {
@@ -2365,7 +2420,7 @@ app.get('/api/student/trend/:rollNo', async (req, res) => {
 });
 
 // ============================================================
-//  NEW FEATURE 3: DEFAULTER WATCHLIST (below threshold %)
+//  DEFAULTER WATCHLIST
 // ============================================================
 app.get('/api/admin/defaulters/:requesterRollNo', async (req, res) => {
   try {
@@ -2393,7 +2448,7 @@ app.get('/api/admin/defaulters/:requesterRollNo', async (req, res) => {
   }
 });
 
-// ==================== CHAT AI ENDPOINT – GROQ API ====================
+// ==================== CHAT AI ENDPOINT ====================
 app.post('/api/chat', async (req, res) => {
 try {
 const { message, rollNo, role, name, branch, threadId, skipGreeting } = req.body;
@@ -2428,7 +2483,6 @@ const cleanRoll = rollNo?.trim().toUpperCase() || 'guest';
  let requestedDate = null;
  let requestedDay = null;
  const msgLower = message.toLowerCase();
- // Detect "kal", "aaj", "today", "tomorrow"
  if (msgLower.includes('kal') || msgLower.includes('tomorrow')) {
    const d = new Date();
    d.setDate(d.getDate() + 1);
@@ -2436,7 +2490,6 @@ const cleanRoll = rollNo?.trim().toUpperCase() || 'guest';
  } else if (msgLower.includes('aaj') || msgLower.includes('today')) {
    requestedDate = new Date().toISOString().split('T')[0];
  } else {
-   // Try to parse a date like "17 August" or "August 17"
    const dateMatch = message.match(/(\d{1,2})\s+([A-Za-z]+)/) || message.match(/([A-Za-z]+)\s+(\d{1,2})/);
    if (dateMatch) {
      const dayNum = parseInt(dateMatch[1] || dateMatch[2]);
@@ -2447,14 +2500,13 @@ const cleanRoll = rollNo?.trim().toUpperCase() || 'guest';
      };
      const monthIdx = monthMap[monthName.toLowerCase()];
      if (monthIdx !== undefined && dayNum >= 1 && dayNum <= 31) {
-       const year = 2026; // assume 2026
+       const year = 2026;
        const d = new Date(year, monthIdx, dayNum);
        if (!isNaN(d)) {
          requestedDate = d.toISOString().split('T')[0];
        }
      }
    }
-   // Also check for day names like "Monday"
    const dayNames = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
    for (const dn of dayNames) {
      if (msgLower.includes(dn)) {
@@ -2463,7 +2515,6 @@ const cleanRoll = rollNo?.trim().toUpperCase() || 'guest';
      }
    }
  }
- // If we have a requested date, fetch its timetable and status
  let requestedTimetable = null;
  let requestedStatus = null;
  if (requestedDate) {
@@ -2474,7 +2525,6 @@ const cleanRoll = rollNo?.trim().toUpperCase() || 'guest';
      requestedTimetable = getTimetableForDate(requestedDate, branchName);
    }
  } else if (requestedDay) {
-   // Use the day name directly (assume current week? or just provide that day's timetable)
    const branchName = userData?.branch || branch || 'CSE';
    const timetable = getTimetableForBranch(branchName);
    requestedTimetable = timetable[requestedDay] || [];
@@ -2491,7 +2541,6 @@ const cleanRoll = rollNo?.trim().toUpperCase() || 'guest';
  }
  const userName = userData?.name || name || 'Guest';
  const userRole = userData?.role || role || 'student';
- // Build context string
  let contextStr = `Current date/time: ${now.toLocaleString()}\n`;
  contextStr += `User: ${userName} (Roll: ${cleanRoll}, Role: ${userRole})\n`;
  contextStr += `Branch: ${userData?.branch || branch || 'CSE'}\n`;
@@ -2502,7 +2551,6 @@ const cleanRoll = rollNo?.trim().toUpperCase() || 'guest';
  if (holidays.length) {
    contextStr += `Holidays: ${holidays.map(h => `${h.date} (${h.reason})`).join(', ')}\n`;
  }
- // Add today's timetable
  const todayDay = now.toLocaleString('en', { weekday: 'long' });
  const todayTimetable = getTimetableForBranch(userData?.branch || branch || 'CSE')[todayDay] || [];
  contextStr += `Today's timetable (${todayDay}): ${todayTimetable.map(s => s.subject).join(', ')}\n`;
@@ -2511,7 +2559,6 @@ const cleanRoll = rollNo?.trim().toUpperCase() || 'guest';
  } else {
    contextStr += `Current lecture period: No class now\n`;
  }
- // Add requested date timetable if available
  if (requestedDate) {
    const status = requestedStatus;
    if (status && status.isBlocked) {
@@ -2529,7 +2576,6 @@ const cleanRoll = rollNo?.trim().toUpperCase() || 'guest';
      contextStr += `No timetable available for ${requestedDay}.\n`;
    }
  }
- // Build system prompt
  let systemPrompt = `You are an AI assistant for BM Group of Institutions attendance portal.
 Your name is "BM Bot".
 ${greeting ? `${greeting}, ${userName} ${emoji}!` : ''}
@@ -2619,7 +2665,6 @@ Now respond to the user's message: "${message}"`;
        fallback += `No timetable available for ${requestedDay}. `;
      }
    } else {
-     // General fallback
      if (attendanceSummary) {
        const pct = attendanceSummary.attendancePercentage || 0;
        const attended = attendanceSummary.totalAcademicLectures || 0;
