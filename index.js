@@ -4,7 +4,7 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
-const { z } = require('zod');   // ✅ Zod – lodash नहीं
+const { z } = require('zod');
 process.env.TZ = 'Asia/Kolkata';
 console.log(`🕐 Server Timezone set to: ${process.env.TZ}`);
 const app = express();
@@ -63,7 +63,7 @@ function normalizeSubject(subject) {
   return subject.replace(/\s+/g, ' ').trim();
 }
 
-// ---------- HELPER: Subject Alias Mapping (Comprehensive) ----------
+// ---------- HELPER: Subject Alias Mapping ----------
 const SUBJECT_ALIAS_MAP = {
   // BDA
   'BDA': 'BDA - Big Data Analytics',
@@ -90,7 +90,7 @@ const SUBJECT_ALIAS_MAP = {
   // WT
   'WT': 'WT - Web Technology',
   'WT - Web Techn': 'WT - Web Technology',
-  // Labs
+  // CSE Labs
   'CN LAB': 'CN LAB - Computer Network Lab',
   'CN LAB - Compu': 'CN LAB - Computer Network Lab',
   'DAA LAB': 'DAA LAB - Algorithm Lab',
@@ -100,7 +100,7 @@ const SUBJECT_ALIAS_MAP = {
   'Internet': 'Internet Lab (Ms. Geeta)',
   'Internet Lab': 'Internet Lab (Ms. Geeta)',
   'Internet Lab (': 'Internet Lab (Ms. Geeta)',
-  // PA, ML
+  // AIDS Subjects
   'PA': 'PA - Predictive Analysis',
   'ML': 'ML - Machine Learning',
   'PA LAB': 'PA LAB - Predictive Analysis Lab',
@@ -121,7 +121,7 @@ function mapToCanonical(subject) {
   return normalized;
 }
 
-// ---------- Timetables (Canonical names) ----------
+// ---------- CORRECT TIMETABLE (CSE) ----------
 const CSE_TIME_TABLE = {
   Monday: [
     { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
@@ -130,7 +130,7 @@ const CSE_TIME_TABLE = {
     { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' },
     { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' },
     { subject: 'CN - Computer Network', faculty: 'Mr. Chhetrapal' },
-    { subject: 'LIB - Library', faculty: 'Library Staff' }
+    { subject: 'Sports', faculty: 'Sports Dept' }
   ],
   Tuesday: [
     { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' },
@@ -138,12 +138,14 @@ const CSE_TIME_TABLE = {
     { subject: 'Internet Lab (Ms. Geeta)', faculty: 'Ms. Geeta' },
     { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' },
     { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' },
-    { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }
+    { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
+    { subject: 'Sports', faculty: 'Sports Dept' }
   ],
   Wednesday: [
     { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
     { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' },
     { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' },
+    { subject: 'Sports / Activity', faculty: 'Sports Dept' },
     { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' },
     { subject: 'CN LAB - Computer Network Lab', faculty: 'Mr. Chhetrapal' }
   ],
@@ -160,9 +162,12 @@ const CSE_TIME_TABLE = {
     { subject: 'CN - Computer Network', faculty: 'Mr. Chhetrapal' },
     { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' },
     { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
-    { subject: 'WT LAB - Web Technology Lab', faculty: 'Mr. Avish Yadav' }
+    { subject: 'WT LAB - Web Technology Lab', faculty: 'Mr. Avish Yadav' },
+    { subject: 'Sports', faculty: 'Sports Dept' }
   ]
 };
+
+// ---------- CORRECT TIMETABLE (AIDS) ----------
 const AIDS_TIME_TABLE = {
   Monday: [
     { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
@@ -207,6 +212,7 @@ const AIDS_TIME_TABLE = {
     { subject: 'Sports', faculty: 'Sports Dept' }
   ]
 };
+
 function getTimetableForBranch(branch) {
   if (branch && branch.toUpperCase() === 'AIDS') return AIDS_TIME_TABLE;
   return CSE_TIME_TABLE;
@@ -283,6 +289,26 @@ async function incrementFailedAttempts(rollNo) {
   await user.save();
 }
 async function generateTeacherId(subject) {
+  const SUBJECT_CODE_MAP = {
+    'BDA - Big Data Analytics': 'BDA',
+    'ECO - Economics for Engineers': 'ECO',
+    'DAA - Design & Analysis of Algorithm': 'DAA',
+    'FLA - Formal Language & Automata': 'FLA',
+    'HRM - Human Resource Mgmt': 'HRM',
+    'CN - Computer Network': 'CN',
+    'WT - Web Technology': 'WT',
+    'Internet Lab (Ms. Geeta)': 'INT',
+    'CN LAB - Computer Network Lab': 'CNL',
+    'DAA LAB - Algorithm Lab': 'DAAL',
+    'WT LAB - Web Technology Lab': 'WTL',
+    'LIB - Library': 'LIB',
+    'PA - Predictive Analysis': 'PA',
+    'ML - Machine Learning': 'ML',
+    'PA LAB - Predictive Analysis Lab': 'PAL',
+    'ML LAB - Machine Learning Lab': 'MLL',
+    'BDA LAB - Big Data Analytics Lab': 'BDAL',
+    'Sports': 'SPT'
+  };
   const code = SUBJECT_CODE_MAP[subject] || 'TCH';
   const existing = await User.find({
     rollNo: { $regex: `^${code}\\d{2}$` },
@@ -296,6 +322,7 @@ async function generateTeacherId(subject) {
   const newNum = String(maxNum + 1).padStart(2, '0');
   return `${code}${newNum}`;
 }
+
 // ---------- Schedule for period detection ----------
 const CSE_SCHEDULE = {
   1: [
@@ -306,7 +333,7 @@ const CSE_SCHEDULE = {
     { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
     { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
     { start: "13:50", end: "14:35", subject: "CN - Computer Network", period: "P7" },
-    { start: "14:35", end: "15:20", subject: "LIB - Library", period: "P8" }
+    { start: "14:35", end: "15:20", subject: "Sports", period: "P8" }
   ],
   2: [
     { start: "09:20", end: "10:05", subject: "WT - Web Technology", period: "P1" },
@@ -316,7 +343,7 @@ const CSE_SCHEDULE = {
     { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
     { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
     { start: "13:50", end: "14:35", subject: "BDA - Big Data Analytics", period: "P7" },
-    { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
+    { start: "14:35", end: "15:20", subject: "Sports", period: "P8" }
   ],
   3: [
     { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
@@ -343,7 +370,7 @@ const CSE_SCHEDULE = {
     { start: "11:35", end: "12:20", subject: "BDA - Big Data Analytics", period: "P4" },
     { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
     { start: "13:05", end: "14:35", subject: "WT LAB - Web Technology Lab", period: "P6-P7" },
-    { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
+    { start: "14:35", end: "15:20", subject: "Sports", period: "P8" }
   ]
 };
 const AIDS_SCHEDULE = {
@@ -523,7 +550,7 @@ const Chat = mongoose.model('Chat', chatSchema);
 const Leave = mongoose.model('Leave', leaveSchema);
 Attendance.createIndexes().catch(err => console.error('Index creation error:', err));
 
-// ---------- Helper: getStudentSummary (with full mapping) ----------
+// ---------- Helper: getStudentSummary ----------
 async function getStudentSummary(rollNo) {
   try {
     const user = await User.findOne({ rollNo });
@@ -1017,6 +1044,7 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 // ========== GET CURRENT PASSCODE ==========
 app.get('/api/admin/current-passcode/:type/:requesterRollNo', async (req, res) => {
   try {
@@ -1380,6 +1408,7 @@ app.get('/api/admin/all-users/:requesterRollNo', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 // ========== ALL FACULTY (Admin) ==========
 app.get('/api/admin/faculty/:requesterRollNo', async (req, res) => {
   try {
@@ -1848,6 +1877,7 @@ app.get('/api/timetable/subjects', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 // ========== TIMETABLE FACULTY LIST ==========
 app.get('/api/timetable/faculty', async (req, res) => {
   try {
@@ -1858,6 +1888,7 @@ app.get('/api/timetable/faculty', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 // ========== CLASS ATTENDANCE REPORT ==========
 app.get('/api/admin/class-attendance-report', async (req, res) => {
   try {
@@ -1937,7 +1968,49 @@ app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
     if (!requester || requester.role !== 'admin') {
       return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     }
-    const studentData = [ /* ... same as before ... */ ];
+    const studentData = [
+      { rollNo: '24CSE01', name: 'AAKASH RAJ CHAUHAN', present: 35 },
+      { rollNo: '24CSE03', name: 'ABHISHEK VERMA', present: 0 },
+      { rollNo: '24CSE04', name: 'ANKIT KUMAR', present: 0 },
+      { rollNo: '24CSE06', name: 'ANSHIKA', present: 44 },
+      { rollNo: '24CSE08', name: 'ANUJ TIWARI', present: 0 },
+      { rollNo: '24CSE09', name: 'ASHISH KUMAR', present: 47 },
+      { rollNo: '24CSE11', name: 'B DEVIKA', present: 0 },
+      { rollNo: '24CSE14', name: 'GAUTAM', present: 35 },
+      { rollNo: '24CSE15', name: 'HARSH RAJ', present: 11 },
+      { rollNo: '24CSE16', name: 'HIMANSHI', present: 38 },
+      { rollNo: '24CSE18', name: 'HITESH YADAV', present: 0 },
+      { rollNo: '24CSE19', name: 'ISHANT KUMAR', present: 44 },
+      { rollNo: '24CSE20', name: 'JATIN', present: 0 },
+      { rollNo: '24CSE21', name: 'JATIN YADAV', present: 0 },
+      { rollNo: '24CSE22', name: 'JITIN YADAV', present: 0 },
+      { rollNo: '24CSE23', name: 'KAUSHAL KUMAR', present: 18 },
+      { rollNo: '24CSE24', name: 'KRISH BHARDWAJ', present: 1 },
+      { rollNo: '24CSE25', name: 'MANISH', present: 0 },
+      { rollNo: '24CSE27', name: 'MANMOHAN KUMAR', present: 0 },
+      { rollNo: '24CSE28', name: 'MANOJ', present: 5 },
+      { rollNo: '24CSE29', name: 'MAYANK', present: 0 },
+      { rollNo: '24CSE30', name: 'MD SAMIR ALAM', present: 0 },
+      { rollNo: '24CSE31', name: 'MUDIT BEDI', present: 8 },
+      { rollNo: '24CSE33', name: 'NEHA SHUKLA', present: 39 },
+      { rollNo: '24CSE35', name: 'PRASHANT', present: 0 },
+      { rollNo: '24CSE36', name: 'PREETI', present: 39 },
+      { rollNo: '24CSE37', name: 'PURAV RAO', present: 1 },
+      { rollNo: '24CSE38', name: 'RACHIT SINGH', present: 0 },
+      { rollNo: '24CSE39', name: 'RAHUL', present: 0 },
+      { rollNo: '24CSE40', name: 'RISHAV RAJ', present: 0 },
+      { rollNo: '24CSE41', name: 'RITU KUMARI', present: 18 },
+      { rollNo: '24CSE42', name: 'ROHIT SHRESTA', present: 43 },
+      { rollNo: '24CSE43', name: 'RUPESH KUMAR', present: 0 },
+      { rollNo: '24CSE44', name: 'SAHIL', present: 0 },
+      { rollNo: '24CSE45', name: 'SAIESH', present: 0 },
+      { rollNo: '24CSE46', name: 'SAKSHI KUMARI', present: 21 },
+      { rollNo: '24CSE47', name: 'SOURABH RAJPUT', present: 0 },
+      { rollNo: '24CSE48', name: 'SUMIT SHARMA', present: 12 },
+      { rollNo: '24CSE49', name: 'TUSHAR KUMAR', present: 44 },
+      { rollNo: '24CSE51', name: 'VIDHI BHARGAV', present: 22 },
+      { rollNo: '24CSE52', name: 'VINAY', present: 32 }
+    ];
     const startDate = new Date(2026, 6, 15);
     const endDate = new Date(2026, 6, 30);
     const startStr = startDate.toISOString().split('T')[0];
@@ -2025,7 +2098,114 @@ app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
 });
 
 // ========== BULK REGISTRATION & ATTENDANCE – AIDS ==========
-// (similar, omitted for brevity)
+app.post('/api/admin/bulk-register-and-update-attendance-aids', async (req, res) => {
+  try {
+    const requester = await User.findOne({ rollNo: req.body.requesterRollNo?.trim().toUpperCase() || '' });
+    if (!requester || requester.role !== 'admin') {
+      return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    }
+    const studentData = [
+      { rollNo: '24AIDS01', name: 'AKASH', present: 1 },
+      { rollNo: '24AIDS03', name: 'DAVANSH SINGH KARKI', present: 5 },
+      { rollNo: '24AIDS04', name: 'FAIZAN AHMAD', present: 40 },
+      { rollNo: '24AIDS05', name: 'GOPESH JHA', present: 0 },
+      { rollNo: '24AIDS06', name: 'HEMANT YADAV', present: 0 },
+      { rollNo: '24AIDS07', name: 'HUSNAIN AHMAD', present: 40 },
+      { rollNo: '24AIDS08', name: 'JANHVI', present: 0 },
+      { rollNo: '24AIDS09', name: 'JYOTI PUSHPA ROUT', present: 26 },
+      { rollNo: '24AIDS11', name: 'MAHIMA', present: 38 },
+      { rollNo: '24AIDS12', name: 'MOHAMMAD HAMID KHALIL', present: 0 },
+      { rollNo: '24AIDS13', name: 'PIYUSH KUMAR', present: 0 },
+      { rollNo: '24AIDS14', name: 'PRINCE KUMAR', present: 0 },
+      { rollNo: '24AIDS16', name: 'SACHIN', present: 0 },
+      { rollNo: '24AIDS17', name: 'SAHIL PRASAD', present: 5 },
+      { rollNo: '24AIDS19', name: 'VINAY', present: 38 }
+    ];
+    const startDate = new Date(2026, 6, 15);
+    const endDate = new Date(2026, 6, 30);
+    const startStr = startDate.toISOString().split('T')[0];
+    const endStr = endDate.toISOString().split('T')[0];
+    let totalRegistered = 0, totalAttendanceAdded = 0;
+    for (const item of studentData) {
+      const roll = item.rollNo;
+      const name = item.name;
+      const presentNeeded = item.present;
+      let user = await User.findOne({ rollNo: roll });
+      if (user) {
+        user.name = name;
+        user.branch = 'AIDS';
+        user.password = await bcrypt.hash('123456', 10);
+        await user.save();
+      } else {
+        const hashedPassword = await bcrypt.hash('123456', 10);
+        const newUser = new User({
+          name: name,
+          rollNo: roll,
+          password: hashedPassword,
+          role: 'student',
+          branch: 'AIDS',
+          boundDeviceId: null
+        });
+        await newUser.save();
+        user = newUser;
+        totalRegistered++;
+      }
+      await Attendance.deleteMany({
+        rollNo: roll,
+        date: { $gte: startStr, $lte: endStr }
+      });
+      if (presentNeeded === 0) continue;
+      let days = [];
+      let cur = new Date(startDate);
+      while (cur <= endDate) {
+        const dateStr = cur.toISOString().split('T')[0];
+        const dayOfWeek = cur.getDay();
+        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+        const isHoliday = await Holiday.findOne({ date: dateStr });
+        if (!isWeekend && !isHoliday) {
+          const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][dayOfWeek];
+          const timetable = getTimetableForBranch('AIDS');
+          const subjects = timetable[dayName] || [];
+          const academicSubjects = subjects
+            .map(s => mapToCanonical(s.subject))
+            .filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports'));
+          days.push({ date: dateStr, subjects: academicSubjects });
+        }
+        cur.setDate(cur.getDate() + 1);
+      }
+      let allAvailableSubjects = [];
+      for (const d of days) {
+        for (const sub of d.subjects) {
+          allAvailableSubjects.push({ date: d.date, subject: sub });
+        }
+      }
+      const toMark = Math.min(presentNeeded, allAvailableSubjects.length);
+      for (let i = 0; i < toMark; i++) {
+        const entry = allAvailableSubjects[i];
+        await new Attendance({
+          rollNo: roll,
+          studentName: name,
+          subject: entry.subject,
+          date: entry.date,
+          status: 'Present',
+          location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG },
+          ipAddress: 'bulk-update',
+          isVerified: true,
+          branch: 'AIDS'
+        }).save();
+        totalAttendanceAdded++;
+      }
+    }
+    res.json({
+      message: 'AIDS Bulk registration and attendance update completed!',
+      totalRegistered,
+      totalAttendanceAdded
+    });
+  } catch (err) {
+    console.error('AIDS Bulk update error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ========== BULK MARK ATTENDANCE ==========
 app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
@@ -2214,6 +2394,7 @@ app.post('/api/leave/apply', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 app.get('/api/leave/my/:rollNo', async (req, res) => {
   try {
     const leaves = await Leave.find({ rollNo: req.params.rollNo.trim().toUpperCase() })
@@ -2223,6 +2404,7 @@ app.get('/api/leave/my/:rollNo', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 app.get('/api/leave/requests/:requesterRollNo', async (req, res) => {
   try {
     const requester = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
@@ -2234,6 +2416,7 @@ app.get('/api/leave/requests/:requesterRollNo', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 app.post('/api/leave/action/:id', async (req, res) => {
   try {
     const { requesterRollNo, action, adminNote } = req.body;
@@ -2617,6 +2800,194 @@ Now respond to the user's message: "${message}"`;
   } catch (err) {
     console.error('❌ Chat error:', err);
     res.status(500).json({ error: 'Internal server error: ' + err.message });
+  }
+});
+
+// ============================================================
+//  BULK CORRECTION SCRIPT – Fix All Attendance Records
+// ============================================================
+app.post('/api/admin/correct-all-attendance', async (req, res) => {
+  try {
+    const { requesterRollNo } = req.body;
+    if (!requesterRollNo) {
+      return res.status(400).json({ error: 'requesterRollNo required' });
+    }
+
+    const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+    if (!requester || requester.role !== 'admin') {
+      return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    }
+
+    // Get all students
+    const students = await User.find({ role: 'student' }).select('rollNo name branch');
+    if (students.length === 0) {
+      return res.json({ message: 'No students found.', totalStudents: 0 });
+    }
+
+    // Fetch all holidays for the semester
+    const holidays = await Holiday.find({});
+    const holidaySet = new Set(holidays.map(h => h.date));
+
+    const semesterStart = new Date(2026, 6, 15);
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+
+    let totalStudentsProcessed = 0;
+    let totalRecordsAdded = 0;
+    let totalRecordsDeleted = 0;
+    let totalDuplicatesRemoved = 0;
+    let totalExtraRemoved = 0;
+    let totalHolidayWeekendDeleted = 0;
+
+    const dayNameMap = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    for (const student of students) {
+      const rollNo = student.rollNo;
+      const branch = student.branch || 'CSE';
+      const timetable = getTimetableForBranch(branch);
+
+      // Get all attendance records for this student
+      const allRecords = await Attendance.find({ rollNo }).lean();
+      // Group records by date for efficient processing
+      const recordsByDate = {};
+      allRecords.forEach(rec => {
+        if (!recordsByDate[rec.date]) recordsByDate[rec.date] = [];
+        recordsByDate[rec.date].push(rec);
+      });
+
+      // Get all distinct dates from records and also iterate semester range
+      const recordDates = Object.keys(recordsByDate);
+      // We'll iterate from semester start to today, but also include any record dates outside that range
+      let cur = new Date(semesterStart);
+      const endDate = new Date(today);
+      let datesToProcess = [];
+      while (cur <= endDate) {
+        const dateStr = cur.toISOString().split('T')[0];
+        datesToProcess.push(dateStr);
+        cur.setDate(cur.getDate() + 1);
+      }
+      // Add any record dates that might be outside (shouldn't happen, but safe)
+      recordDates.forEach(d => {
+        if (!datesToProcess.includes(d)) datesToProcess.push(d);
+      });
+      datesToProcess.sort();
+
+      let studentAdded = 0, studentDeleted = 0, studentDuplicates = 0, studentExtra = 0, studentHolidayDel = 0;
+
+      for (const dateStr of datesToProcess) {
+        const dateObj = new Date(dateStr);
+        const dayOfWeek = dateObj.getDay();
+        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+        const isHoliday = holidaySet.has(dateStr);
+
+        // Get existing records for this date
+        let existing = recordsByDate[dateStr] || [];
+
+        // If weekend or holiday, delete all records for this date
+        if (isWeekend || isHoliday) {
+          if (existing.length > 0) {
+            const deleteResult = await Attendance.deleteMany({ rollNo, date: dateStr });
+            studentDeleted += deleteResult.deletedCount;
+            studentHolidayDel += deleteResult.deletedCount;
+            totalRecordsDeleted += deleteResult.deletedCount;
+            totalHolidayWeekendDeleted += deleteResult.deletedCount;
+          }
+          continue;
+        }
+
+        // Get timetable for this day
+        const dayName = dayNameMap[dayOfWeek];
+        const daySubjects = timetable[dayName] || [];
+        // Academic subjects only (exclude LIB, Sports, Lunch)
+        const expectedSubjects = daySubjects
+          .map(s => mapToCanonical(s.subject))
+          .filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports') && s !== 'Lunch Break');
+
+        // Normalize existing records' subjects and remove duplicates
+        const normalizedExisting = {};
+        const recordsToKeep = [];
+        const duplicateIds = [];
+
+        existing.forEach(rec => {
+          const canonicalSub = mapToCanonical(rec.subject);
+          if (!normalizedExisting[canonicalSub]) {
+            normalizedExisting[canonicalSub] = rec;
+            recordsToKeep.push(rec);
+          } else {
+            // Duplicate found – mark for deletion
+            duplicateIds.push(rec._id);
+          }
+        });
+
+        if (duplicateIds.length > 0) {
+          const delRes = await Attendance.deleteMany({ _id: { $in: duplicateIds } });
+          studentDuplicates += delRes.deletedCount;
+          totalDuplicatesRemoved += delRes.deletedCount;
+          totalRecordsDeleted += delRes.deletedCount;
+          // Remove duplicates from the existing list
+          existing = recordsToKeep;
+        }
+
+        // Now check extra subjects (subjects not in expected)
+        const extraSubjects = [];
+        const keepRecords = [];
+        existing.forEach(rec => {
+          const canonicalSub = mapToCanonical(rec.subject);
+          if (!expectedSubjects.includes(canonicalSub)) {
+            extraSubjects.push(rec._id);
+          } else {
+            keepRecords.push(rec);
+          }
+        });
+
+        if (extraSubjects.length > 0) {
+          const delRes = await Attendance.deleteMany({ _id: { $in: extraSubjects } });
+          studentExtra += delRes.deletedCount;
+          totalExtraRemoved += delRes.deletedCount;
+          totalRecordsDeleted += delRes.deletedCount;
+          existing = keepRecords;
+        }
+
+        // Now check missing subjects
+        const existingSubjects = new Set(existing.map(r => mapToCanonical(r.subject)));
+        const missingSubjects = expectedSubjects.filter(sub => !existingSubjects.has(sub));
+
+        if (missingSubjects.length > 0) {
+          const newRecords = missingSubjects.map(sub => ({
+            rollNo,
+            studentName: student.name,
+            subject: sub,
+            date: dateStr,
+            status: 'Present',
+            location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG },
+            ipAddress: 'bulk-correction',
+            isVerified: true,
+            branch: branch
+          }));
+          await Attendance.insertMany(newRecords);
+          studentAdded += newRecords.length;
+          totalRecordsAdded += newRecords.length;
+        }
+      }
+
+      totalStudentsProcessed++;
+      console.log(`✅ ${rollNo} – Added: ${studentAdded}, Deleted: ${studentDeleted}, Duplicates: ${studentDuplicates}, Extra: ${studentExtra}, HolidayDel: ${studentHolidayDel}`);
+    }
+
+    res.json({
+      message: 'Bulk correction completed successfully!',
+      totalStudentsProcessed,
+      totalRecordsAdded,
+      totalRecordsDeleted,
+      totalDuplicatesRemoved,
+      totalExtraRemoved,
+      totalHolidayWeekendDeleted,
+      details: `Added ${totalRecordsAdded} missing lectures, removed ${totalDuplicatesRemoved} duplicates, removed ${totalExtraRemoved} extra subjects, deleted ${totalHolidayWeekendDeleted} records on holidays/weekends.`
+    });
+
+  } catch (err) {
+    console.error('Bulk correction error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
