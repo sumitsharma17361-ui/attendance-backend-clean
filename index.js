@@ -4,7 +4,7 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
-const { z } = require('zod');
+const { z } = require('zod');   // ✅ Zod – lodash नहीं
 process.env.TZ = 'Asia/Kolkata';
 console.log(`🕐 Server Timezone set to: ${process.env.TZ}`);
 const app = express();
@@ -63,7 +63,7 @@ function normalizeSubject(subject) {
   return subject.replace(/\s+/g, ' ').trim();
 }
 
-// ---------- HELPER: Subject Alias Mapping ----------
+// ---------- HELPER: Subject Alias Mapping (Comprehensive) ----------
 const SUBJECT_ALIAS_MAP = {
   // BDA
   'BDA': 'BDA - Big Data Analytics',
@@ -100,7 +100,7 @@ const SUBJECT_ALIAS_MAP = {
   'Internet': 'Internet Lab (Ms. Geeta)',
   'Internet Lab': 'Internet Lab (Ms. Geeta)',
   'Internet Lab (': 'Internet Lab (Ms. Geeta)',
-  // PA, ML (if needed)
+  // PA, ML
   'PA': 'PA - Predictive Analysis',
   'ML': 'ML - Machine Learning',
   'PA LAB': 'PA LAB - Predictive Analysis Lab',
@@ -112,74 +112,16 @@ const SUBJECT_ALIAS_MAP = {
 function mapToCanonical(subject) {
   if (!subject) return '';
   const normalized = normalizeSubject(subject);
-  // Exact match
   if (SUBJECT_ALIAS_MAP[normalized]) return SUBJECT_ALIAS_MAP[normalized];
-  // Partial match (check if alias is part of the subject)
   for (let [alias, canonical] of Object.entries(SUBJECT_ALIAS_MAP)) {
     if (normalized.includes(alias) || alias.includes(normalized)) {
       return canonical;
     }
   }
-  return normalized; // fallback
+  return normalized;
 }
 
 // ---------- Timetables (Canonical names) ----------
-const SUBJECT_FACULTY_MAP = {
-  'BDA - Big Data Analytics': 'Ms. Geeta',
-  'ECO - Economics for Engineers': 'Ms. Sakshi Yadav',
-  'DAA - Design & Analysis of Algorithm': 'Ms. Rashmi',
-  'FLA - Formal Language & Automata': 'Ms. Nisha Yadav',
-  'HRM - Human Resource Mgmt': 'Mr. Lokesh',
-  'CN - Computer Network': 'Mr. Chhetrapal',
-  'WT - Web Technology': 'Mr. Avish Yadav',
-  'Internet Lab (Ms. Geeta)': 'Ms. Geeta',
-  'CN LAB - Computer Network Lab': 'Mr. Chhetrapal',
-  'DAA LAB - Algorithm Lab': 'Ms. Rashmi',
-  'WT LAB - Web Technology Lab': 'Mr. Avish Yadav',
-  'LIB - Library': 'Library Staff',
-  'PA - Predictive Analysis': 'Ms. Pooja',
-  'ML - Machine Learning': 'Mr. Harsh',
-  'PA LAB - Predictive Analysis Lab': 'Ms. Pooja',
-  'ML LAB - Machine Learning Lab': 'Mr. Harsh',
-  'BDA LAB - Big Data Analytics Lab': 'Ms. Geeta',
-  'Sports': 'Sports Dept',
-  'Sports / Project': 'Sports Dept'
-};
-const SUBJECT_CODE_MAP = {
-  'BDA - Big Data Analytics': 'BDA',
-  'ECO - Economics for Engineers': 'ECO',
-  'DAA - Design & Analysis of Algorithm': 'DAA',
-  'FLA - Formal Language & Automata': 'FLA',
-  'HRM - Human Resource Mgmt': 'HRM',
-  'CN - Computer Network': 'CN',
-  'WT - Web Technology': 'WT',
-  'Internet Lab (Ms. Geeta)': 'INT',
-  'CN LAB - Computer Network Lab': 'CNL',
-  'DAA LAB - Algorithm Lab': 'DAAL',
-  'WT LAB - Web Technology Lab': 'WTL',
-  'LIB - Library': 'LIB',
-  'PA - Predictive Analysis': 'PA',
-  'ML - Machine Learning': 'ML',
-  'PA LAB - Predictive Analysis Lab': 'PAL',
-  'ML LAB - Machine Learning Lab': 'MLL',
-  'BDA LAB - Big Data Analytics Lab': 'BDAL',
-  'Sports': 'SPT',
-  'Sports / Project': 'SPT'
-};
-function getTimetableFaculty() {
-  const facultySet = new Set();
-  const allDays = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
-  allDays.forEach(day => {
-    CSE_TIME_TABLE[day].forEach(entry => facultySet.add(entry.faculty));
-    AIDS_TIME_TABLE[day].forEach(entry => facultySet.add(entry.faculty));
-  });
-  return [...facultySet].sort();
-}
-// Simplified getFullSubjectName using map
-function getFullSubjectName(shortOrFull) {
-  return mapToCanonical(shortOrFull);
-}
-
 const CSE_TIME_TABLE = {
   Monday: [
     { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
@@ -355,11 +297,132 @@ async function generateTeacherId(subject) {
   return `${code}${newNum}`;
 }
 // ---------- Schedule for period detection ----------
-const CSE_SCHEDULE = { /* ... unchanged ... */ };
-const AIDS_SCHEDULE = { /* ... unchanged ... */ };
-function getScheduleForBranch(branch) { /* ... unchanged ... */ }
-function getCurrentPeriod(branch = 'CSE') { /* ... unchanged ... */ }
-function getTimetableForDate(dateStr, branch = 'CSE') { /* ... unchanged ... */ }
+const CSE_SCHEDULE = {
+  1: [
+    { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
+    { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
+    { start: "10:50", end: "11:35", subject: "DAA - Design & Analysis of Algorithm", period: "P3" },
+    { start: "11:35", end: "12:20", subject: "FLA - Formal Language & Automata", period: "P4" },
+    { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+    { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
+    { start: "13:50", end: "14:35", subject: "CN - Computer Network", period: "P7" },
+    { start: "14:35", end: "15:20", subject: "LIB - Library", period: "P8" }
+  ],
+  2: [
+    { start: "09:20", end: "10:05", subject: "WT - Web Technology", period: "P1" },
+    { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
+    { start: "10:50", end: "11:35", subject: "Internet Lab (Ms. Geeta)", period: "P3" },
+    { start: "11:35", end: "12:20", subject: "FLA - Formal Language & Automata", period: "P4" },
+    { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+    { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
+    { start: "13:50", end: "14:35", subject: "BDA - Big Data Analytics", period: "P7" },
+    { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
+  ],
+  3: [
+    { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
+    { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
+    { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
+    { start: "11:35", end: "12:20", subject: "Sports / Activity", period: "P4" },
+    { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+    { start: "13:05", end: "13:50", subject: "WT - Web Technology", period: "P6" },
+    { start: "13:50", end: "15:20", subject: "CN LAB - Computer Network Lab", period: "P7-P8" }
+  ],
+  4: [
+    { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
+    { start: "10:05", end: "10:50", subject: "WT - Web Technology", period: "P2" },
+    { start: "10:50", end: "11:35", subject: "CN - Computer Network", period: "P3" },
+    { start: "11:35", end: "12:20", subject: "DAA - Design & Analysis of Algorithm", period: "P4" },
+    { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+    { start: "13:05", end: "14:35", subject: "DAA LAB - Algorithm Lab", period: "P6-P7" },
+    { start: "14:35", end: "15:20", subject: "HRM - Human Resource Mgmt", period: "P8" }
+  ],
+  5: [
+    { start: "09:20", end: "10:05", subject: "DAA - Design & Analysis of Algorithm", period: "P1" },
+    { start: "10:05", end: "10:50", subject: "CN - Computer Network", period: "P2" },
+    { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
+    { start: "11:35", end: "12:20", subject: "BDA - Big Data Analytics", period: "P4" },
+    { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+    { start: "13:05", end: "14:35", subject: "WT LAB - Web Technology Lab", period: "P6-P7" },
+    { start: "14:35", end: "15:20", subject: "Sports / Library", period: "P8" }
+  ]
+};
+const AIDS_SCHEDULE = {
+  1: [
+    { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
+    { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
+    { start: "10:50", end: "11:35", subject: "LIB - Library", period: "P3" },
+    { start: "11:35", end: "12:20", subject: "FLA - Formal Language & Automata", period: "P4" },
+    { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+    { start: "13:05", end: "13:50", subject: "PA - Predictive Analysis", period: "P6" },
+    { start: "13:50", end: "14:35", subject: "PA - Predictive Analysis", period: "P7" },
+    { start: "14:35", end: "15:20", subject: "Sports", period: "P8" }
+  ],
+  2: [
+    { start: "09:20", end: "10:05", subject: "WT - Web Technology", period: "P1" },
+    { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
+    { start: "10:50", end: "11:35", subject: "PA - Predictive Analysis", period: "P3" },
+    { start: "11:35", end: "12:20", subject: "FLA - Formal Language & Automata", period: "P4" },
+    { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+    { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
+    { start: "13:50", end: "14:35", subject: "BDA - Big Data Analytics", period: "P7" },
+    { start: "14:35", end: "15:20", subject: "ML - Machine Learning", period: "P8" }
+  ],
+  3: [
+    { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
+    { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
+    { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
+    { start: "11:35", end: "12:20", subject: "Sports / Project", period: "P4" },
+    { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+    { start: "13:05", end: "13:50", subject: "WT - Web Technology", period: "P6" },
+    { start: "13:50", end: "15:20", subject: "PA LAB - Predictive Analysis Lab", period: "P7-P8" }
+  ],
+  4: [
+    { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
+    { start: "10:05", end: "10:50", subject: "WT - Web Technology", period: "P2" },
+    { start: "10:50", end: "11:35", subject: "ML - Machine Learning", period: "P3" },
+    { start: "11:35", end: "12:20", subject: "PA - Predictive Analysis", period: "P4" },
+    { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+    { start: "13:05", end: "14:35", subject: "ML LAB - Machine Learning Lab", period: "P6-P7" },
+    { start: "14:35", end: "15:20", subject: "HRM - Human Resource Mgmt", period: "P8" }
+  ],
+  5: [
+    { start: "09:20", end: "10:05", subject: "ML - Machine Learning", period: "P1" },
+    { start: "10:05", end: "10:50", subject: "LIB - Library", period: "P2" },
+    { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
+    { start: "11:35", end: "12:20", subject: "BDA - Big Data Analytics", period: "P4" },
+    { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
+    { start: "13:05", end: "14:35", subject: "BDA LAB - Big Data Analytics Lab", period: "P6-P7" },
+    { start: "14:35", end: "15:20", subject: "Sports", period: "P8" }
+  ]
+};
+function getScheduleForBranch(branch) {
+  if (branch && branch.toUpperCase() === 'AIDS') return AIDS_SCHEDULE;
+  return CSE_SCHEDULE;
+}
+function getCurrentPeriod(branch = 'CSE') {
+  const now = new Date();
+  const day = now.getDay();
+  if (day === 0 || day === 6) return null;
+  const schedule = getScheduleForBranch(branch);
+  const daySchedule = schedule[day] || [];
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  for (let slot of daySchedule) {
+    const startMins = parseInt(slot.start.split(':')[0]) * 60 + parseInt(slot.start.split(':')[1]);
+    const endMins = parseInt(slot.end.split(':')[0]) * 60 + parseInt(slot.end.split(':')[1]);
+    if (currentMinutes >= startMins && currentMinutes < endMins) {
+      return slot;
+    }
+  }
+  return null;
+}
+function getTimetableForDate(dateStr, branch = 'CSE') {
+  const parts = dateStr.split('-');
+  const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const dayName = dayNames[dateObj.getDay()];
+  const timetable = getTimetableForBranch(branch);
+  return timetable[dayName] || [];
+}
 
 // ---------- MongoDB Connection ----------
 mongoose.connect(MONGO_URI, {
@@ -460,7 +523,7 @@ const Chat = mongoose.model('Chat', chatSchema);
 const Leave = mongoose.model('Leave', leaveSchema);
 Attendance.createIndexes().catch(err => console.error('Index creation error:', err));
 
-// ---------- Helper: getStudentSummary (with alias mapping) ----------
+// ---------- Helper: getStudentSummary (with full mapping) ----------
 async function getStudentSummary(rollNo) {
   try {
     const user = await User.findOne({ rollNo });
@@ -481,7 +544,7 @@ async function getStudentSummary(rollNo) {
       const dayName = dayNameMap[d];
       const subjects = timetable[dayName] || [];
       const academic = subjects.filter(entry => !entry.subject.includes("LIB") && !entry.subject.includes("Library") && !entry.subject.includes("Sports"));
-      dayAcademicSubjects[dayName] = academic.map(entry => normalizeSubject(entry.subject));
+      dayAcademicSubjects[dayName] = academic.map(entry => mapToCanonical(entry.subject));
     }
     while (current <= today) {
       const dateStr = current.toISOString().split('T')[0];
@@ -501,8 +564,7 @@ async function getStudentSummary(rollNo) {
     }
     const subjectPresentCount = {};
     allRecords.forEach(rec => {
-      let sub = normalizeSubject(rec.subject);
-      sub = mapToCanonical(sub);
+      let sub = mapToCanonical(rec.subject);
       if (sub.includes("LIB") || sub.includes("Library") || sub.includes("Sports")) return;
       if (rec.status === 'Present' || rec.status === 'Duty Leave') {
         if (!subjectPresentCount[sub]) subjectPresentCount[sub] = 0;
@@ -1347,7 +1409,7 @@ app.get('/api/attendance/student/:rollNo/:requesterRollNo', async (req, res) => 
       records = records.filter(r => subjects.includes(mapToCanonical(r.subject)));
     }
     records = records.map(r => {
-      r.subject = getFullSubjectName(r.subject);
+      r.subject = mapToCanonical(r.subject);
       return r;
     });
     res.json(records);
@@ -1585,7 +1647,7 @@ app.get('/api/attendance/history/:rollNo', async (req, res) => {
   try {
     const records = await Attendance.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ date: -1 });
     const mapped = records.map(r => {
-      r.subject = getFullSubjectName(r.subject);
+      r.subject = mapToCanonical(r.subject);
       return r;
     });
     res.json(mapped);
@@ -1612,7 +1674,7 @@ app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
       allRecords = await Attendance.find().sort({ rollNo: 1, date: -1 });
     }
     allRecords = allRecords.map(r => {
-      r.subject = getFullSubjectName(r.subject);
+      r.subject = mapToCanonical(r.subject);
       return r;
     });
     res.json(allRecords);
@@ -1716,7 +1778,7 @@ app.get('/api/export/google-sheets/:requesterRollNo', async (req, res) => {
     let csv = 'Roll No,Student Name,Subject,Date,Status,IP Address,Location\n';
     records.forEach(r => {
       const loc = r.location ? `(${r.location.latitude}, ${r.location.longitude})` : 'N/A';
-      csv += `${r.rollNo},${r.studentName},${getFullSubjectName(r.subject)},${r.date},${r.status},${r.ipAddress || 'N/A'},${loc}\n`;
+      csv += `${r.rollNo},${r.studentName},${mapToCanonical(r.subject)},${r.date},${r.status},${r.ipAddress || 'N/A'},${loc}\n`;
     });
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename=attendance_export.csv');
@@ -1754,7 +1816,7 @@ app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) => {
     let csv = `Student Attendance Report\nStudent: ${studentName} (${cleanStudent})\nRange: ${startStr} to ${endStr}\nGenerated: ${new Date().toLocaleString()}\n\nDate,Subject,Status,Location,IP Address\n`;
     records.forEach(r => {
       const loc = r.location ? `(${r.location.latitude}, ${r.location.longitude})` : 'N/A';
-      csv += `${r.date},${getFullSubjectName(r.subject)},${r.status},${loc},${r.ipAddress || 'N/A'}\n`;
+      csv += `${r.date},${mapToCanonical(r.subject)},${r.status},${loc},${r.ipAddress || 'N/A'}\n`;
     });
     const total = records.length;
     const present = records.filter(r => r.status === 'Present').length;
@@ -1875,7 +1937,7 @@ app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
     if (!requester || requester.role !== 'admin') {
       return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     }
-    const studentData = [ /* ... as before ... */ ];
+    const studentData = [ /* ... same as before ... */ ];
     const startDate = new Date(2026, 6, 15);
     const endDate = new Date(2026, 6, 30);
     const startStr = startDate.toISOString().split('T')[0];
@@ -1963,8 +2025,7 @@ app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
 });
 
 // ========== BULK REGISTRATION & ATTENDANCE – AIDS ==========
-// (Similar to CSE, but with AIDS data and branch)
-// omitted for brevity, but same pattern.
+// (similar, omitted for brevity)
 
 // ========== BULK MARK ATTENDANCE ==========
 app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
