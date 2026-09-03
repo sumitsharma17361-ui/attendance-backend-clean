@@ -5,10 +5,12 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const { z } = require('zod');
+const csv = require('csv-parser');
+const { Readable } = require('stream');
 process.env.TZ = 'Asia/Kolkata';
 console.log(`🕐 Server Timezone set to: ${process.env.TZ}`);
 const app = express();
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
 app.use(cors());
 
 // ---------- Environment Variables ----------
@@ -2804,13 +2806,13 @@ Now respond to the user's message: "${message}"`;
 });
 
 // ============================================================
-//  BULK CORRECTION SCRIPT – Fix All Attendance Records
+//  RESTORE ATTENDANCE FROM CSV (SUBJECT-WISE)
 // ============================================================
-app.post('/api/admin/correct-all-attendance', async (req, res) => {
+app.post('/api/admin/restore-from-csv', async (req, res) => {
   try {
-    const { requesterRollNo } = req.body;
-    if (!requesterRollNo) {
-      return res.status(400).json({ error: 'requesterRollNo required' });
+    const { requesterRollNo, csvData } = req.body;
+    if (!requesterRollNo || !csvData) {
+      return res.status(400).json({ error: 'requesterRollNo and csvData required' });
     }
 
     const requester = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
@@ -2818,175 +2820,102 @@ app.post('/api/admin/correct-all-attendance', async (req, res) => {
       return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     }
 
-    // Get all students
-    const students = await User.find({ role: 'student' }).select('rollNo name branch');
-    if (students.length === 0) {
-      return res.json({ message: 'No students found.', totalStudents: 0 });
+    // Parse CSV
+    const rows = [];
+    const stream = Readable.from(csvData);
+    await new Promise((resolve, reject) => {
+      stream
+        .pipe(csv())
+        .on('data', (row) => rows.push(row))
+        .on('end', resolve)
+        .on('error', reject);
+    });
+
+    if (rows.length === 0) {
+      return res.status(400).json({ error: 'No data found in CSV' });
     }
 
-    // Fetch all holidays for the semester
-    const holidays = await Holiday.find({});
-    const holidaySet = new Set(holidays.map(h => h.date));
-
-    const semesterStart = new Date(2026, 6, 15);
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
-
-    let totalStudentsProcessed = 0;
-    let totalRecordsAdded = 0;
-    let totalRecordsDeleted = 0;
-    let totalDuplicatesRemoved = 0;
-    let totalExtraRemoved = 0;
-    let totalHolidayWeekendDeleted = 0;
-
-    const dayNameMap = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-    for (const student of students) {
-      const rollNo = student.rollNo;
-      const branch = student.branch || 'CSE';
-      const timetable = getTimetableForBranch(branch);
-
-      // Get all attendance records for this student
-      const allRecords = await Attendance.find({ rollNo }).lean();
-      // Group records by date for efficient processing
-      const recordsByDate = {};
-      allRecords.forEach(rec => {
-        if (!recordsByDate[rec.date]) recordsByDate[rec.date] = [];
-        recordsByDate[rec.date].push(rec);
-      });
-
-      // Get all distinct dates from records and also iterate semester range
-      const recordDates = Object.keys(recordsByDate);
-      // We'll iterate from semester start to today, but also include any record dates outside that range
-      let cur = new Date(semesterStart);
-      const endDate = new Date(today);
-      let datesToProcess = [];
-      while (cur <= endDate) {
-        const dateStr = cur.toISOString().split('T')[0];
-        datesToProcess.push(dateStr);
-        cur.setDate(cur.getDate() + 1);
+    // Find the header row (skip any non-data rows)
+    let dataRows = [];
+    let headers = null;
+    // Look for the row containing 'Roll No' or 'rollNo' or 'Date'
+    for (const row of rows) {
+      const keys = Object.keys(row);
+      if (keys.some(k => /roll/i.test(k) && /no/i.test(k)) || keys.some(k => /date/i.test(k))) {
+        headers = keys;
+        break;
       }
-      // Add any record dates that might be outside (shouldn't happen, but safe)
-      recordDates.forEach(d => {
-        if (!datesToProcess.includes(d)) datesToProcess.push(d);
-      });
-      datesToProcess.sort();
+    }
+    if (!headers) {
+      // Try to use the first row as headers
+      headers = Object.keys(rows[0]);
+    }
 
-      let studentAdded = 0, studentDeleted = 0, studentDuplicates = 0, studentExtra = 0, studentHolidayDel = 0;
+    // Find the index of required columns
+    const rollIdx = headers.findIndex(h => /roll/i.test(h) && /no/i.test(h));
+    const nameIdx = headers.findIndex(h => /name/i.test(h) || /student/i.test(h));
+    const subjectIdx = headers.findIndex(h => /subject/i.test(h));
+    const dateIdx = headers.findIndex(h => /date/i.test(h));
+    const statusIdx = headers.findIndex(h => /status/i.test(h));
 
-      for (const dateStr of datesToProcess) {
-        const dateObj = new Date(dateStr);
-        const dayOfWeek = dateObj.getDay();
-        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-        const isHoliday = holidaySet.has(dateStr);
+    if (rollIdx === -1 || dateIdx === -1 || subjectIdx === -1) {
+      return res.status(400).json({ error: 'CSV must contain Roll No, Date, and Subject columns' });
+    }
 
-        // Get existing records for this date
-        let existing = recordsByDate[dateStr] || [];
+    // Extract data rows (skip rows where rollNo or date is missing)
+    for (const row of rows) {
+      const roll = row[headers[rollIdx]]?.trim();
+      const date = row[headers[dateIdx]]?.trim();
+      const subject = row[headers[subjectIdx]]?.trim();
+      const status = row[headers[statusIdx]]?.trim() || 'Present';
+      const name = nameIdx !== -1 ? row[headers[nameIdx]]?.trim() : '';
 
-        // If weekend or holiday, delete all records for this date
-        if (isWeekend || isHoliday) {
-          if (existing.length > 0) {
-            const deleteResult = await Attendance.deleteMany({ rollNo, date: dateStr });
-            studentDeleted += deleteResult.deletedCount;
-            studentHolidayDel += deleteResult.deletedCount;
-            totalRecordsDeleted += deleteResult.deletedCount;
-            totalHolidayWeekendDeleted += deleteResult.deletedCount;
-          }
-          continue;
-        }
+      if (!roll || !date || !subject) continue;
+      // Skip rows that are not in YYYY-MM-DD format
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+      // Skip if subject is like "Total Days" or "Student" (summary rows)
+      if (subject.toLowerCase().includes('total') || subject.toLowerCase().includes('student')) continue;
 
-        // Get timetable for this day
-        const dayName = dayNameMap[dayOfWeek];
-        const daySubjects = timetable[dayName] || [];
-        // Academic subjects only (exclude LIB, Sports, Lunch)
-        const expectedSubjects = daySubjects
-          .map(s => mapToCanonical(s.subject))
-          .filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports') && s !== 'Lunch Break');
+      dataRows.push({ roll, date, subject, status, name });
+    }
 
-        // Normalize existing records' subjects and remove duplicates
-        const normalizedExisting = {};
-        const recordsToKeep = [];
-        const duplicateIds = [];
+    if (dataRows.length === 0) {
+      return res.status(400).json({ error: 'No valid attendance records found in CSV' });
+    }
 
-        existing.forEach(rec => {
-          const canonicalSub = mapToCanonical(rec.subject);
-          if (!normalizedExisting[canonicalSub]) {
-            normalizedExisting[canonicalSub] = rec;
-            recordsToKeep.push(rec);
-          } else {
-            // Duplicate found – mark for deletion
-            duplicateIds.push(rec._id);
-          }
-        });
+    // Delete all existing attendance records (for all students)
+    await Attendance.deleteMany({});
 
-        if (duplicateIds.length > 0) {
-          const delRes = await Attendance.deleteMany({ _id: { $in: duplicateIds } });
-          studentDuplicates += delRes.deletedCount;
-          totalDuplicatesRemoved += delRes.deletedCount;
-          totalRecordsDeleted += delRes.deletedCount;
-          // Remove duplicates from the existing list
-          existing = recordsToKeep;
-        }
+    // Insert records in bulk
+    const recordsToInsert = dataRows.map(r => ({
+      rollNo: r.roll,
+      studentName: r.name || 'Unknown',
+      subject: mapToCanonical(r.subject),
+      date: r.date,
+      status: r.status === 'Duty Leave' ? 'Duty Leave' : 'Present', // Keep only Present or Duty Leave
+      location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG },
+      ipAddress: 'restore-from-csv',
+      isVerified: true,
+      branch: /AIDS/i.test(r.roll) ? 'AIDS' : 'CSE'
+    }));
 
-        // Now check extra subjects (subjects not in expected)
-        const extraSubjects = [];
-        const keepRecords = [];
-        existing.forEach(rec => {
-          const canonicalSub = mapToCanonical(rec.subject);
-          if (!expectedSubjects.includes(canonicalSub)) {
-            extraSubjects.push(rec._id);
-          } else {
-            keepRecords.push(rec);
-          }
-        });
-
-        if (extraSubjects.length > 0) {
-          const delRes = await Attendance.deleteMany({ _id: { $in: extraSubjects } });
-          studentExtra += delRes.deletedCount;
-          totalExtraRemoved += delRes.deletedCount;
-          totalRecordsDeleted += delRes.deletedCount;
-          existing = keepRecords;
-        }
-
-        // Now check missing subjects
-        const existingSubjects = new Set(existing.map(r => mapToCanonical(r.subject)));
-        const missingSubjects = expectedSubjects.filter(sub => !existingSubjects.has(sub));
-
-        if (missingSubjects.length > 0) {
-          const newRecords = missingSubjects.map(sub => ({
-            rollNo,
-            studentName: student.name,
-            subject: sub,
-            date: dateStr,
-            status: 'Present',
-            location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG },
-            ipAddress: 'bulk-correction',
-            isVerified: true,
-            branch: branch
-          }));
-          await Attendance.insertMany(newRecords);
-          studentAdded += newRecords.length;
-          totalRecordsAdded += newRecords.length;
-        }
-      }
-
-      totalStudentsProcessed++;
-      console.log(`✅ ${rollNo} – Added: ${studentAdded}, Deleted: ${studentDeleted}, Duplicates: ${studentDuplicates}, Extra: ${studentExtra}, HolidayDel: ${studentHolidayDel}`);
+    // Insert in chunks to avoid memory issues
+    const chunkSize = 500;
+    let inserted = 0;
+    for (let i = 0; i < recordsToInsert.length; i += chunkSize) {
+      const chunk = recordsToInsert.slice(i, i + chunkSize);
+      await Attendance.insertMany(chunk, { ordered: false });
+      inserted += chunk.length;
     }
 
     res.json({
-      message: 'Bulk correction completed successfully!',
-      totalStudentsProcessed,
-      totalRecordsAdded,
-      totalRecordsDeleted,
-      totalDuplicatesRemoved,
-      totalExtraRemoved,
-      totalHolidayWeekendDeleted,
-      details: `Added ${totalRecordsAdded} missing lectures, removed ${totalDuplicatesRemoved} duplicates, removed ${totalExtraRemoved} extra subjects, deleted ${totalHolidayWeekendDeleted} records on holidays/weekends.`
+      message: `Restored ${inserted} attendance records from CSV.`,
+      totalRecords: inserted,
+      studentsAffected: [...new Set(recordsToInsert.map(r => r.rollNo))].length
     });
 
   } catch (err) {
-    console.error('Bulk correction error:', err);
+    console.error('Restore from CSV error:', err);
     res.status(500).json({ error: err.message });
   }
 });
