@@ -900,6 +900,25 @@
         </div>
     </div>
 
+    <!-- ===== BULK HOLIDAY MODAL ===== -->
+    <div id="bulkHolidayModal" class="modal-overlay" style="display:none;">
+        <div class="modal-card">
+            <h3>📅 Bulk Add Holidays</h3>
+            <p>Enter dates (YYYY-MM-DD) one per line, or use a date range:</p>
+            <div style="display:flex; gap:8px; margin-bottom:8px;">
+                <input type="date" id="bulkHolidayFrom" style="flex:1; padding:6px; font-size:10px; margin:0;" />
+                <span style="align-self:center;">to</span>
+                <input type="date" id="bulkHolidayTo" style="flex:1; padding:6px; font-size:10px; margin:0;" />
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="addBulkHolidayRange()" style="padding:4px; margin:0 0 8px 0;">Add Range</button>
+            <textarea id="bulkHolidayText" rows="6" style="width:100%; font-size:10px; padding:6px; background:rgba(255,255,255,0.15); border:1px solid var(--glass-border); border-radius:var(--radius-sm); color:var(--text-main);" placeholder="2026-09-01&#10;2026-09-02&#10;..."></textarea>
+            <div class="modal-actions">
+                <button class="btn btn-outline btn-sm" onclick="closeBulkHolidayModal()">Cancel</button>
+                <button class="btn btn-success btn-sm" onclick="submitBulkHolidays()">Add Holidays</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ===== MAIN APP ===== -->
     <div class="app-container">
 
@@ -977,7 +996,7 @@
                     <button class="btn btn-danger btn-sm" style="width:auto; padding:6px 14px; margin:0; font-size:10px;" onclick="logout()">Logout</button>
                 </div>
 
-                <!-- Student Stats -->
+                <!-- Student Stats (now using backend summary) -->
                 <div class="stats-grid" id="studentStatsGrid">
                     <div class="stat-card">
                         <div class="value" id="totalDaysCount">0</div>
@@ -995,6 +1014,12 @@
                         <div class="value" id="daysPresentCount">0</div>
                         <div class="label">Days Present</div>
                     </div>
+                </div>
+
+                <!-- Subject-wise breakdown (new) -->
+                <div id="subjectBreakdown" style="background:rgba(255,255,255,0.06); border-radius:var(--radius-sm); padding:12px; border:1px solid var(--glass-border); margin-bottom:12px; display:none;">
+                    <span style="font-size:9px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.4px;">📚 Subject-wise Attendance</span>
+                    <div id="subjectBreakdownList" class="subject-chips" style="margin-top:6px;"></div>
                 </div>
 
                 <!-- Admin/Teacher Stats -->
@@ -1062,6 +1087,7 @@
                     <div class="tab-item active" id="studentTabHeader" onclick="switchTab('markTab')">Attendance</div>
                     <div class="tab-item" id="adminTabHeader" style="display:none;" onclick="switchTab('adminTab')">Admin</div>
                     <div class="tab-item" id="teacherTabHeader" style="display:none;" onclick="switchTab('teacherTab')">Teacher</div>
+                    <div class="tab-item" id="leaveTabHeader" style="display:none;" onclick="switchTab('leaveTab')">Leave</div>
                 </div>
 
                 <!-- ===== MARK TAB (Student) ===== -->
@@ -1091,6 +1117,12 @@
                             <h4 id="activePeriodName" style="font-size:13px; font-weight:800; color:var(--text-main); margin-top:2px;">Checking…</h4>
                         </div>
                         <button class="action-btn" id="markPeriodBtn" style="background:rgba(0,200,83,0.70); color:#fff; padding:7px 16px; backdrop-filter:var(--glass-blur);" onclick="markActivePeriodAttendance()">Mark</button>
+                    </div>
+
+                    <!-- Timetable Display (new) -->
+                    <div id="timetableDisplay" style="background:rgba(255,255,255,0.06); border-radius:var(--radius-sm); padding:12px; border:1px solid var(--glass-border); margin-bottom:12px; display:none;">
+                        <span style="font-size:9px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.4px;">📅 Today's Timetable</span>
+                        <div id="timetableList" style="font-size:10px; margin-top:6px; color:var(--text-main);"></div>
                     </div>
 
                     <div class="calendar-container">
@@ -1132,6 +1164,8 @@
                         <div class="admin-nav-item" onclick="switchAdminSubTab('subHoliday')">🎉 Holiday</div>
                         <div class="admin-nav-item" onclick="switchAdminSubTab('subPasscode')">🔑 Passcode</div>
                         <div class="admin-nav-item" onclick="switchAdminSubTab('subTools')">⚙️ Tools</div>
+                        <div class="admin-nav-item" onclick="switchAdminSubTab('subLeave')">📝 Leave</div>
+                        <div class="admin-nav-item" onclick="switchAdminSubTab('subDefaulters')">⚠️ Defaulters</div>
                     </div>
 
                     <!-- SUB: Directory -->
@@ -1298,11 +1332,16 @@
 
                     <!-- SUB: Holiday -->
                     <div id="subHoliday" class="admin-box sub-holiday" style="display:none;">
-                        <span class="sub-section-title">📅 Declare Official Holiday</span>
+                        <span class="sub-section-title">📅 Declare Holiday</span>
                         <input type="date" id="holidayDate" style="font-size:10px; padding:7px;" />
                         <input type="text" id="holidayReason" placeholder="Reason (e.g. Diwali)" style="font-size:10px; padding:7px;" />
                         <button class="btn btn-warning btn-sm" onclick="declareHoliday()" style="padding:7px; margin:0;">Mark Holiday</button>
+                        <button class="btn btn-accent btn-sm" onclick="openBulkHolidayModal()" style="padding:7px; margin:4px 0 0 0;">📅 Bulk Add Holidays</button>
                         <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">💡 Holiday reason will show to students</p>
+                        <hr style="margin:12px 0; border-color:var(--glass-border);" />
+                        <span class="sub-section-title">📋 Existing Holidays</span>
+                        <div id="holidayList" style="max-height:150px; overflow-y:auto;"></div>
+                        <button class="btn btn-danger btn-sm" onclick="deleteSelectedHoliday()" style="margin-top:6px;">Delete Selected</button>
                     </div>
 
                     <!-- SUB: Passcode -->
@@ -1412,6 +1451,22 @@
                             <button class="btn btn-danger btn-sm" onclick="deleteUserAccount()" style="padding:7px; margin:0;">Delete Permanently</button>
                         </div>
                     </div>
+
+                    <!-- SUB: Leave Management (Admin) -->
+                    <div id="subLeave" class="admin-box" style="display:none;">
+                        <span class="sub-section-title">📝 Leave Requests</span>
+                        <div id="leaveRequestsList"></div>
+                    </div>
+
+                    <!-- SUB: Defaulters Watchlist -->
+                    <div id="subDefaulters" class="admin-box" style="display:none;">
+                        <span class="sub-section-title">⚠️ Defaulters (Below Threshold)</span>
+                        <div style="display:flex; gap:8px; margin-bottom:8px;">
+                            <input type="number" id="defaulterThreshold" value="75" style="flex:1; padding:6px; font-size:10px; margin:0;" />
+                            <button class="btn btn-primary btn-sm" onclick="loadDefaulters()" style="margin:0;">View</button>
+                        </div>
+                        <div id="defaulterList" style="max-height:300px; overflow-y:auto;"></div>
+                    </div>
                 </div>
 
                 <!-- ===== TEACHER TAB ===== -->
@@ -1429,7 +1484,7 @@
                         </div>
                         <div class="stat-card">
                             <div class="value" id="facultyClassAvg">0%</div>
-                            <div class="label">Class %</div>
+                            <div class="label">Class % (Semester)</div>
                         </div>
                         <div class="stat-card">
                             <div class="value" id="facultyTotalStudents">0</div>
@@ -1450,6 +1505,18 @@
                         </div>
                         <button class="btn btn-success btn-sm" onclick="generateTeacherPasscode()" style="padding:4px 16px; width:auto; margin:0 auto;">Generate Passcode</button>
                         <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">⏳ Expires after 5 minutes – for marking single lecture attendance.</p>
+                    </div>
+
+                    <!-- Teacher Manual Mark -->
+                    <div style="background:rgba(0,200,83,0.04); border-radius:var(--radius-sm); padding:14px; border:1px solid rgba(0,200,83,0.12); margin-bottom:12px;">
+                        <span class="sub-section-title">✏️ Manually Mark Student</span>
+                        <select id="teacherMarkStudent" style="padding:6px; font-size:10px; margin:0 0 6px 0;">
+                            <option value="">Select Student…</option>
+                        </select>
+                        <select id="teacherMarkSubject" style="padding:6px; font-size:10px; margin:0 0 6px 0;">
+                            <option value="">Select Subject…</option>
+                        </select>
+                        <button class="btn btn-primary btn-sm" onclick="teacherManualMark()" style="padding:6px; margin:0;">Mark Present</button>
                     </div>
 
                     <div style="margin-bottom:12px;">
@@ -1505,6 +1572,26 @@
                             </table>
                         </div>
                     </div>
+                </div>
+
+                <!-- ===== LEAVE TAB (Student) ===== -->
+                <div id="leaveTab" style="display:none;">
+                    <h4 style="font-size:11px; font-weight:800;">📝 Apply for Leave</h4>
+                    <div style="background:rgba(255,255,255,0.06); border-radius:var(--radius-sm); padding:14px; border:1px solid var(--glass-border);">
+                        <input type="date" id="leaveFromDate" style="font-size:10px; padding:6px; margin-bottom:4px;" />
+                        <input type="date" id="leaveToDate" style="font-size:10px; padding:6px; margin-bottom:4px;" />
+                        <select id="leaveType" style="font-size:10px; padding:6px; margin-bottom:4px;">
+                            <option value="Sick">Sick</option>
+                            <option value="Personal">Personal</option>
+                            <option value="Event">Event</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <input type="text" id="leaveReason" placeholder="Reason" style="font-size:10px; padding:6px; margin-bottom:4px;" />
+                        <button class="btn btn-primary btn-sm" onclick="applyLeave()" style="padding:6px; margin:0;">Submit Leave</button>
+                    </div>
+                    <hr style="margin:12px 0; border-color:var(--glass-border);" />
+                    <h4 style="font-size:11px; font-weight:800;">📋 My Leave History</h4>
+                    <div id="myLeaveList" style="max-height:200px; overflow-y:auto;"></div>
                 </div>
 
             </div>
@@ -1602,6 +1689,7 @@
         let chatHistory = [];
         let sidebarOpen = false;
         let chatGreeted = false;
+        let intervalIds = [];
 
         const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
@@ -1666,11 +1754,15 @@
             return deviceId;
         }
 
+        function clearAllIntervals() {
+            intervalIds.forEach(id => clearInterval(id));
+            intervalIds = [];
+        }
+
         // ============================================================
-        // TIMETABLE & PERIOD TRACKER (Corrected: Monday/Tuesday last Sports)
+        // TIMETABLE & PERIOD TRACKER (frontend copy for display only)
         // ============================================================
         function getBranchTimetable(branch) {
-            // CSE Timetable – Monday last Sports, Tuesday last Sports (P8)
             const CSE = {
                 Monday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'DAA - Design & Analysis of Algorithm',
                     'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'CN - Computer Network', 'Sports'
@@ -1688,7 +1780,6 @@
                     'BDA - Big Data Analytics', 'WT LAB - Web Technology Lab', 'Sports'
                 ]
             };
-            // AIDS Timetable – same structure (for consistency)
             const AIDS = {
                 Monday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'LIB - Library',
                     'FLA - Formal Language & Automata', 'PA - Predictive Analysis', 'PA - Predictive Analysis', 'Sports'
@@ -1710,7 +1801,6 @@
             return CSE;
         }
 
-        // Schedule for period detection – update to match timetable (Monday/Tuesday P8 Sports)
         const CSE_SCHEDULE = {
             1: [
                 { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
@@ -1816,12 +1906,8 @@
             return CSE_SCHEDULE;
         }
 
-        function getTimetableForBranch(branch) {
-            return getBranchTimetable(branch);
-        }
-
         // ============================================================
-        // PERIOD TRACKER (uses frontend schedule for live display)
+        // PERIOD TRACKER (uses frontend schedule)
         // ============================================================
         async function updatePeriodTrackerWidget() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -1998,8 +2084,14 @@
             try {
                 const res = await fetch(`${API_BASE}/api/teacher/subjects/${user.rollNo}`);
                 const data = await res.json();
-                // Store subjects for later use
                 window.teacherSubjects = data || [];
+                const subjectSelect = document.getElementById('teacherMarkSubject');
+                if (subjectSelect) {
+                    subjectSelect.innerHTML = '<option value="">Select Subject…</option>';
+                    data.forEach(sub => {
+                        subjectSelect.innerHTML += `<option value="${sub}">${sub}</option>`;
+                    });
+                }
             } catch (e) {
                 console.error('Failed to load subjects', e);
                 window.teacherSubjects = [];
@@ -2033,7 +2125,11 @@
                 data.forEach(s => {
                     select.innerHTML += `<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`;
                 });
-                // Load faculty stats
+                const markSelect = document.getElementById('teacherMarkStudent');
+                markSelect.innerHTML = '<option value="">Select Student…</option>';
+                data.forEach(s => {
+                    markSelect.innerHTML += `<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`;
+                });
                 loadFacultyStats();
             } catch (e) {
                 showMsg('Failed to load students', true);
@@ -2058,22 +2154,17 @@
                 return;
             }
 
-            // Fetch today's attendance for these students (only your subjects)
             let presentStudents = [];
             let absentStudents = [];
             let totalPresent = 0;
             let totalAbsent = 0;
-            let totalConducted = 0;
-            let totalAttended = 0;
 
             for (const student of students) {
                 try {
                     const res = await fetch(`${API_BASE}/api/attendance/student/${student.rollNo}/${user.rollNo}`);
                     const records = await res.json();
-                    // Filter records for today and your subjects
                     const todayRecords = records.filter(r => r.date === today && subjects.includes(r.subject));
                     if (todayRecords.length > 0) {
-                        // If any subject marked present/duty leave, consider present
                         const isPresent = todayRecords.some(r => r.status === 'Present' || r.status === 'Duty Leave');
                         if (isPresent) {
                             presentStudents.push(student);
@@ -2083,40 +2174,26 @@
                             totalAbsent++;
                         }
                     } else {
-                        // No record for today => absent
                         absentStudents.push(student);
                         totalAbsent++;
                     }
-
-                    // Calculate class average for today (all conducted lectures vs attended)
-                    // For simplicity, we use total distinct subjects for each student
-                    // We'll compute overall class attendance % based on all records for this teacher
                 } catch (e) {
                     console.error('Error fetching student records', e);
                 }
             }
 
-            // Calculate class average: total attended lectures / total conducted (for today)
-            // We'll approximate by counting all records for today across all students
-            let totalTodayConducted = 0;
-            let totalTodayAttended = 0;
-            for (const student of students) {
-                try {
-                    const res = await fetch(`${API_BASE}/api/attendance/student/${student.rollNo}/${user.rollNo}`);
-                    const records = await res.json();
-                    const todayRecords = records.filter(r => r.date === today && subjects.includes(r.subject));
-                    totalTodayConducted += todayRecords.length;
-                    totalTodayAttended += todayRecords.filter(r => r.status === 'Present' || r.status === 'Duty Leave').length;
-                } catch (e) {}
-            }
-            const classAvg = totalTodayConducted > 0 ? Math.round((totalTodayAttended / totalTodayConducted) * 100) : 0;
+            let classAvg = 0;
+            try {
+                const avgRes = await fetch(`${API_BASE}/api/teacher/class-average/${user.rollNo}`);
+                const avgData = await avgRes.json();
+                if (avgRes.ok) classAvg = avgData.average || 0;
+            } catch (e) {}
 
             document.getElementById('facultyTotalStudents').innerText = students.length;
             document.getElementById('facultyTodayPresent').innerText = totalPresent;
             document.getElementById('facultyTodayAbsent').innerText = totalAbsent;
             document.getElementById('facultyClassAvg').innerText = classAvg + '%';
 
-            // Render present list
             const listDiv = document.getElementById('facultyTodayPresentList');
             if (presentStudents.length === 0) {
                 listDiv.innerHTML =
@@ -2127,6 +2204,40 @@
                     `<div class="present-item"><span class="roll">${s.rollNo}</span><span class="name">${s.name}</span></div>`
                 ).join('');
             }
+        }
+
+        async function teacherManualMark() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'faculty') return showMsg('Teacher access required!', true);
+            const studentRoll = document.getElementById('teacherMarkStudent').value;
+            const subject = document.getElementById('teacherMarkSubject').value;
+            if (!studentRoll || !subject) return showMsg('Select student and subject!', true);
+            if (!navigator.geolocation) return showMsg('Geolocation not supported!', true);
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                try {
+                    const res = await fetch(`${API_BASE}/api/teacher/mark-attendance`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            rollNo: user.rollNo,
+                            name: user.name,
+                            subject,
+                            latitude: pos.coords.latitude,
+                            longitude: pos.coords.longitude,
+                            studentRollNo: studentRoll
+                        })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        showMsg('✅ Marked!');
+                        fetchTeacherStudents();
+                    } else {
+                        showMsg(data.error || 'Failed', true);
+                    }
+                } catch (e) {
+                    showMsg('Network error', true);
+                }
+            }, () => showMsg('GPS required!', true));
         }
 
         async function viewTeacherStudent(rollNo) {
@@ -2197,7 +2308,7 @@
         }
 
         // ============================================================
-        // TEACHER REPORT – with date range
+        // TEACHER REPORT
         // ============================================================
         function toggleTeacherReportRange() {
             const range = document.getElementById('teacherReportRange').value;
@@ -2381,7 +2492,7 @@
         }
 
         // ============================================================
-        // STUDENT MONTHLY SUMMARY – FIXED: only current working days
+        // STUDENT MONTHLY SUMMARY – now uses backend
         // ============================================================
         async function fetchMonthlySummary() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -2396,14 +2507,12 @@
                     container.style.display = 'block';
                     const pct = data.attendancePercentage || 0;
                     const color = pct >= 75 ? '#00796b' : '#b71c1c';
-                    const isCurrentMonth = (parseInt(month) === new Date().getMonth() && new Date().getFullYear() === 2026);
                     let html = `
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                                 <span style="font-weight:700; font-size:11px; color:var(--text-main);">${MONTH_NAMES[parseInt(month)]} 2026</span>
                                 <span style="font-size:13px; font-weight:800; color:${color};">${pct}%</span>
                             </div>
                             <div style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">Attended ${data.totalAttended} / ${data.totalConducted} lectures</div>
-                            ${isCurrentMonth ? `<div style="font-size:8px; color:var(--text-muted); margin-bottom:4px;">📌 Based on working days completed so far this month</div>` : ''}
                             <div style="display:flex; flex-wrap:wrap; gap:4px; max-height:80px; overflow-y:auto;">
                                 ${Object.entries(data.subjectStats || {}).map(([sub, st]) => {
                                     const percentage = st.percentage !== undefined ? st.percentage : 0;
@@ -3051,7 +3160,7 @@
         }
 
         // ============================================================
-        // EDIT ATTENDANCE MODAL
+        // EDIT ATTENDANCE MODAL (now uses PUT endpoint)
         // ============================================================
         function openEditModal(recordId, rollNo, currentStatus) {
             editRecordId = recordId;
@@ -3071,28 +3180,12 @@
             const user = JSON.parse(localStorage.getItem('user'));
 
             try {
-                const res = await fetch(`${API_BASE}/api/attendance/all/${user.rollNo}`);
-                const data = await res.json();
-                const record = data.find(r => r._id === editRecordId);
-                if (!record) return showMsg('Record not found!', true);
-
-                const delRes = await fetch(`${API_BASE}/api/attendance/delete/${editRecordId}/${user.rollNo}`, { method: 'DELETE' });
-                if (!delRes.ok) throw new Error('Failed to delete old record');
-
-                const createRes = await fetch(`${API_BASE}/api/admin/manual-attendance-bulk`, {
-                    method: 'POST',
+                const res = await fetch(`${API_BASE}/api/attendance/update/${editRecordId}`, {
+                    method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        requesterRollNo: user.rollNo,
-                        studentRollNo: record.rollNo,
-                        date: record.date,
-                        subjects: [record.subject],
-                        status: newStatus,
-                        branch: record.branch || 'CSE'
-                    })
+                    body: JSON.stringify({ status: newStatus, requesterRollNo: user.rollNo })
                 });
-                if (!createRes.ok) throw new Error('Failed to create updated record');
-
+                if (!res.ok) throw new Error('Failed to update record');
                 closeEditModal();
                 showMsg('✅ Attendance updated!');
                 loadAllAttendance();
@@ -3103,48 +3196,57 @@
         }
 
         // ============================================================
-        // DASHBOARD & HISTORY (with Working Days %)
+        // DASHBOARD & HISTORY (uses backend summary)
         // ============================================================
-        function calculateRealAttendancePercentage() {
-            const startDate = new Date(2026, 6, 15);
-            const today = new Date();
-            const holidayDatesList = globalHolidays.map(h => h.date);
-            let totalWorkingDays = 0;
-            let daysPresentCount = 0;
-            let cur = new Date(startDate);
-            while (cur <= today) {
-                const dayOfWeek = cur.getDay();
-                const y = cur.getFullYear();
-                const m = String(cur.getMonth() + 1).padStart(2, '0');
-                const d = String(cur.getDate()).padStart(2, '0');
-                const isoStr = `${y}-${m}-${d}`;
-                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-                const isHoliday = holidayDatesList.includes(isoStr);
-                if (!isWeekend && !isHoliday) {
-                    totalWorkingDays++;
-                    // Check if student was present on this day
-                    const dayRecords = globalMyRecords.filter(r => r.date === isoStr && (r.status === 'Present' || r.status === 'Duty Leave'));
-                    if (dayRecords.length > 0) daysPresentCount++;
+        async function loadStudentDashboard() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'student') return;
+            try {
+                const res = await fetch(`${API_BASE}/api/student/summary/${user.rollNo}`);
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed');
+                document.getElementById('totalDaysCount').innerText = data.totalAcademicLectures || 0;
+                const pct = data.attendancePercentage || 0;
+                document.getElementById('attendancePct').innerText = pct + '%';
+                document.getElementById('attendancePct').style.color = pct >= 75 ? '#00796b' : '#b71c1c';
+                document.getElementById('workingDaysPct').innerText = data.workingDaysSoFar > 0 ? Math.round((data.daysPresent /
+                    data.workingDaysSoFar) * 100) + '%' : '0%';
+                document.getElementById('daysPresentCount').innerText = data.daysPresent || 0;
+
+                const advisorBox = document.getElementById('advisorText');
+                if (data.totalConductedLectures > 0) {
+                    const attended = data.totalAcademicLectures || 0;
+                    const total = data.totalConductedLectures || 0;
+                    const p = data.attendancePercentage || 0;
+                    if (p >= 75) {
+                        const safeLectures = Math.floor(attended - 0.75 * total);
+                        const safeDays = Math.floor(safeLectures / 6);
+                        advisorBox.innerHTML = `Safe Zone (<b style="color:#00796b;">${p}%</b>). Skip approx <b style="color:var(--text-main);">${Math.max(0, safeDays)}</b> days safely.`;
+                    } else {
+                        const neededLectures = Math.ceil(0.75 * total - attended);
+                        advisorBox.innerHTML =
+                            `Low Attendance (<b style="color:#b71c1c;">${p}%</b>). Need <b style="color:var(--text-main);">${Math.max(0, neededLectures)}</b> more lectures.`;
+                    }
+                } else {
+                    advisorBox.innerHTML = 'No data yet.';
                 }
-                cur.setDate(cur.getDate() + 1);
+
+                const breakdownDiv = document.getElementById('subjectBreakdown');
+                const listDiv = document.getElementById('subjectBreakdownList');
+                if (data.subjectStats && Object.keys(data.subjectStats).length > 0) {
+                    breakdownDiv.style.display = 'block';
+                    listDiv.innerHTML = Object.entries(data.subjectStats).map(([sub, st]) => {
+                        const color = st.percentage >= 75 ? '#00796b' : '#b71c1c';
+                        return `<span class="subject-chip" style="color:${color};">${sub.substring(0,14)}: ${st.percentage}% (${st.present}/${st.total})</span>`;
+                    }).join('');
+                } else {
+                    breakdownDiv.style.display = 'none';
+                }
+
+                renderAttendanceCalendar(globalMyRecords);
+            } catch (e) {
+                showMsg('Failed to load stats', true);
             }
-            const DEFAULT_DAILY_ACADEMIC_LECTURES = 6;
-            const totalConductedLectures = totalWorkingDays * DEFAULT_DAILY_ACADEMIC_LECTURES;
-            const academicAttendedLectures = globalMyRecords.filter(r => {
-                const sub = r.subject || "";
-                return !sub.includes("LIB") && !sub.includes("Sports") && !sub.includes("Library");
-            }).length;
-            const lecturePct = totalConductedLectures > 0 ? Math.min(100, ((academicAttendedLectures / totalConductedLectures) * 100)).toFixed(1) : 0;
-            const workingDaysPct = totalWorkingDays > 0 ? Math.round((daysPresentCount / totalWorkingDays) * 100) : 0;
-            return {
-                lecturePct,
-                workingDaysPct,
-                totalWorkingDays,
-                totalConductedLectures,
-                totalAttendedLectures: academicAttendedLectures,
-                daysPresent: daysPresentCount,
-                totalDays: totalWorkingDays
-            };
         }
 
         function renderAttendanceCalendar(historyData) {
@@ -3215,27 +3317,7 @@
                 const data = await res.json();
                 globalMyRecords = data || [];
                 const tbody = document.querySelector('#myHistoryTable tbody');
-                const calc = calculateRealAttendancePercentage();
-                document.getElementById('totalDaysCount').innerText = calc.totalAttendedLectures;
-                const lecturePctEl = document.getElementById('attendancePct');
-                if (lecturePctEl) { lecturePctEl.innerText = `${calc.lecturePct}%`;
-                    lecturePctEl.style.color = calc.lecturePct >= 75 ? '#00796b' : '#b71c1c'; }
-                // Working days % and days present
-                document.getElementById('workingDaysPct').innerText = `${calc.workingDaysPct}%`;
-                document.getElementById('daysPresentCount').innerText = calc.daysPresent;
-
-                const advisorBox = document.getElementById('advisorText');
-                if (advisorBox) {
-                    if (calc.lecturePct >= 75) {
-                        const safeLectures = Math.floor(calc.totalAttendedLectures - 0.75 * calc.totalConductedLectures);
-                        const safeDays = Math.floor(safeLectures / 6);
-                        advisorBox.innerHTML = `Safe Zone (<b style="color:#00796b;">${calc.lecturePct}%</b>). Skip approx <b style="color:var(--text-main);">${Math.max(0, safeDays)}</b> days safely.`;
-                    } else {
-                        const neededLectures = Math.ceil(0.75 * calc.totalConductedLectures - calc.totalAttendedLectures);
-                        advisorBox.innerHTML =
-                            `Low Attendance (<b style="color:#b71c1c;">${calc.lecturePct}%</b>). Need <b style="color:var(--text-main);">${Math.max(0, neededLectures)}</b> more lectures.`;
-                    }
-                }
+                loadStudentDashboard();
                 renderAttendanceCalendar(globalMyRecords);
                 if (!tbody) return;
                 if (data.length === 0) return tbody.innerHTML =
@@ -3252,7 +3334,7 @@
         }
 
         // ============================================================
-        // LOAD DASHBOARD STATS
+        // LOAD DASHBOARD STATS (Admin)
         // ============================================================
         async function loadDashboardStats() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -3303,6 +3385,32 @@
                     }
                 }
             } catch (e) { console.error('Dashboard stats failed:', e); }
+        }
+
+        // ============================================================
+        // DISPLAY TODAY'S TIMETABLE
+        // ============================================================
+        function displayTimetable() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user) return;
+            const branch = user.branch || 'CSE';
+            const timetable = getBranchTimetable(branch);
+            const now = new Date();
+            const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][now.getDay()];
+            const subjects = timetable[dayName] || [];
+            const container = document.getElementById('timetableDisplay');
+            const list = document.getElementById('timetableList');
+            if (subjects.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+            container.style.display = 'block';
+            list.innerHTML = subjects.map((s, idx) =>
+                `<div style="display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px solid rgba(255,255,255,0.06);">
+                    <span>P${idx+1}</span>
+                    <span>${s}</span>
+                </div>`
+            ).join('');
         }
 
         // ============================================================
@@ -3492,11 +3600,13 @@
             const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             const dayName = days[dateObj.getDay()];
             const timetable = getBranchTimetable(branch);
-            const subjects = timetable[dayName] || ['General Class'];
+            const subjects = timetable[dayName] || [];
+            const academic = subjects.filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports') && s !==
+                'Lunch Break');
             const container = document.getElementById('subjectCheckboxContainer');
             container.innerHTML =
-                `<label class="select-all"><input type="checkbox" id="selectAllSubjects" onchange="toggleAllSubjects()"> Select All (${subjects.length} subjects)</label>`;
-            subjects.forEach(sub => { container.innerHTML +=
+                `<label class="select-all"><input type="checkbox" id="selectAllSubjects" onchange="toggleAllSubjects()"> Select All (${academic.length} subjects)</label>`;
+            academic.forEach(sub => { container.innerHTML +=
                     `<label><input type="checkbox" class="subject-checkbox" value="${sub}"> ${sub}</label>`; });
             validateStudentBranchForManual();
         }
@@ -3570,8 +3680,100 @@
                 const data = await res.json();
                 if (res.ok) { showMsg(`✅ ${data.message}`);
                     document.getElementById('holidayDate').value = '';
-                    document.getElementById('holidayReason').value = ''; } else { showMsg(data.error || "Failed", true); }
+                    document.getElementById('holidayReason').value = '';
+                    fetchHolidays(); } else { showMsg(data.error || "Failed", true); }
             } catch (e) { showMsg("Network Error!", true); }
+        }
+
+        async function fetchHolidays() {
+            try {
+                const res = await fetch(`${API_BASE}/api/holidays`);
+                const data = await res.json();
+                const container = document.getElementById('holidayList');
+                if (!container) return;
+                if (data.length === 0) {
+                    container.innerHTML = '<p style="font-size:9px; color:var(--text-muted);">No holidays declared.</p>';
+                    return;
+                }
+                container.innerHTML = data.map(h =>
+                    `<div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.06);">
+                        <span>${h.date} – ${h.reason}</span>
+                        <button class="btn btn-danger btn-xs" onclick="deleteHoliday('${h.date}')">Delete</button>
+                    </div>`
+                ).join('');
+            } catch (e) {}
+        }
+
+        async function deleteHoliday(date) {
+            if (!confirm(`Delete holiday on ${date}?`)) return;
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/holiday/${date}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requesterRollNo: user.rollNo })
+                });
+                if (res.ok) {
+                    showMsg('✅ Holiday deleted!');
+                    fetchHolidays();
+                } else {
+                    showMsg('Failed to delete', true);
+                }
+            } catch (e) { showMsg('Server error!', true); }
+        }
+
+        // ============================================================
+        // BULK HOLIDAY ADD
+        // ============================================================
+        function openBulkHolidayModal() {
+            document.getElementById('bulkHolidayModal').style.display = 'flex';
+        }
+
+        function closeBulkHolidayModal() {
+            document.getElementById('bulkHolidayModal').style.display = 'none';
+        }
+
+        function addBulkHolidayRange() {
+            const from = document.getElementById('bulkHolidayFrom').value;
+            const to = document.getElementById('bulkHolidayTo').value;
+            if (!from || !to) return showMsg('Select both dates!', true);
+            if (from > to) return showMsg('Start date must be before end date!', true);
+            let dates = [];
+            let cur = new Date(from);
+            const end = new Date(to);
+            while (cur <= end) {
+                dates.push(cur.toISOString().split('T')[0]);
+                cur.setDate(cur.getDate() + 1);
+            }
+            const textarea = document.getElementById('bulkHolidayText');
+            const existing = textarea.value.split('\n').filter(d => d.trim() !== '');
+            const all = [...existing, ...dates];
+            textarea.value = all.join('\n');
+            showMsg(`Added ${dates.length} dates to list.`);
+        }
+
+        async function submitBulkHolidays() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
+            const text = document.getElementById('bulkHolidayText').value;
+            const dates = text.split('\n').map(d => d.trim()).filter(d => d && /^\d{4}-\d{2}-\d{2}$/.test(d));
+            if (dates.length === 0) return showMsg('No valid dates found!', true);
+            let added = 0, skipped = 0;
+            for (const date of dates) {
+                try {
+                    const res = await fetch(`${API_BASE}/api/admin/holiday`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ requesterRollNo: user.rollNo, date, reason: 'Bulk Holiday' })
+                    });
+                    if (res.ok) added++;
+                    else skipped++;
+                } catch (e) { skipped++; }
+            }
+            showMsg(`✅ Added ${added} holidays, skipped ${skipped} (duplicates/invalid).`);
+            closeBulkHolidayModal();
+            fetchHolidays();
         }
 
         // ============================================================
@@ -4115,7 +4317,7 @@
         }
 
         // ============================================================
-        // DOWNLOAD HELPER – with notification
+        // DOWNLOAD HELPER
         // ============================================================
         function downloadFile(content, fileName, mimeType = 'text/csv') {
             console.log('📥 Downloading:', fileName);
@@ -4209,6 +4411,7 @@
         async function logout() {
             try { const token = localStorage.getItem('token'); if (token) { await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST',
                         headers: { 'Authorization': `Bearer ${token}` } }); } } catch (e) {}
+            clearAllIntervals();
             localStorage.removeItem('user');
             localStorage.removeItem('token');
             impersonating = false;
@@ -4271,6 +4474,8 @@
             document.getElementById('simulatorBox').style.display = 'flex';
             document.getElementById('studentTabHeader').style.display = 'block';
 
+            document.getElementById('leaveTabHeader').style.display = user.role === 'student' ? 'block' : 'none';
+
             if (impersonating) {
                 document.getElementById('impersonationBanner').style.display = 'flex';
             } else {
@@ -4282,7 +4487,8 @@
                 document.getElementById('teacherTabHeader').style.display = 'none';
                 document.getElementById('adminLiveDashboard').style.display = 'block';
                 loadDashboardStats();
-                setInterval(loadDashboardStats, 60000);
+                const id1 = setInterval(loadDashboardStats, 60000);
+                intervalIds.push(id1);
                 populateStudentSelect();
                 populateTeacherSelect();
                 generatePasscode('full_day');
@@ -4293,19 +4499,21 @@
                 toggleFacultyRegistrationFields();
                 loadAllAttendance();
                 populateBulkStudentSelect();
+                fetchHolidays();
+                loadLeaveRequests();
+                loadDefaulters();
             } else if (isFaculty) {
                 document.getElementById('adminTabHeader').style.display = 'none';
                 document.getElementById('teacherTabHeader').style.display = 'block';
                 document.getElementById('adminLiveDashboard').style.display = 'none';
-                // Show faculty stats grid
                 document.getElementById('facultyStatsGrid').style.display = 'grid';
                 loadTeacherSubjects();
                 loadTeacherRecent();
                 fetchTeacherStudents();
                 document.getElementById('teacherPasscodeDisplay').innerText = '—';
                 teacherCurrentPasscode = '—';
-                // Periodically refresh faculty stats
-                setInterval(() => { if (user.role === 'faculty') fetchTeacherStudents(); }, 60000);
+                const id2 = setInterval(() => { if (user.role === 'faculty') fetchTeacherStudents(); }, 60000);
+                intervalIds.push(id2);
             } else {
                 document.getElementById('adminTabHeader').style.display = 'none';
                 document.getElementById('teacherTabHeader').style.display = 'none';
@@ -4318,18 +4526,23 @@
             fetchNotices();
             loadSubjectsForManual();
             updatePeriodTrackerWidget();
-            setInterval(updatePeriodTrackerWidget, 30000);
+            const id3 = setInterval(updatePeriodTrackerWidget, 30000);
+            intervalIds.push(id3);
+            displayTimetable();
 
             if (!isAdmin && !isFaculty) {
                 fetchMonthlySummary();
             }
 
             updateDashboardTime();
-            setInterval(updateDashboardTime, 1000);
+            const id4 = setInterval(updateDashboardTime, 1000);
+            intervalIds.push(id4);
 
             document.getElementById('chatAvatarTrigger').style.display = 'flex';
             loadChatHistory(user.rollNo);
             updateWelcomeGreeting();
+
+            if (user.role === 'student') loadMyLeaves();
         }
 
         // ============================================================
@@ -4339,25 +4552,28 @@
             const markTab = document.getElementById('markTab');
             const adminTab = document.getElementById('adminTab');
             const teacherTab = document.getElementById('teacherTab');
+            const leaveTab = document.getElementById('leaveTab');
             markTab.style.display = tabId === 'markTab' ? 'block' : 'none';
             adminTab.style.display = tabId === 'adminTab' ? 'block' : 'none';
             teacherTab.style.display = tabId === 'teacherTab' ? 'block' : 'none';
+            leaveTab.style.display = tabId === 'leaveTab' ? 'block' : 'none';
             markTab.classList.remove('tab-content-active');
             adminTab.classList.remove('tab-content-active');
             teacherTab.classList.remove('tab-content-active');
+            leaveTab.classList.remove('tab-content-active');
             if (tabId === 'markTab') markTab.classList.add('tab-content-active');
             if (tabId === 'adminTab') adminTab.classList.add('tab-content-active');
             if (tabId === 'teacherTab') teacherTab.classList.add('tab-content-active');
+            if (tabId === 'leaveTab') leaveTab.classList.add('tab-content-active');
             const tabs = document.querySelectorAll('.tab-bar .tab-item');
             tabs.forEach(t => t.classList.remove('active'));
-            if (tabId === 'markTab') tabs[0].classList.add('active');
-            if (tabId === 'adminTab' && tabs[1]) tabs[1].classList.add('active');
-            if (tabId === 'teacherTab' && tabs[2]) tabs[2].classList.add('active');
+            const map = { 'markTab': 0, 'adminTab': 1, 'teacherTab': 2, 'leaveTab': 3 };
+            if (tabs[map[tabId]]) tabs[map[tabId]].classList.add('active');
         }
 
         function switchAdminSubTab(subId) {
             const subTabs = ['subDirectory', 'subAllAttendance', 'subReports', 'subAttendance', 'subHoliday', 'subPasscode',
-                'subTools'
+                'subTools', 'subLeave', 'subDefaulters'
             ];
             subTabs.forEach(id => {
                 const el = document.getElementById(id);
@@ -4375,6 +4591,9 @@
             if (subId === 'subReports') { populateStudentSelect(); }
             if (subId === 'subTools') { populateTeacherSelect(); }
             if (subId === 'subAllAttendance') { loadAllAttendance(); }
+            if (subId === 'subHoliday') { fetchHolidays(); }
+            if (subId === 'subLeave') { loadLeaveRequests(); }
+            if (subId === 'subDefaulters') { loadDefaulters(); }
         }
 
         // ============================================================
@@ -4504,7 +4723,140 @@
         }
 
         // ============================================================
-        // CHAT WIDGET – All queries go to backend with GROQ fallback
+        // LEAVE APPLICATION (Student)
+        // ============================================================
+        async function applyLeave() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'student') return showMsg('Student access required!', true);
+            const fromDate = document.getElementById('leaveFromDate').value;
+            const toDate = document.getElementById('leaveToDate').value;
+            const reason = document.getElementById('leaveReason').value.trim();
+            const leaveType = document.getElementById('leaveType').value;
+            if (!fromDate || !toDate || !reason) return showMsg('All fields required!', true);
+            if (new Date(toDate) < new Date(fromDate)) return showMsg('To date must be after from date!', true);
+            try {
+                const res = await fetch(`${API_BASE}/api/leave/apply`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rollNo: user.rollNo, fromDate, toDate, reason, leaveType })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showMsg(data.message);
+                    document.getElementById('leaveFromDate').value = '';
+                    document.getElementById('leaveToDate').value = '';
+                    document.getElementById('leaveReason').value = '';
+                    loadMyLeaves();
+                } else {
+                    showMsg(data.error || 'Failed', true);
+                }
+            } catch (e) { showMsg('Server error!', true); }
+        }
+
+        async function loadMyLeaves() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'student') return;
+            try {
+                const res = await fetch(`${API_BASE}/api/leave/my/${user.rollNo}`);
+                const data = await res.json();
+                const container = document.getElementById('myLeaveList');
+                if (!container) return;
+                if (data.length === 0) {
+                    container.innerHTML = '<p style="font-size:9px; color:var(--text-muted);">No leave applications.</p>';
+                    return;
+                }
+                container.innerHTML = data.map(l =>
+                    `<div style="padding:6px; border-bottom:1px solid rgba(255,255,255,0.06);">
+                        <div style="display:flex; justify-content:space-between;">
+                            <span style="font-weight:600;">${l.fromDate} to ${l.toDate}</span>
+                            <span class="badge ${l.status === 'Approved' ? 'badge-present' : l.status === 'Rejected' ? 'badge-absent' : 'badge-dl'}">${l.status}</span>
+                        </div>
+                        <div style="font-size:9px; color:var(--text-muted);">${l.leaveType}: ${l.reason}</div>
+                        ${l.adminNote ? `<div style="font-size:8px; color:var(--text-muted);">Admin: ${l.adminNote}</div>` : ''}
+                    </div>`
+                ).join('');
+            } catch (e) {}
+        }
+
+        // ============================================================
+        // LEAVE MANAGEMENT (Admin)
+        // ============================================================
+        async function loadLeaveRequests() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'admin') return;
+            try {
+                const res = await fetch(`${API_BASE}/api/leave/requests/${user.rollNo}`);
+                const data = await res.json();
+                const container = document.getElementById('leaveRequestsList');
+                if (!container) return;
+                if (data.length === 0) {
+                    container.innerHTML = '<p style="font-size:9px; color:var(--text-muted);">No pending leave requests.</p>';
+                    return;
+                }
+                container.innerHTML = data.map(l => `
+                        <div style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.06);">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span><strong>${l.studentName}</strong> (${l.rollNo}) – ${l.leaveType}</span>
+                                <span class="badge ${l.status === 'Approved' ? 'badge-present' : l.status === 'Rejected' ? 'badge-absent' : 'badge-dl'}">${l.status}</span>
+                            </div>
+                            <div style="font-size:9px; color:var(--text-muted);">${l.fromDate} to ${l.toDate} – ${l.reason}</div>
+                            ${l.status === 'Pending' ? `
+                                <div style="display:flex; gap:8px; margin-top:4px;">
+                                    <button class="btn btn-success btn-xs" onclick="reviewLeave('${l._id}','Approved')">Approve</button>
+                                    <button class="btn btn-danger btn-xs" onclick="reviewLeave('${l._id}','Rejected')">Reject</button>
+                                </div>
+                            ` : `<div style="font-size:8px; color:var(--text-muted);">Reviewed by ${l.reviewedBy || 'Admin'}${l.adminNote ? ': '+l.adminNote : ''}</div>`}
+                        </div>
+                    `).join('');
+            } catch (e) {}
+        }
+
+        async function reviewLeave(id, action) {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
+            const note = prompt(`Enter admin note for ${action} (optional):`);
+            try {
+                const res = await fetch(`${API_BASE}/api/leave/action/${id}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requesterRollNo: user.rollNo, action, adminNote: note || '' })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showMsg(data.message);
+                    loadLeaveRequests();
+                } else {
+                    showMsg(data.error || 'Failed', true);
+                }
+            } catch (e) { showMsg('Server error!', true); }
+        }
+
+        // ============================================================
+        // DEFAULTER WATCHLIST
+        // ============================================================
+        async function loadDefaulters() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'admin') return;
+            const threshold = document.getElementById('defaulterThreshold').value || 75;
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/defaulters/${user.rollNo}?threshold=${threshold}`);
+                const data = await res.json();
+                const container = document.getElementById('defaulterList');
+                if (!container) return;
+                if (!data.defaulters || data.defaulters.length === 0) {
+                    container.innerHTML = `<p style="font-size:9px; color:var(--text-muted);">No defaulters below ${threshold}%.</p>`;
+                    return;
+                }
+                container.innerHTML = data.defaulters.map(s =>
+                    `<div style="padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.06);">
+                        ${s.rollNo} – ${s.name} (${s.branch}) – ${s.pct}% (${s.present}/${s.total})
+                    </div>`
+                ).join('');
+            } catch (e) {}
+        }
+
+        // ============================================================
+        // CHAT WIDGET
         // ============================================================
         function toggleChat() {
             chatOpen = !chatOpen;
@@ -4684,9 +5036,6 @@
             }
         }
 
-        // ============================================================
-        // CHAT MESSAGE – All queries go to backend; handle GROQ errors
-        // ============================================================
         async function sendChatMessage() {
             const input = document.getElementById('chatInput');
             const rawMsg = input.value.trim();
@@ -4701,7 +5050,6 @@
                 welcome.remove();
             }
 
-            // Add user message
             const userDiv = document.createElement('div');
             userDiv.className = 'chat-msg user';
             const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -4710,7 +5058,6 @@
             input.value = '';
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
-            // Show typing indicator
             const typing = document.getElementById('typingIndicator');
             if (typing) typing.style.display = 'block';
             const sendBtn = document.getElementById('chatSendBtn');
@@ -4747,9 +5094,7 @@
 
                 if (typing) typing.style.display = 'none';
 
-                // Check if reply contains error indicator
                 let replyText = data.reply || 'Sorry, I could not process that.';
-                // If reply is the fallback "offline" message or contains "API key", show friendly error
                 if (replyText.includes('offline') || replyText.includes('API key') || replyText.includes('GROQ')) {
                     replyText = '⚠️ I\'m having trouble connecting to the AI service. Please try again later or ask a simple question.';
                 }
@@ -4859,6 +5204,9 @@
             console.log('📈 Student dashboard: Working Days % added alongside lecture %.');
             console.log('🤖 Chat AI: handles GROQ errors with fallback messages.');
             console.log('✨ Premium glass theme with butter-smooth animations.');
+            console.log('📝 Leave system: students apply, admin approve/reject with auto Duty Leave.');
+            console.log('⚠️ Defaulter watchlist: shows students below threshold.');
+            console.log('📅 Bulk holiday addition: add multiple holidays at once.');
         })();
     </script>
 </body>
