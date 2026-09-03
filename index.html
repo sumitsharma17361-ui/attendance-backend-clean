@@ -8,9 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous">
     </script>
     <style>
-        /* ============================================================
-           BUTTER-SMOOTH GLASS THEME – Premium & Flawless
-           ============================================================ */
+        /* ===== CSS (same as before, but I'll include it fully) ===== */
         :root {
             --glass-bg: rgba(255, 255, 255, 0.16);
             --glass-border: rgba(255, 255, 255, 0.28);
@@ -32,9 +30,7 @@
             --transition-fast: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
             --bg-gradient: linear-gradient(145deg, #e3f2fd, #b3e5fc, #81d4fa);
         }
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
         .glass-orb-bg {
             position: fixed;
             top: 0;
@@ -62,9 +58,7 @@
             0% { transform: translate(0, 0) scale(1); }
             100% { transform: translate(6%, 6%) scale(1.18); }
         }
-
         html { scroll-behavior: smooth; }
-
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             color: var(--text-main);
@@ -82,7 +76,6 @@
             z-index: 1;
             background: transparent;
         }
-
         @supports not (backdrop-filter: blur(1px)) {
             .app-container,
             .chat-panel,
@@ -94,12 +87,10 @@
                 -webkit-backdrop-filter: none !important;
             }
         }
-
         ::-webkit-scrollbar { width: 5px; height: 5px; }
         ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.03); border-radius: 12px; }
         ::-webkit-scrollbar-thumb { background: rgba(2, 136, 209, 0.25); border-radius: 12px; transition: var(--transition-fast); }
         ::-webkit-scrollbar-thumb:hover { background: rgba(2, 136, 209, 0.45); }
-
         #toast-container {
             position: fixed;
             top: 24px;
@@ -136,7 +127,6 @@
         .toast-card.toast-error { background: rgba(255, 23, 68, 0.18); border-color: rgba(255, 23, 68, 0.35); animation: shake 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
         .toast-card.toast-download { background: rgba(2, 136, 209, 0.18); border-color: rgba(2, 136, 209, 0.35); }
         @keyframes shake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-8px); } 40%,80% { transform: translateX(8px); } }
-
         #downloadProgress {
             position: fixed;
             bottom: 28px;
@@ -163,7 +153,6 @@
         #downloadProgress .spinner { width: 22px; height: 22px; border: 2.5px solid rgba(0,0,0,0.08); border-top: 2.5px solid #0288d1; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeSlideUp { from { opacity:0; transform: translateY(18px) translateX(-50%); } to { opacity:1; transform: translateY(0) translateX(-50%); } }
-
         .app-container {
             width: 100%;
             max-width: 560px;
@@ -182,7 +171,6 @@
         }
         .app-container:hover { box-shadow: 0 20px 80px rgba(0, 0, 0, 0.10); }
         @keyframes appEntrance { from { opacity:0; transform: scale(0.94) translateY(24px); } to { opacity:1; transform: scale(1) translateY(0); } }
-
         #auth-box {
             display: flex;
             flex-direction: column;
@@ -191,7 +179,6 @@
             padding: 28px 20px;
         }
         #auth-box h3 { text-align: center; font-size: 22px; font-weight: 900; margin-bottom: 20px; color: var(--text-main); letter-spacing: -0.3px; }
-
         .app-header {
             background: rgba(255, 255, 255, 0.08);
             padding: 16px 20px;
@@ -213,7 +200,6 @@
         }
         .avatar-circle:hover { transform: scale(1.08) rotate(-2deg); box-shadow: 0 6px 28px rgba(2,136,209,0.40); }
         .avatar-circle:active { transform: scale(0.94); }
-
         .notice-banner {
             background: rgba(255, 171, 0, 0.12);
             border-bottom: 1px solid rgba(255, 171, 0, 0.20);
@@ -228,7 +214,6 @@
         .notice-marquee { overflow: hidden; white-space: nowrap; width: 100%; }
         .notice-marquee p { display: inline-block; animation: marquee 22s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-
         .impersonation-banner {
             background: rgba(255, 171, 0, 0.12);
             border-bottom: 2px solid rgba(255, 171, 0, 0.25);
@@ -254,9 +239,7 @@
             transition: var(--transition-fast);
         }
         .impersonation-banner .switch-back-btn:hover { background: #ff1744; transform: scale(1.04); }
-
         .app-body { padding: 18px; }
-
         input, select {
             width: 100%;
             padding: 11px 16px;
@@ -285,7 +268,6 @@
             padding: 6px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
         }
         .eye-icon:hover { color: #0288d1; background: rgba(2,136,209,0.12); }
-
         .btn {
             width: 100%;
             padding: 12px 18px;
@@ -326,7 +308,6 @@
         .btn-danger:hover { background: rgba(255,23,68,0.22); transform: translateY(-1px); }
         .btn-sm { padding: 6px 14px; font-size: 10px; width: auto; margin: 0; }
         .btn-xs { padding: 4px 10px; font-size: 8px; width: auto; margin: 0; border-radius: 8px; }
-
         .badge { padding: 4px 12px; border-radius: var(--radius-full); font-size: 8px; font-weight: 700; transition: var(--transition-fast); display: inline-block; letter-spacing: 0.2px; backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); }
         .badge-present { background: rgba(0,200,83,0.18); color: #00796b; border: 1px solid rgba(0,200,83,0.25); }
         .badge-absent { background: rgba(255,23,68,0.18); color: #b71c1c; border: 1px solid rgba(255,23,68,0.25); }
@@ -334,7 +315,6 @@
         .badge-role { background: rgba(255,255,255,0.15); color: var(--text-muted); border: 1px solid rgba(255,255,255,0.15); }
         .badge-attendance { background: rgba(0,188,212,0.12); color: #006064; border: 1px solid rgba(0,188,212,0.20); }
         .badge-dl { background: rgba(255,171,0,0.18); color: #e65100; border: 1px solid rgba(255,171,0,0.25); }
-
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
         .stat-card {
             background: rgba(255, 255, 255, 0.12);
@@ -350,7 +330,6 @@
         .stat-card:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.50); box-shadow: 0 8px 32px rgba(0,0,0,0.06); }
         .stat-card .value { font-size: 26px; font-weight: 900; background: linear-gradient(135deg, #0288d1, #00bcd4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.5px; transition: var(--transition-fast); }
         .stat-card .label { font-size: 9px; color: var(--text-muted); font-weight: 700; margin-top: 5px; text-transform: uppercase; letter-spacing: 0.6px; }
-
         .simulator-card {
             background: rgba(2, 136, 209, 0.06);
             border: 1px solid rgba(2, 136, 209, 0.12);
@@ -367,7 +346,6 @@
             -webkit-backdrop-filter: var(--glass-blur);
         }
         .simulator-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.04); border-color: rgba(2,136,209,0.25); }
-
         .quick-portals-card {
             background: rgba(255, 255, 255, 0.06);
             border: 1px solid var(--glass-border);
@@ -400,7 +378,6 @@
         .portal-btn:hover { background: rgba(255,255,255,0.22); border-color: #0288d1; transform: translateY(-3px); box-shadow: 0 8px 28px rgba(2,136,209,0.15); color: #0288d1; }
         .portal-btn:active { transform: scale(0.94); }
         .portal-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; }
-
         .calendar-container {
             background: rgba(255, 255, 255, 0.06);
             border: 1px solid var(--glass-border);
@@ -421,7 +398,6 @@
         .cal-p { background: rgba(0,200,83,0.18); color: #00796b; border-color: rgba(0,200,83,0.25); }
         .cal-a { background: rgba(255,23,68,0.18); color: #b71c1c; border-color: rgba(255,23,68,0.25); }
         .cal-off { background: rgba(255,255,255,0.04); color: rgba(26,26,46,0.25); }
-
         .tab-bar {
             display: flex;
             background: rgba(255, 255, 255, 0.08);
@@ -444,7 +420,6 @@
         }
         .tab-item.active { background: rgba(2,136,209,0.22); color: #0288d1; box-shadow: 0 2px 16px rgba(2,136,209,0.08); }
         .tab-item:hover:not(.active) { color: var(--text-main); background: rgba(255,255,255,0.08); }
-
         .admin-nav {
             display: flex;
             flex-wrap: nowrap;
@@ -483,7 +458,6 @@
         }
         .admin-nav-item:hover { background: rgba(255,255,255,0.10); transform: translateY(-1px); }
         .admin-nav-item.active { background: rgba(2,136,209,0.18); color: #0288d1; box-shadow: 0 2px 16px rgba(2,136,209,0.06); border-color: rgba(2,136,209,0.18); }
-
         .period-card {
             background: rgba(2, 136, 209, 0.06);
             border: 1px solid rgba(2, 136, 209, 0.12);
@@ -508,7 +482,6 @@
         .btn-edit:hover { background: rgba(255,171,0,0.22); }
         .status-holiday { background: rgba(255,171,0,0.12); color: #e65100; border-color: rgba(255,171,0,0.20); }
         .status-weekend { background: rgba(255,255,255,0.06); color: var(--text-muted); border-color: rgba(255,255,255,0.08); }
-
         .table-container {
             max-height: 320px;
             overflow-y: auto;
@@ -522,7 +495,6 @@
         .table-container th { background: rgba(255,255,255,0.10); color: var(--text-muted); padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--glass-border); position: sticky; top: 0; font-weight: 700; font-size: 9px; z-index: 2; text-transform: uppercase; letter-spacing: 0.4px; backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); }
         .table-container td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 10px; vertical-align: middle; color: var(--text-main); }
         .table-container tr:hover td { background: rgba(255,255,255,0.05); }
-
         .admin-box {
             background: rgba(255, 255, 255, 0.06);
             padding: 16px;
@@ -544,7 +516,6 @@
         .admin-box.sub-directory { background: rgba(233,30,99,0.04); border-color: rgba(233,30,99,0.12); }
         .admin-box.sub-all-attendance { background: rgba(0,188,212,0.04); border-color: rgba(0,188,212,0.12); }
         .sub-section-title { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; display: block; }
-
         .subject-checkbox-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -573,7 +544,6 @@
         .subject-checkbox-container label:hover { background: rgba(2,136,209,0.10); border-color: rgba(2,136,209,0.18); }
         .subject-checkbox-container label input[type="checkbox"] { width: auto; margin: 0; accent-color: #0288d1; }
         .subject-checkbox-container .select-all { grid-column: span 2; background: rgba(255,255,255,0.10); padding: 8px 12px; font-weight: 700; border: 1px solid var(--glass-border); }
-
         .passcode-display {
             background: rgba(255, 255, 255, 0.06);
             padding: 12px;
@@ -584,7 +554,6 @@
             transition: var(--transition);
         }
         .passcode-display h2 { font-size: 28px; font-weight: 900; background: linear-gradient(135deg, #0288d1, #00bcd4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: 8px; }
-
         #todayPresentList { max-height: 200px; overflow-y: auto; font-size: 10px; margin: 8px 0; }
         .present-group { margin-bottom: 10px; }
         .present-group .group-title { font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; display: block; border-bottom: 1px solid var(--glass-border); padding-bottom: 4px; }
@@ -592,11 +561,9 @@
         .present-item:hover { background: rgba(255,255,255,0.05); }
         .present-item .roll { font-weight: 600; }
         .present-item .name { color: var(--text-muted); }
-
         .subject-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
         .subject-chip { background: rgba(255,255,255,0.08); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); font-size: 8px; font-weight: 500; transition: var(--transition-fast); color: var(--text-muted); }
         .subject-chip:hover { border-color: #0288d1; color: var(--text-main); }
-
         .tool-sub-card {
             background: rgba(255, 255, 255, 0.06);
             border: 1px solid var(--glass-border);
@@ -609,11 +576,9 @@
         .tool-title { font-size: 11px; font-weight: 800; margin-bottom: 10px; display: block; color: var(--text-main); }
         .flex-buttons { display: flex; gap: 10px; }
         .flex-buttons .btn { margin: 0; flex: 1; }
-
         .svg-icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: inline-block; vertical-align: middle; transition: transform 0.4s cubic-bezier(0.16,1,0.3,1); }
         .svg-icon-sm { width: 13px; height: 13px; }
         .btn:hover .svg-icon { transform: scale(1.12) rotate(-2deg); }
-
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -651,7 +616,6 @@
         .profile-modal { max-width: 500px; max-height: 90vh; overflow-y: auto; }
         .profile-modal .record-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
         .profile-modal .record-item:last-child { border-bottom: none; }
-
         .bulk-student-list {
             max-height: 160px;
             overflow-y: auto;
@@ -671,10 +635,7 @@
         .bulk-date-input-row { display: flex; gap: 10px; align-items: center; margin-bottom: 5px; }
         .bulk-date-input-row input[type="date"] { flex: 1; padding: 7px 12px; font-size: 10px; margin: 0; }
         .bulk-date-input-row button { padding: 7px 16px; font-size: 10px; margin: 0; }
-
-        /* ========================================================== */
-        /* CHAT WIDGET – Premium Glass                                */
-        /* ========================================================== */
+        /* ===== Chat widget styles ===== */
         #chatWidget {
             position: fixed;
             top: 50%;
@@ -776,7 +737,6 @@
             .chat-panel .chat-main .chat-input-row input { font-size: 11px; padding: 7px 14px; min-height: 36px; }
             .chat-panel .chat-main .chat-input-row .send-btn { width: 36px; height: 36px; font-size: 15px; }
         }
-
         .chat-avatar-trigger {
             position: fixed;
             bottom: 28px;
@@ -804,7 +764,6 @@
         .chat-avatar-trigger:active { transform: scale(0.92); }
         .chat-avatar-trigger .badge-dot { position: absolute; top: 5px; right: 5px; width: 16px; height: 16px; background: #00c853; border-radius: 50%; border: 2.5px solid rgba(255,255,255,0.30); animation: pulse-dot 2s infinite; }
         @keyframes pulse-dot { 0%,100% { transform: scale(1); } 50% { transform: scale(1.18); } }
-
         @media (max-width: 480px) {
             body { padding: 10px; }
             .app-container { border-radius: 24px; }
@@ -817,26 +776,21 @@
             #auth-box { min-height: 60vh; }
             .app-body { padding: 14px; }
         }
-
         #auth-box h3 { font-size: 20px; font-weight: 900; margin-bottom: 18px; color: var(--text-main); text-align: center; }
         #toggleLink { color: #0288d1 !important; cursor: pointer; font-size: 11px; display: block; text-align: center; margin-top: 12px; font-weight: 600; transition: var(--transition-fast); }
         #toggleLink:hover { color: #01579b !important; transform: translateY(-1px); }
-
         #dashboardCurrentTime { font-weight: 700; color: #0288d1; }
         #dashboardCurrentDate { font-weight: 600; color: var(--text-muted); }
-
         .skeleton { background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0.04) 75%); background-size: 200% 100%; animation: skeletonShimmer 1.5s infinite; border-radius: 6px; }
         @keyframes skeletonShimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
-
         .tab-content-active { animation: contentFade 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes contentFade { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
-
         .stat-card .value { transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
     </style>
 </head>
 <body>
 
-    <!-- Fixed Glass Orb Background -->
+    <!-- ===== Fixed Background ===== -->
     <div class="glass-orb-bg"></div>
 
     <!-- ===== TOAST ===== -->
@@ -996,7 +950,7 @@
                     <button class="btn btn-danger btn-sm" style="width:auto; padding:6px 14px; margin:0; font-size:10px;" onclick="logout()">Logout</button>
                 </div>
 
-                <!-- Student Stats (now using backend summary) -->
+                <!-- Student Stats -->
                 <div class="stats-grid" id="studentStatsGrid">
                     <div class="stat-card">
                         <div class="value" id="totalDaysCount">0</div>
@@ -1016,7 +970,7 @@
                     </div>
                 </div>
 
-                <!-- Subject-wise breakdown (new) -->
+                <!-- Subject Breakdown -->
                 <div id="subjectBreakdown" style="background:rgba(255,255,255,0.06); border-radius:var(--radius-sm); padding:12px; border:1px solid var(--glass-border); margin-bottom:12px; display:none;">
                     <span style="font-size:9px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.4px;">📚 Subject-wise Attendance</span>
                     <div id="subjectBreakdownList" class="subject-chips" style="margin-top:6px;"></div>
@@ -1119,7 +1073,7 @@
                         <button class="action-btn" id="markPeriodBtn" style="background:rgba(0,200,83,0.70); color:#fff; padding:7px 16px; backdrop-filter:var(--glass-blur);" onclick="markActivePeriodAttendance()">Mark</button>
                     </div>
 
-                    <!-- Timetable Display (new) -->
+                    <!-- Timetable Display -->
                     <div id="timetableDisplay" style="background:rgba(255,255,255,0.06); border-radius:var(--radius-sm); padding:12px; border:1px solid var(--glass-border); margin-bottom:12px; display:none;">
                         <span style="font-size:9px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.4px;">📅 Today's Timetable</span>
                         <div id="timetableList" style="font-size:10px; margin-top:6px; color:var(--text-main);"></div>
@@ -1180,7 +1134,7 @@
                         </div>
                     </div>
 
-                    <!-- SUB: All Attendance -->
+                    <!-- SUB: All Attendance (with new features) -->
                     <div id="subAllAttendance" class="admin-box sub-all-attendance" style="display:none;">
                         <span class="sub-section-title">📊 All Attendance Records – Manage</span>
                         <div class="filter-row" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
@@ -1188,14 +1142,32 @@
                             <input type="date" id="filterAttendanceDate" style="flex:1; min-width:80px; padding:6px 10px; font-size:9px; margin:0;" onchange="loadAllAttendance()" />
                             <button class="btn btn-outline btn-sm" onclick="loadAllAttendance()" style="padding:5px 12px; margin:0;">Filter</button>
                         </div>
-                        <button class="btn btn-outline btn-sm" onclick="loadAllAttendance()" style="padding:4px 12px; margin:0 0 4px 0;">🔄 Refresh All</button>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; margin:6px 0;">
+                            <button class="btn btn-danger btn-sm" onclick="deleteSelectedRecords()" style="padding:4px 12px; margin:0;">
+                                🗑️ Delete Selected
+                            </button>
+                            <button class="btn btn-success btn-sm" onclick="exportAllAttendanceCSV()" style="padding:4px 12px; margin:0;">
+                                📥 Download CSV
+                            </button>
+                            <button class="btn btn-outline btn-sm" onclick="loadAllAttendance()" style="padding:4px 12px; margin:0;">🔄 Refresh</button>
+                        </div>
                         <div class="table-container" style="max-height:360px;">
                             <table id="allAttendanceTable">
-                                <thead><tr><th>Date</th><th>Roll</th><th>Name</th><th>Subject</th><th>Status</th><th>Actions</th></tr></thead>
-                                <tbody><tr><td colspan="6" style="text-align:center; padding:16px; color:var(--text-muted);">Loading records…</td></tr></tbody>
+                                <thead>
+                                    <tr>
+                                        <th style="width:30px;"><input type="checkbox" id="selectAllRecords" onchange="toggleAllRecords()" /></th>
+                                        <th>Date</th>
+                                        <th>Roll</th>
+                                        <th>Name</th>
+                                        <th>Subject</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody><tr><td colspan="7" style="text-align:center; padding:16px; color:var(--text-muted);">Loading records…</td></tr>
                             </table>
                         </div>
-                        <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">💡 Click <strong>Edit</strong> to change status, <strong>Delete</strong> to remove record.</p>
+                        <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">💡 Click <strong>Edit</strong> to change status, <strong>Delete</strong> to remove single record. Use <strong>Delete Selected</strong> for multiple.</p>
                     </div>
 
                     <!-- SUB: Reports -->
@@ -1247,7 +1219,6 @@
                             Login as Student
                         </button>
                         <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">💡 Bypasses device binding – for admin assistance only.</p>
-
                         <hr style="margin:14px 0; border-color:var(--glass-border);" />
                         <span class="sub-section-title">📈 Individual Student Report (PDF/CSV)</span>
                         <select id="adminStudentReportSelect" style="padding:8px; margin-bottom:6px; font-size:10px;">
@@ -1257,7 +1228,6 @@
                             <button class="btn btn-primary btn-sm" onclick="generateStudentReport('pdf')" style="padding:6px;">PDF</button>
                             <button class="btn btn-success btn-sm" onclick="generateStudentReport('csv')" style="padding:6px;">CSV</button>
                         </div>
-
                         <hr style="margin:14px 0; border-color:var(--glass-border);" />
                         <span class="sub-section-title">📋 Class Attendance Report (PDF)</span>
                         <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -1302,7 +1272,6 @@
                         </div>
                         <button class="btn btn-success btn-sm" onclick="markAllSubjectsForDay()" style="margin-top:5px; padding:6px; font-size:9px;">📚 Mark All Subjects for this Day</button>
                         <p id="manualBranchWarning" style="font-size:8px; color:#d50000; margin-top:4px; display:none;"></p>
-
                         <!-- Bulk Actions -->
                         <div style="margin-top:16px; border-top:2px dashed var(--glass-border); padding-top:14px;">
                             <span class="sub-section-title" style="color:#0288d1;">📦 Bulk Actions (Select Students & Dates)</span>
@@ -1381,7 +1350,6 @@
                             <input type="text" id="adminRegPass" placeholder="Password (Default: 123456)" style="font-size:10px; padding:7px;" />
                             <button class="btn btn-primary btn-sm" onclick="adminRegisterUser()" style="padding:7px; margin:0;">Register</button>
                         </div>
-
                         <div class="tool-sub-card">
                             <span class="tool-title">📚 Assign Subject to Teacher</span>
                             <select id="teacherSelect" style="font-size:10px; padding:7px;">
@@ -1395,13 +1363,11 @@
                                 <button class="btn btn-danger btn-sm" onclick="removeSubjectFromTeacher()" style="padding:6px;">Remove</button>
                             </div>
                         </div>
-
                         <div class="tool-sub-card" style="border-color:rgba(2,136,209,0.20);">
                             <span class="tool-title">🔓 Reset Device Binding (Student Only)</span>
                             <input type="text" id="resetDeviceRoll" placeholder="Student Roll No" style="font-size:10px; padding:7px;" />
                             <button class="btn btn-primary btn-sm" onclick="resetDeviceBinding()" style="padding:7px; margin:0;">Reset</button>
                         </div>
-
                         <div class="tool-sub-card">
                             <span class="tool-title">📢 Broadcast Notice</span>
                             <input type="text" id="noticeMsg" placeholder="Notice text…" style="font-size:10px; padding:7px;" />
@@ -1410,21 +1376,18 @@
                                 <button class="btn btn-danger btn-sm" onclick="clearNotice()" style="padding:6px;">Clear</button>
                             </div>
                         </div>
-
                         <div class="tool-sub-card">
                             <span class="tool-title">🔄 Update Roll Number</span>
                             <input type="text" id="oldRollFormat" placeholder="Old ID" style="font-size:10px; padding:7px;" />
                             <input type="text" id="newRollFormat" placeholder="New ID" style="font-size:10px; padding:7px;" />
                             <button class="btn btn-primary btn-sm" onclick="updateRollNumberFormat()" style="padding:7px; margin:0;">Update</button>
                         </div>
-
                         <div class="tool-sub-card">
                             <span class="tool-title">🔑 Reset Password</span>
                             <input type="text" id="resetRoll" placeholder="ID" style="font-size:10px; padding:7px;" />
                             <input type="text" id="resetPass" placeholder="New Password" style="font-size:10px; padding:7px;" />
                             <button class="btn btn-warning btn-sm" onclick="resetUserPassword()" style="padding:7px; margin:0;">Reset</button>
                         </div>
-
                         <div class="tool-sub-card" style="border-color:rgba(96,165,250,0.20);">
                             <span class="tool-title">📋 CSE Bulk Register & Update Attendance</span>
                             <p style="font-size:8px; color:var(--text-muted); margin-bottom:6px;">Register all CSE students (15-30 July) & set attendance as per records. Password: 123456</p>
@@ -1434,7 +1397,6 @@
                             </button>
                             <p id="bulkStatus" style="font-size:8px; color:var(--text-muted); margin-top:4px;">⚠️ Overwrites 15-30 July attendance.</p>
                         </div>
-
                         <div class="tool-sub-card" style="border-color:rgba(167,139,250,0.20);">
                             <span class="tool-title">📋 AIDS Bulk Register & Update Attendance</span>
                             <p style="font-size:8px; color:var(--text-muted); margin-bottom:6px;">Register all AIDS students (15-30 July) & set attendance as per records. Password: 123456</p>
@@ -1444,7 +1406,6 @@
                             </button>
                             <p id="aidsBulkStatus" style="font-size:8px; color:var(--text-muted); margin-top:4px;">⚠️ Overwrites 15-30 July attendance.</p>
                         </div>
-
                         <div class="tool-sub-card" style="border-color:rgba(255,23,68,0.20);">
                             <span class="tool-title">🗑️ Delete Account</span>
                             <input type="text" id="deleteUserRoll" placeholder="ID to Delete" style="font-size:10px; padding:7px;" />
@@ -1471,7 +1432,6 @@
 
                 <!-- ===== TEACHER TAB ===== -->
                 <div id="teacherTab" style="display:none;">
-
                     <!-- Faculty Stats -->
                     <div class="stats-grid" id="facultyStatsGrid">
                         <div class="stat-card">
@@ -1491,13 +1451,11 @@
                             <div class="label">My Students</div>
                         </div>
                     </div>
-
                     <!-- Today's Present Students -->
                     <div style="background:rgba(2,136,209,0.06); border-radius:var(--radius-sm); padding:12px; border:1px solid rgba(2,136,209,0.12); margin-bottom:12px;">
                         <span style="font-size:9px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.4px;">📋 Today's Present Students (Your Subjects)</span>
                         <div id="facultyTodayPresentList"></div>
                     </div>
-
                     <div style="background:rgba(2,136,209,0.06); border-radius:var(--radius-sm); padding:14px; border:1px solid rgba(2,136,209,0.12); margin-bottom:14px; text-align:center;">
                         <span class="sub-section-title" style="color:#0288d1;">🔒 Single Lecture Passcode (4‑digit)</span>
                         <div class="passcode-display" style="margin-top:4px;">
@@ -1506,7 +1464,6 @@
                         <button class="btn btn-success btn-sm" onclick="generateTeacherPasscode()" style="padding:4px 16px; width:auto; margin:0 auto;">Generate Passcode</button>
                         <p style="font-size:8px; color:var(--text-muted); margin-top:4px;">⏳ Expires after 5 minutes – for marking single lecture attendance.</p>
                     </div>
-
                     <!-- Teacher Manual Mark -->
                     <div style="background:rgba(0,200,83,0.04); border-radius:var(--radius-sm); padding:14px; border:1px solid rgba(0,200,83,0.12); margin-bottom:12px;">
                         <span class="sub-section-title">✏️ Manually Mark Student</span>
@@ -1518,7 +1475,6 @@
                         </select>
                         <button class="btn btn-primary btn-sm" onclick="teacherManualMark()" style="padding:6px; margin:0;">Mark Present</button>
                     </div>
-
                     <div style="margin-bottom:12px;">
                         <h4 style="font-size:11px; font-weight:800;">📋 Students (with your subjects)</h4>
                         <button class="btn btn-outline btn-sm" onclick="fetchTeacherStudents()" style="padding:4px 14px;">Refresh</button>
@@ -1529,7 +1485,6 @@
                             </table>
                         </div>
                     </div>
-
                     <div style="background:rgba(0,200,83,0.04); border-radius:var(--radius-sm); padding:14px; border:1px solid rgba(0,200,83,0.12); margin-bottom:12px;">
                         <span class="sub-section-title">📈 Student Report (PDF/CSV)</span>
                         <select id="teacherStudentReportSelect" style="padding:8px; margin-bottom:6px; font-size:10px;">
@@ -1562,7 +1517,6 @@
                             <button class="btn btn-success btn-sm" onclick="generateTeacherReport('csv')" style="padding:6px;">CSV</button>
                         </div>
                     </div>
-
                     <div>
                         <h4 style="font-size:11px; font-weight:800;">Recent Marks</h4>
                         <div class="table-container" style="max-height:160px;">
@@ -1598,9 +1552,7 @@
         </div>
     </div>
 
-    <!-- ========================================================== -->
-    <!-- CHAT WIDGET – Premium Glass                                -->
-    <!-- ========================================================== -->
+    <!-- ===== CHAT WIDGET ===== -->
     <div id="chatWidget">
         <div class="chat-panel" id="chatPanel">
             <div class="chat-header">
@@ -1907,7 +1859,7 @@
         }
 
         // ============================================================
-        // PERIOD TRACKER (uses frontend schedule)
+        // PERIOD TRACKER
         // ============================================================
         async function updatePeriodTrackerWidget() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -2492,7 +2444,7 @@
         }
 
         // ============================================================
-        // STUDENT MONTHLY SUMMARY – now uses backend
+        // STUDENT MONTHLY SUMMARY
         // ============================================================
         async function fetchMonthlySummary() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -2794,7 +2746,7 @@
         }
 
         // ============================================================
-        // CLASS ATTENDANCE REPORT (PDF)
+        // CLASS ATTENDANCE REPORT
         // ============================================================
         async function generateClassAttendanceReport() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -2903,7 +2855,7 @@
         }
 
         // ============================================================
-        // DELETE ALL FOR DATE
+        // DELETE ALL FOR DATE & SINGLE RECORD
         // ============================================================
         async function deleteAllForDate(rollNo, date) {
             if (!confirm(`Delete ALL attendance records for ${rollNo} on ${date}? This cannot be undone.`)) return;
@@ -2941,9 +2893,6 @@
             }
         }
 
-        // ============================================================
-        // DELETE RECORD
-        // ============================================================
         async function deleteRecord(recordId) {
             if (!confirm('Delete this attendance record permanently?')) return;
             const user = JSON.parse(localStorage.getItem('user'));
@@ -3108,8 +3057,10 @@
         }
 
         // ============================================================
-        // ALL ATTENDANCE MANAGEMENT
+        // ALL ATTENDANCE MANAGEMENT (UPDATED)
         // ============================================================
+        let selectedRecordIds = [];
+
         async function loadAllAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
@@ -3132,15 +3083,19 @@
 
                 const tbody = document.querySelector('#allAttendanceTable tbody');
                 if (filtered.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:16px; color:var(--text-muted);">No records found.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:16px; color:var(--text-muted);">No records found.</td></tr>';
                     return;
                 }
 
-                tbody.innerHTML = filtered.map(r => {
+                // Store record IDs for selection
+                window.currentAllRecords = filtered;
+
+                tbody.innerHTML = filtered.map((r, index) => {
                     const statusClass = r.status === 'Present' ? 'badge-present' : r.status === 'Duty Leave' ?
                         'badge-dl' : 'badge-absent';
                     return `
                             <tr>
+                                <td><input type="checkbox" class="record-checkbox" data-id="${r._id}" data-index="${index}" /></td>
                                 <td><b style="color:var(--text-main);">${r.date}</b></td>
                                 <td style="color:var(--text-main);">${r.rollNo}</td>
                                 <td style="color:var(--text-main);">${r.studentName || r.name || 'Unknown'}</td>
@@ -3153,14 +3108,62 @@
                             </tr>
                         `;
                 }).join('');
+
+                // Reset select all checkbox
+                document.getElementById('selectAllRecords').checked = false;
             } catch (e) {
                 showMsg('Failed to load attendance', true);
                 console.error(e);
             }
         }
 
+        // Toggle all checkboxes
+        function toggleAllRecords() {
+            const master = document.getElementById('selectAllRecords');
+            const checkboxes = document.querySelectorAll('.record-checkbox');
+            checkboxes.forEach(cb => cb.checked = master.checked);
+        }
+
+        // Delete selected records (loops through each)
+        async function deleteSelectedRecords() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
+
+            const checkboxes = document.querySelectorAll('.record-checkbox:checked');
+            if (checkboxes.length === 0) return showMsg('No records selected!', true);
+            if (!confirm(`Delete ${checkboxes.length} record(s) permanently?`)) return;
+
+            const ids = Array.from(checkboxes).map(cb => cb.dataset.id);
+            let deleted = 0,
+                failed = 0;
+            showMsg(`Deleting ${ids.length} records...`);
+
+            for (const id of ids) {
+                try {
+                    const res = await fetch(`${API_BASE}/api/attendance/delete/${id}/${user.rollNo}`, { method: 'DELETE' });
+                    if (res.ok) deleted++;
+                    else failed++;
+                } catch (e) { failed++; }
+            }
+            showMsg(`✅ Deleted ${deleted} records, ${failed} failed.`, failed > 0);
+            loadAllAttendance();
+        }
+
+        // Export current filtered data as CSV (subject-wise)
+        function exportAllAttendanceCSV() {
+            const records = window.currentAllRecords || globalAllRecords;
+            if (!records || records.length === 0) return showMsg('No records to export!', true);
+
+            let csv = 'Date,Roll No,Student Name,Subject,Status\n';
+            records.forEach(r => {
+                csv += `"${r.date}","${r.rollNo}","${r.studentName || r.name || 'Unknown'}","${r.subject}","${r.status}"\n`;
+            });
+            const fileName = `All_Attendance_${new Date().toISOString().split('T')[0]}.csv`;
+            downloadFile(csv, fileName, 'text/csv');
+        }
+
         // ============================================================
-        // EDIT ATTENDANCE MODAL (now uses PUT endpoint)
+        // EDIT ATTENDANCE MODAL
         // ============================================================
         function openEditModal(recordId, rollNo, currentStatus) {
             editRecordId = recordId;
@@ -3196,7 +3199,7 @@
         }
 
         // ============================================================
-        // DASHBOARD & HISTORY (uses backend summary)
+        // DASHBOARD & HISTORY
         // ============================================================
         async function loadStudentDashboard() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -3759,7 +3762,8 @@
             const text = document.getElementById('bulkHolidayText').value;
             const dates = text.split('\n').map(d => d.trim()).filter(d => d && /^\d{4}-\d{2}-\d{2}$/.test(d));
             if (dates.length === 0) return showMsg('No valid dates found!', true);
-            let added = 0, skipped = 0;
+            let added = 0,
+                skipped = 0;
             for (const date of dates) {
                 try {
                     const res = await fetch(`${API_BASE}/api/admin/holiday`, {
@@ -5207,6 +5211,7 @@
             console.log('📝 Leave system: students apply, admin approve/reject with auto Duty Leave.');
             console.log('⚠️ Defaulter watchlist: shows students below threshold.');
             console.log('📅 Bulk holiday addition: add multiple holidays at once.');
+            console.log('🗑️ All Attendance: Delete Selected & CSV Export added.');
         })();
     </script>
 </body>
