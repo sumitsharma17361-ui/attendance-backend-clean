@@ -235,10 +235,15 @@ async function checkDateStatus(dateStr) {
   }
   return { isBlocked: false, dayName };
 }
+
+// FIX: Corrected getWorkingDays – inclusive start, excludes weekends & holidays
 async function getWorkingDays(startDate, endDate) {
   const start = typeof startDate === 'string' ? new Date(startDate) : startDate;
   const end = typeof endDate === 'string' ? new Date(endDate) : endDate;
   let workingDays = 0;
+  // Ensure we start from the beginning of the day
+  start.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
   const holidays = await Holiday.find({ date: { $gte: start.toISOString().split('T')[0], $lte: end.toISOString().split('T')[0] } });
   const holidaySet = new Set(holidays.map(h => h.date));
   let current = new Date(start);
@@ -251,6 +256,7 @@ async function getWorkingDays(startDate, endDate) {
   }
   return workingDays;
 }
+
 function calculateDistance(lat1, lon1, lat2, lon2) {
   const R = 6371000;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -552,7 +558,7 @@ const Chat = mongoose.model('Chat', chatSchema);
 const Leave = mongoose.model('Leave', leaveSchema);
 Attendance.createIndexes().catch(err => console.error('Index creation error:', err));
 
-// ---------- Helper: getStudentSummary ----------
+// ---------- Helper: getStudentSummary (UPDATED) ----------
 async function getStudentSummary(rollNo) {
   try {
     const user = await User.findOne({ rollNo });
@@ -615,13 +621,17 @@ async function getStudentSummary(rollNo) {
       };
     }
     const daysPresent = allRecords.filter(r => r.status === 'Present' || r.status === 'Duty Leave').length;
+    // FIX: Add totalWorkingDaysSemester
+    const workingDaysSoFar = await getWorkingDays(semesterStart, today);
+    const totalWorkingDaysSemester = await getWorkingDays(semesterStart, SEMESTER_END);
     return {
       totalAcademicLectures: totalAcademicLecturesAttended,
       totalConductedLectures: totalConductedAcademicSubjects,
       attendancePercentage: pct,
       subjectStats: subjectStatsFinal,
       daysPresent,
-      workingDaysSoFar: (await getWorkingDays(semesterStart, today))
+      workingDaysSoFar,
+      totalWorkingDaysSemester   // <-- NEW
     };
   } catch (e) {
     console.error('Error in getStudentSummary:', e);
@@ -1192,6 +1202,7 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     const academicSubjectSet = new Set();
     allSubjects.forEach(entry => {
       const sub = mapToCanonical(entry.subject);
+      // Include all except LIB, Library, Sports (LABs are included)
       if (!sub.includes("LIB") && !sub.includes("Library") && !sub.includes("Sports")) {
         academicSubjectSet.add(sub);
       }
@@ -1715,7 +1726,7 @@ app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
   }
 });
 
-// ========== STUDENT SUMMARY (Overall) ==========
+// ========== STUDENT SUMMARY (Overall) – UPDATED ==========
 app.get('/api/student/summary/:rollNo', async (req, res) => {
   try {
     const cleanRoll = req.params.rollNo.trim().toUpperCase();
@@ -1785,13 +1796,17 @@ app.get('/api/student/summary/:rollNo', async (req, res) => {
         percentage: stats.total > 0 ? Math.round(((stats.present || 0) / stats.total) * 100) : 0
       };
     }
+    // FIX: added totalWorkingDaysSemester
+    const workingDaysSoFar = totalWorkingDays;
+    const totalWorkingDaysSemester = await getWorkingDays(semesterStart, SEMESTER_END);
     res.json({
       totalAcademicLectures: totalAcademicLecturesAttended,
       totalConductedLectures: totalConductedAcademicSubjects,
       attendancePercentage: pct,
       daysPresent,
       daysAbsent,
-      workingDaysSoFar: totalWorkingDays,
+      workingDaysSoFar,
+      totalWorkingDaysSemester,   // <-- NEW
       subjectStats: subjectStatsFinal
     });
   } catch (err) {
@@ -1819,6 +1834,8 @@ app.get('/api/export/google-sheets/:requesterRollNo', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ========== STUDENT ATTENDANCE EXPORT – FIXED ==========
 app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) => {
   try {
     const requesterRollNo = req.params.requesterRollNo.trim().toUpperCase();
@@ -1826,10 +1843,19 @@ app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) => {
     if (!requester) return res.status(403).json({ error: 'Access Denied' });
     const isAdmin = requester.role === 'admin';
     const isTeacher = requester.role === 'faculty';
-    if (!isAdmin && !isTeacher) return res.status(403).json({ error: 'Access Denied: Admin or Teacher only!' });
+    const isStudent = requester.role === 'student';
+    if (!isAdmin && !isTeacher && !isStudent) {
+      return res.status(403).json({ error: 'Access Denied: Insufficient privileges.' });
+    }
     const { studentRollNo, range, month } = req.query;
     if (!studentRollNo) return res.status(400).json({ error: 'studentRollNo is required' });
     const cleanStudent = studentRollNo.trim().toUpperCase();
+
+    // FIX: Student can only export their own data
+    if (isStudent && requester.rollNo !== cleanStudent) {
+      return res.status(403).json({ error: 'You can only export your own attendance.' });
+    }
+
     const today = new Date();
     let startDate, endDate;
     if (range === 'CURRENT_MONTH') { startDate = new Date(today.getFullYear(), today.getMonth(), 1); endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0); }
@@ -2487,7 +2513,7 @@ app.get('/api/student/trend/:rollNo', async (req, res) => {
 });
 
 // ============================================================
-//  DEFAULTER WATCHLIST
+//  DEFAULTER WATCHLIST – FIXED
 // ============================================================
 app.get('/api/admin/defaulters/:requesterRollNo', async (req, res) => {
   try {
@@ -2501,16 +2527,26 @@ app.get('/api/admin/defaulters/:requesterRollNo', async (req, res) => {
     const defaulters = [];
     for (const s of students) {
       const present = await Attendance.countDocuments({
-        rollNo: s.rollNo, date: { $gte: startStr, $lte: today },
-        status: { $in: ['Present','Duty Leave'] }
+        rollNo: s.rollNo,
+        date: { $gte: startStr, $lte: today },
+        status: { $in: ['Present','Duty Leave'] },
+        subject: { $nin: [/Sports/i, /LIB/i, /Library/i] }
       });
-      const total = await Attendance.countDocuments({ rollNo: s.rollNo, date: { $gte: startStr, $lte: today } });
-      const pct = total > 0 ? Math.round((present/total)*100) : 0;
-      if (total > 0 && pct < threshold) defaulters.push({ rollNo: s.rollNo, name: s.name, branch: s.branch, pct, present, total });
+      const total = await Attendance.countDocuments({
+        rollNo: s.rollNo,
+        date: { $gte: startStr, $lte: today },
+        subject: { $nin: [/Sports/i, /LIB/i, /Library/i] }
+      });
+      if (total === 0) continue; // skip students with no records
+      const pct = Math.round((present/total)*100);
+      if (pct < threshold) {
+        defaulters.push({ rollNo: s.rollNo, name: s.name, branch: s.branch, pct, present, total });
+      }
     }
     defaulters.sort((a,b) => a.pct - b.pct);
     res.json({ threshold, defaulters });
   } catch (err) {
+    console.error('Defaulter error:', err);
     res.status(500).json({ error: err.message });
   }
 });
