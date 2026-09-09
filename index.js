@@ -1797,7 +1797,7 @@ app.get('/api/student/summary/:rollNo', async (req, res) => {
       };
     }
     // FIX: added totalWorkingDaysSemester
-    const workingDaysSoFar = totalWorkingDays;
+    const workingDaysSoFar = await getWorkingDays(semesterStart, today);
     const totalWorkingDaysSemester = await getWorkingDays(semesterStart, SEMESTER_END);
     res.json({
       totalAcademicLectures: totalAcademicLecturesAttended,
