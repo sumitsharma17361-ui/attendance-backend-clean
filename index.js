@@ -92,7 +92,7 @@ const SUBJECT_ALIAS_MAP = {
   // WT
   'WT': 'WT - Web Technology',
   'WT - Web Techn': 'WT - Web Technology',
-  // CSE Labs
+  // CSE Labs - EXACT MATCHES to prevent merging
   'CN LAB': 'CN LAB - Computer Network Lab',
   'CN LAB - Compu': 'CN LAB - Computer Network Lab',
   'DAA LAB': 'DAA LAB - Algorithm Lab',
@@ -114,7 +114,9 @@ const SUBJECT_ALIAS_MAP = {
 function mapToCanonical(subject) {
   if (!subject) return '';
   const normalized = normalizeSubject(subject);
+  // Exact match first
   if (SUBJECT_ALIAS_MAP[normalized]) return SUBJECT_ALIAS_MAP[normalized];
+  // Then fallback to partial match (only if no exact match)
   for (let [alias, canonical] of Object.entries(SUBJECT_ALIAS_MAP)) {
     if (normalized.includes(alias) || alias.includes(normalized)) {
       return canonical;
@@ -246,6 +248,7 @@ async function getWorkingDays(startDate, endDate) {
   end.setHours(0, 0, 0, 0);
   const holidays = await Holiday.find({ date: { $gte: start.toISOString().split('T')[0], $lte: end.toISOString().split('T')[0] } });
   const holidaySet = new Set(holidays.map(h => h.date));
+  console.log(`📅 Holidays in range:`, [...holidaySet]);
   let current = new Date(start);
   while (current <= end) {
     const dateStr = current.toISOString().split('T')[0];
@@ -545,7 +548,8 @@ const leaveSchema = new mongoose.Schema({
   leaveType:   { type: String, enum: ['Sick','Personal','Event','Other'], default: 'Personal' },
   status:      { type: String, enum: ['Pending','Approved','Rejected'], default: 'Pending' },
   reviewedBy:  { type: String, default: null },
-  adminNote:   { type: String, default: '' }
+  adminNote:   { type: String, default: '' },
+  branch:      { type: String, default: 'CSE' }  // Added
 }, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);
@@ -1020,12 +1024,8 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
         return res.json({ message: 'Existing passcode retrieved', passcode: passcodeDoc.passcode, type, expiresAt: passcodeDoc.expiresAt });
       }
       const passcode = Math.floor(1000 + Math.random() * 9000).toString();
-      const endParts = period.end.split(':');
-      const expiry = new Date(now);
-      expiry.setHours(parseInt(endParts[0]), parseInt(endParts[1]) + 1, 0, 0);
-      if (expiry <= now) {
-        expiry.setMinutes(now.getMinutes() + 5);
-      }
+      // FIX: expiry set to 5 minutes from now
+      const expiry = new Date(now.getTime() + 5 * 60 * 1000);
       await Passcode.deleteMany({ key, type: 'single_lecture' });
       const newPasscode = new Passcode({
         passcode,
@@ -1653,7 +1653,8 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
       const allSubjects = timetable[dayName] || [];
       subjectsToMark = allSubjects.filter(entry => !entry.subject.includes("LIB") && !entry.subject.includes("Library") && !entry.subject.includes("Sports")).map(entry => mapToCanonical(entry.subject));
     }
-    const uniqueSubjects = [...new Set(subjectsToMark.map(s => mapToCanonical(s)))];
+    // FIX: Always filter out non-academic
+    const uniqueSubjects = [...new Set(subjectsToMark.map(s => mapToCanonical(s)).filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports')))];
     for (let sub of uniqueSubjects) {
       const existing = await Attendance.findOne({ rollNo: targetRoll, subject: sub, date });
       if (existing) {
@@ -2268,6 +2269,7 @@ app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
         const dayName = dateStatus.dayName;
         let daySubjects = timetable[dayName] || [];
         let subjectsToMark = subjects && subjects.length > 0 ? subjects : daySubjects.map(s => mapToCanonical(s.subject));
+        // Always filter out non-academic
         const uniqueSubjects = [...new Set(subjectsToMark.filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports')))];
         for (const sub of uniqueSubjects) {
           const exists = await Attendance.findOne({ rollNo: student.rollNo, subject: sub, date });
@@ -2412,8 +2414,13 @@ app.post('/api/leave/apply', async (req, res) => {
     if (new Date(toDate) < new Date(fromDate))
       return res.status(400).json({ error: 'End date cannot be before start date.' });
     const leave = new Leave({
-      rollNo: cleanRoll, studentName: user.name, fromDate, toDate,
-      reason, leaveType: leaveType || 'Personal'
+      rollNo: cleanRoll,
+      studentName: user.name,
+      fromDate,
+      toDate,
+      reason,
+      leaveType: leaveType || 'Personal',
+      branch: user.branch || 'CSE'
     });
     await leave.save();
     res.status(201).json({ message: '✅ Leave application submitted for review!', leave });
@@ -2460,21 +2467,29 @@ app.post('/api/leave/action/:id', async (req, res) => {
     await leave.save();
 
     if (action === 'Approved') {
+      // Fetch student's branch
+      const student = await User.findOne({ rollNo: leave.rollNo });
+      const branch = student?.branch || 'CSE';
       let cur = new Date(leave.fromDate);
       const end = new Date(leave.toDate);
       while (cur <= end) {
         const dateStr = cur.toISOString().split('T')[0];
         const ds = await checkDateStatus(dateStr);
         if (!ds.isBlocked) {
-          const tt = getTimetableForBranch('CSE')[ds.dayName] || [];
+          const tt = getTimetableForBranch(branch)[ds.dayName] || [];
           for (const entry of tt) {
             const sub = mapToCanonical(entry.subject);
             if (sub.includes('LIB') || sub.includes('Library') || sub.includes('Sports')) continue;
             const exists = await Attendance.findOne({ rollNo: leave.rollNo, subject: sub, date: dateStr });
             if (!exists) {
               await new Attendance({
-                rollNo: leave.rollNo, studentName: leave.studentName, subject: sub,
-                date: dateStr, status: 'Duty Leave', isVerified: true, branch: 'CSE',
+                rollNo: leave.rollNo,
+                studentName: leave.studentName,
+                subject: sub,
+                date: dateStr,
+                status: 'Duty Leave',
+                isVerified: true,
+                branch: branch,
                 ipAddress: 'leave-approved'
               }).save();
             }
@@ -2513,7 +2528,7 @@ app.get('/api/student/trend/:rollNo', async (req, res) => {
 });
 
 // ============================================================
-//  DEFAULTER WATCHLIST – FIXED
+//  DEFAULTER WATCHLIST – FIXED (include zero attendance)
 // ============================================================
 app.get('/api/admin/defaulters/:requesterRollNo', async (req, res) => {
   try {
@@ -2537,7 +2552,11 @@ app.get('/api/admin/defaulters/:requesterRollNo', async (req, res) => {
         date: { $gte: startStr, $lte: today },
         subject: { $nin: [/Sports/i, /LIB/i, /Library/i] }
       });
-      if (total === 0) continue; // skip students with no records
+      if (total === 0) {
+        // Include with 0%
+        defaulters.push({ rollNo: s.rollNo, name: s.name, branch: s.branch, pct: 0, present: 0, total: 0 });
+        continue;
+      }
       const pct = Math.round((present/total)*100);
       if (pct < threshold) {
         defaulters.push({ rollNo: s.rollNo, name: s.name, branch: s.branch, pct, present, total });
