@@ -20,7 +20,8 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY ? process.env.GROQ_API_KEY.trim() 
 const COLLEGE_LAT = 28.4509370;
 const COLLEGE_LNG = 76.7688120;
 const COLLEGE_RADIUS = 50;
-// FIX 1: Corrected Semester Start date to avoid UTC offset issues
+
+// FIX: Corrected Semester Start date to avoid UTC offset issues
 const SEMESTER_START = new Date('2026-07-15T00:00:00+05:30'); 
 const SEMESTER_END = new Date('2026-12-31T23:59:59+05:30');
 
@@ -124,7 +125,7 @@ function mapToCanonical(subject) {
   return normalized;
 }
 
-// ---------- CORRECTED TIMETABLE (CSE) - Matches Image exactly ----------
+// ---------- CORRECTED TIMETABLE (CSE) ----------
 const CSE_TIME_TABLE = {
   Monday: [
     { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
@@ -150,14 +151,14 @@ const CSE_TIME_TABLE = {
     { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' },
     { subject: 'Sports / Activity', faculty: 'Sports Dept' },
     { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' },
-    { subject: 'CN LAB - Computer Network Lab', faculty: 'Mr. Chhetrapal' } // P7-P8
+    { subject: 'CN LAB - Computer Network Lab', faculty: 'Mr. Chhetrapal' }
   ],
   Thursday: [
     { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
     { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' },
     { subject: 'CN - Computer Network', faculty: 'Mr. Chhetrapal' },
     { subject: 'DAA - Design & Analysis of Algorithm', faculty: 'Ms. Rashmi' },
-    { subject: 'DAA LAB - Algorithm Lab', faculty: 'Ms. Rashmi' }, // P6-P7
+    { subject: 'DAA LAB - Algorithm Lab', faculty: 'Ms. Rashmi' },
     { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }
   ],
   Friday: [
@@ -165,14 +166,14 @@ const CSE_TIME_TABLE = {
     { subject: 'CN - Computer Network', faculty: 'Mr. Chhetrapal' },
     { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' },
     { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
-    { subject: 'WT LAB - Web Technology Lab', faculty: 'Mr. Avish Yadav' }, // P6-P7
+    { subject: 'WT LAB - Web Technology Lab', faculty: 'Mr. Avish Yadav' },
     { subject: 'Sports', faculty: 'Sports Dept' }
   ],
-  Saturday: [], // OFF
-  Sunday: []    // OFF
+  Saturday: [],
+  Sunday: []
 };
 
-// ---------- CORRECTED TIMETABLE (AIDS) - Matches Image exactly ----------
+// ---------- CORRECTED TIMETABLE (AIDS) ----------
 const AIDS_TIME_TABLE = {
   Monday: [
     { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
@@ -180,6 +181,7 @@ const AIDS_TIME_TABLE = {
     { subject: 'LIB - Library', faculty: 'Library Staff' },
     { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' },
     { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' },
+    { subject: 'PA - Predictive Analysis', faculty: 'Ms. Pooja' },
     { subject: 'PA - Predictive Analysis', faculty: 'Ms. Pooja' },
     { subject: 'Sports', faculty: 'Sports Dept' }
   ],
@@ -198,14 +200,14 @@ const AIDS_TIME_TABLE = {
     { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' },
     { subject: 'Sports / Project', faculty: 'Sports Dept' },
     { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' },
-    { subject: 'PA LAB - Predictive Analysis Lab', faculty: 'Ms. Pooja' } // P7-P8
+    { subject: 'PA LAB - Predictive Analysis Lab', faculty: 'Ms. Pooja' }
   ],
   Thursday: [
     { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
     { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' },
     { subject: 'ML - Machine Learning', faculty: 'Mr. Harsh' },
     { subject: 'PA - Predictive Analysis', faculty: 'Ms. Pooja' },
-    { subject: 'ML LAB - Machine Learning Lab', faculty: 'Mr. Harsh' }, // P6-P7
+    { subject: 'ML LAB - Machine Learning Lab', faculty: 'Mr. Harsh' },
     { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }
   ],
   Friday: [
@@ -213,11 +215,11 @@ const AIDS_TIME_TABLE = {
     { subject: 'LIB - Library', faculty: 'Library Staff' },
     { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' },
     { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
-    { subject: 'BDA LAB - Big Data Analytics Lab', faculty: 'Ms. Geeta' }, // P6-P7
+    { subject: 'BDA LAB - Big Data Analytics Lab', faculty: 'Ms. Geeta' },
     { subject: 'Sports', faculty: 'Sports Dept' }
   ],
-  Saturday: [], // OFF
-  Sunday: []    // OFF
+  Saturday: [],
+  Sunday: []
 };
 
 function getTimetableForBranch(branch) {
@@ -231,7 +233,6 @@ async function checkDateStatus(dateStr) {
   const parts = dateStr.split('-');
   const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
   const dayName = days[dateObj.getDay()];
-  // Saturday and Sunday are officially closed as per the timetable
   if (dayName === 'Saturday' || dayName === 'Sunday') {
     return { isBlocked: true, type: 'WEEKEND', message: `📅 ${dayName}: College Closed (Weekend)`, dayName };
   }
@@ -257,7 +258,7 @@ async function getWorkingDays(startDate, endDate) {
   let current = new Date(start);
   while (current <= end) {
     const dateStr = current.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-    const dayOfWeek = current.getDay(); // 0 = Sunday, 6 = Saturday
+    const dayOfWeek = current.getDay();
     const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
     if (!isWeekend && !holidaySet.has(dateStr)) workingDays++;
     current.setDate(current.getDate() + 1);
@@ -339,9 +340,9 @@ async function generateTeacherId(subject) {
   return `${code}${newNum}`;
 }
 
-// ---------- Schedule for period detection (Corrected to match Image) ----------
+// ---------- Schedule for period detection ----------
 const CSE_SCHEDULE = {
-  1: [ // Monday
+  1: [
     { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
     { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
     { start: "10:50", end: "11:35", subject: "DAA - Design & Analysis of Algorithm", period: "P3" },
@@ -351,7 +352,7 @@ const CSE_SCHEDULE = {
     { start: "13:50", end: "14:35", subject: "CN - Computer Network", period: "P7" },
     { start: "14:35", end: "15:20", subject: "Sports", period: "P8" }
   ],
-  2: [ // Tuesday
+  2: [
     { start: "09:20", end: "10:05", subject: "WT - Web Technology", period: "P1" },
     { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
     { start: "10:50", end: "11:35", subject: "Internet Lab (Ms. Geeta)", period: "P3" },
@@ -361,7 +362,7 @@ const CSE_SCHEDULE = {
     { start: "13:50", end: "14:35", subject: "BDA - Big Data Analytics", period: "P7" },
     { start: "14:35", end: "15:20", subject: "Sports", period: "P8" }
   ],
-  3: [ // Wednesday
+  3: [
     { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
     { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
     { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
@@ -370,7 +371,7 @@ const CSE_SCHEDULE = {
     { start: "13:05", end: "13:50", subject: "WT - Web Technology", period: "P6" },
     { start: "13:50", end: "15:20", subject: "CN LAB - Computer Network Lab", period: "P7-P8" }
   ],
-  4: [ // Thursday
+  4: [
     { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
     { start: "10:05", end: "10:50", subject: "WT - Web Technology", period: "P2" },
     { start: "10:50", end: "11:35", subject: "CN - Computer Network", period: "P3" },
@@ -379,7 +380,7 @@ const CSE_SCHEDULE = {
     { start: "13:05", end: "14:35", subject: "DAA LAB - Algorithm Lab", period: "P6-P7" },
     { start: "14:35", end: "15:20", subject: "HRM - Human Resource Mgmt", period: "P8" }
   ],
-  5: [ // Friday
+  5: [
     { start: "09:20", end: "10:05", subject: "DAA - Design & Analysis of Algorithm", period: "P1" },
     { start: "10:05", end: "10:50", subject: "CN - Computer Network", period: "P2" },
     { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
@@ -391,7 +392,7 @@ const CSE_SCHEDULE = {
 };
 
 const AIDS_SCHEDULE = {
-  1: [ // Monday
+  1: [
     { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
     { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
     { start: "10:50", end: "11:35", subject: "LIB - Library", period: "P3" },
@@ -401,7 +402,7 @@ const AIDS_SCHEDULE = {
     { start: "13:50", end: "14:35", subject: "PA - Predictive Analysis", period: "P7" },
     { start: "14:35", end: "15:20", subject: "Sports", period: "P8" }
   ],
-  2: [ // Tuesday
+  2: [
     { start: "09:20", end: "10:05", subject: "WT - Web Technology", period: "P1" },
     { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
     { start: "10:50", end: "11:35", subject: "PA - Predictive Analysis", period: "P3" },
@@ -411,7 +412,7 @@ const AIDS_SCHEDULE = {
     { start: "13:50", end: "14:35", subject: "BDA - Big Data Analytics", period: "P7" },
     { start: "14:35", end: "15:20", subject: "ML - Machine Learning", period: "P8" }
   ],
-  3: [ // Wednesday
+  3: [
     { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
     { start: "10:05", end: "10:50", subject: "ECO - Economics for Engineers", period: "P2" },
     { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
@@ -420,7 +421,7 @@ const AIDS_SCHEDULE = {
     { start: "13:05", end: "13:50", subject: "WT - Web Technology", period: "P6" },
     { start: "13:50", end: "15:20", subject: "PA LAB - Predictive Analysis Lab", period: "P7-P8" }
   ],
-  4: [ // Thursday
+  4: [
     { start: "09:20", end: "10:05", subject: "BDA - Big Data Analytics", period: "P1" },
     { start: "10:05", end: "10:50", subject: "WT - Web Technology", period: "P2" },
     { start: "10:50", end: "11:35", subject: "ML - Machine Learning", period: "P3" },
@@ -429,7 +430,7 @@ const AIDS_SCHEDULE = {
     { start: "13:05", end: "14:35", subject: "ML LAB - Machine Learning Lab", period: "P6-P7" },
     { start: "14:35", end: "15:20", subject: "HRM - Human Resource Mgmt", period: "P8" }
   ],
-  5: [ // Friday
+  5: [
     { start: "09:20", end: "10:05", subject: "ML - Machine Learning", period: "P1" },
     { start: "10:05", end: "10:50", subject: "LIB - Library", period: "P2" },
     { start: "10:50", end: "11:35", subject: "FLA - Formal Language & Automata", period: "P3" },
@@ -447,13 +448,11 @@ function getScheduleForBranch(branch) {
 
 function getCurrentPeriod(branch = 'CSE') {
   const now = new Date();
-  const day = now.getDay(); // 0 = Sunday, 6 = Saturday
-  if (day === 0 || day === 6) return null; // No classes on weekends
-  
+  const day = now.getDay();
+  if (day === 0 || day === 6) return null;
   const schedule = getScheduleForBranch(branch);
   const daySchedule = schedule[day] || [];
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
-  
   for (let slot of daySchedule) {
     const startMins = parseInt(slot.start.split(':')[0]) * 60 + parseInt(slot.start.split(':')[1]);
     const endMins = parseInt(slot.end.split(':')[0]) * 60 + parseInt(slot.end.split(':')[1]);
@@ -1231,7 +1230,6 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     const academicSubjectSet = new Set();
     allSubjects.forEach(entry => {
       const sub = mapToCanonical(entry.subject);
-      // Include all except LIB, Library, Sports (Labs are included automatically)
       if (!sub.includes("LIB") && !sub.includes("Library") && !sub.includes("Sports")) {
         academicSubjectSet.add(sub);
       }
