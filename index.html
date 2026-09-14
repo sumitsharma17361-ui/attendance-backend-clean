@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -32,2024 +33,409 @@
             --transition-fast: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
             --bg-gradient: linear-gradient(145deg, #e3f2fd, #b3e5fc, #81d4fa);
         }
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         .glass-orb-bg {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            pointer-events: none;
-            z-index: 0;
-            background: var(--bg-gradient);
-            overflow: hidden;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none; z-index: 0; background: var(--bg-gradient); overflow: hidden;
         }
         .glass-orb-bg::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
             background: radial-gradient(circle at 30% 40%, rgba(2, 136, 209, 0.22) 0%, transparent 60%),
                 radial-gradient(circle at 70% 60%, rgba(0, 188, 212, 0.18) 0%, transparent 50%);
-            animation: glassOrb 18s ease-in-out infinite alternate;
-            will-change: transform;
+            animation: glassOrb 18s ease-in-out infinite alternate; will-change: transform;
         }
-        @keyframes glassOrb {
-            0% {
-                transform: translate(0, 0) scale(1);
-            }
-            100% {
-                transform: translate(6%, 6%) scale(1.18);
-            }
-        }
-        html {
-            scroll-behavior: smooth;
-        }
+        @keyframes glassOrb { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(6%, 6%) scale(1.18); } }
+        html { scroll-behavior: smooth; }
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            color: var(--text-main);
-            min-height: 100vh;
-            display: flex;
-            align-items: flex-start;
-            justify-content: center;
-            padding: 18px 14px;
-            margin: 0;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            overflow-y: auto;
-            overflow-x: hidden;
-            position: relative;
-            z-index: 1;
-            background: transparent;
+            color: var(--text-main); min-height: 100vh; display: flex; align-items: flex-start;
+            justify-content: center; padding: 18px 14px; margin: 0; -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale; overflow-y: auto; overflow-x: hidden; position: relative;
+            z-index: 1; background: transparent;
         }
         @supports not (backdrop-filter: blur(1px)) {
-            .app-container,
-            .chat-panel,
-            .modal-card,
-            .toast-card,
-            #downloadProgress {
-                background: rgba(255, 255, 255, 0.88) !important;
-                backdrop-filter: none !important;
+            .app-container, .chat-panel, .modal-card, .toast-card, #downloadProgress {
+                background: rgba(255, 255, 255, 0.88) !important; backdrop-filter: none !important;
                 -webkit-backdrop-filter: none !important;
             }
         }
-        ::-webkit-scrollbar {
-            width: 5px;
-            height: 5px;
-        }
-        ::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.03);
-            border-radius: 12px;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(2, 136, 209, 0.25);
-            border-radius: 12px;
-            transition: var(--transition-fast);
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(2, 136, 209, 0.45);
-        }
-        #toast-container {
-            position: fixed;
-            top: 24px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 99999;
-            width: 92%;
-            max-width: 440px;
-            pointer-events: none;
-        }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.03); border-radius: 12px; }
+        ::-webkit-scrollbar-thumb { background: rgba(2, 136, 209, 0.25); border-radius: 12px; transition: var(--transition-fast); }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(2, 136, 209, 0.45); }
+        #toast-container { position: fixed; top: 24px; left: 50%; transform: translateX(-50%); z-index: 99999; width: 92%; max-width: 440px; pointer-events: none; }
         .toast-card {
-            padding: 16px 24px;
-            border-radius: var(--radius-sm);
-            font-size: 13px;
-            font-weight: 600;
-            text-align: center;
-            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.10);
-            border: 1px solid var(--glass-border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 14px;
-            opacity: 0;
-            transform: translateY(-24px) scale(0.94);
-            transition: all 0.55s cubic-bezier(0.16, 1, 0.3, 1);
-            pointer-events: auto;
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-            background: var(--glass-bg);
-            color: var(--text-main);
+            padding: 16px 24px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600;
+            text-align: center; box-shadow: 0 12px 48px rgba(0, 0, 0, 0.10); border: 1px solid var(--glass-border);
+            display: flex; align-items: center; justify-content: center; gap: 14px; opacity: 0;
+            transform: translateY(-24px) scale(0.94); transition: all 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: auto; backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+            background: var(--glass-bg); color: var(--text-main);
         }
-        .toast-card.show {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-        }
-        .toast-card.toast-success {
-            background: rgba(0, 200, 83, 0.18);
-            border-color: rgba(0, 200, 83, 0.35);
-        }
-        .toast-card.toast-error {
-            background: rgba(255, 23, 68, 0.18);
-            border-color: rgba(255, 23, 68, 0.35);
-            animation: shake 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .toast-card.toast-download {
-            background: rgba(2, 136, 209, 0.18);
-            border-color: rgba(2, 136, 209, 0.35);
-        }
-        @keyframes shake {
-            0%,
-            100% {
-                transform: translateX(0);
-            }
-            20%,
-            60% {
-                transform: translateX(-8px);
-            }
-            40%,
-            80% {
-                transform: translateX(8px);
-            }
-        }
+        .toast-card.show { opacity: 1; transform: translateY(0) scale(1); }
+        .toast-card.toast-success { background: rgba(0, 200, 83, 0.18); border-color: rgba(0, 200, 83, 0.35); }
+        .toast-card.toast-error { background: rgba(255, 23, 68, 0.18); border-color: rgba(255, 23, 68, 0.35); animation: shake 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        .toast-card.toast-download { background: rgba(2, 136, 209, 0.18); border-color: rgba(2, 136, 209, 0.35); }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
         #downloadProgress {
-            position: fixed;
-            bottom: 28px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-            color: var(--text-main);
-            padding: 14px 28px;
-            border-radius: var(--radius-sm);
-            font-size: 12px;
-            z-index: 99999;
-            display: none;
-            align-items: center;
-            gap: 16px;
-            max-width: 92%;
-            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.10);
-            font-weight: 600;
+            position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.85); backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur); color: var(--text-main);
+            padding: 14px 28px; border-radius: var(--radius-sm); font-size: 12px; z-index: 99999;
+            display: none; align-items: center; gap: 16px; max-width: 92%;
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.10); font-weight: 600;
             border: 1px solid var(--glass-border);
-            will-change: transform, opacity;
         }
-        #downloadProgress.show {
-            display: flex;
-            animation: fadeSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        #downloadProgress .spinner {
-            width: 22px;
-            height: 22px;
-            border: 2.5px solid rgba(0, 0, 0, 0.08);
-            border-top: 2.5px solid #0288d1;
-            border-radius: 50%;
-            animation: spin 0.7s linear infinite;
-            flex-shrink: 0;
-        }
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-        @keyframes fadeSlideUp {
-            from {
-                opacity: 0;
-                transform: translateY(18px) translateX(-50%);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) translateX(-50%);
-            }
-        }
+        #downloadProgress.show { display: flex; animation: fadeSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        #downloadProgress .spinner { width: 22px; height: 22px; border: 2.5px solid rgba(0, 0, 0, 0.08); border-top: 2.5px solid #0288d1; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeSlideUp { from { opacity: 0; transform: translateY(18px) translateX(-50%); } to { opacity: 1; transform: translateY(0) translateX(-50%); } }
         .app-container {
-            width: 100%;
-            max-width: 560px;
-            margin: 0 auto;
-            background: var(--glass-bg);
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-            border-radius: 32px;
-            box-shadow: 0 16px 60px rgba(0, 0, 0, 0.08);
-            border: 1px solid var(--glass-border);
-            overflow: hidden;
-            animation: appEntrance 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-            position: relative;
-            will-change: transform, opacity;
-            transition: box-shadow 0.5s ease;
+            width: 100%; max-width: 560px; margin: 0 auto; background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+            border-radius: 32px; box-shadow: 0 16px 60px rgba(0, 0, 0, 0.08);
+            border: 1px solid var(--glass-border); overflow: hidden;
+            animation: appEntrance 0.7s cubic-bezier(0.16, 1, 0.3, 1); position: relative;
         }
-        .app-container:hover {
-            box-shadow: 0 20px 80px rgba(0, 0, 0, 0.10);
-        }
-        @keyframes appEntrance {
-            from {
-                opacity: 0;
-                transform: scale(0.94) translateY(24px);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
-        }
-        #auth-box {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            min-height: 70vh;
-            padding: 28px 20px;
-        }
-        #auth-box h3 {
-            text-align: center;
-            font-size: 22px;
-            font-weight: 900;
-            margin-bottom: 20px;
-            color: var(--text-main);
-            letter-spacing: -0.3px;
-        }
+        @keyframes appEntrance { from { opacity: 0; transform: scale(0.94) translateY(24px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        #auth-box { display: flex; flex-direction: column; justify-content: center; min-height: 70vh; padding: 28px 20px; }
+        #auth-box h3 { text-align: center; font-size: 22px; font-weight: 900; margin-bottom: 20px; color: var(--text-main); letter-spacing: -0.3px; }
         .app-header {
-            background: rgba(255, 255, 255, 0.08);
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--glass-border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
+            background: rgba(255, 255, 255, 0.08); padding: 16px 20px; border-bottom: 1px solid var(--glass-border);
+            display: flex; align-items: center; justify-content: space-between;
+            backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
         }
         .app-header-title h1 {
-            font-size: 16px;
-            font-weight: 900;
-            letter-spacing: -0.4px;
-            color: var(--text-main);
+            font-size: 16px; font-weight: 900; letter-spacing: -0.4px;
             background: linear-gradient(135deg, #0288d1, #00bcd4);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
         }
-        .app-header-title p {
-            font-size: 9px;
-            font-weight: 600;
-            color: var(--text-muted);
-            margin-top: 1px;
-            letter-spacing: 0.4px;
-            -webkit-text-fill-color: var(--text-muted);
-        }
-        .header-avatar-badge {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-shrink: 0;
-        }
+        .app-header-title p { font-size: 9px; font-weight: 600; color: var(--text-muted); margin-top: 1px; letter-spacing: 0.4px; }
+        .header-avatar-badge { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
         .avatar-circle {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
+            width: 40px; height: 40px; border-radius: 50%;
             background: linear-gradient(135deg, #0288d1, #00bcd4);
-            color: #fff;
-            font-weight: 700;
-            font-size: 13px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid rgba(255, 255, 255, 0.30);
-            transition: var(--transition-fast);
-            cursor: pointer;
-            box-shadow: 0 2px 16px rgba(2, 136, 209, 0.25);
-            will-change: transform;
+            color: #fff; font-weight: 700; font-size: 13px; display: flex;
+            align-items: center; justify-content: center; border: 2px solid rgba(255, 255, 255, 0.30);
+            transition: var(--transition-fast); cursor: pointer; box-shadow: 0 2px 16px rgba(2, 136, 209, 0.25);
         }
-        .avatar-circle:hover {
-            transform: scale(1.08) rotate(-2deg);
-            box-shadow: 0 6px 28px rgba(2, 136, 209, 0.40);
-        }
-        .avatar-circle:active {
-            transform: scale(0.94);
-        }
+        .avatar-circle:hover { transform: scale(1.08) rotate(-2deg); box-shadow: 0 6px 28px rgba(2, 136, 209, 0.40); }
+        .avatar-circle:active { transform: scale(0.94); }
         .notice-banner {
-            background: rgba(255, 171, 0, 0.12);
-            border-bottom: 1px solid rgba(255, 171, 0, 0.20);
-            color: #f57f17;
-            font-size: 10px;
-            padding: 10px 16px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 12px;
+            background: rgba(255, 171, 0, 0.12); border-bottom: 1px solid rgba(255, 171, 0, 0.20);
+            color: #f57f17; font-size: 10px; padding: 10px 16px; font-weight: 600;
+            display: flex; align-items: center; gap: 12px;
         }
-        .notice-marquee {
-            overflow: hidden;
-            white-space: nowrap;
-            width: 100%;
-        }
-        .notice-marquee p {
-            display: inline-block;
-            animation: marquee 22s linear infinite;
-        }
-        @keyframes marquee {
-            0% {
-                transform: translateX(100%);
-            }
-            100% {
-                transform: translateX(-100%);
-            }
-        }
+        .notice-marquee { overflow: hidden; white-space: nowrap; width: 100%; }
+        .notice-marquee p { display: inline-block; animation: marquee 22s linear infinite; }
+        @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
         .impersonation-banner {
-            background: rgba(255, 171, 0, 0.12);
-            border-bottom: 2px solid rgba(255, 171, 0, 0.25);
-            color: #f57f17;
-            padding: 10px 16px;
-            font-size: 11px;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            flex-wrap: wrap;
+            background: rgba(255, 171, 0, 0.12); border-bottom: 2px solid rgba(255, 171, 0, 0.25);
+            color: #f57f17; padding: 10px 16px; font-size: 11px; font-weight: 700;
+            display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
         }
         .impersonation-banner .switch-back-btn {
-            background: rgba(255, 23, 68, 0.80);
-            color: #fff;
-            border: none;
-            border-radius: var(--radius-sm);
-            padding: 5px 16px;
-            font-size: 10px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: var(--transition-fast);
+            background: rgba(255, 23, 68, 0.80); color: #fff; border: none; border-radius: var(--radius-sm);
+            padding: 5px 16px; font-size: 10px; font-weight: 700; cursor: pointer; transition: var(--transition-fast);
         }
-        .impersonation-banner .switch-back-btn:hover {
-            background: #ff1744;
-            transform: scale(1.04);
+        .impersonation-banner .switch-back-btn:hover { background: #ff1744; transform: scale(1.04); }
+        .app-body { padding: 18px; }
+        input, select {
+            width: 100%; padding: 11px 16px; margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.25); border: 1.5px solid rgba(255, 255, 255, 0.35);
+            border-radius: var(--radius-sm); font-size: 12px; font-weight: 500;
+            color: var(--text-main); outline: none; transition: var(--transition-fast);
+            font-family: inherit; backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
         }
-        .app-body {
-            padding: 18px;
-        }
-        input,
-        select {
-            width: 100%;
-            padding: 11px 16px;
-            margin-bottom: 10px;
-            background: rgba(255, 255, 255, 0.25);
-            border: 1.5px solid rgba(255, 255, 255, 0.35);
-            border-radius: var(--radius-sm);
-            font-size: 12px;
-            font-weight: 500;
-            color: var(--text-main);
-            outline: none;
-            transition: var(--transition-fast);
-            font-family: inherit;
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-            will-change: border-color, box-shadow, background;
-        }
-        select option {
-            background: #fff;
-            color: var(--text-main);
-        }
-        input::placeholder {
-            color: rgba(26, 26, 46, 0.40);
-            font-weight: 400;
-        }
-        input:focus,
-        select:focus {
-            background: rgba(255, 255, 255, 0.45);
-            border-color: #0288d1;
-            box-shadow: 0 0 0 5px rgba(2, 136, 209, 0.12);
-            transform: translateY(-1px);
-        }
-        .password-wrapper {
-            position: relative;
-            width: 100%;
-        }
-        .password-wrapper input {
-            padding-right: 48px;
-        }
+        select option { background: #fff; color: var(--text-main); }
+        input::placeholder { color: rgba(26, 26, 46, 0.40); font-weight: 400; }
+        input:focus, select:focus { background: rgba(255, 255, 255, 0.45); border-color: #0288d1; box-shadow: 0 0 0 5px rgba(2, 136, 209, 0.12); transform: translateY(-1px); }
+        .password-wrapper { position: relative; width: 100%; }
+        .password-wrapper input { padding-right: 48px; }
         .eye-icon {
-            position: absolute;
-            right: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            cursor: pointer;
-            color: rgba(26, 26, 46, 0.45);
-            transition: var(--transition-fast);
-            padding: 6px;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+            cursor: pointer; color: rgba(26, 26, 46, 0.45); transition: var(--transition-fast);
+            padding: 6px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
         }
-        .eye-icon:hover {
-            color: #0288d1;
-            background: rgba(2, 136, 209, 0.12);
-        }
+        .eye-icon:hover { color: #0288d1; background: rgba(2, 136, 209, 0.12); }
         .btn {
-            width: 100%;
-            padding: 12px 18px;
-            border-radius: var(--radius-sm);
-            font-weight: 700;
-            font-size: 12px;
-            cursor: pointer;
-            margin-top: 4px;
-            transition: var(--transition);
-            border: none;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            font-family: inherit;
-            letter-spacing: 0.2px;
-            position: relative;
-            overflow: hidden;
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-            will-change: transform, box-shadow;
-            touch-action: manipulation;
+            width: 100%; padding: 12px 18px; border-radius: var(--radius-sm);
+            font-weight: 700; font-size: 12px; cursor: pointer; margin-top: 4px;
+            transition: var(--transition); border: none; display: inline-flex;
+            align-items: center; justify-content: center; gap: 10px; font-family: inherit;
+            letter-spacing: 0.2px; position: relative; overflow: hidden;
+            backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
         }
-        .btn::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: rgba(255, 255, 255, 0);
-            transition: var(--transition-fast);
-            pointer-events: none;
-        }
-        .btn:hover::after {
-            background: rgba(255, 255, 255, 0.08);
-        }
-        .btn:active {
-            transform: scale(0.95);
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, #0288d1, #0277bd);
-            color: #fff;
-            box-shadow: 0 4px 24px rgba(2, 136, 209, 0.30);
-        }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 40px rgba(2, 136, 209, 0.40);
-        }
-        .btn-success {
-            background: linear-gradient(135deg, #00c853, #009624);
-            color: #fff;
-            box-shadow: 0 4px 24px rgba(0, 200, 83, 0.25);
-        }
-        .btn-success:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 40px rgba(0, 200, 83, 0.35);
-        }
-        .btn-warning {
-            background: linear-gradient(135deg, #ffab00, #f57f17);
-            color: #fff;
-            box-shadow: 0 4px 24px rgba(255, 171, 0, 0.25);
-        }
-        .btn-warning:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 40px rgba(255, 171, 0, 0.35);
-        }
-        .btn-accent {
-            background: linear-gradient(135deg, #00bcd4, #00838f);
-            color: #fff;
-            box-shadow: 0 4px 24px rgba(0, 188, 212, 0.25);
-        }
-        .btn-accent:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 40px rgba(0, 188, 212, 0.35);
-        }
-        .btn-outline {
-            background: rgba(255, 255, 255, 0.15);
-            border: 1.5px solid rgba(255, 255, 255, 0.35);
-            color: var(--text-main);
-            box-shadow: none;
-        }
-        .btn-outline:hover {
-            background: rgba(255, 255, 255, 0.30);
-            border-color: rgba(255, 255, 255, 0.60);
-            transform: translateY(-1px);
-        }
-        .btn-danger {
-            background: rgba(255, 23, 68, 0.12);
-            color: #d50000;
-            border: 1.5px solid rgba(255, 23, 68, 0.25);
-            box-shadow: none;
-        }
-        .btn-danger:hover {
-            background: rgba(255, 23, 68, 0.22);
-            transform: translateY(-1px);
-        }
-        .btn-sm {
-            padding: 6px 14px;
-            font-size: 10px;
-            width: auto;
-            margin: 0;
-        }
-        .btn-xs {
-            padding: 4px 10px;
-            font-size: 8px;
-            width: auto;
-            margin: 0;
-            border-radius: 8px;
-        }
+        .btn::after { content: ''; position: absolute; inset: 0; background: rgba(255, 255, 255, 0); transition: var(--transition-fast); pointer-events: none; }
+        .btn:hover::after { background: rgba(255, 255, 255, 0.08); }
+        .btn:active { transform: scale(0.95); }
+        .btn-primary { background: linear-gradient(135deg, #0288d1, #0277bd); color: #fff; box-shadow: 0 4px 24px rgba(2, 136, 209, 0.30); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 40px rgba(2, 136, 209, 0.40); }
+        .btn-success { background: linear-gradient(135deg, #00c853, #009624); color: #fff; box-shadow: 0 4px 24px rgba(0, 200, 83, 0.25); }
+        .btn-success:hover { transform: translateY(-2px); box-shadow: 0 8px 40px rgba(0, 200, 83, 0.35); }
+        .btn-warning { background: linear-gradient(135deg, #ffab00, #f57f17); color: #fff; box-shadow: 0 4px 24px rgba(255, 171, 0, 0.25); }
+        .btn-warning:hover { transform: translateY(-2px); box-shadow: 0 8px 40px rgba(255, 171, 0, 0.35); }
+        .btn-accent { background: linear-gradient(135deg, #00bcd4, #00838f); color: #fff; box-shadow: 0 4px 24px rgba(0, 188, 212, 0.25); }
+        .btn-accent:hover { transform: translateY(-2px); box-shadow: 0 8px 40px rgba(0, 188, 212, 0.35); }
+        .btn-outline { background: rgba(255, 255, 255, 0.15); border: 1.5px solid rgba(255, 255, 255, 0.35); color: var(--text-main); box-shadow: none; }
+        .btn-outline:hover { background: rgba(255, 255, 255, 0.30); border-color: rgba(255, 255, 255, 0.60); transform: translateY(-1px); }
+        .btn-danger { background: rgba(255, 23, 68, 0.12); color: #d50000; border: 1.5px solid rgba(255, 23, 68, 0.25); box-shadow: none; }
+        .btn-danger:hover { background: rgba(255, 23, 68, 0.22); transform: translateY(-1px); }
+        .btn-sm { padding: 6px 14px; font-size: 10px; width: auto; margin: 0; }
+        .btn-xs { padding: 4px 10px; font-size: 8px; width: auto; margin: 0; border-radius: 8px; }
         .badge {
-            padding: 4px 12px;
-            border-radius: var(--radius-full);
-            font-size: 8px;
-            font-weight: 700;
-            transition: var(--transition-fast);
-            display: inline-block;
-            letter-spacing: 0.2px;
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
+            padding: 4px 12px; border-radius: var(--radius-full); font-size: 8px; font-weight: 700;
+            transition: var(--transition-fast); display: inline-block; letter-spacing: 0.2px;
+            backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
         }
-        .badge-present {
-            background: rgba(0, 200, 83, 0.18);
-            color: #00796b;
-            border: 1px solid rgba(0, 200, 83, 0.25);
-        }
-        .badge-absent {
-            background: rgba(255, 23, 68, 0.18);
-            color: #b71c1c;
-            border: 1px solid rgba(255, 23, 68, 0.25);
-        }
-        .badge-active {
-            background: rgba(2, 136, 209, 0.18);
-            color: #01579b;
-            border: 1px solid rgba(2, 136, 209, 0.25);
-        }
-        .badge-role {
-            background: rgba(255, 255, 255, 0.15);
-            color: var(--text-muted);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-        }
-        .badge-attendance {
-            background: rgba(0, 188, 212, 0.12);
-            color: #006064;
-            border: 1px solid rgba(0, 188, 212, 0.20);
-        }
-        .badge-dl {
-            background: rgba(255, 171, 0, 0.18);
-            color: #e65100;
-            border: 1px solid rgba(255, 171, 0, 0.25);
-        }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin: 14px 0;
-        }
+        .badge-present { background: rgba(0, 200, 83, 0.18); color: #00796b; border: 1px solid rgba(0, 200, 83, 0.25); }
+        .badge-absent { background: rgba(255, 23, 68, 0.18); color: #b71c1c; border: 1px solid rgba(255, 23, 68, 0.25); }
+        .badge-active { background: rgba(2, 136, 209, 0.18); color: #01579b; border: 1px solid rgba(2, 136, 209, 0.25); }
+        .badge-role { background: rgba(255, 255, 255, 0.15); color: var(--text-muted); border: 1px solid rgba(255, 255, 255, 0.15); }
+        .badge-attendance { background: rgba(0, 188, 212, 0.12); color: #006064; border: 1px solid rgba(0, 188, 212, 0.20); }
+        .badge-dl { background: rgba(255, 171, 0, 0.18); color: #e65100; border: 1px solid rgba(255, 171, 0, 0.25); }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
         .stat-card {
-            background: rgba(255, 255, 255, 0.12);
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-            padding: 16px 14px;
-            border-radius: var(--radius);
-            text-align: center;
-            border: 1px solid var(--glass-border);
-            transition: var(--transition);
-            will-change: transform;
+            background: rgba(255, 255, 255, 0.12); backdrop-filter: var(--glass-blur);
+            padding: 16px 14px; border-radius: var(--radius); text-align: center;
+            border: 1px solid var(--glass-border); transition: var(--transition);
         }
-        .stat-card:hover {
-            transform: translateY(-3px);
-            border-color: rgba(255, 255, 255, 0.50);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
-        }
-        .stat-card .value {
-            font-size: 26px;
-            font-weight: 900;
-            background: linear-gradient(135deg, #0288d1, #00bcd4);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            letter-spacing: -0.5px;
-            transition: var(--transition-fast);
-        }
-        .stat-card .label {
-            font-size: 9px;
-            color: var(--text-muted);
-            font-weight: 700;
-            margin-top: 5px;
-            text-transform: uppercase;
-            letter-spacing: 0.6px;
-        }
+        .stat-card:hover { transform: translateY(-3px); border-color: rgba(255, 255, 255, 0.50); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06); }
+        .stat-card .value { font-size: 26px; font-weight: 900; background: linear-gradient(135deg, #0288d1, #00bcd4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.5px; }
+        .stat-card .label { font-size: 9px; color: var(--text-muted); font-weight: 700; margin-top: 5px; text-transform: uppercase; letter-spacing: 0.6px; }
         .simulator-card {
-            background: rgba(2, 136, 209, 0.06);
-            border: 1px solid rgba(2, 136, 209, 0.12);
-            border-radius: var(--radius);
-            padding: 12px 16px;
-            margin-bottom: 14px;
-            font-size: 10px;
-            color: #01579b;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            transition: var(--transition-fast);
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
+            background: rgba(2, 136, 209, 0.06); border: 1px solid rgba(2, 136, 209, 0.12);
+            border-radius: var(--radius); padding: 12px 16px; margin-bottom: 14px;
+            font-size: 10px; color: #01579b; display: flex; align-items: center; gap: 12px;
+            transition: var(--transition-fast); backdrop-filter: var(--glass-blur);
         }
-        .simulator-card:hover {
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-            border-color: rgba(2, 136, 209, 0.25);
-        }
-        .quick-portals-card {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid var(--glass-border);
-            border-radius: var(--radius);
-            padding: 14px;
-            margin: 14px 0;
-            transition: var(--transition);
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-        }
-        .quick-portals-card:hover {
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
-        }
-        .portal-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 10px;
-            margin-top: 10px;
-        }
+        .simulator-card:hover { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04); border-color: rgba(2, 136, 209, 0.25); }
+        .quick-portals-card { background: rgba(255, 255, 255, 0.06); border: 1px solid var(--glass-border); border-radius: var(--radius); padding: 14px; margin: 14px 0; transition: var(--transition); backdrop-filter: var(--glass-blur); }
+        .quick-portals-card:hover { box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04); }
+        .portal-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px; }
         .portal-btn {
-            background: rgba(255, 255, 255, 0.10);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: var(--radius-sm);
-            padding: 10px 6px;
-            text-align: center;
-            font-size: 9px;
-            font-weight: 700;
-            color: var(--text-main);
-            cursor: pointer;
-            transition: var(--transition);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-            will-change: transform;
-        }
-        .portal-btn:hover {
-            background: rgba(255, 255, 255, 0.22);
-            border-color: #0288d1;
-            transform: translateY(-3px);
-            box-shadow: 0 8px 28px rgba(2, 136, 209, 0.15);
-            color: #0288d1;
-        }
-        .portal-btn:active {
-            transform: scale(0.94);
-        }
-        .portal-btn svg {
-            width: 22px;
-            height: 22px;
-            stroke: currentColor;
-            fill: none;
-            stroke-width: 2;
-        }
-        .calendar-container {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid var(--glass-border);
-            border-radius: var(--radius);
-            padding: 14px;
-            margin: 14px 0;
-            transition: var(--transition);
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-        }
-        .calendar-container:hover {
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
-        }
-        .calendar-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 11px;
-            font-weight: 800;
-            margin-bottom: 12px;
-            color: var(--text-main);
-        }
-        .calendar-header select {
-            margin-top: 0;
-            padding: 5px 12px;
-            font-size: 10px;
-            width: auto;
-            background: rgba(255, 255, 255, 0.15);
-            border-color: rgba(255, 255, 255, 0.25);
-            color: var(--text-main);
-        }
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 4px;
-            text-align: center;
-            font-size: 10px;
-        }
-        .cal-day-head {
-            font-weight: 700;
-            color: var(--text-muted);
-            padding-bottom: 6px;
-            font-size: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.6px;
-        }
-        .cal-date {
-            padding: 6px 2px;
-            border-radius: 8px;
-            font-weight: 600;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            transition: var(--transition-fast);
-            font-size: 10px;
-            color: var(--text-main);
-            will-change: transform;
-        }
-        .cal-date:hover {
-            transform: scale(1.08);
-            z-index: 1;
-        }
-        .cal-p {
-            background: rgba(0, 200, 83, 0.18);
-            color: #00796b;
-            border-color: rgba(0, 200, 83, 0.25);
-        }
-        .cal-a {
-            background: rgba(255, 23, 68, 0.18);
-            color: #b71c1c;
-            border-color: rgba(255, 23, 68, 0.25);
-        }
-        .cal-off {
-            background: rgba(255, 255, 255, 0.04);
-            color: rgba(26, 26, 46, 0.25);
-        }
-        .tab-bar {
-            display: flex;
-            background: rgba(255, 255, 255, 0.08);
-            border-radius: var(--radius-sm);
-            padding: 4px;
-            margin-bottom: 14px;
-            border: 1px solid var(--glass-border);
-        }
-        .tab-item {
-            flex: 1;
-            padding: 9px 6px;
-            text-align: center;
-            font-size: 10px;
-            font-weight: 700;
-            cursor: pointer;
-            color: var(--text-muted);
-            border-radius: 10px;
-            transition: var(--transition);
-            will-change: background, color, box-shadow;
-        }
-        .tab-item.active {
-            background: rgba(2, 136, 209, 0.22);
-            color: #0288d1;
-            box-shadow: 0 2px 16px rgba(2, 136, 209, 0.08);
-        }
-        .tab-item:hover:not(.active) {
-            color: var(--text-main);
-            background: rgba(255, 255, 255, 0.08);
-        }
-        .admin-nav {
-            display: flex;
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            overflow-y: hidden;
-            gap: 5px;
-            background: rgba(255, 255, 255, 0.06);
-            padding: 8px 10px;
-            border-radius: var(--radius-sm);
-            margin-bottom: 14px;
-            border: 1px solid var(--glass-border);
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: thin;
-            scrollbar-color: rgba(2, 136, 209, 0.25) transparent;
-        }
-        .admin-nav::-webkit-scrollbar {
-            height: 3px;
-        }
-        .admin-nav::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        .admin-nav::-webkit-scrollbar-thumb {
-            background: rgba(2, 136, 209, 0.25);
-            border-radius: 12px;
-        }
-        .admin-nav-item {
-            flex: 0 0 auto;
-            min-width: 58px;
-            text-align: center;
-            padding: 8px 12px;
-            font-size: 9px;
-            font-weight: 700;
-            cursor: pointer;
-            border-radius: 10px;
-            color: var(--text-muted);
-            transition: var(--transition);
-            background: transparent;
-            border: 1px solid transparent;
-            line-height: 1.3;
-            letter-spacing: 0.2px;
-            white-space: nowrap;
-            will-change: background, color, box-shadow;
-        }
-        .admin-nav-item:hover {
-            background: rgba(255, 255, 255, 0.10);
-            transform: translateY(-1px);
-        }
-        .admin-nav-item.active {
-            background: rgba(2, 136, 209, 0.18);
-            color: #0288d1;
-            box-shadow: 0 2px 16px rgba(2, 136, 209, 0.06);
-            border-color: rgba(2, 136, 209, 0.18);
-        }
-        .period-card {
-            background: rgba(2, 136, 209, 0.06);
-            border: 1px solid rgba(2, 136, 209, 0.12);
-            border-radius: var(--radius);
-            padding: 14px 18px;
-            margin: 10px 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: var(--transition);
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-        }
-        .period-card:hover {
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
-            border-color: rgba(2, 136, 209, 0.25);
-        }
-        .action-btn {
-            border: none;
-            border-radius: 8px;
-            padding: 6px 14px;
-            font-size: 9px;
-            font-weight: 700;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            transition: var(--transition-fast);
-            font-family: inherit;
-        }
-        .action-btn:hover {
-            transform: translateY(-1px);
-        }
-        .btn-del {
-            background: rgba(255, 23, 68, 0.12);
-            color: #b71c1c;
-            border: 1px solid rgba(255, 23, 68, 0.18);
-        }
-        .btn-del:hover {
-            background: rgba(255, 23, 68, 0.22);
-        }
-        .btn-view {
-            background: rgba(2, 136, 209, 0.12);
-            color: #01579b;
-            border: 1px solid rgba(2, 136, 209, 0.18);
-        }
-        .btn-view:hover {
-            background: rgba(2, 136, 209, 0.22);
-        }
-        .btn-edit {
-            background: rgba(255, 171, 0, 0.12);
-            color: #e65100;
-            border: 1px solid rgba(255, 171, 0, 0.18);
-        }
-        .btn-edit:hover {
-            background: rgba(255, 171, 0, 0.22);
-        }
-        .status-holiday {
-            background: rgba(255, 171, 0, 0.12);
-            color: #e65100;
-            border-color: rgba(255, 171, 0, 0.20);
-        }
-        .status-weekend {
-            background: rgba(255, 255, 255, 0.06);
-            color: var(--text-muted);
-            border-color: rgba(255, 255, 255, 0.08);
-        }
-        .table-container {
-            max-height: 320px;
-            overflow-y: auto;
-            border: 1px solid var(--glass-border);
-            border-radius: var(--radius-sm);
-            margin-top: 8px;
-            background: rgba(255, 255, 255, 0.04);
-            transition: var(--transition);
-        }
-        .table-container table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 10px;
-        }
-        .table-container th {
-            background: rgba(255, 255, 255, 0.10);
-            color: var(--text-muted);
-            padding: 10px 12px;
-            text-align: left;
-            border-bottom: 1px solid var(--glass-border);
-            position: sticky;
-            top: 0;
-            font-weight: 700;
-            font-size: 9px;
-            z-index: 2;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-        }
-        .table-container td {
-            padding: 10px 12px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-            font-size: 10px;
-            vertical-align: middle;
-            color: var(--text-main);
-        }
-        .table-container tr:hover td {
-            background: rgba(255, 255, 255, 0.05);
-        }
-        .admin-box {
-            background: rgba(255, 255, 255, 0.06);
-            padding: 16px;
-            border-radius: var(--radius);
-            border: 1px solid var(--glass-border);
-            animation: fadeSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-            margin-bottom: 12px;
-            transition: var(--transition);
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-            will-change: opacity, transform;
-        }
-        .admin-box:hover {
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
-        }
-        .admin-box.sub-reports {
-            background: rgba(0, 200, 83, 0.04);
-            border-color: rgba(0, 200, 83, 0.12);
-        }
-        .admin-box.sub-attendance {
-            background: rgba(255, 171, 0, 0.04);
-            border-color: rgba(255, 171, 0, 0.12);
-        }
-        .admin-box.sub-holiday {
-            background: rgba(255, 23, 68, 0.04);
-            border-color: rgba(255, 23, 68, 0.12);
-        }
-        .admin-box.sub-passcode {
-            background: rgba(2, 136, 209, 0.04);
-            border-color: rgba(2, 136, 209, 0.12);
-        }
-        .admin-box.sub-tools {
-            background: rgba(156, 39, 176, 0.04);
-            border-color: rgba(156, 39, 176, 0.12);
-        }
-        .admin-box.sub-directory {
-            background: rgba(233, 30, 99, 0.04);
-            border-color: rgba(233, 30, 99, 0.12);
-        }
-        .admin-box.sub-all-attendance {
-            background: rgba(0, 188, 212, 0.04);
-            border-color: rgba(0, 188, 212, 0.12);
-        }
-        .sub-section-title {
-            font-size: 11px;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.6px;
-            margin-bottom: 10px;
-            display: block;
-        }
-        .subject-checkbox-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 5px;
-            max-height: 170px;
-            overflow-y: auto;
-            padding: 8px;
-            background: rgba(255, 255, 255, 0.06);
-            border-radius: var(--radius-sm);
-            border: 1px solid var(--glass-border);
-        }
-        .subject-checkbox-container label {
-            font-size: 9px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            padding: 5px 10px;
-            background: rgba(255, 255, 255, 0.06);
-            border-radius: 6px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            transition: var(--transition-fast);
-            color: var(--text-main);
-        }
-        .subject-checkbox-container label:hover {
-            background: rgba(2, 136, 209, 0.10);
-            border-color: rgba(2, 136, 209, 0.18);
-        }
-        .subject-checkbox-container label input[type="checkbox"] {
-            width: auto;
-            margin: 0;
-            accent-color: #0288d1;
-        }
-        .subject-checkbox-container .select-all {
-            grid-column: span 2;
-            background: rgba(255, 255, 255, 0.10);
-            padding: 8px 12px;
-            font-weight: 700;
-            border: 1px solid var(--glass-border);
-        }
-        .passcode-display {
-            background: rgba(255, 255, 255, 0.06);
-            padding: 12px;
-            border-radius: var(--radius-sm);
-            margin-bottom: 8px;
-            border: 1px solid var(--glass-border);
-            text-align: center;
-            transition: var(--transition);
-        }
-        .passcode-display h2 {
-            font-size: 28px;
-            font-weight: 900;
-            background: linear-gradient(135deg, #0288d1, #00bcd4);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            letter-spacing: 8px;
-        }
-        #todayPresentList {
-            max-height: 200px;
-            overflow-y: auto;
-            font-size: 10px;
-            margin: 8px 0;
-        }
-        .present-group {
-            margin-bottom: 10px;
-        }
-        .present-group .group-title {
-            font-size: 9px;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            margin-bottom: 4px;
-            display: block;
-            border-bottom: 1px solid var(--glass-border);
-            padding-bottom: 4px;
-        }
-        .present-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 10px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-            transition: var(--transition-fast);
-        }
-        .present-item:hover {
-            background: rgba(255, 255, 255, 0.05);
-        }
-        .present-item .roll {
-            font-weight: 600;
-        }
-        .present-item .name {
-            color: var(--text-muted);
-        }
-        .subject-chips {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            margin-top: 5px;
-        }
-        .subject-chip {
-            background: rgba(255, 255, 255, 0.08);
-            padding: 4px 10px;
-            border-radius: 6px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            font-size: 8px;
-            font-weight: 500;
-            transition: var(--transition-fast);
-            color: var(--text-muted);
-        }
-        .subject-chip:hover {
-            border-color: #0288d1;
-            color: var(--text-main);
-        }
-        .tool-sub-card {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid var(--glass-border);
-            border-radius: var(--radius);
-            padding: 14px;
-            margin-bottom: 12px;
-            transition: var(--transition);
-        }
-        .tool-sub-card:hover {
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
-            border-color: rgba(255, 255, 255, 0.25);
-        }
-        .tool-title {
-            font-size: 11px;
-            font-weight: 800;
-            margin-bottom: 10px;
-            display: block;
-            color: var(--text-main);
-        }
-        .flex-buttons {
-            display: flex;
-            gap: 10px;
-        }
-        .flex-buttons .btn {
-            margin: 0;
-            flex: 1;
-        }
-        .svg-icon {
-            width: 18px;
-            height: 18px;
-            fill: none;
-            stroke: currentColor;
-            stroke-width: 2;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-            display: inline-block;
-            vertical-align: middle;
-            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .svg-icon-sm {
-            width: 13px;
-            height: 13px;
-        }
-        .btn:hover .svg-icon {
-            transform: scale(1.12) rotate(-2deg);
-        }
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.25);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            z-index: 10000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
-        .modal-card {
-            background: rgba(255, 255, 255, 0.18);
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-            width: 100%;
-            max-width: 400px;
-            border-radius: 24px;
-            padding: 28px;
-            box-shadow: 0 20px 80px rgba(0, 0, 0, 0.12);
-            border: 1px solid var(--glass-border);
-            animation: modalScale 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        @keyframes modalScale {
-            from {
-                opacity: 0;
-                transform: scale(0.92) translateY(12px);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
-        }
-        .modal-card h3 {
-            color: var(--text-main);
-            font-size: 15px;
-            font-weight: 800;
-            margin-bottom: 5px;
-        }
-        .modal-card p {
-            color: var(--text-muted);
-            font-size: 10px;
-            margin-bottom: 14px;
-        }
-        .modal-card .modal-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 14px;
-        }
-        .modal-card .modal-actions .btn {
-            flex: 1;
-        }
-        .profile-modal {
-            max-width: 500px;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-        .profile-modal .record-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        }
-        .profile-modal .record-item:last-child {
-            border-bottom: none;
-        }
-        .bulk-student-list {
-            max-height: 160px;
-            overflow-y: auto;
-            border: 1px solid var(--glass-border);
-            border-radius: var(--radius-sm);
-            padding: 8px;
-            background: rgba(255, 255, 255, 0.04);
-            margin-bottom: 8px;
-        }
-        .bulk-student-list label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 10px;
-            padding: 5px 8px;
-            cursor: pointer;
-            transition: var(--transition-fast);
-            border-radius: 6px;
-            color: var(--text-main);
-        }
-        .bulk-student-list label:hover {
-            background: rgba(255, 255, 255, 0.08);
-        }
-        .bulk-student-list .select-all-label {
-            font-weight: 700;
-            border-bottom: 1px solid var(--glass-border);
-            padding-bottom: 8px;
-            margin-bottom: 5px;
-        }
-        .bulk-date-chips {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            margin-top: 5px;
-        }
-        .bulk-date-chip {
-            background: rgba(255, 255, 255, 0.10);
-            padding: 4px 12px;
-            border-radius: 14px;
-            font-size: 10px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 500;
-            color: var(--text-main);
-            border: 1px solid var(--glass-border);
-        }
-        .bulk-date-chip .remove-date {
-            cursor: pointer;
-            color: #d50000;
-            font-weight: 700;
-            transition: var(--transition-fast);
-        }
-        .bulk-date-chip .remove-date:hover {
-            color: #ff1744;
-            transform: scale(1.2);
-        }
-        .bulk-date-input-row {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            margin-bottom: 5px;
-        }
-        .bulk-date-input-row input[type="date"] {
-            flex: 1;
-            padding: 7px 12px;
-            font-size: 10px;
-            margin: 0;
-        }
-        .bulk-date-input-row button {
-            padding: 7px 16px;
-            font-size: 10px;
-            margin: 0;
-        }
+            background: rgba(255, 255, 255, 0.10); border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: var(--radius-sm); padding: 10px 6px; text-align: center;
+            font-size: 9px; font-weight: 700; color: var(--text-main); cursor: pointer;
+            transition: var(--transition); display: flex; flex-direction: column; align-items: center; gap: 6px;
+        }
+        .portal-btn:hover { background: rgba(255, 255, 255, 0.22); border-color: #0288d1; transform: translateY(-3px); box-shadow: 0 8px 28px rgba(2, 136, 209, 0.15); color: #0288d1; }
+        .portal-btn:active { transform: scale(0.94); }
+        .portal-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; }
+        .calendar-container { background: rgba(255, 255, 255, 0.06); border: 1px solid var(--glass-border); border-radius: var(--radius); padding: 14px; margin: 14px 0; transition: var(--transition); backdrop-filter: var(--glass-blur); }
+        .calendar-container:hover { box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04); }
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 800; margin-bottom: 12px; color: var(--text-main); }
+        .calendar-header select { margin-top: 0; padding: 5px 12px; font-size: 10px; width: auto; background: rgba(255, 255, 255, 0.15); border-color: rgba(255, 255, 255, 0.25); color: var(--text-main); }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; font-size: 10px; }
+        .cal-day-head { font-weight: 700; color: var(--text-muted); padding-bottom: 6px; font-size: 8px; text-transform: uppercase; letter-spacing: 0.6px; }
+        .cal-date { padding: 6px 2px; border-radius: 8px; font-weight: 600; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.06); transition: var(--transition-fast); font-size: 10px; color: var(--text-main); }
+        .cal-date:hover { transform: scale(1.08); z-index: 1; }
+        .cal-p { background: rgba(0, 200, 83, 0.18); color: #00796b; border-color: rgba(0, 200, 83, 0.25); }
+        .cal-a { background: rgba(255, 23, 68, 0.18); color: #b71c1c; border-color: rgba(255, 23, 68, 0.25); }
+        .cal-off { background: rgba(255, 255, 255, 0.04); color: rgba(26, 26, 46, 0.25); }
+        .tab-bar { display: flex; background: rgba(255, 255, 255, 0.08); border-radius: var(--radius-sm); padding: 4px; margin-bottom: 14px; border: 1px solid var(--glass-border); }
+        .tab-item { flex: 1; padding: 9px 6px; text-align: center; font-size: 10px; font-weight: 700; cursor: pointer; color: var(--text-muted); border-radius: 10px; transition: var(--transition); }
+        .tab-item.active { background: rgba(2, 136, 209, 0.22); color: #0288d1; box-shadow: 0 2px 16px rgba(2, 136, 209, 0.08); }
+        .tab-item:hover:not(.active) { color: var(--text-main); background: rgba(255, 255, 255, 0.08); }
+        .admin-nav { display: flex; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; gap: 5px; background: rgba(255, 255, 255, 0.06); padding: 8px 10px; border-radius: var(--radius-sm); margin-bottom: 14px; border: 1px solid var(--glass-border); -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: rgba(2, 136, 209, 0.25) transparent; }
+        .admin-nav::-webkit-scrollbar { height: 3px; }
+        .admin-nav::-webkit-scrollbar-track { background: transparent; }
+        .admin-nav::-webkit-scrollbar-thumb { background: rgba(2, 136, 209, 0.25); border-radius: 12px; }
+        .admin-nav-item { flex: 0 0 auto; min-width: 58px; text-align: center; padding: 8px 12px; font-size: 9px; font-weight: 700; cursor: pointer; border-radius: 10px; color: var(--text-muted); transition: var(--transition); background: transparent; border: 1px solid transparent; line-height: 1.3; white-space: nowrap; }
+        .admin-nav-item:hover { background: rgba(255, 255, 255, 0.10); transform: translateY(-1px); }
+        .admin-nav-item.active { background: rgba(2, 136, 209, 0.18); color: #0288d1; box-shadow: 0 2px 16px rgba(2, 136, 209, 0.06); border-color: rgba(2, 136, 209, 0.18); }
+        .period-card { background: rgba(2, 136, 209, 0.06); border: 1px solid rgba(2, 136, 209, 0.12); border-radius: var(--radius); padding: 14px 18px; margin: 10px 0; display: flex; justify-content: space-between; align-items: center; transition: var(--transition); backdrop-filter: var(--glass-blur); }
+        .period-card:hover { box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04); border-color: rgba(2, 136, 209, 0.25); }
+        .action-btn { border: none; border-radius: 8px; padding: 6px 14px; font-size: 9px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: var(--transition-fast); font-family: inherit; }
+        .action-btn:hover { transform: translateY(-1px); }
+        .btn-del { background: rgba(255, 23, 68, 0.12); color: #b71c1c; border: 1px solid rgba(255, 23, 68, 0.18); }
+        .btn-del:hover { background: rgba(255, 23, 68, 0.22); }
+        .btn-view { background: rgba(2, 136, 209, 0.12); color: #01579b; border: 1px solid rgba(2, 136, 209, 0.18); }
+        .btn-view:hover { background: rgba(2, 136, 209, 0.22); }
+        .btn-edit { background: rgba(255, 171, 0, 0.12); color: #e65100; border: 1px solid rgba(255, 171, 0, 0.18); }
+        .btn-edit:hover { background: rgba(255, 171, 0, 0.22); }
+        .status-holiday { background: rgba(255, 171, 0, 0.12); color: #e65100; border-color: rgba(255, 171, 0, 0.20); }
+        .status-weekend { background: rgba(255, 255, 255, 0.06); color: var(--text-muted); border-color: rgba(255, 255, 255, 0.08); }
+        .table-container { max-height: 320px; overflow-y: auto; border: 1px solid var(--glass-border); border-radius: var(--radius-sm); margin-top: 8px; background: rgba(255, 255, 255, 0.04); }
+        .table-container table { width: 100%; border-collapse: collapse; font-size: 10px; }
+        .table-container th { background: rgba(255, 255, 255, 0.10); color: var(--text-muted); padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--glass-border); position: sticky; top: 0; font-weight: 700; font-size: 9px; z-index: 2; text-transform: uppercase; letter-spacing: 0.4px; backdrop-filter: var(--glass-blur); }
+        .table-container td { padding: 10px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); font-size: 10px; vertical-align: middle; color: var(--text-main); }
+        .table-container tr:hover td { background: rgba(255, 255, 255, 0.05); }
+        .admin-box { background: rgba(255, 255, 255, 0.06); padding: 16px; border-radius: var(--radius); border: 1px solid var(--glass-border); animation: fadeSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1); margin-bottom: 12px; transition: var(--transition); backdrop-filter: var(--glass-blur); }
+        .admin-box:hover { box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04); }
+        .admin-box.sub-reports { background: rgba(0, 200, 83, 0.04); border-color: rgba(0, 200, 83, 0.12); }
+        .admin-box.sub-attendance { background: rgba(255, 171, 0, 0.04); border-color: rgba(255, 171, 0, 0.12); }
+        .admin-box.sub-holiday { background: rgba(255, 23, 68, 0.04); border-color: rgba(255, 23, 68, 0.12); }
+        .admin-box.sub-passcode { background: rgba(2, 136, 209, 0.04); border-color: rgba(2, 136, 209, 0.12); }
+        .admin-box.sub-tools { background: rgba(156, 39, 176, 0.04); border-color: rgba(156, 39, 176, 0.12); }
+        .admin-box.sub-directory { background: rgba(233, 30, 99, 0.04); border-color: rgba(233, 30, 99, 0.12); }
+        .admin-box.sub-all-attendance { background: rgba(0, 188, 212, 0.04); border-color: rgba(0, 188, 212, 0.12); }
+        .sub-section-title { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; display: block; }
+        .subject-checkbox-container { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; max-height: 170px; overflow-y: auto; padding: 8px; background: rgba(255, 255, 255, 0.06); border-radius: var(--radius-sm); border: 1px solid var(--glass-border); }
+        .subject-checkbox-container label { font-size: 9px; font-weight: 500; display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 5px 10px; background: rgba(255, 255, 255, 0.06); border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.08); transition: var(--transition-fast); color: var(--text-main); }
+        .subject-checkbox-container label:hover { background: rgba(2, 136, 209, 0.10); border-color: rgba(2, 136, 209, 0.18); }
+        .subject-checkbox-container label input[type="checkbox"] { width: auto; margin: 0; accent-color: #0288d1; }
+        .subject-checkbox-container .select-all { grid-column: span 2; background: rgba(255, 255, 255, 0.10); padding: 8px 12px; font-weight: 700; border: 1px solid var(--glass-border); }
+        .passcode-display { background: rgba(255, 255, 255, 0.06); padding: 12px; border-radius: var(--radius-sm); margin-bottom: 8px; border: 1px solid var(--glass-border); text-align: center; transition: var(--transition); }
+        .passcode-display h2 { font-size: 28px; font-weight: 900; background: linear-gradient(135deg, #0288d1, #00bcd4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: 8px; }
+        #todayPresentList { max-height: 200px; overflow-y: auto; font-size: 10px; margin: 8px 0; }
+        .present-group { margin-bottom: 10px; }
+        .present-group .group-title { font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; display: block; border-bottom: 1px solid var(--glass-border); padding-bottom: 4px; }
+        .present-item { display: flex; justify-content: space-between; padding: 5px 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); transition: var(--transition-fast); }
+        .present-item:hover { background: rgba(255, 255, 255, 0.05); }
+        .present-item .roll { font-weight: 600; }
+        .present-item .name { color: var(--text-muted); }
+        .subject-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+        .subject-chip { background: rgba(255, 255, 255, 0.08); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.08); font-size: 8px; font-weight: 500; transition: var(--transition-fast); color: var(--text-muted); }
+        .subject-chip:hover { border-color: #0288d1; color: var(--text-main); }
+        .tool-sub-card { background: rgba(255, 255, 255, 0.06); border: 1px solid var(--glass-border); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; transition: var(--transition); }
+        .tool-sub-card:hover { box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04); border-color: rgba(255, 255, 255, 0.25); }
+        .tool-title { font-size: 11px; font-weight: 800; margin-bottom: 10px; display: block; color: var(--text-main); }
+        .flex-buttons { display: flex; gap: 10px; }
+        .flex-buttons .btn { margin: 0; flex: 1; }
+        .svg-icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: inline-block; vertical-align: middle; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .svg-icon-sm { width: 13px; height: 13px; }
+        .btn:hover .svg-icon { transform: scale(1.12) rotate(-2deg); }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.25); backdrop-filter: blur(10px); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px; animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .modal-card { background: rgba(255, 255, 255, 0.18); backdrop-filter: var(--glass-blur); width: 100%; max-width: 400px; border-radius: 24px; padding: 28px; box-shadow: 0 20px 80px rgba(0, 0, 0, 0.12); border: 1px solid var(--glass-border); animation: modalScale 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes modalScale { from { opacity: 0; transform: scale(0.92) translateY(12px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .modal-card h3 { color: var(--text-main); font-size: 15px; font-weight: 800; margin-bottom: 5px; }
+        .modal-card p { color: var(--text-muted); font-size: 10px; margin-bottom: 14px; }
+        .modal-card .modal-actions { display: flex; gap: 10px; margin-top: 14px; }
+        .modal-card .modal-actions .btn { flex: 1; }
+        .profile-modal { max-width: 500px; max-height: 90vh; overflow-y: auto; }
+        .profile-modal .record-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+        .profile-modal .record-item:last-child { border-bottom: none; }
+        .bulk-student-list { max-height: 160px; overflow-y: auto; border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 8px; background: rgba(255, 255, 255, 0.04); margin-bottom: 8px; }
+        .bulk-student-list label { display: flex; align-items: center; gap: 8px; font-size: 10px; padding: 5px 8px; cursor: pointer; transition: var(--transition-fast); border-radius: 6px; color: var(--text-main); }
+        .bulk-student-list label:hover { background: rgba(255, 255, 255, 0.08); }
+        .bulk-student-list .select-all-label { font-weight: 700; border-bottom: 1px solid var(--glass-border); padding-bottom: 8px; margin-bottom: 5px; }
+        .bulk-date-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+        .bulk-date-chip { background: rgba(255, 255, 255, 0.10); padding: 4px 12px; border-radius: 14px; font-size: 10px; display: flex; align-items: center; gap: 8px; font-weight: 500; color: var(--text-main); border: 1px solid var(--glass-border); }
+        .bulk-date-chip .remove-date { cursor: pointer; color: #d50000; font-weight: 700; transition: var(--transition-fast); }
+        .bulk-date-chip .remove-date:hover { color: #ff1744; transform: scale(1.2); }
+        .bulk-date-input-row { display: flex; gap: 10px; align-items: center; margin-bottom: 5px; }
+        .bulk-date-input-row input[type="date"] { flex: 1; padding: 7px 12px; font-size: 10px; margin: 0; }
+        .bulk-date-input-row button { padding: 7px 16px; font-size: 10px; margin: 0; }
 
         /* Chat widget styles */
-        #chatWidget {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 99999;
-            display: none;
-            width: 78vw;
-            max-width: 760px;
-            height: 78vh;
-            max-height: 760px;
-            background: transparent;
-            pointer-events: none;
-        }
-        .chat-panel {
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.18);
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-            border-radius: 28px;
-            box-shadow: 0 28px 100px rgba(0, 0, 0, 0.15);
-            border: 1px solid var(--glass-border);
-            display: none;
-            flex-direction: column;
-            overflow: hidden;
-            animation: modalScale 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-            pointer-events: auto;
-        }
-        .chat-panel.open {
-            display: flex !important;
-        }
-        .chat-panel .chat-header {
-            background: rgba(255, 255, 255, 0.08);
-            padding: 14px 20px;
-            border-bottom: 1px solid var(--glass-border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-shrink: 0;
-        }
-        .chat-panel .chat-header .chat-title {
-            font-weight: 800;
-            font-size: 16px;
-            color: var(--text-main);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .chat-panel .chat-header .chat-title .ai-badge {
-            background: linear-gradient(135deg, #0288d1, #0277bd);
-            color: #fff;
-            font-size: 8px;
-            padding: 3px 12px;
-            border-radius: var(--radius-full);
-            font-weight: 700;
-            letter-spacing: 0.4px;
-        }
-        .chat-panel .chat-header .chat-close {
-            background: transparent;
-            border: none;
-            font-size: 26px;
-            cursor: pointer;
-            color: var(--text-muted);
-            padding: 0 8px;
-            transition: var(--transition-fast);
-            touch-action: manipulation;
-            line-height: 1;
-        }
-        .chat-panel .chat-header .chat-close:hover {
-            color: #d50000;
-            transform: rotate(90deg);
-        }
-        .chat-panel .chat-body {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-            background: rgba(255, 255, 255, 0.03);
-        }
-        .chat-panel .chat-sidebar {
-            width: 0;
-            overflow: hidden;
-            background: rgba(255, 255, 255, 0.06);
-            border-right: 1px solid var(--glass-border);
-            transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            flex-shrink: 0;
-            display: flex;
-            flex-direction: column;
-        }
-        .chat-panel .chat-sidebar.open {
-            width: 180px;
-        }
-        .chat-panel .chat-sidebar .sidebar-header {
-            padding: 12px 14px;
-            font-size: 10px;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.6px;
-            border-bottom: 1px solid var(--glass-border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-shrink: 0;
-        }
-        .chat-panel .chat-sidebar .sidebar-header .new-chat-btn {
-            background: linear-gradient(135deg, #0288d1, #0277bd);
-            color: #fff;
-            border: none;
-            border-radius: 6px;
-            padding: 4px 14px;
-            font-size: 9px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: var(--transition-fast);
-        }
-        .chat-panel .chat-sidebar .sidebar-header .new-chat-btn:hover {
-            transform: scale(1.05);
-        }
-        .chat-panel .chat-sidebar .sidebar-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 8px;
-        }
-        .chat-panel .chat-sidebar .sidebar-list .chat-item {
-            padding: 10px 14px;
-            border-radius: 8px;
-            font-size: 10px;
-            font-weight: 600;
-            color: var(--text-main);
-            cursor: pointer;
-            transition: var(--transition-fast);
-            margin-bottom: 3px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            border: 1px solid transparent;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(255, 255, 255, 0.04);
-        }
-        .chat-panel .chat-sidebar .sidebar-list .chat-item:hover {
-            background: rgba(255, 255, 255, 0.12);
-            border-color: var(--glass-border);
-        }
-        .chat-panel .chat-sidebar .sidebar-list .chat-item.active {
-            background: rgba(2, 136, 209, 0.12);
-            border-color: rgba(2, 136, 209, 0.20);
-            color: #0288d1;
-        }
-        .chat-panel .chat-sidebar .sidebar-list .chat-item .delete-chat {
-            color: var(--text-muted);
-            cursor: pointer;
-            font-size: 13px;
-            padding: 0 5px;
-            transition: var(--transition-fast);
-        }
-        .chat-panel .chat-sidebar .sidebar-list .chat-item .delete-chat:hover {
-            color: #d50000;
-        }
-        .chat-panel .chat-sidebar .sidebar-list .empty-chats {
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 10px;
-            padding: 28px 0;
-        }
-        .chat-panel .chat-main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-width: 0;
-            background: rgba(255, 255, 255, 0.03);
-        }
-        .chat-panel .chat-main .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 14px 18px;
-            font-size: 13px;
-            line-height: 1.6;
-        }
-        .chat-panel .chat-main .chat-messages .chat-msg {
-            margin-bottom: 12px;
-            display: flex;
-            flex-direction: column;
-        }
-        .chat-panel .chat-main .chat-messages .chat-msg.user {
-            align-items: flex-end;
-        }
-        .chat-panel .chat-main .chat-messages .chat-msg.bot {
-            align-items: flex-start;
-        }
-        .chat-panel .chat-main .chat-messages .chat-msg .bubble {
-            max-width: 85%;
-            padding: 10px 18px;
-            border-radius: 18px;
-            word-wrap: break-word;
-            font-size: 12px;
-            line-height: 1.6;
-            transition: var(--transition-fast);
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-        }
-        .chat-panel .chat-main .chat-messages .chat-msg.user .bubble {
-            background: linear-gradient(135deg, #0288d1, #0277bd);
-            color: #fff;
-            border-bottom-right-radius: 4px;
-            box-shadow: 0 2px 16px rgba(2, 136, 209, 0.25);
-        }
-        .chat-panel .chat-main .chat-messages .chat-msg.bot .bubble {
-            background: rgba(255, 255, 255, 0.18);
-            color: var(--text-main);
-            border-bottom-left-radius: 4px;
-            border: 1px solid var(--glass-border);
-        }
-        .chat-panel .chat-main .chat-messages .chat-msg .bubble .msg-time {
-            font-size: 8px;
-            color: var(--text-muted);
-            display: block;
-            text-align: right;
-            margin-top: 5px;
-            opacity: 0.7;
-        }
-        .chat-panel .chat-main .chat-messages .chat-msg.user .bubble .msg-time {
-            color: rgba(255, 255, 255, 0.60);
-        }
-        .chat-panel .chat-main .chat-messages .typing-indicator {
-            display: none;
-            padding: 10px 18px;
-            background: rgba(255, 255, 255, 0.10);
-            border-radius: 18px;
-            border-bottom-left-radius: 4px;
-            width: fit-content;
-            font-size: 12px;
-            color: var(--text-muted);
-            border: 1px solid var(--glass-border);
-        }
-        .chat-panel .chat-main .chat-messages .typing-indicator .dots {
-            display: inline-block;
-            animation: typingDots 1.4s infinite;
-        }
-        @keyframes typingDots {
-            0% {
-                content: '.';
-            }
-            33% {
-                content: '..';
-            }
-            66% {
-                content: '...';
-            }
-        }
-        .chat-panel .chat-main .quick-chips {
-            padding: 8px 14px 10px 14px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            border-top: 1px solid var(--glass-border);
-            background: rgba(255, 255, 255, 0.04);
-            flex-shrink: 0;
-            max-height: 100px;
-            overflow-y: auto;
-        }
-        .chat-panel .chat-main .quick-chips .chip {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid var(--glass-border);
-            border-radius: var(--radius-full);
-            padding: 4px 14px;
-            font-size: 9px;
-            font-weight: 600;
-            color: var(--text-main);
-            cursor: pointer;
-            transition: var(--transition-fast);
-            white-space: nowrap;
-        }
-        .chat-panel .chat-main .quick-chips .chip:hover {
-            background: rgba(2, 136, 209, 0.12);
-            border-color: #0288d1;
-            color: #0288d1;
-            transform: translateY(-1px);
-        }
-        .chat-panel .chat-main .chat-input-row {
-            display: flex;
-            border-top: 1px solid var(--glass-border);
-            background: rgba(255, 255, 255, 0.04);
-            flex-shrink: 0;
-            padding: 10px 14px;
-            gap: 10px;
-        }
-        .chat-panel .chat-main .chat-input-row input {
-            flex: 1;
-            padding: 9px 16px;
-            border: 1.5px solid rgba(255, 255, 255, 0.18);
-            border-radius: var(--radius-full);
-            font-size: 12px;
-            outline: none;
-            background: rgba(255, 255, 255, 0.10);
-            margin: 0;
-            transition: var(--transition-fast);
-            min-height: 40px;
-            font-family: inherit;
-            color: var(--text-main);
-        }
-        .chat-panel .chat-main .chat-input-row input::placeholder {
-            color: rgba(26, 26, 46, 0.35);
-        }
-        .chat-panel .chat-main .chat-input-row input:focus {
-            border-color: #0288d1;
-            background: rgba(255, 255, 255, 0.18);
-            box-shadow: 0 0 0 5px rgba(2, 136, 209, 0.08);
-        }
-        .chat-panel .chat-main .chat-input-row .send-btn {
-            background: linear-gradient(135deg, #0288d1, #0277bd);
-            color: #fff;
-            border: none;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 17px;
-            transition: var(--transition-fast);
-            flex-shrink: 0;
-            touch-action: manipulation;
-            box-shadow: 0 2px 16px rgba(2, 136, 209, 0.30);
-        }
-        .chat-panel .chat-main .chat-input-row .send-btn:hover {
-            transform: scale(1.06);
-            box-shadow: 0 4px 32px rgba(2, 136, 209, 0.45);
-        }
-        .chat-panel .chat-main .chat-input-row .send-btn:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-            transform: none;
-        }
-        .chat-panel .chat-main .sidebar-toggle {
-            background: transparent;
-            border: none;
-            font-size: 20px;
-            cursor: pointer;
-            color: var(--text-muted);
-            padding: 0 8px;
-            transition: var(--transition-fast);
-            touch-action: manipulation;
-        }
-        .chat-panel .chat-main .sidebar-toggle:hover {
-            color: #0288d1;
-        }
-        .chat-panel .chat-main .chat-messages .welcome-greeting {
-            text-align: center;
-            padding: 24px 0;
-            color: var(--text-muted);
-            font-size: 13px;
-            line-height: 2;
-        }
-        .chat-panel .chat-main .chat-messages .welcome-greeting .greeting-emoji {
-            font-size: 36px;
-            display: block;
-            margin-bottom: 10px;
-        }
-        .chat-panel .chat-main .chat-messages .welcome-greeting .greeting-name {
-            font-weight: 700;
-            color: var(--text-main);
-        }
+        #chatWidget { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 99999; display: none; width: 78vw; max-width: 760px; height: 78vh; max-height: 760px; background: transparent; pointer-events: none; }
+        .chat-panel { width: 100%; height: 100%; background: rgba(255, 255, 255, 0.18); backdrop-filter: var(--glass-blur); border-radius: 28px; box-shadow: 0 28px 100px rgba(0, 0, 0, 0.15); border: 1px solid var(--glass-border); display: none; flex-direction: column; overflow: hidden; animation: modalScale 0.5s cubic-bezier(0.16, 1, 0.3, 1); pointer-events: auto; }
+        .chat-panel.open { display: flex !important; }
+        .chat-panel .chat-header { background: rgba(255, 255, 255, 0.08); padding: 14px 20px; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .chat-panel .chat-header .chat-title { font-weight: 800; font-size: 16px; color: var(--text-main); display: flex; align-items: center; gap: 12px; }
+        .chat-panel .chat-header .chat-title .ai-badge { background: linear-gradient(135deg, #0288d1, #0277bd); color: #fff; font-size: 8px; padding: 3px 12px; border-radius: var(--radius-full); font-weight: 700; letter-spacing: 0.4px; }
+        .chat-panel .chat-header .chat-close { background: transparent; border: none; font-size: 26px; cursor: pointer; color: var(--text-muted); padding: 0 8px; transition: var(--transition-fast); line-height: 1; }
+        .chat-panel .chat-header .chat-close:hover { color: #d50000; transform: rotate(90deg); }
+        .chat-panel .chat-body { display: flex; flex: 1; overflow: hidden; background: rgba(255, 255, 255, 0.03); }
+        .chat-panel .chat-sidebar { width: 0; overflow: hidden; background: rgba(255, 255, 255, 0.06); border-right: 1px solid var(--glass-border); transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1); flex-shrink: 0; display: flex; flex-direction: column; }
+        .chat-panel .chat-sidebar.open { width: 180px; }
+        .chat-panel .chat-sidebar .sidebar-header { padding: 12px 14px; font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .chat-panel .chat-sidebar .sidebar-header .new-chat-btn { background: linear-gradient(135deg, #0288d1, #0277bd); color: #fff; border: none; border-radius: 6px; padding: 4px 14px; font-size: 9px; font-weight: 700; cursor: pointer; transition: var(--transition-fast); }
+        .chat-panel .chat-sidebar .sidebar-header .new-chat-btn:hover { transform: scale(1.05); }
+        .chat-panel .chat-sidebar .sidebar-list { flex: 1; overflow-y: auto; padding: 8px; }
+        .chat-panel .chat-sidebar .sidebar-list .chat-item { padding: 10px 14px; border-radius: 8px; font-size: 10px; font-weight: 600; color: var(--text-main); cursor: pointer; transition: var(--transition-fast); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid transparent; display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.04); }
+        .chat-panel .chat-sidebar .sidebar-list .chat-item:hover { background: rgba(255, 255, 255, 0.12); border-color: var(--glass-border); }
+        .chat-panel .chat-sidebar .sidebar-list .chat-item.active { background: rgba(2, 136, 209, 0.12); border-color: rgba(2, 136, 209, 0.20); color: #0288d1; }
+        .chat-panel .chat-sidebar .sidebar-list .chat-item .delete-chat { color: var(--text-muted); cursor: pointer; font-size: 13px; padding: 0 5px; transition: var(--transition-fast); }
+        .chat-panel .chat-sidebar .sidebar-list .chat-item .delete-chat:hover { color: #d50000; }
+        .chat-panel .chat-sidebar .sidebar-list .empty-chats { text-align: center; color: var(--text-muted); font-size: 10px; padding: 28px 0; }
+        .chat-panel .chat-main { flex: 1; display: flex; flex-direction: column; min-width: 0; background: rgba(255, 255, 255, 0.03); }
+        .chat-panel .chat-main .chat-messages { flex: 1; overflow-y: auto; padding: 14px 18px; font-size: 13px; line-height: 1.6; }
+        .chat-panel .chat-main .chat-messages .chat-msg { margin-bottom: 12px; display: flex; flex-direction: column; }
+        .chat-panel .chat-main .chat-messages .chat-msg.user { align-items: flex-end; }
+        .chat-panel .chat-main .chat-messages .chat-msg.bot { align-items: flex-start; }
+        .chat-panel .chat-main .chat-messages .chat-msg .bubble { max-width: 85%; padding: 10px 18px; border-radius: 18px; word-wrap: break-word; font-size: 12px; line-height: 1.6; transition: var(--transition-fast); backdrop-filter: var(--glass-blur); }
+        .chat-panel .chat-main .chat-messages .chat-msg.user .bubble { background: linear-gradient(135deg, #0288d1, #0277bd); color: #fff; border-bottom-right-radius: 4px; box-shadow: 0 2px 16px rgba(2, 136, 209, 0.25); }
+        .chat-panel .chat-main .chat-messages .chat-msg.bot .bubble { background: rgba(255, 255, 255, 0.18); color: var(--text-main); border-bottom-left-radius: 4px; border: 1px solid var(--glass-border); }
+        .chat-panel .chat-main .chat-messages .chat-msg .bubble .msg-time { font-size: 8px; color: var(--text-muted); display: block; text-align: right; margin-top: 5px; opacity: 0.7; }
+        .chat-panel .chat-main .chat-messages .chat-msg.user .bubble .msg-time { color: rgba(255, 255, 255, 0.60); }
+        .chat-panel .chat-main .chat-messages .typing-indicator { display: none; padding: 10px 18px; background: rgba(255, 255, 255, 0.10); border-radius: 18px; border-bottom-left-radius: 4px; width: fit-content; font-size: 12px; color: var(--text-muted); border: 1px solid var(--glass-border); }
+        .chat-panel .chat-main .chat-messages .typing-indicator .dots { display: inline-block; animation: typingDots 1.4s infinite; }
+        @keyframes typingDots { 0% { content: '.'; } 33% { content: '..'; } 66% { content: '...'; } }
+        .chat-panel .chat-main .quick-chips { padding: 8px 14px 10px 14px; display: flex; flex-wrap: wrap; gap: 5px; border-top: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.04); flex-shrink: 0; max-height: 100px; overflow-y: auto; }
+        .chat-panel .chat-main .quick-chips .chip { background: rgba(255, 255, 255, 0.08); border: 1px solid var(--glass-border); border-radius: var(--radius-full); padding: 4px 14px; font-size: 9px; font-weight: 600; color: var(--text-main); cursor: pointer; transition: var(--transition-fast); white-space: nowrap; }
+        .chat-panel .chat-main .quick-chips .chip:hover { background: rgba(2, 136, 209, 0.12); border-color: #0288d1; color: #0288d1; transform: translateY(-1px); }
+        .chat-panel .chat-main .chat-input-row { display: flex; border-top: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.04); flex-shrink: 0; padding: 10px 14px; gap: 10px; }
+        .chat-panel .chat-main .chat-input-row input { flex: 1; padding: 9px 16px; border: 1.5px solid rgba(255, 255, 255, 0.18); border-radius: var(--radius-full); font-size: 12px; outline: none; background: rgba(255, 255, 255, 0.10); margin: 0; transition: var(--transition-fast); min-height: 40px; font-family: inherit; color: var(--text-main); }
+        .chat-panel .chat-main .chat-input-row input::placeholder { color: rgba(26, 26, 46, 0.35); }
+        .chat-panel .chat-main .chat-input-row input:focus { border-color: #0288d1; background: rgba(255, 255, 255, 0.18); box-shadow: 0 0 0 5px rgba(2, 136, 209, 0.08); }
+        .chat-panel .chat-main .chat-input-row .send-btn { background: linear-gradient(135deg, #0288d1, #0277bd); color: #fff; border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 17px; transition: var(--transition-fast); flex-shrink: 0; box-shadow: 0 2px 16px rgba(2, 136, 209, 0.30); }
+        .chat-panel .chat-main .chat-input-row .send-btn:hover { transform: scale(1.06); box-shadow: 0 4px 32px rgba(2, 136, 209, 0.45); }
+        .chat-panel .chat-main .chat-input-row .send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+        .chat-panel .chat-main .sidebar-toggle { background: transparent; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted); padding: 0 8px; transition: var(--transition-fast); }
+        .chat-panel .chat-main .sidebar-toggle:hover { color: #0288d1; }
+        .chat-panel .chat-main .chat-messages .welcome-greeting { text-align: center; padding: 24px 0; color: var(--text-muted); font-size: 13px; line-height: 2; }
+        .chat-panel .chat-main .chat-messages .welcome-greeting .greeting-emoji { font-size: 36px; display: block; margin-bottom: 10px; }
+        .chat-panel .chat-main .chat-messages .welcome-greeting .greeting-name { font-weight: 700; color: var(--text-main); }
         @media (max-width: 600px) {
-            #chatWidget {
-                width: 96vw;
-                height: 90vh;
-                max-height: 94vh;
-            }
-            .chat-panel .chat-sidebar.open {
-                width: 140px;
-            }
-            .chat-panel .chat-main .quick-chips .chip {
-                font-size: 8px;
-                padding: 3px 12px;
-            }
-            .chat-panel .chat-main .chat-messages {
-                padding: 12px 14px;
-                font-size: 12px;
-            }
-            .chat-panel .chat-main .chat-input-row input {
-                font-size: 11px;
-                padding: 7px 14px;
-                min-height: 36px;
-            }
-            .chat-panel .chat-main .chat-input-row .send-btn {
-                width: 36px;
-                height: 36px;
-                font-size: 15px;
-            }
+            #chatWidget { width: 96vw; height: 90vh; max-height: 94vh; }
+            .chat-panel .chat-sidebar.open { width: 140px; }
+            .chat-panel .chat-main .quick-chips .chip { font-size: 8px; padding: 3px 12px; }
+            .chat-panel .chat-main .chat-messages { padding: 12px 14px; font-size: 12px; }
+            .chat-panel .chat-main .chat-input-row input { font-size: 11px; padding: 7px 14px; min-height: 36px; }
+            .chat-panel .chat-main .chat-input-row .send-btn { width: 36px; height: 36px; font-size: 15px; }
         }
-        .chat-avatar-trigger {
-            position: fixed;
-            bottom: 28px;
-            right: 28px;
-            z-index: 99998;
-            display: none;
-            background: linear-gradient(135deg, #0288d1, #0277bd);
-            color: #fff;
-            border: none;
-            border-radius: 50%;
-            width: 64px;
-            height: 64px;
-            font-size: 30px;
-            box-shadow: 0 4px 28px rgba(2, 136, 209, 0.35);
-            cursor: pointer;
-            transition: var(--transition);
-            touch-action: manipulation;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-            border: 1px solid var(--glass-border);
-        }
-        .chat-avatar-trigger:hover {
-            transform: scale(1.08);
-            box-shadow: 0 8px 48px rgba(2, 136, 209, 0.50);
-        }
-        .chat-avatar-trigger:active {
-            transform: scale(0.92);
-        }
-        .chat-avatar-trigger .badge-dot {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            width: 16px;
-            height: 16px;
-            background: #00c853;
-            border-radius: 50%;
-            border: 2.5px solid rgba(255, 255, 255, 0.30);
-            animation: pulse-dot 2s infinite;
-        }
-        @keyframes pulse-dot {
-            0%,
-            100% {
-                transform: scale(1);
-            }
-            50% {
-                transform: scale(1.18);
-            }
-        }
+        .chat-avatar-trigger { position: fixed; bottom: 28px; right: 28px; z-index: 99998; display: none; background: linear-gradient(135deg, #0288d1, #0277bd); color: #fff; border: none; border-radius: 50%; width: 64px; height: 64px; font-size: 30px; box-shadow: 0 4px 28px rgba(2, 136, 209, 0.35); cursor: pointer; transition: var(--transition); align-items: center; justify-content: center; backdrop-filter: var(--glass-blur); border: 1px solid var(--glass-border); }
+        .chat-avatar-trigger:hover { transform: scale(1.08); box-shadow: 0 8px 48px rgba(2, 136, 209, 0.50); }
+        .chat-avatar-trigger:active { transform: scale(0.92); }
+        .chat-avatar-trigger .badge-dot { position: absolute; top: 5px; right: 5px; width: 16px; height: 16px; background: #00c853; border-radius: 50%; border: 2.5px solid rgba(255, 255, 255, 0.30); animation: pulse-dot 2s infinite; }
+        @keyframes pulse-dot { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
         @media (max-width: 480px) {
-            body {
-                padding: 10px;
-            }
-            .app-container {
-                border-radius: 24px;
-            }
-            .stats-grid {
-                grid-template-columns: 1fr 1fr;
-                gap: 8px;
-            }
-            .admin-nav-item {
-                min-width: 50px;
-                font-size: 8px;
-                padding: 6px 10px;
-            }
-            .portal-grid {
-                grid-template-columns: 1fr 1fr 1fr;
-                gap: 6px;
-            }
-            .app-header-title h1 {
-                font-size: 14px;
-            }
-            .avatar-circle {
-                width: 34px;
-                height: 34px;
-                font-size: 11px;
-            }
-            .chat-avatar-trigger {
-                width: 56px;
-                height: 56px;
-                font-size: 26px;
-                bottom: 20px;
-                right: 20px;
-            }
-            #auth-box {
-                min-height: 60vh;
-            }
-            .app-body {
-                padding: 14px;
-            }
+            body { padding: 10px; }
+            .app-container { border-radius: 24px; }
+            .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+            .admin-nav-item { min-width: 50px; font-size: 8px; padding: 6px 10px; }
+            .portal-grid { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+            .app-header-title h1 { font-size: 14px; }
+            .avatar-circle { width: 34px; height: 34px; font-size: 11px; }
+            .chat-avatar-trigger { width: 56px; height: 56px; font-size: 26px; bottom: 20px; right: 20px; }
+            #auth-box { min-height: 60vh; }
+            .app-body { padding: 14px; }
         }
-        #auth-box h3 {
-            font-size: 20px;
-            font-weight: 900;
-            margin-bottom: 18px;
-            color: var(--text-main);
-            text-align: center;
-        }
-        #toggleLink {
-            color: #0288d1 !important;
-            cursor: pointer;
-            font-size: 11px;
-            display: block;
-            text-align: center;
-            margin-top: 12px;
-            font-weight: 600;
-            transition: var(--transition-fast);
-        }
-        #toggleLink:hover {
-            color: #01579b !important;
-            transform: translateY(-1px);
-        }
-        #dashboardCurrentTime {
-            font-weight: 700;
-            color: #0288d1;
-        }
-        #dashboardCurrentDate {
-            font-weight: 600;
-            color: var(--text-muted);
-        }
-        .skeleton {
-            background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 25%, rgba(255, 255, 255, 0.10) 50%, rgba(255, 255, 255, 0.04) 75%);
-            background-size: 200% 100%;
-            animation: skeletonShimmer 1.5s infinite;
-            border-radius: 6px;
-        }
-        @keyframes skeletonShimmer {
-            0% {
-                background-position: -200% 0;
-            }
-            100% {
-                background-position: 200% 0;
-            }
-        }
-        .tab-content-active {
-            animation: contentFade 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        @keyframes contentFade {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        .stat-card .value {
-            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-        }
+        #auth-box h3 { font-size: 20px; font-weight: 900; margin-bottom: 18px; color: var(--text-main); text-align: center; }
+        #toggleLink { color: #0288d1 !important; cursor: pointer; font-size: 11px; display: block; text-align: center; margin-top: 12px; font-weight: 600; transition: var(--transition-fast); }
+        #toggleLink:hover { color: #01579b !important; transform: translateY(-1px); }
+        #dashboardCurrentTime { font-weight: 700; color: #0288d1; }
+        #dashboardCurrentDate { font-weight: 600; color: var(--text-muted); }
+        .skeleton { background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 25%, rgba(255, 255, 255, 0.10) 50%, rgba(255, 255, 255, 0.04) 75%); background-size: 200% 100%; animation: skeletonShimmer 1.5s infinite; border-radius: 6px; }
+        @keyframes skeletonShimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+        .tab-content-active { animation: contentFade 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes contentFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Trend chart container - enhanced */
-        .trend-chart-container {
-            background: rgba(255, 255, 255, 0.06);
-            border-radius: var(--radius-sm);
-            padding: 14px;
-            border: 1px solid var(--glass-border);
-            margin-bottom: 14px;
-            transition: var(--transition);
-        }
-        .trend-chart-container:hover {
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
-        }
-        .trend-chart-container canvas {
-            width: 100% !important;
-            max-height: 200px;
-        }
-        .trend-chart-container .chart-title {
-            font-size: 10px;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 6px;
-        }
-        .trend-chart-container .chart-controls {
-            display: flex;
-            gap: 6px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        .trend-chart-container .chart-controls select,
-        .trend-chart-container .chart-controls button {
-            padding: 3px 10px;
-            font-size: 8px;
-            border-radius: var(--radius-full);
-            border: 1px solid var(--glass-border);
-            background: rgba(255, 255, 255, 0.08);
-            color: var(--text-main);
-            cursor: pointer;
-            font-family: inherit;
-            font-weight: 600;
-            transition: var(--transition-fast);
-            margin: 0;
-        }
-        .trend-chart-container .chart-controls select:hover,
-        .trend-chart-container .chart-controls button:hover {
-            background: rgba(255, 255, 255, 0.18);
-            border-color: #0288d1;
-        }
-        .trend-chart-container .chart-controls .active-view {
-            background: rgba(2, 136, 209, 0.15);
-            border-color: #0288d1;
-            color: #0288d1;
-        }
+        /* Trend chart container - FIX: Added bottom padding for x-axis labels */
+        .trend-chart-container { background: rgba(255, 255, 255, 0.06); border-radius: var(--radius-sm); padding: 14px; border: 1px solid var(--glass-border); margin-bottom: 14px; transition: var(--transition); height: 300px; }
+        .trend-chart-container:hover { box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04); }
+        .trend-chart-container canvas { width: 100% !important; height: 100% !important; }
+        .trend-chart-container .chart-title { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
+        .trend-chart-container .chart-controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        .trend-chart-container .chart-controls select, .trend-chart-container .chart-controls button { padding: 3px 10px; font-size: 8px; border-radius: var(--radius-full); border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.08); color: var(--text-main); cursor: pointer; font-family: inherit; font-weight: 600; transition: var(--transition-fast); margin: 0; }
+        .trend-chart-container .chart-controls select:hover, .trend-chart-container .chart-controls button:hover { background: rgba(255, 255, 255, 0.18); border-color: #0288d1; }
+        .trend-chart-container .chart-controls .active-view { background: rgba(2, 136, 209, 0.15); border-color: #0288d1; color: #0288d1; }
 
         /* PDF Export button styles */
-        .pdf-export-group {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin: 8px 0;
-        }
-        .pdf-export-group .btn {
-            flex: 1;
-            min-width: 80px;
-            padding: 6px 12px;
-            font-size: 9px;
-        }
+        .pdf-export-group { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+        .pdf-export-group .btn { flex: 1; min-width: 80px; padding: 6px 12px; font-size: 9px; }
 
         /* Branch toggle pills */
-        .branch-toggle-group {
-            display: flex;
-            gap: 8px;
-            margin: 8px 0 12px 0;
-        }
-        .branch-toggle-group .branch-pill {
-            flex: 1;
-            text-align: center;
-            padding: 6px 10px;
-            border-radius: var(--radius-full);
-            font-size: 10px;
-            font-weight: 700;
-            cursor: pointer;
-            border: 1.5px solid var(--glass-border);
-            background: rgba(255, 255, 255, 0.06);
-            color: var(--text-muted);
-            transition: var(--transition-fast);
-        }
-        .branch-toggle-group .branch-pill.active-cse {
-            border-color: #0288d1;
-            background: rgba(2, 136, 209, 0.15);
-            color: #0288d1;
-        }
-        .branch-toggle-group .branch-pill.active-aids {
-            border-color: #7c3aed;
-            background: rgba(124, 58, 237, 0.15);
-            color: #7c3aed;
-        }
-        .branch-toggle-group .branch-pill:hover:not(.active-cse):not(.active-aids) {
-            background: rgba(255, 255, 255, 0.12);
-            border-color: rgba(255, 255, 255, 0.40);
-        }
+        .branch-toggle-group { display: flex; gap: 8px; margin: 8px 0 12px 0; }
+        .branch-toggle-group .branch-pill { flex: 1; text-align: center; padding: 6px 10px; border-radius: var(--radius-full); font-size: 10px; font-weight: 700; cursor: pointer; border: 1.5px solid var(--glass-border); background: rgba(255, 255, 255, 0.06); color: var(--text-muted); transition: var(--transition-fast); }
+        .branch-toggle-group .branch-pill.active-cse { border-color: #0288d1; background: rgba(2, 136, 209, 0.15); color: #0288d1; }
+        .branch-toggle-group .branch-pill.active-aids { border-color: #7c3aed; background: rgba(124, 58, 237, 0.15); color: #7c3aed; }
+        .branch-toggle-group .branch-pill:hover:not(.active-cse):not(.active-aids) { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.40); }
 
         /* Month selector for subject-wise attendance */
-        .subject-month-selector {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            margin: 6px 0 10px 0;
-            flex-wrap: wrap;
-        }
-        .subject-month-selector select {
-            flex: 1;
-            min-width: 100px;
-            padding: 5px 12px;
-            font-size: 9px;
-            margin: 0;
-            background: rgba(255, 255, 255, 0.10);
-            border-color: var(--glass-border);
-            border-radius: var(--radius-full);
-            color: var(--text-main);
-        }
-        .subject-month-selector .month-label {
-            font-size: 9px;
-            font-weight: 600;
-            color: var(--text-muted);
-        }
+        .subject-month-selector { display: flex; gap: 8px; align-items: center; margin: 6px 0 10px 0; flex-wrap: wrap; }
+        .subject-month-selector select { flex: 1; min-width: 100px; padding: 5px 12px; font-size: 9px; margin: 0; background: rgba(255, 255, 255, 0.10); border-color: var(--glass-border); border-radius: var(--radius-full); color: var(--text-main); }
+        .subject-month-selector .month-label { font-size: 9px; font-weight: 600; color: var(--text-muted); }
 
-        /* Leave form date fields - enhanced visibility */
-        .leave-date-group {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        .leave-date-group .date-field {
-            flex: 1;
-            min-width: 100px;
-        }
-        .leave-date-group .date-field label {
-            font-size: 8px;
-            font-weight: 600;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-            display: block;
-            margin-bottom: 2px;
-        }
-        .leave-date-group .date-field input[type="date"] {
-            padding: 8px 12px;
-            font-size: 10px;
-            margin: 0;
-            width: 100%;
-            background: rgba(255, 255, 255, 0.15);
-            border-color: var(--glass-border);
-            border-radius: var(--radius-sm);
-            color: var(--text-main);
-        }
-        .leave-date-group .date-field input[type="date"]:focus {
-            border-color: #0288d1;
-            box-shadow: 0 0 0 4px rgba(2, 136, 209, 0.10);
-        }
+        /* Leave form date fields */
+        .leave-date-group { display: flex; gap: 8px; flex-wrap: wrap; }
+        .leave-date-group .date-field { flex: 1; min-width: 100px; }
+        .leave-date-group .date-field label { font-size: 8px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; display: block; margin-bottom: 2px; }
+        .leave-date-group .date-field input[type="date"] { padding: 8px 12px; font-size: 10px; margin: 0; width: 100%; background: rgba(255, 255, 255, 0.15); border-color: var(--glass-border); border-radius: var(--radius-sm); color: var(--text-main); }
+        .leave-date-group .date-field input[type="date"]:focus { border-color: #0288d1; box-shadow: 0 0 0 4px rgba(2, 136, 209, 0.10); }
     </style>
 </head>
 <body>
@@ -2218,7 +604,7 @@
                 <div class="stats-grid" id="studentStatsGrid">
                     <div class="stat-card">
                         <div class="value" id="totalDaysCount">0</div>
-                        <div class="label">Academic Lectures</div>
+                        <div class="label">Working Days (So Far)</div>
                     </div>
                     <div class="stat-card">
                         <div class="value" id="attendancePct">0%</div>
@@ -2337,7 +723,7 @@
                     </div>
                     <div id="monthlySummaryContainer" style="background:rgba(255,255,255,0.06); border-radius:var(--radius-sm); padding:12px; margin-bottom:12px; border:1px solid var(--glass-border); display:none;"></div>
 
-                    <!-- ===== FEATURE A: TREND GRAPH - Enhanced Interactive ===== -->
+                    <!-- ===== FEATURE A: TREND GRAPH - FIX: Added padding and tick limits ===== -->
                     <div class="trend-chart-container" id="trendChartContainer">
                         <div class="chart-title">
                             <span>📈 Attendance Trend</span>
@@ -2354,7 +740,7 @@
                                 </select>
                             </div>
                         </div>
-                        <canvas id="attendanceTrendChart" height="180"></canvas>
+                        <canvas id="attendanceTrendChart"></canvas>
                     </div>
 
                     <button class="btn btn-primary" onclick="markFullDayAttendance()" style="padding:12px; font-size:11px;">
@@ -2589,7 +975,7 @@
                         <span class="sub-section-title">📝 Manual Backdate Attendance</span>
                         <input type="text" id="manualRoll" placeholder="Student Roll No" style="font-size:10px; padding:7px;" onchange="validateStudentBranchForManual()" />
                         <input type="date" id="manualDate" style="font-size:10px; padding:7px;" onchange="loadSubjectsForManual()" />
-                        <select id="manualBranch" style="font-size:10px; padding:7px;">
+                        <select id="manualBranch" style="font-size:10px; padding:7px; display:none;">
                             <option value="CSE">CSE</option>
                             <option value="AIDS">AIDS</option>
                         </select>
@@ -2864,7 +1250,7 @@
                     </div>
                 </div>
 
-                <!-- ===== LEAVE TAB (Student) - FIXED date fields ===== -->
+                <!-- ===== LEAVE TAB (Student) ===== -->
                 <div id="leaveTab" style="display:none;">
                     <h4 style="font-size:11px; font-weight:800;">📝 Apply for Leave</h4>
                     <div style="background:rgba(255,255,255,0.06); border-radius:var(--radius-sm); padding:14px; border:1px solid var(--glass-border);">
@@ -3082,7 +1468,7 @@
             };
             const AIDS = {
                 Monday: ['BDA - Big Data Analytics', 'ECO - Economics for Engineers', 'LIB - Library',
-                    'FLA - Formal Language & Automata', 'PA - Predictive Analysis', 'PA - Predictive Analysis', 'Sports'
+                    'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'PA - Predictive Analysis', 'PA - Predictive Analysis', 'Sports'
                 ],
                 Tuesday: ['WT - Web Technology', 'ECO - Economics for Engineers', 'PA - Predictive Analysis',
                     'FLA - Formal Language & Automata', 'HRM - Human Resource Mgmt', 'BDA - Big Data Analytics', 'ML - Machine Learning'
@@ -3158,7 +1544,7 @@
                 { start: "10:50", end: "11:35", subject: "LIB - Library", period: "P3" },
                 { start: "11:35", end: "12:20", subject: "FLA - Formal Language & Automata", period: "P4" },
                 { start: "12:20", end: "13:05", subject: "Lunch Break", period: "LUNCH" },
-                { start: "13:05", end: "13:50", subject: "PA - Predictive Analysis", period: "P6" },
+                { start: "13:05", end: "13:50", subject: "HRM - Human Resource Mgmt", period: "P6" },
                 { start: "13:50", end: "14:35", subject: "PA - Predictive Analysis", period: "P7" },
                 { start: "14:35", end: "15:20", subject: "Sports", period: "P8" }
             ],
@@ -3217,8 +1603,7 @@
                 const btn = document.getElementById('markPeriodBtn');
                 if (labelEl) labelEl.innerText = "TEACHER MODE:";
                 if (nameEl) nameEl.innerText = "Use Teacher Tab";
-                if (btn) { btn.disabled = true;
-                    btn.style.opacity = "0.5"; }
+                if (btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
                 return;
             }
             const branch = user.branch || 'CSE';
@@ -3233,15 +1618,11 @@
                 const res = await fetch(`${API_BASE}/api/date-status/${todayDate}`);
                 const status = await res.json();
                 if (status.isBlocked) {
-                    if (labelEl) { labelEl.innerText = status.type + ":"; labelEl.style.color = status.type === 'HOLIDAY' ?
-                            '#e65100' : 'var(--text-muted)'; }
-                    if (nameEl) { nameEl.innerText = status.message; nameEl.style.color = status.type === 'HOLIDAY' ?
-                            '#e65100' : 'var(--text-muted)'; }
-                    if (btn) { btn.disabled = true;
-                        btn.style.opacity = "0.5"; }
+                    if (labelEl) { labelEl.innerText = status.type + ":"; labelEl.style.color = status.type === 'HOLIDAY' ? '#e65100' : 'var(--text-muted)'; }
+                    if (nameEl) { nameEl.innerText = status.message; nameEl.style.color = status.type === 'HOLIDAY' ? '#e65100' : 'var(--text-muted)'; }
+                    if (btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
                     activeSubjectSubjectCode = "";
-                    document.getElementById('periodCardBox').className = 'period-card ' + (status.type === 'HOLIDAY' ?
-                        'status-holiday' : 'status-weekend');
+                    document.getElementById('periodCardBox').className = 'period-card ' + (status.type === 'HOLIDAY' ? 'status-holiday' : 'status-weekend');
                     return;
                 }
             } catch (e) {}
@@ -3249,8 +1630,7 @@
             if (dayOfWeek === 0 || dayOfWeek === 6) {
                 if (labelEl) { labelEl.innerText = "WEEKEND:"; labelEl.style.color = 'var(--text-muted)'; }
                 if (nameEl) { nameEl.innerText = "College Closed"; nameEl.style.color = 'var(--text-muted)'; }
-                if (btn) { btn.disabled = true;
-                    btn.style.opacity = "0.5"; }
+                if (btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
                 activeSubjectSubjectCode = "";
                 document.getElementById('periodCardBox').className = 'period-card status-weekend';
                 return;
@@ -3273,21 +1653,18 @@
                 if (foundSlot.period === "LUNCH") {
                     if (labelEl) labelEl.innerText = "LUNCH BREAK:";
                     if (nameEl) { nameEl.innerText = "Lunch Time"; nameEl.style.color = 'var(--text-main)'; }
-                    if (btn) { btn.disabled = true;
-                        btn.style.opacity = "0.5"; }
+                    if (btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
                     activeSubjectSubjectCode = "";
                 } else {
                     if (labelEl) labelEl.innerText = `ACTIVE (${foundSlot.start} - ${foundSlot.end}):`;
                     if (nameEl) { nameEl.innerText = foundSlot.subject; nameEl.style.color = 'var(--text-main)'; }
-                    if (btn) { btn.disabled = false;
-                        btn.style.opacity = "1"; }
+                    if (btn) { btn.disabled = false; btn.style.opacity = "1"; }
                     activeSubjectSubjectCode = foundSlot.subject;
                 }
             } else {
                 if (labelEl) labelEl.innerText = "COLLEGE STATUS:";
                 if (nameEl) { nameEl.innerText = "Off Hours / No Class"; nameEl.style.color = 'var(--text-muted)'; }
-                if (btn) { btn.disabled = true;
-                    btn.style.opacity = "0.5"; }
+                if (btn) { btn.disabled = true; btn.style.opacity = "0.5"; }
                 activeSubjectSubjectCode = "";
             }
         }
@@ -3449,8 +1826,7 @@
                 document.getElementById('facultyTodayPresent').innerText = '0';
                 document.getElementById('facultyTodayAbsent').innerText = '0';
                 document.getElementById('facultyClassAvg').innerText = '0%';
-                document.getElementById('facultyTodayPresentList').innerHTML =
-                    '<div style="padding:10px; text-align:center; color:var(--text-muted);">No students assigned.</div>';
+                document.getElementById('facultyTodayPresentList').innerHTML = '<div style="padding:10px; text-align:center; color:var(--text-muted);">No students assigned.</div>';
                 return;
             }
 
@@ -3496,8 +1872,7 @@
 
             const listDiv = document.getElementById('facultyTodayPresentList');
             if (presentStudents.length === 0) {
-                listDiv.innerHTML =
-                '<div style="padding:10px; text-align:center; color:var(--text-muted);">No students present today.</div>';
+                listDiv.innerHTML = '<div style="padding:10px; text-align:center; color:var(--text-muted);">No students present today.</div>';
             } else {
                 const sorted = presentStudents.sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }));
                 listDiv.innerHTML = sorted.map(s =>
@@ -3612,8 +1987,7 @@
         // ============================================================
         function toggleTeacherReportRange() {
             const range = document.getElementById('teacherReportRange').value;
-            document.getElementById('teacherSelectedMonthWrapper').style.display = (range === 'SELECTED_MONTH') ? 'block' :
-                'none';
+            document.getElementById('teacherSelectedMonthWrapper').style.display = (range === 'SELECTED_MONTH') ? 'block' : 'none';
             document.getElementById('teacherCustomRangeWrapper').style.display = (range === 'CUSTOM') ? 'block' : 'none';
         }
 
@@ -3710,8 +2084,7 @@
                     subjectStats[sub] = {
                         total: subjectTotals[sub],
                         present: attendedCounts[sub] || 0,
-                        percentage: subjectTotals[sub] > 0 ? Math.round(((attendedCounts[sub] || 0) / subjectTotals[
-                            sub]) * 100) : 0
+                        percentage: subjectTotals[sub] > 0 ? Math.round(((attendedCounts[sub] || 0) / subjectTotals[sub]) * 100) : 0
                     };
                 });
 
@@ -4054,10 +2427,13 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: {
+                        padding: {
+                            bottom: 20 // FIX: Add bottom padding for x-axis labels
+                        }
+                    },
                     plugins: {
-                        legend: {
-                            display: false
-                        },
+                        legend: { display: false },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
@@ -4078,7 +2454,13 @@
                         },
                         x: {
                             grid: { display: false },
-                            ticks: { font: { size: 8 }, color: 'var(--text-muted)' }
+                            ticks: {
+                                font: { size: 8 },
+                                color: 'var(--text-muted)',
+                                maxRotation: 90,
+                                minRotation: 45,
+                                maxTicksLimit: 15 // FIX: Limit the number of ticks to avoid overlapping
+                            }
                         }
                     },
                     elements: {
@@ -4088,11 +2470,11 @@
             });
 
             // Update chart container height
-            canvas.parentElement.style.height = '180px';
+            canvas.parentElement.style.height = '300px';
         }
 
         // ============================================================
-        // FEATURE D: PDF EXPORT (Student-wise) - FIXED
+        // FEATURE D: PDF EXPORT (Student-wise) - EXACT ADMIN FORMAT
         // ============================================================
         function populatePDFStudentSelect() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -4102,10 +2484,8 @@
             if (!select) return;
 
             if (user.role === 'student') {
-                // Student: show their own name
                 select.innerHTML = `<option value="${user.rollNo}">${user.name} (${user.rollNo})</option>`;
             } else if (user.role === 'admin' || user.role === 'faculty') {
-                // For admin/teacher, populate from users
                 populatePDFStudentSelectAdmin();
             }
         }
@@ -4134,14 +2514,12 @@
             } catch (e) {
                 console.error('Failed to populate student select', e);
                 select.innerHTML = '<option value="">Select Student…</option>';
-                // If student is logged in, add their own
                 if (user && user.role === 'student') {
                     select.innerHTML += `<option value="${user.rollNo}">${user.name} (${user.rollNo})</option>`;
                 }
             }
         }
 
-        // PDF Range toggle
         document.addEventListener('DOMContentLoaded', function() {
             const rangeSelect = document.getElementById('pdfRangeSelect');
             if (rangeSelect) {
@@ -4172,13 +2550,11 @@
             document.getElementById('pdfExportStatus').innerHTML = '⏳ Generating PDF...';
 
             try {
-                // Try to fetch records from API first, fallback to local data
                 let records = [];
                 let studentName = studentRoll;
                 let branch = 'CSE';
 
                 try {
-                    // Get student profile
                     const profileRes = await fetch(`${API_BASE}/api/student/profile/${studentRoll}`);
                     if (profileRes.ok) {
                         const profile = await profileRes.json();
@@ -4190,7 +2566,6 @@
                 }
 
                 try {
-                    // Fetch attendance records
                     const attRes = await fetch(`${API_BASE}/api/attendance/student/${studentRoll}/${user.rollNo}`);
                     if (attRes.ok) {
                         records = await attRes.json();
@@ -4199,17 +2574,12 @@
                     }
                 } catch (e) {
                     console.warn('API fetch failed, using local data:', e);
-                    // Use local data if available
                     if (globalMyRecords && globalMyRecords.length > 0) {
                         records = globalMyRecords.filter(r => r.rollNo === studentRoll || r.rollNo === studentRoll);
-                        if (records.length === 0) {
-                            // If no records for this student in local data, use all records
-                            records = globalMyRecords;
-                        }
+                        if (records.length === 0) records = globalMyRecords;
                     }
                 }
 
-                // Filter by range
                 const today = new Date();
                 let startDate, endDate;
                 if (range === 'FULL_SEMESTER') {
@@ -4233,26 +2603,15 @@
                     return showMsg('No records found for selected range!', true);
                 }
 
-                // Calculate subject-wise stats
-                const subjectStats = {};
-                records.forEach(r => {
-                    const sub = r.subject || 'General';
-                    if (!subjectStats[sub]) subjectStats[sub] = { present: 0, total: 0 };
-                    if (r.status === 'Present' || r.status === 'Duty Leave') {
-                        subjectStats[sub].present++;
-                    }
-                    subjectStats[sub].total++;
-                });
-
-                // Get holidays
-                const holidaySet = new Set(globalHolidays.map(h => h.date));
-
-                // Calculate total conducted lectures in range
+                // EXACT ADMIN FORMAT LOGIC
+                const holidayRes = await fetch(`${API_BASE}/api/holidays`);
+                const holidays = await holidayRes.json();
+                const holidaySet = new Set(holidays.map(h => h.date));
                 const timetable = getBranchTimetable(branch);
                 const dayNameMap = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                const subjectTotals = {};
                 let totalConducted = 0;
                 let cur = new Date(startDate);
-                const subjectTotals = {};
                 while (cur <= endDate) {
                     const dateStr = cur.toISOString().split('T')[0];
                     const dayOfWeek = cur.getDay();
@@ -4272,122 +2631,66 @@
                     cur.setDate(cur.getDate() + 1);
                 }
 
-                const totalPresent = records.filter(r => r.status === 'Present' || r.status === 'Duty Leave').length;
-                const pct = totalConducted > 0 ? Math.round((totalPresent / totalConducted) * 100) : 0;
+                const attendedCounts = {};
+                records.forEach(r => {
+                    if (r.status === 'Present' || r.status === 'Duty Leave') {
+                        if (!attendedCounts[r.subject]) attendedCounts[r.subject] = 0;
+                        attendedCounts[r.subject]++;
+                    }
+                });
 
-                // Build HTML for PDF
-                const htmlContent = `
-                        <!DOCTYPE html>
-                        <html>
-                        <head>
-                            <meta charset="UTF-8">
-                            <title>Attendance Report - ${studentRoll}</title>
-                            <style>
-                                body { font-family: Arial, sans-serif; padding: 30px; background: #fff; color: #1a1a2e; }
-                                .header { text-align: center; border-bottom: 2px solid #0288d1; padding-bottom: 15px; margin-bottom: 20px; }
-                                .header h1 { color: #0288d1; margin: 0; font-size: 24px; }
-                                .header h2 { color: #0277bd; margin: 5px 0; font-size: 18px; font-weight: 400; }
-                                .header p { color: rgba(0,0,0,0.5); font-size: 12px; margin: 3px 0; }
-                                .summary { display: flex; gap: 20px; justify-content: center; margin: 20px 0; flex-wrap: wrap; }
-                                .summary-box { background: #f5f9ff; padding: 12px 24px; border-radius: 8px; text-align: center; min-width: 100px; border: 1px solid #e3f2fd; }
-                                .summary-box .number { font-size: 28px; font-weight: 700; color: #0288d1; }
-                                .summary-box .label { font-size: 10px; color: rgba(0,0,0,0.5); text-transform: uppercase; letter-spacing: 0.5px; }
-                                .section-title { font-size: 16px; font-weight: 700; color: #0277bd; margin: 20px 0 10px 0; border-bottom: 1px solid #e3f2fd; padding-bottom: 5px; }
-                                table { width: 100%; border-collapse: collapse; font-size: 11px; }
-                                th { background: #e3f2fd; padding: 8px 10px; text-align: left; font-weight: 700; color: #01579b; }
-                                td { padding: 6px 10px; border-bottom: 1px solid #f0f4f8; }
-                                .status-present { color: #00796b; font-weight: 600; }
-                                .status-absent { color: #b71c1c; font-weight: 600; }
-                                .status-dl { color: #e65100; font-weight: 600; }
-                                .footer { text-align: center; font-size: 10px; color: rgba(0,0,0,0.3); margin-top: 30px; border-top: 1px solid #eee; padding-top: 15px; }
-                                .subject-stats { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
-                                .subject-pill { background: #f5f9ff; padding: 4px 14px; border-radius: 12px; font-size: 10px; border: 1px solid #e3f2fd; }
-                                .subject-pill .pct { font-weight: 700; }
-                                .pct-good { color: #00796b; }
-                                .pct-warn { color: #e65100; }
-                                .pct-bad { color: #b71c1c; }
-                            </style>
-                        </head>
-                        <body>
-                            <div class="header">
-                                <h1>BM Group of Institutions</h1>
-                                <h2>Student Attendance Report</h2>
-                                <p><strong>${studentName}</strong> (${studentRoll}) &bull; ${branch} &bull; 5th Semester</p>
-                                <p>Range: ${startStr} to ${endStr} &bull; Generated: ${new Date().toLocaleString()}</p>
-                            </div>
+                const totalAttended = records.filter(r => r.status === 'Present' || r.status === 'Duty Leave').length;
+                const pct = totalConducted > 0 ? Math.round((totalAttended / totalConducted) * 100) : 0;
 
-                            <div class="summary">
-                                <div class="summary-box">
-                                    <div class="number">${totalPresent}</div>
-                                    <div class="label">Present</div>
-                                </div>
-                                <div class="summary-box">
-                                    <div class="number">${totalConducted}</div>
-                                    <div class="label">Conducted</div>
-                                </div>
-                                <div class="summary-box">
-                                    <div class="number" style="color:${pct >= 75 ? '#00796b' : '#b71c1c'};">${pct}%</div>
-                                    <div class="label">Attendance</div>
-                                </div>
-                                <div class="summary-box">
-                                    <div class="number">${Object.keys(subjectStats).length}</div>
-                                    <div class="label">Subjects</div>
-                                </div>
-                            </div>
+                const subjectStats = {};
+                Object.keys(subjectTotals).forEach(sub => {
+                    subjectStats[sub] = {
+                        total: subjectTotals[sub],
+                        present: attendedCounts[sub] || 0,
+                        percentage: subjectTotals[sub] > 0 ? Math.round(((attendedCounts[sub] || 0) / subjectTotals[sub]) * 100) : 0
+                    };
+                });
 
-                            <div class="section-title">📚 Subject-wise Breakdown</div>
-                            <div class="subject-stats">
-                                ${Object.keys(subjectTotals).sort().map(sub => {
-                                    const st = subjectStats[sub] || { present: 0, total: 0 };
-                                    const total = subjectTotals[sub] || 0;
-                                    const p = total > 0 ? Math.round((st.present / total) * 100) : 0;
-                                    const cls = p >= 75 ? 'pct-good' : p >= 50 ? 'pct-warn' : 'pct-bad';
-                                    return `<span class="subject-pill">${sub.substring(0,20)}: <span class="pct ${cls}">${p}%</span> (${st.present}/${total})</span>`;
-                                }).join('')}
-                            </div>
-
-                            <div class="section-title">📋 Detailed Records</div>
-                            ${records.length === 0 ? '<p style="color:rgba(0,0,0,0.4);">No records found in this range.</p>' : `
-                                <table>
-                                    <thead><tr><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
-                                    <tbody>
-                                        ${records.sort((a,b) => b.date.localeCompare(a.date)).map(r => {
-                                            const cls = r.status === 'Present' ? 'status-present' : r.status === 'Duty Leave' ? 'status-dl' : 'status-absent';
-                                            return `<tr><td>${r.date}</td><td>${r.subject || 'General'}</td><td class="${cls}">${r.status}</td></tr>`;
-                                        }).join('')}
-                                    </tbody>
-                                </table>
-                            `}
-
-                            <div class="footer">
-                                BM Group of Institutions &bull; Attendance Report &bull; ${new Date().toLocaleString()}
-                            </div>
-                        </body>
-                        </html>
+                const content = `
+                        <div style="font-family:Arial; padding:20px; background:#e3f2fd; color:#1a1a2e;">
+                            <h1 style="color:#0288d1;">BM Group of Institutions</h1>
+                            <h2 style="color:#0277bd;">Student Attendance Report – ${studentRoll}</h2>
+                            <p style="color:rgba(0,0,0,0.60);">Generated: ${new Date().toLocaleString()}</p>
+                            <p style="color:rgba(0,0,0,0.60);">Branch: ${branch}</p>
+                            <p style="color:rgba(0,0,0,0.60);">Range: ${startStr} to ${endStr}</p>
+                            <hr style="border-color:rgba(0,0,0,0.10);">
+                            <h3 style="color:#0277bd;">Summary</h3>
+                            <p><strong>Total Lectures Conducted:</strong> ${totalConducted}</p>
+                            <p><strong>Lectures Attended:</strong> ${totalAttended}</p>
+                            <p><strong>Attendance %:</strong> ${pct}%</p>
+                            <h3 style="color:#0277bd;">Subject-wise</h3>
+                            <ul>
+                                ${Object.entries(subjectStats).map(([sub, st]) => `
+                                        <li>${sub}: ${st.present}/${st.total} (${st.percentage}%)</li>
+                                    `).join('')}
+                            </ul>
+                            <hr style="border-color:rgba(0,0,0,0.10);">
+                            <h3 style="color:#0277bd;">Detailed Records</h3>
+                            <table style="width:100%; border-collapse:collapse; border:1px solid #ccc;">
+                                <thead><tr style="background:rgba(2,136,209,0.10);"><th style="padding:8px; text-align:left;">Date</th><th style="padding:8px; text-align:left;">Subject</th><th style="padding:8px; text-align:left;">Status</th></tr></thead>
+                                <tbody>
+                                    ${records.map(r => `
+                                            <tr><td style="padding:6px 8px; border-bottom:1px solid #eee;">${r.date}</td><td style="padding:6px 8px; border-bottom:1px solid #eee;">${r.subject}</td><td style="padding:6px 8px; border-bottom:1px solid #eee;">${r.status}</td></tr>
+                                        `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
                     `;
 
-                // Use html2pdf to generate PDF
-                const pdfContainer = document.createElement('div');
-                pdfContainer.innerHTML = htmlContent;
-                pdfContainer.style.position = 'fixed';
-                pdfContainer.style.left = '-9999px';
-                pdfContainer.style.top = '-9999px';
-                document.body.appendChild(pdfContainer);
+                const win = window.open('', '_blank');
+                if (!win) { showMsg('Allow popups!', true); return; }
+                win.document.write(content);
+                win.document.close();
+                win.print();
 
-                const opt = {
-                    margin: [0.5, 0.5, 0.5, 0.5],
-                    filename: `Attendance_${studentRoll}_${range}.pdf`,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-                    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-                };
-
-                await html2pdf().set(opt).from(pdfContainer).save();
-
-                document.body.removeChild(pdfContainer);
                 hideDownloadProgress();
-                document.getElementById('pdfExportStatus').innerHTML = '✅ PDF downloaded successfully!';
-                showMsg('✅ PDF downloaded!', false, 'download');
+                document.getElementById('pdfExportStatus').innerHTML = '✅ PDF generated!';
+                showMsg('✅ PDF generated!', false, 'download');
 
             } catch (e) {
                 console.error('PDF generation error:', e);
@@ -4397,7 +2700,6 @@
             }
         }
 
-        // CSV export for student
         async function exportStudentCSV() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user) return showMsg('Please login!', true);
@@ -4416,7 +2718,6 @@
             document.getElementById('pdfExportStatus').innerHTML = '⏳ Generating CSV...';
 
             try {
-                // Try API first, fallback to local data
                 let records = [];
                 let studentName = studentRoll;
 
@@ -4465,8 +2766,7 @@
                     return showMsg('No records found for selected range!', true);
                 }
 
-                let csv =
-                    `Student Attendance Report\nStudent: ${studentName} (${studentRoll})\nRange: ${startStr} to ${endStr}\nGenerated: ${new Date().toLocaleString()}\n\nDate,Subject,Status\n`;
+                let csv = `Student Attendance Report\nStudent: ${studentName} (${studentRoll})\nRange: ${startStr} to ${endStr}\nGenerated: ${new Date().toLocaleString()}\n\nDate,Subject,Status\n`;
                 records.sort((a, b) => b.date.localeCompare(a.date)).forEach(r => {
                     csv += `${r.date},${r.subject || 'General'},${r.status}\n`;
                 });
@@ -4493,28 +2793,19 @@
         async function markFullDayAttendance() {
             console.log('🚀 markFullDayAttendance called');
             const enteredPasscode = prompt("Enter Full Day Passcode (5‑digit):");
-            if (!enteredPasscode) {
-                console.log('❌ No passcode entered');
-                return;
-            }
+            if (!enteredPasscode) return;
             if (enteredPasscode.length !== 5) {
                 showMsg('Full Day passcode must be 5 digits!', true);
                 return;
             }
-            console.log('📝 Passcode entered:', enteredPasscode);
             const valid = await verifyPasscode(enteredPasscode, 'full_day');
-            if (!valid) {
-                console.log('❌ Passcode invalid');
-                return;
-            }
-            console.log('✅ Passcode valid, requesting GPS...');
+            if (!valid) return;
             if (!navigator.geolocation) {
                 showMsg('Geolocation not supported!', true);
                 return;
             }
             navigator.geolocation.getCurrentPosition(
                 async (pos) => {
-                    console.log('📍 GPS position:', pos.coords.latitude, pos.coords.longitude);
                     const user = JSON.parse(localStorage.getItem('user'));
                     if (!user || user.role !== 'student') {
                         showMsg('Student access required!', true);
@@ -4534,7 +2825,6 @@
                             })
                         });
                         const data = await res.json();
-                        console.log('📦 Full day response:', data);
                         if (res.ok) {
                             showMsg(data.message || '✅ Full Day marked!');
                             fetchHistory(user.rollNo);
@@ -4569,30 +2859,20 @@
                 showMsg('No active period found!', true);
                 return;
             }
-            const enteredPasscode = prompt(
-                `Enter Single Lecture Passcode (4‑digit) for "${activeSubjectSubjectCode}":`);
-            if (!enteredPasscode) {
-                console.log('❌ No passcode entered');
-                return;
-            }
+            const enteredPasscode = prompt(`Enter Single Lecture Passcode (4‑digit) for "${activeSubjectSubjectCode}":`);
+            if (!enteredPasscode) return;
             if (enteredPasscode.length !== 4) {
                 showMsg('Passcode must be 4 digits!', true);
                 return;
             }
-            console.log('📝 Passcode entered:', enteredPasscode);
             const valid = await verifyPasscode(enteredPasscode, 'single_lecture');
-            if (!valid) {
-                console.log('❌ Passcode invalid');
-                return;
-            }
-            console.log('✅ Passcode valid, requesting GPS...');
+            if (!valid) return;
             if (!navigator.geolocation) {
                 showMsg('Geolocation not supported!', true);
                 return;
             }
             navigator.geolocation.getCurrentPosition(
                 async (pos) => {
-                    console.log('📍 GPS position:', pos.coords.latitude, pos.coords.longitude);
                     try {
                         const res = await fetch(`${API_BASE}/api/attendance/mark-lecture`, {
                             method: 'POST',
@@ -4608,7 +2888,6 @@
                             })
                         });
                         const data = await res.json();
-                        console.log('📦 Lecture response:', data);
                         if (res.ok) {
                             showMsg(data.message || '✅ Attendance Marked!');
                             fetchHistory(user.rollNo);
@@ -4694,8 +2973,7 @@
                     subjectStats[sub] = {
                         total: subjectTotals[sub],
                         present: attendedCounts[sub] || 0,
-                        percentage: subjectTotals[sub] > 0 ? Math.round(((attendedCounts[sub] || 0) / subjectTotals[
-                            sub]) * 100) : 0
+                        percentage: subjectTotals[sub] > 0 ? Math.round(((attendedCounts[sub] || 0) / subjectTotals[sub]) * 100) : 0
                     };
                 });
 
@@ -4736,8 +3014,7 @@
                     win.document.close();
                     win.print();
                 } else {
-                    let csv =
-                        `Student Attendance Report\nStudent: ${studentRoll}\nBranch: ${branch}\nRange: 15 July 2026 to ${today.toISOString().split('T')[0]}\nTotal Conducted: ${totalConducted}, Attended: ${totalAttended}, %: ${pct}%\n\nSubject,Attended,Total,Percentage\n`;
+                    let csv = `Student Attendance Report\nStudent: ${studentRoll}\nBranch: ${branch}\nRange: 15 July 2026 to ${today.toISOString().split('T')[0]}\nTotal Conducted: ${totalConducted}, Attended: ${totalAttended}, %: ${pct}%\n\nSubject,Attended,Total,Percentage\n`;
                     Object.entries(subjectStats).forEach(([sub, st]) => {
                         csv += `"${sub}",${st.present},${st.total},${st.percentage}%\n`;
                     });
@@ -4776,8 +3053,7 @@
 
             showDownloadProgress('Generating class report…');
             try {
-                const url =
-                    `${API_BASE}/api/admin/class-attendance-report?requesterRollNo=${user.rollNo}&startDate=${startDate}&endDate=${endDate}&branch=${branchFilter}`;
+                const url = `${API_BASE}/api/admin/class-attendance-report?requesterRollNo=${user.rollNo}&startDate=${startDate}&endDate=${endDate}&branch=${branchFilter}`;
                 const res = await fetch(url);
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Failed to fetch report');
@@ -4803,9 +3079,7 @@
                 const htmlContent = `
                         <!DOCTYPE html>
                         <html>
-                        <head>
-                            <meta charset="UTF-8">
-                            <title>Class Attendance Report</title>
+                        <head><meta charset="UTF-8"><title>Class Attendance Report</title>
                             <style>
                                 body { font-family: Arial, sans-serif; padding: 20px; background: #e3f2fd; color: #1a1a2e; }
                                 h1 { color: #0288d1; text-align: center; }
@@ -4834,9 +3108,7 @@
                                         <th>Percentage</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    ${tableRows}
-                                </tbody>
+                                <tbody>${tableRows}</tbody>
                             </table>
                             <p class="footer">Generated on ${new Date().toLocaleString()}</p>
                         </body>
@@ -4878,8 +3150,7 @@
                 const data = await res.json();
                 if (res.ok) {
                     showMsg(data.message || '✅ Records deleted successfully!');
-                    const modal = document.getElementById('studentProfileModal') || document.getElementById(
-                        'teacherStudentModal');
+                    const modal = document.getElementById('studentProfileModal') || document.getElementById('teacherStudentModal');
                     if (modal) {
                         const roll = rollNo;
                         if (modal.id === 'studentProfileModal') {
@@ -4919,8 +3190,7 @@
                     }
                     const teacherModal = document.getElementById('teacherStudentModal');
                     if (teacherModal) {
-                        const roll = document.querySelector('#teacherStudentModal .profile-modal h3')?.innerText?.replace(
-                            'Attendance – ', '');
+                        const roll = document.querySelector('#teacherStudentModal .profile-modal h3')?.innerText?.replace('Attendance – ', '');
                         closeTeacherStudentModal();
                         if (roll) viewTeacherStudent(roll);
                         fetchTeacherStudents();
@@ -4951,8 +3221,7 @@
                     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:16px; color:var(--text-muted);">No users registered</td></tr>';
                     return;
                 }
-                const students = data.filter(u => u.role === 'student').sort((a, b) => a.rollNo.localeCompare(b.rollNo,
-                    undefined, { numeric: true }));
+                const students = data.filter(u => u.role === 'student').sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }));
                 const summaryPromises = students.map(async (s) => {
                     try {
                         const res2 = await fetch(`${API_BASE}/api/student/summary/${s.rollNo}`);
@@ -4970,8 +3239,7 @@
 
                 tbody.innerHTML = allUsersSorted.map(s => {
                     const deviceStatus = s.boundDeviceId ? '✅ Bound' : '🔓 Unbound';
-                    const roleBadge = s.role === 'admin' ? '👑 Admin' : s.role === 'faculty' ? '👨‍🏫 Faculty' :
-                        '🎓 Student';
+                    const roleBadge = s.role === 'admin' ? '👑 Admin' : s.role === 'faculty' ? '👨‍🏫 Faculty' : '🎓 Student';
                     let attendanceDisplay = '-';
                     if (s.role === 'student' && summaryMap[s.rollNo]) {
                         const sm = summaryMap[s.rollNo];
@@ -5098,8 +3366,7 @@
                 window.currentAllRecords = filtered;
 
                 tbody.innerHTML = filtered.map((r, index) => {
-                    const statusClass = r.status === 'Present' ? 'badge-present' : r.status === 'Duty Leave' ?
-                        'badge-dl' : 'badge-absent';
+                    const statusClass = r.status === 'Present' ? 'badge-present' : r.status === 'Duty Leave' ? 'badge-dl' : 'badge-absent';
                     return `
                             <tr>
                                 <td><input type="checkbox" class="record-checkbox" data-id="${r._id}" data-index="${index}" /></td>
@@ -5138,8 +3405,7 @@
             if (!confirm(`Delete ${checkboxes.length} record(s) permanently?`)) return;
 
             const ids = Array.from(checkboxes).map(cb => cb.dataset.id);
-            let deleted = 0,
-                failed = 0;
+            let deleted = 0, failed = 0;
             showMsg(`Deleting ${ids.length} records...`);
 
             for (const id of ids) {
@@ -5212,12 +3478,11 @@
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Failed');
                 globalStudentSummary = data;
-                document.getElementById('totalDaysCount').innerText = data.totalAcademicLectures || 0;
+                document.getElementById('totalDaysCount').innerText = data.workingDaysSoFar || 0;
                 const pct = data.attendancePercentage || 0;
                 document.getElementById('attendancePct').innerText = pct + '%';
                 document.getElementById('attendancePct').style.color = pct >= 75 ? '#00796b' : '#b71c1c';
-                document.getElementById('workingDaysPct').innerText = data.workingDaysSoFar > 0 ? Math.round((data.daysPresent /
-                    data.workingDaysSoFar) * 100) + '%' : '0%';
+                document.getElementById('workingDaysPct').innerText = data.workingDaysSoFar > 0 ? Math.round((data.daysPresent / data.workingDaysSoFar) * 100) + '%' : '0%';
                 document.getElementById('daysPresentCount').innerText = data.daysPresent || 0;
 
                 const advisorBox = document.getElementById('advisorText');
@@ -5231,18 +3496,14 @@
                         advisorBox.innerHTML = `Safe Zone (<b style="color:#00796b;">${p}%</b>). Skip approx <b style="color:var(--text-main);">${Math.max(0, safeDays)}</b> days safely.`;
                     } else {
                         const neededLectures = Math.ceil(0.75 * total - attended);
-                        advisorBox.innerHTML =
-                            `Low Attendance (<b style="color:#b71c1c;">${p}%</b>). Need <b style="color:var(--text-main);">${Math.max(0, neededLectures)}</b> more lectures.`;
+                        advisorBox.innerHTML = `Low Attendance (<b style="color:#b71c1c;">${p}%</b>). Need <b style="color:var(--text-main);">${Math.max(0, neededLectures)}</b> more lectures.`;
                     }
                 } else {
                     advisorBox.innerHTML = 'No data yet.';
                 }
 
-                // Update subject breakdown with month filter
                 updateSubjectBreakdown();
-
                 renderAttendanceCalendar(globalMyRecords);
-                // Update trend chart
                 updateTrendChart();
             } catch (e) {
                 showMsg('Failed to load stats', true);
@@ -5267,10 +3528,8 @@
 
             let subjectStats = globalStudentSummary.subjectStats || {};
 
-            // If a specific month is selected, filter records for that month
             if (monthFilter !== 'ALL') {
                 const month = parseInt(monthFilter);
-                // Fetch monthly data
                 fetch(`${API_BASE}/api/student/monthly-summary/${user.rollNo}?month=${month}`)
                     .then(res => res.json())
                     .then(data => {
@@ -5314,8 +3573,7 @@
                 const monthName = MONTH_NAMES[mIdx];
                 const daysInMonth = new Date(year, mIdx + 1, 0).getDate();
                 const firstDayOfWeek = new Date(year, mIdx, 1).getDay();
-                let gridHtml =
-                    `<div style="margin-bottom:10px; border-bottom:1px solid var(--glass-border); padding-bottom:8px;">
+                let gridHtml = `<div style="margin-bottom:10px; border-bottom:1px solid var(--glass-border); padding-bottom:8px;">
                         <div style="font-size:10px; font-weight:800; color:#0288d1; margin-bottom:5px;">${monthName} ${year}</div>
                         <div class="calendar-grid"><div class="cal-day-head">S</div><div class="cal-day-head">M</div><div class="cal-day-head">T</div>
                         <div class="cal-day-head">W</div><div class="cal-day-head">T</div><div class="cal-day-head">F</div><div class="cal-day-head">S</div>`;
@@ -5326,11 +3584,7 @@
                     const dayOfWeek = dtObj.getDay();
                     const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
                     const isHoliday = holidayDatesSet.has(dateStr);
-                    if (isWeekend) { gridHtml += `<div class="cal-date cal-off">${d}</div>`; } else if (isHoliday) { gridHtml +=
-                            `<div class="cal-date cal-off" style="background:rgba(255,171,0,0.15); color:#e65100; font-weight:800; border-color:rgba(255,171,0,0.20);" title="Holiday">${d}</div>`; } else if (
-                        attendedDates.has(dateStr)) { gridHtml += `<div class="cal-date cal-p">${d}</div>`; } else if (dtObj <=
-                        today) { gridHtml += `<div class="cal-date cal-a">${d}</div>`; } else { gridHtml +=
-                            `<div class="cal-date cal-off">${d}</div>`; }
+                    if (isWeekend) { gridHtml += `<div class="cal-date cal-off">${d}</div>`; } else if (isHoliday) { gridHtml += `<div class="cal-date cal-off" style="background:rgba(255,171,0,0.15); color:#e65100; font-weight:800; border-color:rgba(255,171,0,0.20);" title="Holiday">${d}</div>`; } else if (attendedDates.has(dateStr)) { gridHtml += `<div class="cal-date cal-p">${d}</div>`; } else if (dtObj <= today) { gridHtml += `<div class="cal-date cal-a">${d}</div>`; } else { gridHtml += `<div class="cal-date cal-off">${d}</div>`; }
                 }
                 gridHtml += `</div></div>`;
                 wrapperHtml += gridHtml;
@@ -5360,8 +3614,7 @@
                 if (!res.ok) {
                     globalMyRecords = [];
                     const tbody = document.querySelector('#myHistoryTable tbody');
-                    if (tbody) tbody.innerHTML =
-                        '<tr><td colspan="3" style="text-align:center; padding:16px; color:var(--text-muted);">⚠️ Could not load logs</td></tr>';
+                    if (tbody) tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:16px; color:var(--text-muted);">⚠️ Could not load logs</td></tr>';
                     return;
                 }
                 const data = await res.json();
@@ -5370,16 +3623,14 @@
                 loadStudentDashboard();
                 renderAttendanceCalendar(globalMyRecords);
                 if (!tbody) return;
-                if (data.length === 0) return tbody.innerHTML =
-                    '<tr><td colspan="3" style="text-align:center; padding:16px; color:var(--text-muted);">No records</td></tr>';
+                if (data.length === 0) return tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:16px; color:var(--text-muted);">No records</td></tr>';
                 tbody.innerHTML = data.slice(0, 50).map(r => {
                     return `<tr><td><b style="color:var(--text-main);">${r.date}</b></td><td style="color:var(--text-main);">${r.subject}</td><td><span class="badge ${r.status === 'Present' ? 'badge-present' : 'badge-absent'}">${r.status}</span></td></tr>`;
                 }).join('');
             } catch (e) {
                 globalMyRecords = [];
                 const tbody = document.querySelector('#myHistoryTable tbody');
-                if (tbody) tbody.innerHTML =
-                    '<tr><td colspan="3" style="text-align:center; padding:16px; color:var(--text-muted);">⚠️ Network error loading logs</td></tr>';
+                if (tbody) tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:16px; color:var(--text-muted);">⚠️ Network error loading logs</td></tr>';
             }
         }
 
@@ -5402,36 +3653,30 @@
 
                     const presentList = document.getElementById('todayPresentList');
                     if (data.todayPresentStudents && data.todayPresentStudents.length > 0) {
-                        const sortedStudents = data.todayPresentStudents.sort((a, b) =>
-                            a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true })
-                        );
+                        const sortedStudents = data.todayPresentStudents.sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }));
                         const cseStudents = sortedStudents.filter(s => s.rollNo && !s.rollNo.includes('AIDS'));
                         const aidsStudents = sortedStudents.filter(s => s.rollNo && s.rollNo.includes('AIDS'));
                         let html = '';
                         if (cseStudents.length > 0) {
                             html += `<div class="present-group"><span class="group-title">🟦 CSE (${cseStudents.length})</span>`;
                             cseStudents.forEach(s => {
-                                html +=
-                                    `<div class="present-item"><span class="roll" style="color:var(--text-main);">${s.rollNo}</span><span class="name" style="color:var(--text-muted);">${s.name}</span></div>`;
+                                html += `<div class="present-item"><span class="roll" style="color:var(--text-main);">${s.rollNo}</span><span class="name" style="color:var(--text-muted);">${s.name}</span></div>`;
                             });
                             html += `</div>`;
                         }
                         if (aidsStudents.length > 0) {
                             html += `<div class="present-group"><span class="group-title">🟪 AIDS (${aidsStudents.length})</span>`;
                             aidsStudents.forEach(s => {
-                                html +=
-                                    `<div class="present-item"><span class="roll" style="color:var(--text-main);">${s.rollNo}</span><span class="name" style="color:var(--text-muted);">${s.name}</span></div>`;
+                                html += `<div class="present-item"><span class="roll" style="color:var(--text-main);">${s.rollNo}</span><span class="name" style="color:var(--text-muted);">${s.name}</span></div>`;
                             });
                             html += `</div>`;
                         }
                         if (cseStudents.length === 0 && aidsStudents.length === 0) {
-                            html =
-                                '<div style="padding:12px; text-align:center; color:var(--text-muted);">No students present today.</div>';
+                            html = '<div style="padding:12px; text-align:center; color:var(--text-muted);">No students present today.</div>';
                         }
                         presentList.innerHTML = html;
                     } else {
-                        presentList.innerHTML =
-                            '<div style="padding:12px; text-align:center; color:var(--text-muted);">No students present yet today.</div>';
+                        presentList.innerHTML = '<div style="padding:12px; text-align:center; color:var(--text-muted);">No students present yet today.</div>';
                     }
                 }
             } catch (e) { console.error('Dashboard stats failed:', e); }
@@ -5538,8 +3783,7 @@
             const studentsMap = {};
             globalAllRecords.forEach(r => {
                 const cleanRoll = r.rollNo.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                if (!studentsMap[cleanRoll]) { studentsMap[cleanRoll] = { name: r.studentName || r.name || 'Unknown',
-                        roll: cleanRoll, dates: {} }; }
+                if (!studentsMap[cleanRoll]) { studentsMap[cleanRoll] = { name: r.studentName || r.name || 'Unknown', roll: cleanRoll, dates: {} }; }
                 if (!studentsMap[cleanRoll].dates[r.date]) { studentsMap[cleanRoll].dates[r.date] = []; }
                 studentsMap[cleanRoll].dates[r.date].push(r.status || 'Present');
             });
@@ -5575,8 +3819,7 @@
                 csv += `,${parts[2]}/${parts[1]} (${dayName})`;
             });
             csv += ",Total Present\n";
-            const sortedStudents = Object.values(studentsMap).sort((a, b) => a.roll.localeCompare(b.roll, undefined,
-                { numeric: true }));
+            const sortedStudents = Object.values(studentsMap).sort((a, b) => a.roll.localeCompare(b.roll, undefined, { numeric: true }));
             sortedStudents.forEach(s => {
                 csv += `"${s.roll}","${s.name}"`;
                 let presentCount = 0;
@@ -5589,17 +3832,13 @@
                     if (isWeekend) { csv += `,OFF`; } else if (isHoliday) { csv += `,H`; } else {
                         const statuses = s.dates[dt] || [];
                         const isPresent = statuses.some(s => s === 'Present' || s === 'Duty Leave');
-                        if (isPresent) { csv += `,P`;
-                            presentCount++; } else { csv += `,A`; }
+                        if (isPresent) { csv += `,P`; presentCount++; } else { csv += `,A`; }
                     }
                 });
                 csv += `,${presentCount}\n`;
             });
-            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
-                "November", "December"
-            ];
-            const fileName = selection === 'ALL_SEMESTER' ? 'Full_Semester_Attendance_Grid_2026.csv' :
-                `Attendance_Grid_${monthNames[parseInt(selection)]}_2026.csv`;
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            const fileName = selection === 'ALL_SEMESTER' ? 'Full_Semester_Attendance_Grid_2026.csv' : `Attendance_Grid_${monthNames[parseInt(selection)]}_2026.csv`;
             downloadFile(csv, fileName, 'text/csv');
         }
 
@@ -5608,18 +3847,16 @@
             if (!user || user.role !== 'admin') { return showMsg("Admin access required!", true); }
             showDownloadProgress('Preparing Google Sheets export…');
             let csv = "Date,Roll No,Name,Subject,Status,Timestamp\n";
-            const sortedRecords = [...globalAllRecords].sort((a, b) => { if (a.date !== b.date) return a.date.localeCompare(b
-                    .date); return a.rollNo.localeCompare(b.rollNo); });
+            const sortedRecords = [...globalAllRecords].sort((a, b) => { if (a.date !== b.date) return a.date.localeCompare(b.date); return a.rollNo.localeCompare(b.rollNo); });
             sortedRecords.forEach(r => {
-                csv +=
-                    `"${r.date}","${r.rollNo}","${r.studentName || r.name || 'Unknown'}","${r.subject || 'General'}","${r.status || 'Present'}","${r.timestamp || ''}"\n`;
+                csv += `"${r.date}","${r.rollNo}","${r.studentName || r.name || 'Unknown'}","${r.subject || 'General'}","${r.status || 'Present'}","${r.timestamp || ''}"\n`;
             });
             const fileName = `Google_Sheets_Export_${new Date().toISOString().split('T')[0]}.csv`;
             downloadFile(csv, fileName, 'text/csv');
         }
 
         // ============================================================
-        // ADMIN MANUAL ATTENDANCE — FIXED BRANCH HANDLING
+        // ADMIN MANUAL ATTENDANCE — FIX 4: Branch filtering for students
         // ============================================================
         function setManualBranch(branch) {
             currentManualBranch = branch;
@@ -5629,7 +3866,29 @@
             csePill.className = 'branch-pill' + (branch === 'CSE' ? ' active-cse' : '');
             aidsPill.className = 'branch-pill' + (branch === 'AIDS' ? ' active-aids' : '');
             loadSubjectsForManual();
+            updateBulkStudentListForBranch(branch);
             validateStudentBranchForManual();
+        }
+
+        async function updateBulkStudentListForBranch(branch) {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || user.role !== 'admin') return;
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/all-users/${user.rollNo}`);
+                const data = await res.json();
+                const filteredStudents = data.filter(u => u.role === 'student' && (u.branch === branch || u.rollNo.startsWith(branch === 'CSE' ? '24CSE' : '24AIDS')))
+                                             .sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }));
+                
+                const container = document.getElementById('bulkStudentList');
+                container.innerHTML = `<label class="select-all-label"><input type="checkbox" id="bulkSelectAllStudents" onchange="toggleAllBulkStudents()" /> Select All</label>`;
+                filteredStudents.forEach(s => {
+                    const label = document.createElement('label');
+                    label.innerHTML = `<input type="checkbox" class="bulk-student-checkbox" value="${s.rollNo}" /> ${s.rollNo} - ${s.name}`;
+                    container.appendChild(label);
+                });
+            } catch (e) {
+                console.error('Failed to update bulk student list', e);
+            }
         }
 
         async function validateStudentBranchForManual() {
@@ -5644,8 +3903,7 @@
                 const selectedBranch = document.getElementById('manualBranch').value;
                 if (selectedBranch.toUpperCase() !== studentBranch.toUpperCase()) {
                     warningEl.style.display = 'block';
-                    warningEl.innerText =
-                        `⚠️ Student is in ${studentBranch}, but selected ${selectedBranch}. Please select correct branch.`;
+                    warningEl.innerText = `⚠️ Student is in ${studentBranch}, but selected ${selectedBranch}. Please select correct branch.`;
                 } else {
                     warningEl.style.display = 'none';
                 }
@@ -5662,13 +3920,10 @@
             const dayName = days[dateObj.getDay()];
             const timetable = getBranchTimetable(branch);
             const subjects = timetable[dayName] || [];
-            const academic = subjects.filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports') && s !==
-                'Lunch Break');
+            const academic = subjects.filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports') && s !== 'Lunch Break');
             const container = document.getElementById('subjectCheckboxContainer');
-            container.innerHTML =
-                `<label class="select-all"><input type="checkbox" id="selectAllSubjects" onchange="toggleAllSubjects()"> Select All (${academic.length} subjects)</label>`;
-            academic.forEach(sub => { container.innerHTML +=
-                    `<label><input type="checkbox" class="subject-checkbox" value="${sub}"> ${sub}</label>`; });
+            container.innerHTML = `<label class="select-all"><input type="checkbox" id="selectAllSubjects" onchange="toggleAllSubjects()"> Select All (${academic.length} subjects)</label>`;
+            academic.forEach(sub => { container.innerHTML += `<label><input type="checkbox" class="subject-checkbox" value="${sub}"> ${sub}</label>`; });
             validateStudentBranchForManual();
         }
 
@@ -5701,8 +3956,7 @@
                 const res = await fetch(`${API_BASE}/api/admin/manual-attendance-bulk`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ requesterRollNo: user.rollNo, studentRollNo, date, subjects, status,
-                        branch })
+                    body: JSON.stringify({ requesterRollNo: user.rollNo, studentRollNo, date, subjects, status, branch })
                 });
                 const data = await res.json();
                 if (res.ok) { showMsg(`✅ ${data.message}`);
@@ -5723,26 +3977,12 @@
         }
 
         // ============================================================
-        // BULK MARK & DELETE — FIXED: uses each date's timetable
+        // BULK MARK & DELETE
         // ============================================================
         async function populateBulkStudentSelect() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return;
-            try {
-                const res = await fetch(`${API_BASE}/api/admin/all-users/${user.rollNo}`);
-                const data = await res.json();
-                const students = data.filter(u => u.role === 'student').sort((a, b) => a.rollNo.localeCompare(b.rollNo,
-                    undefined, { numeric: true }));
-                const container = document.getElementById('bulkStudentList');
-                container.innerHTML =
-                    `<label class="select-all-label"><input type="checkbox" id="bulkSelectAllStudents" onchange="toggleAllBulkStudents()" /> Select All</label>`;
-                students.forEach(s => {
-                    const label = document.createElement('label');
-                    label.innerHTML =
-                        `<input type="checkbox" class="bulk-student-checkbox" value="${s.rollNo}" /> ${s.rollNo} - ${s.name}`;
-                    container.appendChild(label);
-                });
-            } catch (e) {}
+            updateBulkStudentListForBranch(currentManualBranch);
         }
 
         function toggleAllBulkStudents() {
@@ -5786,9 +4026,7 @@
             if (selectedStudents.length === 0) return showMsg('Please select at least one student.', true);
             if (selectedDates.length === 0) return showMsg('Please add at least one date.', true);
 
-            if (!confirm(
-                    `Mark ALL academic subjects for ${selectedStudents.length} students on ${selectedDates.length} dates? (Uses each date's timetable)`
-                )) return;
+            if (!confirm(`Mark ALL academic subjects for ${selectedStudents.length} students on ${selectedDates.length} dates? (Uses each date's timetable)`)) return;
 
             try {
                 const res = await fetch(`${API_BASE}/api/admin/bulk-mark-attendance`, {
@@ -5819,9 +4057,7 @@
             if (selectedStudents.length === 0) return showMsg('Please select at least one student.', true);
             if (selectedDates.length === 0) return showMsg('Please add at least one date.', true);
 
-            if (!confirm(
-                    `Delete ALL attendance records for ${selectedStudents.length} students on ${selectedDates.length} dates?`
-                )) return;
+            if (!confirm(`Delete ALL attendance records for ${selectedStudents.length} students on ${selectedDates.length} dates?`)) return;
 
             try {
                 const res = await fetch(`${API_BASE}/api/admin/bulk-delete-attendance`, {
@@ -5942,8 +4178,7 @@
             const text = document.getElementById('bulkHolidayText').value;
             const dates = text.split('\n').map(d => d.trim()).filter(d => d && /^\d{4}-\d{2}-\d{2}$/.test(d));
             if (dates.length === 0) return showMsg('No valid dates found!', true);
-            let added = 0,
-                skipped = 0;
+            let added = 0, skipped = 0;
             for (const date of dates) {
                 try {
                     const res = await fetch(`${API_BASE}/api/admin/holiday`, {
@@ -6112,13 +4347,7 @@
                 const res = await fetch(`${API_BASE}/api/auth/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name,
-                        rollNo: rawRoll,
-                        password,
-                        role,
-                        subject: subject || undefined
-                    })
+                    body: JSON.stringify({ name, rollNo: rawRoll, password, role, subject: subject || undefined })
                 });
                 const data = await res.json();
                 if (res.ok) {
@@ -6130,6 +4359,7 @@
                     fetchAllUsers();
                     populateStudentSelect();
                     populateTeacherSelect();
+                    updateBulkStudentListForBranch(currentManualBranch);
                 } else {
                     showMsg(data.error || "Registration failed", true);
                 }
@@ -6229,13 +4459,8 @@
             } catch (e) { showMsg("Failed!", true); }
         }
 
-        // ============================================================
-        // BULK REGISTRATION & UPDATE – CSE
-        // ============================================================
         async function triggerBulkUpdate() {
-            if (!confirm(
-                    '⚠️ This will register/update all CSE students and set attendance for 15-30 July.\n\nThis may overwrite existing attendance records for that period.\n\nAre you sure you want to continue?'
-                )) return;
+            if (!confirm('⚠️ This will register/update all CSE students and set attendance for 15-30 July.\n\nThis may overwrite existing attendance records for that period.\n\nAre you sure you want to continue?')) return;
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
 
@@ -6253,13 +4478,11 @@
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    showMsg(
-                        `✅ Done! Registered ${data.totalRegistered} new CSE students, added ${data.totalAttendanceAdded} attendance records.`
-                        );
-                    document.getElementById('bulkStatus').innerHTML =
-                        `✅ Last run: ${new Date().toLocaleString()} – ${data.totalRegistered} registered, ${data.totalAttendanceAdded} records added.`;
+                    showMsg(`✅ Done! Registered ${data.totalRegistered} new CSE students, added ${data.totalAttendanceAdded} attendance records.`);
+                    document.getElementById('bulkStatus').innerHTML = `✅ Last run: ${new Date().toLocaleString()} – ${data.totalRegistered} registered, ${data.totalAttendanceAdded} records added.`;
                     fetchAllUsers();
                     loadAllAttendance();
+                    updateBulkStudentListForBranch(currentManualBranch);
                 } else {
                     showMsg(data.error || 'Failed', true);
                 }
@@ -6271,13 +4494,8 @@
             }
         }
 
-        // ============================================================
-        // BULK REGISTRATION & UPDATE – AIDS
-        // ============================================================
         async function triggerAidsBulkUpdate() {
-            if (!confirm(
-                    '⚠️ This will register/update all AIDS students and set attendance for 15-30 July.\n\nThis may overwrite existing attendance records for that period.\n\nAre you sure you want to continue?'
-                )) return;
+            if (!confirm('⚠️ This will register/update all AIDS students and set attendance for 15-30 July.\n\nThis may overwrite existing attendance records for that period.\n\nAre you sure you want to continue?')) return;
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
 
@@ -6295,13 +4513,11 @@
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    showMsg(
-                        `✅ Done! Registered ${data.totalRegistered} new AIDS students, added ${data.totalAttendanceAdded} attendance records.`
-                        );
-                    document.getElementById('aidsBulkStatus').innerHTML =
-                        `✅ Last run: ${new Date().toLocaleString()} – ${data.totalRegistered} registered, ${data.totalAttendanceAdded} records added.`;
+                    showMsg(`✅ Done! Registered ${data.totalRegistered} new AIDS students, added ${data.totalAttendanceAdded} attendance records.`);
+                    document.getElementById('aidsBulkStatus').innerHTML = `✅ Last run: ${new Date().toLocaleString()} – ${data.totalRegistered} registered, ${data.totalAttendanceAdded} records added.`;
                     fetchAllUsers();
                     loadAllAttendance();
+                    updateBulkStudentListForBranch(currentManualBranch);
                 } else {
                     showMsg(data.error || 'Failed', true);
                 }
@@ -6313,17 +4529,12 @@
             }
         }
 
-        // ============================================================
-        // DELETE USER ACCOUNT
-        // ============================================================
         async function deleteUserAccount() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
             const targetRoll = document.getElementById('deleteUserRoll').value.trim();
             if (!targetRoll) return showMsg('Enter ID to delete!', true);
-            if (!confirm(
-                    `⚠️ Are you sure you want to permanently delete account "${targetRoll}" and all associated records? This cannot be undone!`
-                )) return;
+            if (!confirm(`⚠️ Are you sure you want to permanently delete account "${targetRoll}" and all associated records? This cannot be undone!`)) return;
             try {
                 const res = await fetch(`${API_BASE}/api/admin/delete-user`, {
                     method: 'DELETE',
@@ -6337,6 +4548,7 @@
                     fetchAllUsers();
                     populateStudentSelect();
                     populateTeacherSelect();
+                    updateBulkStudentListForBranch(currentManualBranch);
                 } else {
                     showMsg(data.error || "Failed to delete account", true);
                 }
@@ -6412,9 +4624,6 @@
             if (wrapper) wrapper.style.display = (range === 'SELECTED_MONTH') ? 'block' : 'none';
         }
 
-        // ============================================================
-        // SINGLE STUDENT EXPORT (Admin)
-        // ============================================================
         async function downloadSingleStudentAttendance() {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || user.role !== 'admin') return showMsg('Admin access required!', true);
@@ -6425,13 +4634,11 @@
             if (range === 'SELECTED_MONTH') month = document.getElementById('singleStudentMonth').value;
             showDownloadProgress('Generating student report…');
             try {
-                const url =
-                    `${API_BASE}/api/export/student-attendance/${user.rollNo}?studentRollNo=${studentRoll}&range=${range}&month=${month}`;
+                const url = `${API_BASE}/api/export/student-attendance/${user.rollNo}?studentRollNo=${studentRoll}&range=${range}&month=${month}`;
                 const res = await fetch(url);
                 if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed to fetch'); }
                 const csv = await res.text();
-                const fileName =
-                    `Attendance_${studentRoll}_${range}_${new Date().toISOString().split('T')[0]}.csv`;
+                const fileName = `Attendance_${studentRoll}_${range}_${new Date().toISOString().split('T')[0]}.csv`;
                 downloadFile(csv, fileName, 'text/csv');
             } catch (e) { hideDownloadProgress();
                 showMsg(e.message || 'Failed to download', true); }
@@ -6443,8 +4650,7 @@
         function openStudentExcelModal() {
             document.getElementById('studentExcelModal').style.display = 'flex';
             document.getElementById('studentExcelRange').onchange = function() {
-                document.getElementById('selectedMonthWrapper').style.display = (this.value === 'SELECTED_MONTH') ?
-                    'block' : 'none';
+                document.getElementById('selectedMonthWrapper').style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none';
             };
         }
 
@@ -6465,18 +4671,14 @@
             if (range === 'CURRENT_MONTH') {
                 const currentMonthIdx = today.getMonth();
                 const currentYear = today.getFullYear();
-                filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); return parseInt(parts[0]) ===
-                        currentYear && (parseInt(parts[1]) - 1) === currentMonthIdx; });
+                filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); return parseInt(parts[0]) === currentYear && (parseInt(parts[1]) - 1) === currentMonthIdx; });
             } else if (range === 'SELECTED_MONTH') {
                 const monthIdx = parseInt(selectedMonth);
-                filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); return parseInt(parts[0]) ===
-                        2026 && (parseInt(parts[1]) - 1) === monthIdx; });
+                filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); return parseInt(parts[0]) === 2026 && (parseInt(parts[1]) - 1) === monthIdx; });
             } else {
-                filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); const m = parseInt(parts[
-                        1]) - 1; return parseInt(parts[0]) === 2026 && m >= 6 && m <= 11; });
+                filteredRecords = globalMyRecords.filter(r => { const parts = r.date.split('-'); const m = parseInt(parts[1]) - 1; return parseInt(parts[0]) === 2026 && m >= 6 && m <= 11; });
             }
-            if (filteredRecords.length === 0) { hideDownloadProgress(); return showMsg("No records for selected period!",
-                    true); }
+            if (filteredRecords.length === 0) { hideDownloadProgress(); return showMsg("No records for selected period!", true); }
             const grouped = {};
             filteredRecords.forEach(r => { if (!grouped[r.date]) grouped[r.date] = []; grouped[r.date].push(r); });
             const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -6535,8 +4737,7 @@
         function showDownloadProgress(message) {
             const el = document.getElementById('downloadProgress');
             const status = document.getElementById('downloadStatus');
-            if (el && status) { status.textContent = message || 'Preparing file…';
-                el.classList.add('show'); }
+            if (el && status) { status.textContent = message || 'Preparing file…'; el.classList.add('show'); }
         }
 
         function hideDownloadProgress() {
@@ -6569,8 +4770,7 @@
                         body: JSON.stringify({ name, rollNo: validation.cleanRoll, password, deviceId, role })
                     });
                     const data = await res.json();
-                    if (res.ok) { showMsg('Registered! Login now.');
-                        toggleMode(); } else { showMsg(data.error || 'Registration failed', true); }
+                    if (res.ok) { showMsg('Registered! Login now.'); toggleMode(); } else { showMsg(data.error || 'Registration failed', true); }
                 } else {
                     const selectedRole = document.getElementById('loginRole').value;
                     const res = await fetch(`${API_BASE}/api/auth/login`, {
@@ -6581,8 +4781,7 @@
                     const data = await res.json();
                     if (res.ok) {
                         if (data.user.role !== selectedRole) {
-                            return showMsg(`You are registered as ${data.user.role}, not ${selectedRole}. Please select correct role.`,
-                                true);
+                            return showMsg(`You are registered as ${data.user.role}, not ${selectedRole}. Please select correct role.`, true);
                         }
                         localStorage.setItem('user', JSON.stringify(data.user));
                         localStorage.setItem('token', data.token);
@@ -6593,8 +4792,7 @@
         }
 
         async function logout() {
-            try { const token = localStorage.getItem('token'); if (token) { await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST',
-                        headers: { 'Authorization': `Bearer ${token}` } }); } } catch (e) {}
+            try { const token = localStorage.getItem('token'); if (token) { await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }); } } catch (e) {}
             clearAllIntervals();
             localStorage.removeItem('user');
             localStorage.removeItem('token');
@@ -6608,18 +4806,8 @@
         // ============================================================
         function updateDashboardTime() {
             const now = new Date();
-            const timeStr = now.toLocaleTimeString('en-IN', {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: true
-            });
-            const dateStr = now.toLocaleDateString('en-IN', {
-                weekday: 'short',
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric'
-            });
+            const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+            const dateStr = now.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
             const timeEl = document.getElementById('dashboardCurrentTime');
             const dateEl = document.getElementById('dashboardCurrentDate');
             if (timeEl) timeEl.innerText = timeStr;
@@ -6719,7 +4907,6 @@
 
             if (!isAdmin && !isFaculty) {
                 fetchMonthlySummary();
-                // Set initial trend view
                 setTrendView('monthly');
             }
 
@@ -6735,13 +4922,11 @@
 
             setManualBranch('CSE');
 
-            // Set PDF month selector default
             const pdfMonthSelect = document.getElementById('pdfMonthSelect');
             if (pdfMonthSelect) {
                 const m = new Date().getMonth();
                 if (m >= 6 && m <= 11) pdfMonthSelect.value = m.toString();
             }
-            // Set subject month filter default
             const subjectMonthFilter = document.getElementById('subjectMonthFilter');
             if (subjectMonthFilter) {
                 const m = new Date().getMonth();
@@ -6789,8 +4974,7 @@
             });
             const navItems = document.querySelectorAll('.admin-nav-item');
             navItems.forEach((item, idx) => { item.classList.toggle('active', subTabs[idx] === subId); });
-            if (subId === 'subPasscode') { generatePasscode('full_day');
-                generatePasscode('single_lecture'); }
+            if (subId === 'subPasscode') { generatePasscode('full_day'); generatePasscode('single_lecture'); }
             if (subId === 'subDirectory') { fetchAllUsers(); }
             if (subId === 'subReports') { populateStudentSelect(); }
             if (subId === 'subTools') { populateTeacherSelect(); }
@@ -6798,13 +4982,11 @@
             if (subId === 'subHoliday') { fetchHolidays(); }
             if (subId === 'subLeave') { loadLeaveRequests(); }
             if (subId === 'subDefaulters') { loadDefaulters(); }
-            if (subId === 'subAttendance') {
-                setManualBranch(currentManualBranch || 'CSE');
-            }
+            if (subId === 'subAttendance') { setManualBranch(currentManualBranch || 'CSE'); }
         }
 
         // ============================================================
-        // LEAVE APPLICATION (Student) - FIXED: date fields now visible
+        // LEAVE APPLICATION (Student)
         // ============================================================
         async function applyLeave() {
             const user = JSON.parse(localStorage.getItem('user'));
@@ -6983,10 +5165,7 @@
             const hour = now.getHours();
             let greeting = 'Hello';
             let emoji = '👋';
-            if (hour < 12) { greeting = 'Good morning';
-                emoji = '🌞'; } else if (hour < 17) { greeting = 'Good afternoon';
-                emoji = '🌤️'; } else { greeting = 'Good evening';
-                emoji = '🌙'; }
+            if (hour < 12) { greeting = 'Good morning'; emoji = '🌞'; } else if (hour < 17) { greeting = 'Good afternoon'; emoji = '🌤️'; } else { greeting = 'Good evening'; emoji = '🌙'; }
             const name = user?.name || 'Guest';
             greetingEl.innerHTML = `
                     <span class="greeting-emoji">${emoji}</span>
@@ -7070,8 +5249,7 @@
                 chat.messages.forEach(msg => {
                     const div = document.createElement('div');
                     div.className = `chat-msg ${msg.role === 'user' ? 'user' : 'bot'}`;
-                    const time = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit',
-                        minute: '2-digit' });
+                    const time = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     div.innerHTML = `<div class="bubble">${escapeHtml(msg.content)}<span class="msg-time">${time}</span></div>`;
                     messagesDiv.appendChild(div);
                 });
@@ -7253,7 +5431,6 @@
                 const monthSelect = document.getElementById('pdfMonthSelect');
                 if (monthSelect) monthSelect.style.display = (this.value === 'SELECTED_MONTH') ? 'block' : 'none';
             });
-            // Set default dates for leave
             const today = new Date().toISOString().split('T')[0];
             const leaveFrom = document.getElementById('leaveFromDate');
             const leaveTo = document.getElementById('leaveToDate');
@@ -7306,7 +5483,14 @@
             console.log('🔧 FIX: PDF/CSV export uses fallback data when API fails');
             console.log('🔧 FIX: Branch toggle for manual attendance (CSE / AIDS)');
             console.log('🔧 FIX: Bulk attendance uses each date\'s timetable automatically');
+            console.log('🔧 FIX: Bulk student list filtered by branch (CSE/AIDS) dynamically');
+            console.log('🔧 FIX: Working Days card now shows correct working days count instead of total lectures.');
+            console.log('🔧 FIX: Trend chart dates visible and chart height optimized.');
+            console.log('🔧 FIX: Student PDF report matches Admin format exactly.');
+            console.log('🔧 FIX: AIDS Monday timetable includes HRM correctly.');
+            console.log('🔧 FIX: Chart daily view dates now visible with proper padding and limits.');
         })();
     </script>
 </body>
 </html>
+```
