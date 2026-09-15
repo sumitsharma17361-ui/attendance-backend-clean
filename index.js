@@ -33,9 +33,7 @@ if (!GROQ_API_KEY) {
 }
 
 // ---------- HELPER: Get IST Date String (FIX for timezone shift) ----------
-// This function safely extracts YYYY-MM-DD in IST regardless of server timezone
 function getISTDateString(dateObj) {
-  // Add 5 hours 30 minutes to convert UTC to IST
   const istDate = new Date(dateObj.getTime() + (5.5 * 60 * 60 * 1000));
   return istDate.toISOString().split('T')[0];
 }
@@ -228,7 +226,7 @@ function getTimetableForBranch(branch) {
 // ---------- Helper Functions ----------
 async function checkDateStatus(dateStr) {
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const dateObj = new Date(dateStr + 'T00:00:00Z'); // Treat as UTC to get consistent day of week
+  const dateObj = new Date(dateStr + 'T00:00:00Z');
   const dayName = days[dateObj.getUTCDay()];
   if (dayName === 'Saturday' || dayName === 'Sunday') {
     return { isBlocked: true, type: 'WEEKEND', message: `📅 ${dayName}: College Closed (Weekend)`, dayName };
@@ -240,21 +238,22 @@ async function checkDateStatus(dateStr) {
   return { isBlocked: false, dayName };
 }
 
-// FIX: Bulletproof getWorkingDays using UTC and IST string conversion
-async function getWorkingDays(startInput, endInput) {
-  const startStr = typeof startInput === 'string' ? startInput : getISTDateString(startInput);
-  const endStr = typeof endInput === 'string' ? endInput : getISTDateString(endInput);
+// FIX: Bulletproof getWorkingDays with explicit date normalization
+async function getWorkingDays(startDate, endDate) {
+  const startStr = typeof startDate === 'string' ? startDate : getISTDateString(startDate);
+  const endStr = typeof endDate === 'string' ? endDate : getISTDateString(endDate);
   
   const start = new Date(startStr + 'T00:00:00Z');
   const end = new Date(endStr + 'T23:59:59Z');
   let workingDays = 0;
   
   const holidays = await Holiday.find({ date: { $gte: startStr, $lte: endStr } });
-  const holidaySet = new Set(holidays.map(h => h.date));
+  // FIX: Normalize dates by removing time part if present
+  const holidaySet = new Set(holidays.map(h => h.date.split('T')[0]));
   
   let current = new Date(start);
   while (current <= end) {
-    const dateStr = current.toISOString().split('T')[0]; // UTC date since we aligned to UTC
+    const dateStr = current.toISOString().split('T')[0];
     const dayOfWeek = current.getUTCDay();
     const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
     if (!isWeekend && !holidaySet.has(dateStr)) workingDays++;
@@ -586,7 +585,8 @@ async function getStudentSummary(rollNo) {
     const timetable = getTimetableForBranch(branch);
     const allRecords = await Attendance.find({ rollNo }).lean();
     const holidays = await Holiday.find({}).lean();
-    const holidaySet = new Set(holidays.map(h => h.date));
+    // FIX: Normalize dates by removing time part if present
+    const holidaySet = new Set(holidays.map(h => h.date.split('T')[0]));
     const today = new Date();
     const semesterStart = new Date('2026-07-15T00:00:00+05:30');
     
@@ -650,7 +650,6 @@ async function getStudentSummary(rollNo) {
     }
     
     const daysPresent = allRecords.filter(r => r.status === 'Present' || r.status === 'Duty Leave').length;
-    // FIX: Pass Date objects directly to getWorkingDays
     const workingDaysSoFar = await getWorkingDays(semesterStart, today);
     const totalWorkingDaysSemester = await getWorkingDays(semesterStart, SEMESTER_END);
     
@@ -1429,7 +1428,6 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
     const presentCount = await Attendance.countDocuments({ status: 'Present' });
     const overallPct = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : 0;
     
-    // FIX: Pass Date objects directly to getWorkingDays
     const workingDaysSoFar = await getWorkingDays(SEMESTER_START, today);
     const totalWorkingDaysSemester = await getWorkingDays(SEMESTER_START, SEMESTER_END);
     
@@ -1592,7 +1590,7 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
     let totalConducted = 0;
     let cur = new Date(startDate);
     const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    const holidaySet = new Set((await Holiday.find({ date: { $gte: startStr, $lte: endStr } })).map(h => h.date));
+    const holidaySet = new Set((await Holiday.find({ date: { $gte: startStr, $lte: endStr } })).map(h => h.date.split('T')[0]));
     
     while (cur <= endDate) {
       const dateStr = getISTDateString(cur);
@@ -1781,7 +1779,8 @@ app.get('/api/student/summary/:rollNo', async (req, res) => {
     const timetable = getTimetableForBranch(branch);
     const allRecords = await Attendance.find({ rollNo: cleanRoll }).lean();
     const holidays = await Holiday.find({}).lean();
-    const holidaySet = new Set(holidays.map(h => h.date));
+    // FIX: Normalize dates by removing time part if present
+    const holidaySet = new Set(holidays.map(h => h.date.split('T')[0]));
     const today = new Date();
     const semesterStart = new Date('2026-07-15T00:00:00+05:30');
     
@@ -1850,7 +1849,6 @@ app.get('/api/student/summary/:rollNo', async (req, res) => {
       };
     }
     
-    // FIX: Pass Date objects directly to getWorkingDays
     const workingDaysSoFar = await getWorkingDays(semesterStart, today);
     const totalWorkingDaysSemester = await getWorkingDays(semesterStart, SEMESTER_END);
     
@@ -1983,7 +1981,8 @@ app.get('/api/admin/class-attendance-report', async (req, res) => {
     if (students.length === 0) return res.json({ students: [], totalLectures: 0 });
     
     const holidays = await Holiday.find({ date: { $gte: startStr, $lte: endStr } });
-    const holidaySet = new Set(holidays.map(h => h.date));
+    // FIX: Normalize dates by removing time part if present
+    const holidaySet = new Set(holidays.map(h => h.date.split('T')[0]));
     const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     
     const resultStudents = await Promise.all(students.map(async (student) => {
