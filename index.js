@@ -21,7 +21,6 @@ const COLLEGE_LAT = 28.4509370;
 const COLLEGE_LNG = 76.7688120;
 const COLLEGE_RADIUS = 50;
 
-// FIX: Corrected Semester Start date to avoid UTC offset issues
 const SEMESTER_START = new Date('2026-07-15T00:00:00+05:30'); 
 const SEMESTER_END = new Date('2026-12-31T23:59:59+05:30');
 
@@ -33,12 +32,12 @@ if (!GROQ_API_KEY) {
   console.warn('⚠️ GROQ_API_KEY is not set. Chat AI will fallback to static responses.');
 }
 
-// ---------- HELPER: Get Local Date String (FIX for timezone shift) ----------
-function getLocalDateString(d) {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+// ---------- HELPER: Get IST Date String (FIX for timezone shift) ----------
+// This function safely extracts YYYY-MM-DD in IST regardless of server timezone
+function getISTDateString(dateObj) {
+  // Add 5 hours 30 minutes to convert UTC to IST
+  const istDate = new Date(dateObj.getTime() + (5.5 * 60 * 60 * 1000));
+  return istDate.toISOString().split('T')[0];
 }
 
 // ---------- Rate Limiting ----------
@@ -78,31 +77,23 @@ function normalizeSubject(subject) {
 
 // ---------- HELPER: Subject Alias Mapping ----------
 const SUBJECT_ALIAS_MAP = {
-  // BDA
   'BDA': 'BDA - Big Data Analytics',
   'BDA - Big Data': 'BDA - Big Data Analytics',
-  // ECO
   'ECO': 'ECO - Economics for Engineers',
   'ECO - Economic': 'ECO - Economics for Engineers',
-  // DAA
   'DAA': 'DAA - Design & Analysis of Algorithm',
   'DAA - Design': 'DAA - Design & Analysis of Algorithm',
   'DAA - Design &': 'DAA - Design & Analysis of Algorithm',
-  // FLA
   'FLA': 'FLA - Formal Language & Automata',
   'FLA - Formal L': 'FLA - Formal Language & Automata',
   'FLA - Formal Language': 'FLA - Formal Language & Automata',
-  // HRM
   'HRM': 'HRM - Human Resource Mgmt',
   'HRM - Human Re': 'HRM - Human Resource Mgmt',
-  // CN
   'CN': 'CN - Computer Network',
   'CN - Computer': 'CN - Computer Network',
   'CN - Computer :': 'CN - Computer Network',
-  // WT
   'WT': 'WT - Web Technology',
   'WT - Web Techn': 'WT - Web Technology',
-  // Labs - Exact mappings to prevent merging with theory
   'CN LAB': 'CN LAB - Computer Network Lab',
   'CN LAB - Compu': 'CN LAB - Computer Network Lab',
   'DAA LAB': 'DAA LAB - Algorithm Lab',
@@ -111,7 +102,6 @@ const SUBJECT_ALIAS_MAP = {
   'WT LAB - Web T': 'WT LAB - Web Technology Lab',
   'Internet': 'Internet Lab (Ms. Geeta)',
   'Internet Lab': 'Internet Lab (Ms. Geeta)',
-  // AIDS Subjects
   'PA': 'PA - Predictive Analysis',
   'ML': 'ML - Machine Learning',
   'PA LAB': 'PA LAB - Predictive Analysis Lab',
@@ -238,9 +228,8 @@ function getTimetableForBranch(branch) {
 // ---------- Helper Functions ----------
 async function checkDateStatus(dateStr) {
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const parts = dateStr.split('-');
-  const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-  const dayName = days[dateObj.getDay()];
+  const dateObj = new Date(dateStr + 'T00:00:00Z'); // Treat as UTC to get consistent day of week
+  const dayName = days[dateObj.getUTCDay()];
   if (dayName === 'Saturday' || dayName === 'Sunday') {
     return { isBlocked: true, type: 'WEEKEND', message: `📅 ${dayName}: College Closed (Weekend)`, dayName };
   }
@@ -251,25 +240,25 @@ async function checkDateStatus(dateStr) {
   return { isBlocked: false, dayName };
 }
 
-// FIX 1: Corrected getWorkingDays – inclusive start, excludes weekends & holidays
-async function getWorkingDays(startDate, endDate) {
-  const start = typeof startDate === 'string' ? new Date(startDate + 'T00:00:00+05:30') : startDate;
-  const end = typeof endDate === 'string' ? new Date(endDate + 'T23:59:59+05:30') : endDate;
-  let workingDays = 0;
+// FIX: Bulletproof getWorkingDays using UTC and IST string conversion
+async function getWorkingDays(startInput, endInput) {
+  const startStr = typeof startInput === 'string' ? startInput : getISTDateString(startInput);
+  const endStr = typeof endInput === 'string' ? endInput : getISTDateString(endInput);
   
-  const startStr = getLocalDateString(start);
-  const endStr = getLocalDateString(end);
+  const start = new Date(startStr + 'T00:00:00Z');
+  const end = new Date(endStr + 'T23:59:59Z');
+  let workingDays = 0;
   
   const holidays = await Holiday.find({ date: { $gte: startStr, $lte: endStr } });
   const holidaySet = new Set(holidays.map(h => h.date));
   
   let current = new Date(start);
   while (current <= end) {
-    const dateStr = getLocalDateString(current);
-    const dayOfWeek = current.getDay();
+    const dateStr = current.toISOString().split('T')[0]; // UTC date since we aligned to UTC
+    const dayOfWeek = current.getUTCDay();
     const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
     if (!isWeekend && !holidaySet.has(dateStr)) workingDays++;
-    current.setDate(current.getDate() + 1);
+    current.setUTCDate(current.getUTCDate() + 1);
   }
   return workingDays;
 }
@@ -615,7 +604,7 @@ async function getStudentSummary(rollNo) {
     }
 
     while (current <= today) {
-      const dateStr = getLocalDateString(current);
+      const dateStr = getISTDateString(current);
       const dayOfWeek = current.getDay();
       const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
       const isHoliday = holidaySet.has(dateStr);
@@ -661,6 +650,7 @@ async function getStudentSummary(rollNo) {
     }
     
     const daysPresent = allRecords.filter(r => r.status === 'Present' || r.status === 'Duty Leave').length;
+    // FIX: Pass Date objects directly to getWorkingDays
     const workingDaysSoFar = await getWorkingDays(semesterStart, today);
     const totalWorkingDaysSemester = await getWorkingDays(semesterStart, SEMESTER_END);
     
@@ -995,7 +985,7 @@ app.post('/api/teacher/mark-attendance', async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude, studentRollNo } = req.body;
     const today = new Date();
-    const todayDate = getLocalDateString(today);
+    const todayDate = getISTDateString(today);
     const dateStatus = await checkDateStatus(todayDate);
     if (dateStatus.isBlocked) return res.status(400).json({ error: dateStatus.message });
     const cleanRoll = rollNo.trim().toUpperCase();
@@ -1053,7 +1043,7 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
         return res.status(400).json({ error: 'No active lecture period right now.' });
       }
       const now = new Date();
-      const dateStr = getLocalDateString(now);
+      const dateStr = getISTDateString(now);
       const key = `single_lecture_${dateStr}_${period.start}`;
       let passcodeDoc = await Passcode.findOne({ key, type: 'single_lecture' });
       if (passcodeDoc && passcodeDoc.expiresAt > new Date()) {
@@ -1110,7 +1100,7 @@ app.get('/api/admin/current-passcode/:type/:requesterRollNo', async (req, res) =
       return res.json({ passcode: null, message: 'No active lecture period' });
     }
     const now = new Date();
-    const dateStr = getLocalDateString(now);
+    const dateStr = getISTDateString(now);
     const key = `single_lecture_${dateStr}_${period.start}`;
     const passcodeDoc = await Passcode.findOne({ key, type: 'single_lecture', expiresAt: { $gt: new Date() } });
     if (passcodeDoc) {
@@ -1132,7 +1122,7 @@ app.post('/api/attendance/mark-lecture', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields: rollNo, subject, passcode' });
     }
     const today = new Date();
-    const todayDate = getLocalDateString(today);
+    const todayDate = getISTDateString(today);
     const dateStatus = await checkDateStatus(todayDate);
     if (dateStatus.isBlocked) {
       return res.status(400).json({ error: dateStatus.message });
@@ -1208,7 +1198,7 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
       return res.status(400).json({ error: 'Full Day passcode required!' });
     }
     const today = new Date();
-    const todayDate = getLocalDateString(today);
+    const todayDate = getISTDateString(today);
     const dateStatus = await checkDateStatus(todayDate);
     if (dateStatus.isBlocked) return res.status(400).json({ error: dateStatus.message });
     const cleanRoll = rollNo.trim().toUpperCase();
@@ -1303,7 +1293,7 @@ app.post('/api/attendance/mark', async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude } = req.body;
     const today = new Date();
-    const todayDate = getLocalDateString(today);
+    const todayDate = getISTDateString(today);
     const dateStatus = await checkDateStatus(todayDate);
     if (dateStatus.isBlocked) return res.status(400).json({ error: dateStatus.message });
     const cleanRoll = rollNo.trim().toUpperCase();
@@ -1423,7 +1413,7 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
     if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const totalStudents = await User.countDocuments({ role: 'student' });
     const today = new Date();
-    const todayDate = getLocalDateString(today);
+    const todayDate = getISTDateString(today);
     const todayPresentStudents = await Attendance.distinct('rollNo', { date: todayDate, status: 'Present' });
     const todayPresent = todayPresentStudents.length;
     const presentStudentDetails = await Attendance.find({ date: todayDate, status: 'Present' }).select('rollNo studentName').lean();
@@ -1439,10 +1429,9 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
     const presentCount = await Attendance.countDocuments({ status: 'Present' });
     const overallPct = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : 0;
     
-    const semesterStartStr = getLocalDateString(SEMESTER_START);
-    const todayStr = getLocalDateString(today);
-    const workingDaysSoFar = await getWorkingDays(semesterStartStr, todayStr);
-    const totalWorkingDaysSemester = await getWorkingDays(semesterStartStr, getLocalDateString(SEMESTER_END));
+    // FIX: Pass Date objects directly to getWorkingDays
+    const workingDaysSoFar = await getWorkingDays(SEMESTER_START, today);
+    const totalWorkingDaysSemester = await getWorkingDays(SEMESTER_START, SEMESTER_END);
     
     res.json({ totalStudents, todayPresent, todayAbsent, overallAttendance: totalAttendance, overallPct, todayPresentStudents: presentList, workingDaysSoFar, totalWorkingDaysSemester });
   } catch (err) {
@@ -1595,8 +1584,8 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
     const year = 2026;
     const startDate = new Date(year, m, 1);
     const endDate = new Date(year, m + 1, 0);
-    const startStr = getLocalDateString(startDate);
-    const endStr = getLocalDateString(endDate);
+    const startStr = getISTDateString(startDate);
+    const endStr = getISTDateString(endDate);
     
     const records = await Attendance.find({ rollNo: cleanRoll, date: { $gte: startStr, $lte: endStr } }).lean();
     const subjectSet = new Set();
@@ -1606,7 +1595,7 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
     const holidaySet = new Set((await Holiday.find({ date: { $gte: startStr, $lte: endStr } })).map(h => h.date));
     
     while (cur <= endDate) {
-      const dateStr = getLocalDateString(cur);
+      const dateStr = getISTDateString(cur);
       const dayOfWeek = cur.getDay();
       const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
       const isHoliday = holidaySet.has(dateStr);
@@ -1630,7 +1619,7 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
     
     cur = new Date(startDate);
     while (cur <= endDate) {
-      const dateStr = getLocalDateString(cur);
+      const dateStr = getISTDateString(cur);
       const dayOfWeek = cur.getDay();
       const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
       const isHoliday = holidaySet.has(dateStr);
@@ -1811,7 +1800,7 @@ app.get('/api/student/summary/:rollNo', async (req, res) => {
     }
     
     while (current <= today) {
-      const dateStr = getLocalDateString(current);
+      const dateStr = getISTDateString(current);
       const dayOfWeek = current.getDay();
       const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
       const isHoliday = holidaySet.has(dateStr);
@@ -1861,6 +1850,7 @@ app.get('/api/student/summary/:rollNo', async (req, res) => {
       };
     }
     
+    // FIX: Pass Date objects directly to getWorkingDays
     const workingDaysSoFar = await getWorkingDays(semesterStart, today);
     const totalWorkingDaysSemester = await getWorkingDays(semesterStart, SEMESTER_END);
     
@@ -1926,8 +1916,8 @@ app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) => {
     else if (range === 'SELECTED_MONTH') { const m = parseInt(month); if (isNaN(m) || m < 0 || m > 11) return res.status(400).json({ error: 'Invalid month' }); startDate = new Date(2026, m, 1); endDate = new Date(2026, m + 1, 0); }
     else { startDate = new Date(SEMESTER_START); endDate = new Date(SEMESTER_END); }
     
-    const startStr = getLocalDateString(startDate);
-    const endStr = getLocalDateString(endDate);
+    const startStr = getISTDateString(startDate);
+    const endStr = getISTDateString(endDate);
     
     let records = await Attendance.find({ rollNo: cleanStudent, date: { $gte: startStr, $lte: endStr } }).sort({ date: 1 });
     if (isTeacher) {
@@ -1982,8 +1972,8 @@ app.get('/api/admin/class-attendance-report', async (req, res) => {
     const start = startDate ? new Date(startDate) : new Date(SEMESTER_START);
     const end = endDate ? new Date(endDate) : new Date(SEMESTER_END);
     
-    const startStr = getLocalDateString(start);
-    const endStr = getLocalDateString(end);
+    const startStr = getISTDateString(start);
+    const endStr = getISTDateString(end);
     
     let query = { role: 'student' };
     if (branch && branch !== 'ALL' && branch !== 'undefined' && branch !== 'null') {
@@ -2002,7 +1992,7 @@ app.get('/api/admin/class-attendance-report', async (req, res) => {
       let totalConducted = 0;
       let cur = new Date(start);
       while (cur <= end) {
-        const dateStr = getLocalDateString(cur);
+        const dateStr = getISTDateString(cur);
         const dayOfWeek = cur.getDay();
         const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
         const isHoliday = holidaySet.has(dateStr);
@@ -2104,8 +2094,8 @@ app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
     ];
     const startDate = new Date('2026-07-15T00:00:00+05:30');
     const endDate = new Date('2026-07-30T23:59:59+05:30');
-    const startStr = getLocalDateString(startDate);
-    const endStr = getLocalDateString(endDate);
+    const startStr = getISTDateString(startDate);
+    const endStr = getISTDateString(endDate);
     
     let totalRegistered = 0, totalAttendanceAdded = 0;
     for (const item of studentData) {
@@ -2141,7 +2131,7 @@ app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
       let days = [];
       let cur = new Date(startDate);
       while (cur <= endDate) {
-        const dateStr = getLocalDateString(cur);
+        const dateStr = getISTDateString(cur);
         const dayOfWeek = cur.getDay();
         const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
         const isHoliday = await Holiday.findOne({ date: dateStr });
@@ -2217,8 +2207,8 @@ app.post('/api/admin/bulk-register-and-update-attendance-aids', async (req, res)
     ];
     const startDate = new Date('2026-07-15T00:00:00+05:30');
     const endDate = new Date('2026-07-30T23:59:59+05:30');
-    const startStr = getLocalDateString(startDate);
-    const endStr = getLocalDateString(endDate);
+    const startStr = getISTDateString(startDate);
+    const endStr = getISTDateString(endDate);
     
     let totalRegistered = 0, totalAttendanceAdded = 0;
     for (const item of studentData) {
@@ -2254,7 +2244,7 @@ app.post('/api/admin/bulk-register-and-update-attendance-aids', async (req, res)
       let days = [];
       let cur = new Date(startDate);
       while (cur <= endDate) {
-        const dateStr = getLocalDateString(cur);
+        const dateStr = getISTDateString(cur);
         const dayOfWeek = cur.getDay();
         const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
         const isHoliday = await Holiday.findOne({ date: dateStr });
@@ -2541,7 +2531,7 @@ app.post('/api/leave/action/:id', async (req, res) => {
       let cur = new Date(leave.fromDate);
       const end = new Date(leave.toDate);
       while (cur <= end) {
-        const dateStr = getLocalDateString(cur);
+        const dateStr = getISTDateString(cur);
         const ds = await checkDateStatus(dateStr);
         if (!ds.isBlocked) {
           const tt = getTimetableForBranch(branch)[ds.dayName] || [];
@@ -2585,8 +2575,8 @@ app.get('/api/student/trend/:rollNo', async (req, res) => {
     for (const m of months) {
       const start = new Date(2026, m, 1);
       const end = new Date(2026, m + 1, 0);
-      const startStr = getLocalDateString(start);
-      const endStr = getLocalDateString(end);
+      const startStr = getISTDateString(start);
+      const endStr = getISTDateString(end);
       const recs = await Attendance.find({ rollNo: cleanRoll, date: { $gte: startStr, $lte: endStr } });
       const present = recs.filter(r => r.status === 'Present' || r.status === 'Duty Leave').length;
       data.push({ month: labels[m-6], present, total: recs.length });
@@ -2607,8 +2597,8 @@ app.get('/api/admin/defaulters/:requesterRollNo', async (req, res) => {
       return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const threshold = parseInt(req.query.threshold) || 75;
     const students = await User.find({ role: 'student' }).select('rollNo name branch');
-    const today = getLocalDateString(new Date());
-    const startStr = getLocalDateString(SEMESTER_START);
+    const today = getISTDateString(new Date());
+    const startStr = getISTDateString(SEMESTER_START);
     const defaulters = [];
     for (const s of students) {
       const present = await Attendance.countDocuments({
@@ -2658,9 +2648,9 @@ app.post('/api/chat', async (req, res) => {
         if (userData) {
           attendanceSummary = await getStudentSummary(userData.rollNo);
           const today = new Date();
-          const startStr = getLocalDateString(SEMESTER_START);
-          const todayStr = getLocalDateString(today);
-          workingDays = await getWorkingDays(startStr, todayStr);
+          const startStr = getISTDateString(SEMESTER_START);
+          const todayStr = getISTDateString(today);
+          workingDays = await getWorkingDays(SEMESTER_START, today);
           holidays = await Holiday.find({ date: { $gte: startStr, $lte: todayStr } });
           const branchName = userData.branch || 'CSE';
           timetable = getTimetableForBranch(branchName);
@@ -2677,9 +2667,9 @@ app.post('/api/chat', async (req, res) => {
     if (msgLower.includes('kal') || msgLower.includes('tomorrow')) {
       const d = new Date();
       d.setDate(d.getDate() + 1);
-      requestedDate = getLocalDateString(d);
+      requestedDate = getISTDateString(d);
     } else if (msgLower.includes('aaj') || msgLower.includes('today')) {
-      requestedDate = getLocalDateString(new Date());
+      requestedDate = getISTDateString(new Date());
     } else {
       const dateMatch = message.match(/(\d{1,2})\s+([A-Za-z]+)/) || message.match(/([A-Za-z]+)\s+(\d{1,2})/);
       if (dateMatch) {
@@ -2694,7 +2684,7 @@ app.post('/api/chat', async (req, res) => {
           const year = 2026;
           const d = new Date(year, monthIdx, dayNum);
           if (!isNaN(d)) {
-            requestedDate = getLocalDateString(d);
+            requestedDate = getISTDateString(d);
           }
         }
       }
