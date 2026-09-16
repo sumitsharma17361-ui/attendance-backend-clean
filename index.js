@@ -21,7 +21,7 @@ const COLLEGE_LAT = 28.4509370;
 const COLLEGE_LNG = 76.7688120;
 const COLLEGE_RADIUS = 50;
 
-const SEMESTER_START = new Date('2026-07-15T00:00:00+05:30'); 
+const SEMESTER_START = new Date('2026-07-15T00:00:00+05:30');
 const SEMESTER_END = new Date('2026-12-31T23:59:59+05:30');
 
 if (!MONGO_URI) {
@@ -32,7 +32,7 @@ if (!GROQ_API_KEY) {
   console.warn('⚠️ GROQ_API_KEY is not set. Chat AI will fallback to static responses.');
 }
 
-// ---------- HELPER: Get IST Date String (FIX for timezone shift) ----------
+// ---------- HELPER: Get IST Date String ----------
 function getISTDateString(dateObj) {
   const istDate = new Date(dateObj.getTime() + (5.5 * 60 * 60 * 1000));
   return istDate.toISOString().split('T')[0];
@@ -238,19 +238,17 @@ async function checkDateStatus(dateStr) {
   return { isBlocked: false, dayName };
 }
 
-// FIX: Bulletproof getWorkingDays with explicit date normalization
 async function getWorkingDays(startDate, endDate) {
   const startStr = typeof startDate === 'string' ? startDate : getISTDateString(startDate);
   const endStr = typeof endDate === 'string' ? endDate : getISTDateString(endDate);
-  
+
   const start = new Date(startStr + 'T00:00:00Z');
   const end = new Date(endStr + 'T23:59:59Z');
   let workingDays = 0;
-  
+
   const holidays = await Holiday.find({ date: { $gte: startStr, $lte: endStr } });
-  // FIX: Normalize dates by removing time part if present
   const holidaySet = new Set(holidays.map(h => h.date.split('T')[0]));
-  
+
   let current = new Date(start);
   while (current <= end) {
     const dateStr = current.toISOString().split('T')[0];
@@ -585,11 +583,10 @@ async function getStudentSummary(rollNo) {
     const timetable = getTimetableForBranch(branch);
     const allRecords = await Attendance.find({ rollNo }).lean();
     const holidays = await Holiday.find({}).lean();
-    // FIX: Normalize dates by removing time part if present
     const holidaySet = new Set(holidays.map(h => h.date.split('T')[0]));
     const today = new Date();
     const semesterStart = new Date('2026-07-15T00:00:00+05:30');
-    
+
     let current = new Date(semesterStart);
     let totalConductedAcademicSubjects = 0;
     const subjectStats = {};
@@ -608,7 +605,7 @@ async function getStudentSummary(rollNo) {
       const dayOfWeek = current.getDay();
       const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
       const isHoliday = holidaySet.has(dateStr);
-      
+
       if (!isWeekend && !isHoliday) {
         const dayName = dayNameMap[dayOfWeek];
         const academicSubjects = dayAcademicSubjects[dayName] || [];
@@ -637,9 +634,9 @@ async function getStudentSummary(rollNo) {
 
     let totalAcademicLecturesAttended = 0;
     Object.values(subjectPresentCount).forEach(v => totalAcademicLecturesAttended += v);
-    
+
     const pct = totalConductedAcademicSubjects > 0 ? Math.round((totalAcademicLecturesAttended / totalConductedAcademicSubjects) * 100) : 0;
-    
+
     const subjectStatsFinal = {};
     for (let [sub, stats] of Object.entries(subjectStats)) {
       subjectStatsFinal[sub] = {
@@ -648,11 +645,11 @@ async function getStudentSummary(rollNo) {
         percentage: stats.total > 0 ? Math.round(((stats.present || 0) / stats.total) * 100) : 0
       };
     }
-    
+
     const daysPresent = allRecords.filter(r => r.status === 'Present' || r.status === 'Duty Leave').length;
     const workingDaysSoFar = await getWorkingDays(semesterStart, today);
     const totalWorkingDaysSemester = await getWorkingDays(semesterStart, SEMESTER_END);
-    
+
     return {
       totalAcademicLectures: totalAcademicLecturesAttended,
       totalConductedLectures: totalConductedAcademicSubjects,
@@ -1019,7 +1016,11 @@ app.post('/api/teacher/mark-attendance', async (req, res) => {
   }
 });
 
-// ========== PASSCODE ==========
+// ============================================================
+// PASSCODE GENERATION
+// 🔧 FIXED: Full Day passcode now valid for the WHOLE DAY (not 5 min)
+// 🔧 Single Lecture passcode remains fixed for the current lecture slot
+// ============================================================
 app.post('/api/admin/generate-passcode', async (req, res) => {
   try {
     const { requesterRollNo, type } = req.body;
@@ -1035,6 +1036,8 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
     if (!type || !['full_day', 'single_lecture'].includes(type)) {
       return res.status(400).json({ error: 'Invalid passcode type.' });
     }
+
+    // ---------- SINGLE LECTURE (fixed per lecture slot) ----------
     if (type === 'single_lecture') {
       const branch = requester.branch || 'CSE';
       const period = getCurrentPeriod(branch);
@@ -1061,19 +1064,47 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
       await Passcode.deleteMany({ type, expiresAt: { $lt: new Date() } });
       return res.json({ message: 'Passcode generated for lecture', passcode, type, expiresAt: expiry });
     }
+
+    // ---------- FULL DAY (✅ FIXED: valid for the whole day) ----------
     if (type === 'full_day') {
-      await Passcode.deleteMany({ type: 'full_day' });
+      const now = new Date();
+      const dateStr = getISTDateString(now);
+      const key = `full_day_${dateStr}`;
+
+      // Reuse existing passcode if still valid for today
+      let passcodeDoc = await Passcode.findOne({ key, type: 'full_day' });
+      if (passcodeDoc && passcodeDoc.expiresAt > new Date()) {
+        return res.json({
+          message: 'Existing Full Day passcode retrieved',
+          passcode: passcodeDoc.passcode,
+          type,
+          expiresAt: passcodeDoc.expiresAt
+        });
+      }
+
       const passcode = Math.floor(10000 + Math.random() * 90000).toString();
-      const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+      // ✅ Valid until 23:59:59 today (IST)
+      const expiry = new Date(now);
+      expiry.setHours(23, 59, 59, 999);
+
+      await Passcode.deleteMany({ key, type: 'full_day' });
       const newPasscode = new Passcode({
         passcode,
         type,
-        key: 'full_day_' + Date.now(),
-        expiresAt
+        key,
+        expiresAt: expiry
       });
       await newPasscode.save();
-      return res.json({ message: 'Full Day passcode generated', passcode, type, expiresAt });
+      await Passcode.deleteMany({ type: 'full_day', expiresAt: { $lt: new Date() } });
+      return res.json({
+        message: 'Full Day passcode generated (valid all day)',
+        passcode,
+        type,
+        expiresAt: expiry
+      });
     }
+
     res.status(400).json({ error: 'Invalid type' });
   } catch (err) {
     console.error('Generate passcode error:', err);
@@ -1144,11 +1175,11 @@ app.post('/api/attendance/mark-lecture', async (req, res) => {
       return res.status(400).json({ error: 'Subject does not match the current lecture.' });
     }
     const key = `single_lecture_${todayDate}_${currentPeriod.start}`;
-    const passcodeDoc = await Passcode.findOne({ 
-      key, 
-      type: 'single_lecture', 
-      passcode: passcode, 
-      expiresAt: { $gt: new Date() } 
+    const passcodeDoc = await Passcode.findOne({
+      key,
+      type: 'single_lecture',
+      passcode: passcode,
+      expiresAt: { $gt: new Date() }
     });
     if (!passcodeDoc) {
       return res.status(400).json({ error: 'Invalid or expired passcode.' });
@@ -1223,7 +1254,7 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const dayName = days[today.getDay()];
     const allSubjects = timetable[dayName] || [];
-    
+
     const academicSubjectSet = new Set();
     allSubjects.forEach(entry => {
       const sub = mapToCanonical(entry.subject);
@@ -1231,7 +1262,7 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
         academicSubjectSet.add(sub);
       }
     });
-    
+
     const academicSubjects = Array.from(academicSubjectSet);
     const existingRecords = await Attendance.find({
       rollNo: cleanRoll,
@@ -1242,7 +1273,7 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     let markedCount = 0;
     let skippedCount = 0;
     const newAttendances = [];
-    
+
     for (const sub of academicSubjects) {
       if (!existingSubjectSet.has(sub)) {
         newAttendances.push({
@@ -1261,19 +1292,19 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
         skippedCount++;
       }
     }
-    
+
     if (newAttendances.length > 0) {
       await Attendance.insertMany(newAttendances, { ordered: false }).catch(err => {
         if (err.code !== 11000) throw err;
       });
     }
-    
+
     user.lastAttendanceTime = new Date();
     user.lastAttendanceLocation = { latitude, longitude };
     user.failedAttempts = 0;
     user.blockUntil = null;
     await user.save();
-    
+
     if (markedCount === 0 && skippedCount > 0) {
       return res.status(400).json({ error: `All ${skippedCount} academic subjects already marked today!` });
     }
@@ -1427,10 +1458,10 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
     const totalAttendance = await Attendance.countDocuments();
     const presentCount = await Attendance.countDocuments({ status: 'Present' });
     const overallPct = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : 0;
-    
+
     const workingDaysSoFar = await getWorkingDays(SEMESTER_START, today);
     const totalWorkingDaysSemester = await getWorkingDays(SEMESTER_START, SEMESTER_END);
-    
+
     res.json({ totalStudents, todayPresent, todayAbsent, overallAttendance: totalAttendance, overallPct, todayPresentStudents: presentList, workingDaysSoFar, totalWorkingDaysSemester });
   } catch (err) {
     console.error('Dashboard stats error:', err);
@@ -1584,20 +1615,20 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
     const endDate = new Date(year, m + 1, 0);
     const startStr = getISTDateString(startDate);
     const endStr = getISTDateString(endDate);
-    
+
     const records = await Attendance.find({ rollNo: cleanRoll, date: { $gte: startStr, $lte: endStr } }).lean();
     const subjectSet = new Set();
     let totalConducted = 0;
     let cur = new Date(startDate);
     const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const holidaySet = new Set((await Holiday.find({ date: { $gte: startStr, $lte: endStr } })).map(h => h.date.split('T')[0]));
-    
+
     while (cur <= endDate) {
       const dateStr = getISTDateString(cur);
       const dayOfWeek = cur.getDay();
       const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
       const isHoliday = holidaySet.has(dateStr);
-      
+
       if (!isWeekend && !isHoliday) {
         const dayName = dayNameMap[dayOfWeek];
         const subjects = timetable[dayName] || [];
@@ -1611,17 +1642,17 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
       }
       cur.setDate(cur.getDate() + 1);
     }
-    
+
     const subjectStats = {};
     subjectSet.forEach(sub => { subjectStats[sub] = { total: 0, present: 0 }; });
-    
+
     cur = new Date(startDate);
     while (cur <= endDate) {
       const dateStr = getISTDateString(cur);
       const dayOfWeek = cur.getDay();
       const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
       const isHoliday = holidaySet.has(dateStr);
-      
+
       if (!isWeekend && !isHoliday) {
         const dayName = dayNameMap[dayOfWeek];
         const subjects = timetable[dayName] || [];
@@ -1632,19 +1663,19 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
       }
       cur.setDate(cur.getDate() + 1);
     }
-    
+
     records.forEach(rec => {
       let sub = mapToCanonical(rec.subject);
       if (subjectStats[sub] && (rec.status === 'Present' || rec.status === 'Duty Leave')) {
         subjectStats[sub].present++;
       }
     });
-    
+
     let totalAttended = 0;
     Object.values(subjectStats).forEach(st => totalAttended += st.present);
     const pct = totalConducted > 0 ? Math.round((totalAttended / totalConducted) * 100) : 0;
     const presentDays = new Set(records.filter(r => r.status === 'Present' || r.status === 'Duty Leave').map(r => r.date));
-    
+
     const subjectStatsWithPct = {};
     Object.keys(subjectStats).forEach(sub => {
       const st = subjectStats[sub];
@@ -1654,7 +1685,7 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
         percentage: st.total > 0 ? Math.round((st.present / st.total) * 100) : 0
       };
     });
-    
+
     res.json({
       totalConducted,
       totalAttended,
@@ -1686,16 +1717,16 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
     let markedCount = 0, markedSubjects = [], alreadyMarked = [];
     const timetable = getTimetableForBranch(actualBranch);
     let subjectsToMark = subjects;
-    
+
     if (!subjectsToMark || subjectsToMark.length === 0) {
       const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
       const dayName = days[dateObj.getDay()];
       const allSubjects = timetable[dayName] || [];
       subjectsToMark = allSubjects.filter(entry => !entry.subject.includes("LIB") && !entry.subject.includes("Library") && !entry.subject.includes("Sports")).map(entry => mapToCanonical(entry.subject));
     }
-    
+
     const uniqueSubjects = [...new Set(subjectsToMark.map(s => mapToCanonical(s)).filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports')))];
-    
+
     for (let sub of uniqueSubjects) {
       const existing = await Attendance.findOne({ rollNo: targetRoll, subject: sub, date });
       if (existing) {
@@ -1717,7 +1748,7 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
       markedCount++;
       markedSubjects.push(sub);
     }
-    
+
     let message = `✅ Marked ${markedCount} lectures for ${user.name} on ${date} (Branch: ${actualBranch})`;
     if (alreadyMarked.length > 0) message += `. Already marked: ${alreadyMarked.join(', ')}`;
     res.status(201).json({ message, markedSubjects, alreadyMarked, total: markedCount });
@@ -1769,7 +1800,7 @@ app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
   }
 });
 
-// ========== STUDENT SUMMARY (Overall) – UPDATED ==========
+// ========== STUDENT SUMMARY (Overall) ==========
 app.get('/api/student/summary/:rollNo', async (req, res) => {
   try {
     const cleanRoll = req.params.rollNo.trim().toUpperCase();
@@ -1779,31 +1810,30 @@ app.get('/api/student/summary/:rollNo', async (req, res) => {
     const timetable = getTimetableForBranch(branch);
     const allRecords = await Attendance.find({ rollNo: cleanRoll }).lean();
     const holidays = await Holiday.find({}).lean();
-    // FIX: Normalize dates by removing time part if present
     const holidaySet = new Set(holidays.map(h => h.date.split('T')[0]));
     const today = new Date();
     const semesterStart = new Date('2026-07-15T00:00:00+05:30');
-    
+
     let current = new Date(semesterStart);
     let totalConductedAcademicSubjects = 0;
     const academicDaysSet = new Set();
     const subjectStats = {};
     const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const dayAcademicSubjects = {};
-    
+
     for (let d = 0; d < 7; d++) {
       const dayName = dayNameMap[d];
       const subjects = timetable[dayName] || [];
       const academic = subjects.filter(entry => !entry.subject.includes("LIB") && !entry.subject.includes("Library") && !entry.subject.includes("Sports"));
       dayAcademicSubjects[dayName] = academic.map(entry => mapToCanonical(entry.subject));
     }
-    
+
     while (current <= today) {
       const dateStr = getISTDateString(current);
       const dayOfWeek = current.getDay();
       const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
       const isHoliday = holidaySet.has(dateStr);
-      
+
       if (!isWeekend && !isHoliday) {
         academicDaysSet.add(dateStr);
         const dayName = dayNameMap[dayOfWeek];
@@ -1816,7 +1846,7 @@ app.get('/api/student/summary/:rollNo', async (req, res) => {
       }
       current.setDate(current.getDate() + 1);
     }
-    
+
     const presentDaysSet = new Set();
     const subjectPresentCount = {};
     allRecords.forEach(rec => {
@@ -1828,18 +1858,18 @@ app.get('/api/student/summary/:rollNo', async (req, res) => {
         presentDaysSet.add(rec.date);
       }
     });
-    
+
     Object.keys(subjectPresentCount).forEach(sub => {
       if (subjectStats[sub]) subjectStats[sub].present = subjectPresentCount[sub];
     });
-    
+
     let totalAcademicLecturesAttended = 0;
     Object.values(subjectPresentCount).forEach(v => totalAcademicLecturesAttended += v);
     const pct = totalConductedAcademicSubjects > 0 ? Math.round((totalAcademicLecturesAttended / totalConductedAcademicSubjects) * 100) : 0;
     const daysPresent = presentDaysSet.size;
     const totalWorkingDays = academicDaysSet.size;
     const daysAbsent = totalWorkingDays - daysPresent;
-    
+
     const subjectStatsFinal = {};
     for (let [sub, stats] of Object.entries(subjectStats)) {
       subjectStatsFinal[sub] = {
@@ -1848,10 +1878,10 @@ app.get('/api/student/summary/:rollNo', async (req, res) => {
         percentage: stats.total > 0 ? Math.round(((stats.present || 0) / stats.total) * 100) : 0
       };
     }
-    
+
     const workingDaysSoFar = await getWorkingDays(semesterStart, today);
     const totalWorkingDaysSemester = await getWorkingDays(semesterStart, SEMESTER_END);
-    
+
     res.json({
       totalAcademicLectures: totalAcademicLecturesAttended,
       totalConductedLectures: totalConductedAcademicSubjects,
@@ -1913,10 +1943,10 @@ app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) => {
     if (range === 'CURRENT_MONTH') { startDate = new Date(today.getFullYear(), today.getMonth(), 1); endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0); }
     else if (range === 'SELECTED_MONTH') { const m = parseInt(month); if (isNaN(m) || m < 0 || m > 11) return res.status(400).json({ error: 'Invalid month' }); startDate = new Date(2026, m, 1); endDate = new Date(2026, m + 1, 0); }
     else { startDate = new Date(SEMESTER_START); endDate = new Date(SEMESTER_END); }
-    
+
     const startStr = getISTDateString(startDate);
     const endStr = getISTDateString(endDate);
-    
+
     let records = await Attendance.find({ rollNo: cleanStudent, date: { $gte: startStr, $lte: endStr } }).sort({ date: 1 });
     if (isTeacher) {
       const subjects = await TeacherSubject.find({ teacherRollNo: requesterRollNo }).distinct('subject');
@@ -1969,22 +1999,21 @@ app.get('/api/admin/class-attendance-report', async (req, res) => {
     if (!requester || requester.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     const start = startDate ? new Date(startDate) : new Date(SEMESTER_START);
     const end = endDate ? new Date(endDate) : new Date(SEMESTER_END);
-    
+
     const startStr = getISTDateString(start);
     const endStr = getISTDateString(end);
-    
+
     let query = { role: 'student' };
     if (branch && branch !== 'ALL' && branch !== 'undefined' && branch !== 'null') {
       query.branch = branch.toUpperCase();
     }
     const students = await User.find(query).select('rollNo name branch');
     if (students.length === 0) return res.json({ students: [], totalLectures: 0 });
-    
+
     const holidays = await Holiday.find({ date: { $gte: startStr, $lte: endStr } });
-    // FIX: Normalize dates by removing time part if present
     const holidaySet = new Set(holidays.map(h => h.date.split('T')[0]));
     const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    
+
     const resultStudents = await Promise.all(students.map(async (student) => {
       const branch = student.branch || 'CSE';
       const timetable = getTimetableForBranch(branch);
@@ -1995,7 +2024,7 @@ app.get('/api/admin/class-attendance-report', async (req, res) => {
         const dayOfWeek = cur.getDay();
         const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
         const isHoliday = holidaySet.has(dateStr);
-        
+
         if (!isWeekend && !isHoliday) {
           const dayName = dayNameMap[dayOfWeek];
           const subjects = timetable[dayName] || [];
@@ -2008,14 +2037,14 @@ app.get('/api/admin/class-attendance-report', async (req, res) => {
         }
         cur.setDate(cur.getDate() + 1);
       }
-      
+
       const presentCount = await Attendance.countDocuments({
         rollNo: student.rollNo,
         date: { $gte: startStr, $lte: endStr },
         status: { $in: ['Present', 'Duty Leave'] },
         subject: { $nin: [/Sports/i, /LIB/i, /Library/i] }
       });
-      
+
       return {
         rollNo: student.rollNo,
         name: student.name,
@@ -2025,7 +2054,7 @@ app.get('/api/admin/class-attendance-report', async (req, res) => {
         percentage: totalConducted > 0 ? Math.round((presentCount / totalConducted) * 100) : 0
       };
     }));
-    
+
     resultStudents.sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true }));
     let overallTotal = 0;
     if (resultStudents.length > 0) {
@@ -2095,7 +2124,7 @@ app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
     const endDate = new Date('2026-07-30T23:59:59+05:30');
     const startStr = getISTDateString(startDate);
     const endStr = getISTDateString(endDate);
-    
+
     let totalRegistered = 0, totalAttendanceAdded = 0;
     for (const item of studentData) {
       const roll = item.rollNo;
@@ -2126,7 +2155,7 @@ app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
         date: { $gte: startStr, $lte: endStr }
       });
       if (presentNeeded === 0) continue;
-      
+
       let days = [];
       let cur = new Date(startDate);
       while (cur <= endDate) {
@@ -2145,7 +2174,7 @@ app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
         }
         cur.setDate(cur.getDate() + 1);
       }
-      
+
       let allAvailableSubjects = [];
       for (const d of days) {
         for (const sub of d.subjects) {
@@ -2208,7 +2237,7 @@ app.post('/api/admin/bulk-register-and-update-attendance-aids', async (req, res)
     const endDate = new Date('2026-07-30T23:59:59+05:30');
     const startStr = getISTDateString(startDate);
     const endStr = getISTDateString(endDate);
-    
+
     let totalRegistered = 0, totalAttendanceAdded = 0;
     for (const item of studentData) {
       const roll = item.rollNo;
@@ -2239,7 +2268,7 @@ app.post('/api/admin/bulk-register-and-update-attendance-aids', async (req, res)
         date: { $gte: startStr, $lte: endStr }
       });
       if (presentNeeded === 0) continue;
-      
+
       let days = [];
       let cur = new Date(startDate);
       while (cur <= endDate) {
@@ -2258,7 +2287,7 @@ app.post('/api/admin/bulk-register-and-update-attendance-aids', async (req, res)
         }
         cur.setDate(cur.getDate() + 1);
       }
-      
+
       let allAvailableSubjects = [];
       for (const d of days) {
         for (const sub of d.subjects) {
@@ -2326,9 +2355,9 @@ app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
         const dayName = dateStatus.dayName;
         let daySubjects = timetable[dayName] || [];
         let subjectsToMark = subjects && subjects.length > 0 ? subjects : daySubjects.map(s => mapToCanonical(s.subject));
-        
+
         const uniqueSubjects = [...new Set(subjectsToMark.filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports')))];
-        
+
         for (const sub of uniqueSubjects) {
           const exists = await Attendance.findOne({ rollNo: student.rollNo, subject: sub, date });
           if (!exists) {
@@ -2361,9 +2390,9 @@ app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
       totalMarked += studentMarked;
       totalSkipped += studentSkipped;
     }
-    res.json({ 
-      message: `✅ Bulk mark completed. Marked ${totalMarked} new records, skipped ${totalSkipped} existing.`, 
-      results 
+    res.json({
+      message: `✅ Bulk mark completed. Marked ${totalMarked} new records, skipped ${totalSkipped} existing.`,
+      results
     });
   } catch (err) {
     console.error('Bulk mark error:', err);
@@ -2640,7 +2669,7 @@ app.post('/api/chat', async (req, res) => {
     let holidays = [];
     let timetable = {};
     let currentPeriod = null;
-    
+
     if (cleanRoll !== 'guest') {
       try {
         userData = await User.findOne({ rollNo: cleanRoll });
@@ -2659,7 +2688,7 @@ app.post('/api/chat', async (req, res) => {
         console.error('Error fetching user data for chat:', err);
       }
     }
-    
+
     let requestedDate = null;
     let requestedDay = null;
     const msgLower = message.toLowerCase();
@@ -2695,7 +2724,7 @@ app.post('/api/chat', async (req, res) => {
         }
       }
     }
-    
+
     let requestedTimetable = null;
     let requestedStatus = null;
     if (requestedDate) {
@@ -2710,7 +2739,7 @@ app.post('/api/chat', async (req, res) => {
       const timetable = getTimetableForBranch(branchName);
       requestedTimetable = timetable[requestedDay] || [];
     }
-    
+
     const now = new Date();
     const hour = now.getHours();
     let greeting = '';
@@ -2722,7 +2751,7 @@ app.post('/api/chat', async (req, res) => {
     }
     const userName = userData?.name || name || 'Guest';
     const userRole = userData?.role || role || 'student';
-    
+
     let contextStr = `Current date/time: ${now.toLocaleString()}\n`;
     contextStr += `User: ${userName} (Roll: ${cleanRoll}, Role: ${userRole})\n`;
     contextStr += `Branch: ${userData?.branch || branch || 'CSE'}\n`;
@@ -2758,7 +2787,7 @@ app.post('/api/chat', async (req, res) => {
         contextStr += `No timetable available for ${requestedDay}.\n`;
       }
     }
-    
+
     let systemPrompt = `You are an AI assistant for BM Group of Institutions attendance portal.
 Your name is "BM Bot".
 ${greeting ? `${greeting}, ${userName} ${emoji}!` : ''}
@@ -2774,7 +2803,7 @@ Do not perform actions (like marking attendance) – only provide information.
 Respond in the same language as the user (Hindi/English).
 If the user asks for notes or study material, provide helpful content with bullet points.
 Now respond to the user's message: "${message}"`;
-    
+
     let reply = '';
     let aiError = false;
     if (GROQ_API_KEY) {
@@ -2828,7 +2857,7 @@ Now respond to the user's message: "${message}"`;
       console.warn('⚠️ GROQ_API_KEY not set');
       aiError = true;
     }
-    
+
     if (aiError || !reply) {
       let fallback = '';
       if (greeting) fallback = `${greeting}, ${userName} ${emoji}! `;
@@ -2864,7 +2893,7 @@ Now respond to the user's message: "${message}"`;
       }
       reply = fallback;
     }
-    
+
     let newThreadId = threadId;
     if (cleanRoll !== 'guest') {
       const existingMessages = [];
@@ -2909,7 +2938,7 @@ Now respond to the user's message: "${message}"`;
         title = autoTitle;
       }
     }
-    
+
     res.json({
       reply,
       threadId: newThreadId || null,
