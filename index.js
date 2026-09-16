@@ -73,31 +73,40 @@ function normalizeSubject(subject) {
   return subject.replace(/\s+/g, ' ').trim();
 }
 
-// ---------- HELPER: Subject Alias Mapping ----------
+// ---------- ✅ FIXED: Subject Alias Mapping ----------
+// Rule: canonical self-mappings FIRST, then short aliases.
+// mapToCanonical will sort by length DESC so specific names win.
 const SUBJECT_ALIAS_MAP = {
+  // --- Canonical self-mappings (exact match wins immediately) ---
+  'BDA - Big Data Analytics': 'BDA - Big Data Analytics',
+  'ECO - Economics for Engineers': 'ECO - Economics for Engineers',
+  'DAA - Design & Analysis of Algorithm': 'DAA - Design & Analysis of Algorithm',
+  'FLA - Formal Language & Automata': 'FLA - Formal Language & Automata',
+  'HRM - Human Resource Mgmt': 'HRM - Human Resource Mgmt',
+  'CN - Computer Network': 'CN - Computer Network',
+  'WT - Web Technology': 'WT - Web Technology',
+  'CN LAB - Computer Network Lab': 'CN LAB - Computer Network Lab',
+  'DAA LAB - Algorithm Lab': 'DAA LAB - Algorithm Lab',
+  'WT LAB - Web Technology Lab': 'WT LAB - Web Technology Lab',
+  'Internet Lab (Ms. Geeta)': 'Internet Lab (Ms. Geeta)',
+  'PA - Predictive Analysis': 'PA - Predictive Analysis',
+  'ML - Machine Learning': 'ML - Machine Learning',
+  'PA LAB - Predictive Analysis Lab': 'PA LAB - Predictive Analysis Lab',
+  'ML LAB - Machine Learning Lab': 'ML LAB - Machine Learning Lab',
+  'BDA LAB - Big Data Analytics Lab': 'BDA LAB - Big Data Analytics Lab',
+  'LIB - Library': 'LIB - Library',
+  'Sports': 'Sports',
+  // --- Short aliases (fallback only) ---
   'BDA': 'BDA - Big Data Analytics',
-  'BDA - Big Data': 'BDA - Big Data Analytics',
   'ECO': 'ECO - Economics for Engineers',
-  'ECO - Economic': 'ECO - Economics for Engineers',
   'DAA': 'DAA - Design & Analysis of Algorithm',
-  'DAA - Design': 'DAA - Design & Analysis of Algorithm',
-  'DAA - Design &': 'DAA - Design & Analysis of Algorithm',
   'FLA': 'FLA - Formal Language & Automata',
-  'FLA - Formal L': 'FLA - Formal Language & Automata',
-  'FLA - Formal Language': 'FLA - Formal Language & Automata',
   'HRM': 'HRM - Human Resource Mgmt',
-  'HRM - Human Re': 'HRM - Human Resource Mgmt',
   'CN': 'CN - Computer Network',
-  'CN - Computer': 'CN - Computer Network',
-  'CN - Computer :': 'CN - Computer Network',
   'WT': 'WT - Web Technology',
-  'WT - Web Techn': 'WT - Web Technology',
   'CN LAB': 'CN LAB - Computer Network Lab',
-  'CN LAB - Compu': 'CN LAB - Computer Network Lab',
   'DAA LAB': 'DAA LAB - Algorithm Lab',
-  'DAA LAB - Algo': 'DAA LAB - Algorithm Lab',
   'WT LAB': 'WT LAB - Web Technology Lab',
-  'WT LAB - Web T': 'WT LAB - Web Technology Lab',
   'Internet': 'Internet Lab (Ms. Geeta)',
   'Internet Lab': 'Internet Lab (Ms. Geeta)',
   'PA': 'PA - Predictive Analysis',
@@ -105,23 +114,35 @@ const SUBJECT_ALIAS_MAP = {
   'PA LAB': 'PA LAB - Predictive Analysis Lab',
   'ML LAB': 'ML LAB - Machine Learning Lab',
   'BDA LAB': 'BDA LAB - Big Data Analytics Lab',
-  'LIB': 'LIB - Library',
-  'Sports': 'Sports'
+  'LIB': 'LIB - Library'
 };
 
+// ✅ FIXED: longest alias wins, no accidental substring matches like "CN" matching "CN LAB"
 function mapToCanonical(subject) {
   if (!subject) return '';
   const normalized = normalizeSubject(subject);
+
+  // 1. Exact match (canonical self-map)
   if (SUBJECT_ALIAS_MAP[normalized]) return SUBJECT_ALIAS_MAP[normalized];
-  for (let [alias, canonical] of Object.entries(SUBJECT_ALIAS_MAP)) {
-    if (normalized.includes(alias) || alias.includes(normalized)) {
-      return canonical;
-    }
+
+  // 2. Sort aliases by length DESC so more-specific names are checked first
+  const sortedAliases = Object.keys(SUBJECT_ALIAS_MAP).sort((a, b) => b.length - a.length);
+
+  // 3. Word-boundary prefix match ("CN LAB - Computer Network Lab".startsWith("CN LAB ") → correct)
+  for (const alias of sortedAliases) {
+    if (normalized === alias) return SUBJECT_ALIAS_MAP[alias];
+    if (normalized.startsWith(alias + ' ')) return SUBJECT_ALIAS_MAP[alias];
   }
+
+  // 4. Last-resort substring match (still longest first)
+  for (const alias of sortedAliases) {
+    if (normalized.includes(alias)) return SUBJECT_ALIAS_MAP[alias];
+  }
+
   return normalized;
 }
 
-// ---------- CORRECTED TIMETABLE (CSE) ----------
+// ---------- TIMETABLE (CSE) ----------
 const CSE_TIME_TABLE = {
   Monday: [
     { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
@@ -169,7 +190,7 @@ const CSE_TIME_TABLE = {
   Sunday: []
 };
 
-// ---------- CORRECTED TIMETABLE (AIDS) ----------
+// ---------- TIMETABLE (AIDS) ----------
 const AIDS_TIME_TABLE = {
   Monday: [
     { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
@@ -897,6 +918,68 @@ app.post('/api/admin/login-as-student', async (req, res) => {
   }
 });
 
+// ========== ✅ NEW: FIX ALL ATTENDANCE SUBJECTS (ONE-CLICK) ==========
+app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
+  try {
+    const { requesterRollNo } = req.body;
+    const requester = await User.findOne({ rollNo: requesterRollNo?.trim().toUpperCase() });
+    if (!requester || requester.role !== 'admin') {
+      return res.status(403).json({ error: 'Access Denied: Admin Only!' });
+    }
+
+    const allRecords = await Attendance.find({}).lean();
+    if (!allRecords.length) {
+      return res.json({ message: 'No attendance records found.', fixed: 0, merged: 0, deleted: 0, totalScanned: 0, untouched: 0 });
+    }
+
+    let fixedCount = 0;
+    let mergedCount = 0;
+    let untouchedCount = 0;
+    const toDelete = [];
+    const toUpdate = [];
+    const seenKey = new Map();
+
+    for (const rec of allRecords) {
+      const canonical = mapToCanonical(rec.subject);
+      const key = `${rec.rollNo}|${rec.date}|${canonical}`;
+
+      if (seenKey.has(key)) {
+        toDelete.push(rec._id);
+        mergedCount++;
+        continue;
+      }
+      seenKey.set(key, rec._id);
+
+      if (rec.subject !== canonical) {
+        toUpdate.push({ _id: rec._id, subject: canonical });
+        fixedCount++;
+      } else {
+        untouchedCount++;
+      }
+    }
+
+    for (const u of toUpdate) {
+      await Attendance.updateOne({ _id: u._id }, { $set: { subject: u.subject } });
+    }
+    if (toDelete.length) {
+      await Attendance.deleteMany({ _id: { $in: toDelete } });
+    }
+
+    console.log(`🛠️  Fix-all-attendance ran: fixed=${fixedCount}, merged=${mergedCount}, untouched=${untouchedCount}`);
+    res.json({
+      message: `✅ Fixed ${fixedCount} records, merged/removed ${mergedCount} duplicates.`,
+      totalScanned: allRecords.length,
+      fixed: fixedCount,
+      merged: mergedCount,
+      untouched: untouchedCount,
+      deleted: toDelete.length
+    });
+  } catch (err) {
+    console.error('Fix all attendance error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ========== TEACHER SUBJECT ASSIGNMENT ==========
 app.post('/api/admin/assign-subject', async (req, res) => {
   try {
@@ -1018,8 +1101,8 @@ app.post('/api/teacher/mark-attendance', async (req, res) => {
 
 // ============================================================
 // PASSCODE GENERATION
-// 🔧 FIXED: Full Day passcode now valid for the WHOLE DAY (not 5 min)
-// 🔧 Single Lecture passcode remains fixed for the current lecture slot
+// ✅ Full Day: valid till 23:59:59 today
+// ✅ Single Lecture: fixed for the current lecture slot (5 min)
 // ============================================================
 app.post('/api/admin/generate-passcode', async (req, res) => {
   try {
@@ -1037,7 +1120,7 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
       return res.status(400).json({ error: 'Invalid passcode type.' });
     }
 
-    // ---------- SINGLE LECTURE (fixed per lecture slot) ----------
+    // ---------- SINGLE LECTURE ----------
     if (type === 'single_lecture') {
       const branch = requester.branch || 'CSE';
       const period = getCurrentPeriod(branch);
@@ -1054,24 +1137,17 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
       const passcode = Math.floor(1000 + Math.random() * 9000).toString();
       const expiry = new Date(now.getTime() + 5 * 60 * 1000);
       await Passcode.deleteMany({ key, type: 'single_lecture' });
-      const newPasscode = new Passcode({
-        passcode,
-        type,
-        key,
-        expiresAt: expiry
-      });
+      const newPasscode = new Passcode({ passcode, type, key, expiresAt: expiry });
       await newPasscode.save();
       await Passcode.deleteMany({ type, expiresAt: { $lt: new Date() } });
       return res.json({ message: 'Passcode generated for lecture', passcode, type, expiresAt: expiry });
     }
 
-    // ---------- FULL DAY (✅ FIXED: valid for the whole day) ----------
+    // ---------- FULL DAY (valid whole day) ----------
     if (type === 'full_day') {
       const now = new Date();
       const dateStr = getISTDateString(now);
       const key = `full_day_${dateStr}`;
-
-      // Reuse existing passcode if still valid for today
       let passcodeDoc = await Passcode.findOne({ key, type: 'full_day' });
       if (passcodeDoc && passcodeDoc.expiresAt > new Date()) {
         return res.json({
@@ -1081,20 +1157,11 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
           expiresAt: passcodeDoc.expiresAt
         });
       }
-
       const passcode = Math.floor(10000 + Math.random() * 90000).toString();
-
-      // ✅ Valid until 23:59:59 today (IST)
       const expiry = new Date(now);
       expiry.setHours(23, 59, 59, 999);
-
       await Passcode.deleteMany({ key, type: 'full_day' });
-      const newPasscode = new Passcode({
-        passcode,
-        type,
-        key,
-        expiresAt: expiry
-      });
+      const newPasscode = new Passcode({ passcode, type, key, expiresAt: expiry });
       await newPasscode.save();
       await Passcode.deleteMany({ type: 'full_day', expiresAt: { $lt: new Date() } });
       return res.json({
