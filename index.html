@@ -7,7 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -161,17 +160,18 @@ tbody tr:hover{background:var(--slate-50);}
 .hidden{display:none!important;}
 .empty{text-align:center;padding:32px 16px;color:var(--slate-400);font-size:12px;font-weight:500;}
 .section-title{font-size:11px;font-weight:700;color:var(--slate-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;}
-.modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);z-index:9000;display:none;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s ease;overflow-y:auto;}
+.modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:9000;display:none;align-items:flex-start;justify-content:center;padding:20px;animation:fadeIn .2s ease;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 .modal-backdrop.open{display:flex;}
 @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
-.modal{background:#fff;border-radius:var(--radius-lg);width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:modalIn .25s cubic-bezier(.16,1,.3,1);}
+.modal{background:#fff;border-radius:var(--radius-lg);width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:modalIn .25s cubic-bezier(.16,1,.3,1);margin:auto;}
 .modal.wide{max-width:680px;}
 @keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(8px);}to{opacity:1;transform:scale(1) translateY(0);}}
 .modal-header{padding:18px 20px 14px;border-bottom:1px solid var(--slate-200);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;position:sticky;top:0;background:#fff;z-index:2;}
 .modal-header h3{font-size:16px;font-weight:800;letter-spacing:-.02em;color:var(--slate-900);}
 .modal-header p{font-size:11.5px;color:var(--slate-500);margin-top:3px;}
-.modal-close{width:30px;height:30px;border-radius:8px;border:1px solid var(--slate-200);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--slate-500);font-size:16px;flex-shrink:0;transition:all .15s;}
+.modal-close{width:34px;height:34px;border-radius:8px;border:1px solid var(--slate-200);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--slate-500);font-size:16px;flex-shrink:0;transition:all .15s;touch-action:manipulation;}
 .modal-close:hover{background:var(--slate-100);color:var(--slate-900);}
+.modal-close:active{background:var(--rose-100);color:var(--rose-700);transform:scale(.95);}
 .modal-body{padding:18px 20px 20px;}
 .modal-footer{padding:14px 20px 18px;border-top:1px solid var(--slate-200);display:flex;gap:10px;justify-content:flex-end;}
 .wd-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
@@ -257,8 +257,9 @@ tbody tr:hover{background:var(--slate-50);}
 @keyframes spin{to{transform:rotate(360deg);}}
 .faculty-fields{display:none;margin-top:10px;padding:10px;background:var(--slate-50);border-radius:var(--radius-sm);border:1px solid var(--slate-200);}
 .bulk-holiday-textarea{width:100%;font-size:12px;padding:10px;font-family:inherit;border:1px solid var(--slate-300);border-radius:var(--radius-sm);min-height:110px;resize:vertical;}
-.holiday-row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--slate-50);border-radius:6px;margin-bottom:6px;font-size:12px;}
-.holiday-row label{display:flex;align-items:center;gap:8px;cursor:pointer;}
+.holiday-row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--slate-50);border-radius:6px;margin-bottom:6px;font-size:12px;gap:8px;}
+.holiday-row label{display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;min-width:0;}
+.holiday-row label b{white-space:nowrap;}
 .subject-summary-line{font-size:12px;color:var(--slate-600);padding:10px 12px;background:var(--slate-50);border-radius:var(--radius-sm);margin-bottom:10px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;border:1px solid var(--slate-200);}
 .subject-summary-line .pct-big{font-size:20px;font-weight:800;}
 .subject-summary-line .pct-big.good{color:var(--emerald-600);}
@@ -525,7 +526,7 @@ tbody tr:hover{background:var(--slate-50);}
             <select id="pdfMonthSelect" style="display:none;">
               <option value="6">July 2026</option>
               <option value="7">August 2026</option>
-              <option value="8" selected>September 2026</option>
+              <option value="8">September 2026</option>
               <option value="9">October 2026</option>
               <option value="10">November 2026</option>
               <option value="11">December 2026</option>
@@ -535,6 +536,7 @@ tbody tr:hover{background:var(--slate-50);}
             <button class="btn btn-primary btn-sm" onclick="generateSelfPDF()">📄 Download PDF</button>
             <button class="btn btn-success btn-sm" onclick="exportMyAttendance()">📥 CSV</button>
           </div>
+          <p class="text-xs text-muted mt-1" style="text-align:center;">PDF opens in new tab → tap "Save as PDF" from print dialog</p>
         </div>
 
         <div class="card">
@@ -634,7 +636,7 @@ tbody tr:hover{background:var(--slate-50);}
             <select id="adminReportMonth" class="mb-2" style="display:none;">
               <option value="6">July 2026</option>
               <option value="7">August 2026</option>
-              <option value="8" selected>September 2026</option>
+              <option value="8">September 2026</option>
               <option value="9">October 2026</option>
               <option value="10">November 2026</option>
               <option value="11">December 2026</option>
@@ -643,6 +645,7 @@ tbody tr:hover{background:var(--slate-50);}
               <button class="btn btn-primary btn-sm" onclick="generateStudentReport('pdf')">📄 Download PDF</button>
               <button class="btn btn-success btn-sm" onclick="generateStudentReport('csv')">📥 CSV</button>
             </div>
+            <p class="text-xs text-muted mt-1" style="text-align:center;">PDF opens in new tab → tap "Save as PDF" from print dialog</p>
           </div>
           <div class="card">
             <div class="card-title">📋 Class Attendance Report</div>
@@ -807,6 +810,19 @@ tbody tr:hover{background:var(--slate-50);}
             <div class="card-title">🔄 Bulk Register AIDS</div>
             <button class="btn btn-purple btn-block" onclick="bulkRegAIDS()">Run AIDS Bulk Update</button>
           </div>
+          <!-- ✅ NEW: Fix All Attendance Subjects -->
+          <div class="card" style="border-color:#fecdd3;background:linear-gradient(135deg,#fff,#fff1f2);">
+            <div class="card-title" style="color:#be123c;">🛠️ Fix All Student Attendance Subjects</div>
+            <p class="text-xs text-muted" style="margin-bottom:10px;line-height:1.6;">
+              Timetable-aware fix: renames wrong subject names (e.g. <code>"CN"</code> → <code>"CN LAB - Computer Network Lab"</code> on Wednesdays, splits merged DAA/DAA LAB on Thursdays) and removes duplicates.<br>
+              <b style="color:#be123c;">⚠️ One-time operation — safe to run multiple times.</b>
+            </p>
+            <button class="btn btn-danger btn-block" onclick="fixAllAttendanceSubjects()">
+              <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+              Run One-Click Fix
+            </button>
+            <p id="fixAllStatus" class="text-xs text-muted" style="margin-top:8px;text-align:center;"></p>
+          </div>
           <div class="card">
             <div class="card-title">🔑 Admin Login as Student</div>
             <input type="text" id="impRollInput" placeholder="Student Roll No" class="mb-1" />
@@ -893,7 +909,7 @@ tbody tr:hover{background:var(--slate-50);}
           <select id="facReportMonth" class="mb-1" style="display:none;">
             <option value="6">July 2026</option>
             <option value="7">August 2026</option>
-            <option value="8" selected>September 2026</option>
+            <option value="8">September 2026</option>
             <option value="9">October 2026</option>
             <option value="10">November 2026</option>
             <option value="11">December 2026</option>
@@ -945,7 +961,7 @@ tbody tr:hover{background:var(--slate-50);}
   <div class="modal wide">
     <div class="modal-header">
       <div><h3>College Working Days</h3><p id="wdModalSub">Calendar from 15 July 2026 to today</p></div>
-      <button class="modal-close" onclick="closeModal('wdModal')">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal('wdModal')" aria-label="Close">✕</button>
     </div>
     <div class="modal-body">
       <div class="wd-summary">
@@ -967,7 +983,7 @@ tbody tr:hover{background:var(--slate-50);}
 
 <div class="modal-backdrop" id="editModal">
   <div class="modal" style="max-width:400px;">
-    <div class="modal-header"><h3>Edit Attendance</h3><button class="modal-close" onclick="closeModal('editModal')">✕</button></div>
+    <div class="modal-header"><h3>Edit Attendance</h3><button type="button" class="modal-close" onclick="closeModal('editModal')">✕</button></div>
     <div class="modal-body">
       <div class="form-group">
         <label class="form-label">Status</label>
@@ -989,7 +1005,7 @@ tbody tr:hover{background:var(--slate-50);}
   <div class="modal wide">
     <div class="modal-header">
       <div><h3>Confirm Bulk Marking</h3><p>Review students and lectures before marking</p></div>
-      <button class="modal-close" onclick="closeModal('bulkMarkModal')">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal('bulkMarkModal')">✕</button>
     </div>
     <div class="modal-body"><div id="bulkMarkSummary"></div></div>
     <div class="modal-footer">
@@ -1003,7 +1019,7 @@ tbody tr:hover{background:var(--slate-50);}
   <div class="modal wide">
     <div class="modal-header">
       <div><h3>Confirm Bulk Delete</h3><p>This will delete all selected students' records</p></div>
-      <button class="modal-close" onclick="closeModal('bulkDeleteModal')">✕</button>
+      <button type="button" class="modal-close" onclick="closeModal('bulkDeleteModal')">✕</button>
     </div>
     <div class="modal-body"><div id="bulkDeleteSummary"></div></div>
     <div class="modal-footer">
@@ -1103,14 +1119,55 @@ function toast(msg, type='info'){
 }
 function showDL(msg){$('dlMsg').textContent = msg;$('dlProgress').classList.add('show');}
 function hideDL(){$('dlProgress').classList.remove('show');}
-function closeModal(id){$(id).classList.remove('open');}
-function openModal(id){$(id).classList.add('open');}
+function closeModal(id){ const m = $(id); if (m) m.classList.remove('open'); }
+function openModal(id){ const m = $(id); if (m) m.classList.add('open'); }
 function fmtDate(d){const y=d.getFullYear();const m=String(d.getMonth()+1).padStart(2,'0');const day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`;}
 function fmtDatePretty(s){if(!s)return '—';const p=s.split('T')[0].split('-');if(p.length<3)return s;return `${p[2]}/${p[1]}/${p[0]}`;}
 function sanitizeRoll(r){return r ? r.toUpperCase().replace(/[^A-Z0-9]/g,'') : '';}
 function isValidStudentRoll(r){return /^24(CSE|AIDS)\d{2}$/.test(r);}
 function togglePassword(){const p = $('password');p.type = p.type === 'password' ? 'text' : 'password';}
 function escapeHtml(t){ const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+function getMonthRangeStrings(monthNum){
+  const mm = String(monthNum + 1).padStart(2, '0');
+  const lastDay = new Date(2026, monthNum + 1, 0).getDate();
+  return { start: `2026-${mm}-01`, end: `2026-${mm}-${String(lastDay).padStart(2, '0')}` };
+}
+function getCurrentMonthRangeStrings(){
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const mm = String(m + 1).padStart(2, '0');
+  const lastDay = new Date(y, m + 1, 0).getDate();
+  return { start: `${y}-${mm}-01`, end: `${y}-${mm}-${String(lastDay).padStart(2, '0')}` };
+}
+function getRangeForSelection(range, month){
+  if (range === 'FULL_SEMESTER') return { start: '2026-07-15', end: '2026-12-31' };
+  if (range === 'CURRENT_MONTH') return getCurrentMonthRangeStrings();
+  return getMonthRangeStrings(parseInt(month));
+}
+
+async function ensureHolidays(){
+  try {
+    const res = await fetch(`${API}/api/holidays`);
+    if (res.ok) {
+      globalHolidays = await res.json();
+      return globalHolidays;
+    }
+  } catch(e){ console.warn('Holidays fetch failed', e); }
+  return globalHolidays || [];
+}
+
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.classList && e.target.classList.contains('modal-backdrop') && e.target.classList.contains('open')) {
+    e.target.classList.remove('open');
+  }
+}, true);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-backdrop.open').forEach(m => m.classList.remove('open'));
+  }
+});
 
 function toggleAuthMode(){
   isRegistering = !isRegistering;
@@ -1184,6 +1241,8 @@ function loadDashboard(){
   if (subjFilter && now.getMonth() >= 6 && now.getMonth() <= 11) subjFilter.value = now.getMonth().toString();
   const adminRepMonth = $('adminReportMonth');
   if (adminRepMonth && now.getMonth() >= 6 && now.getMonth() <= 11) adminRepMonth.value = now.getMonth().toString();
+
+  ensureHolidays();
 
   if (currentUser.role === 'admin') {
     $('tabBtnAdmin').style.display = 'block';
@@ -1300,18 +1359,23 @@ async function openWorkingDays(){
   openModal('wdModal');
   $('wdCalendar').innerHTML = '<div class="empty">Loading calendar…</div>';
   try {
-    const holidays = await fetch(`${API}/api/holidays`).then(r=>r.json());
-    globalHolidays = holidays;
-    renderWorkingDays(holidays);
-  } catch(e){ $('wdCalendar').innerHTML = '<div class="empty">Failed to load calendar.</div>'; }
+    const holidays = await ensureHolidays();
+    renderWorkingDays(holidays || []);
+  } catch(e){
+    $('wdCalendar').innerHTML = '<div class="empty">Failed to load calendar.</div>';
+  }
 }
 function renderWorkingDays(holidays){
   const holidayMap = {};
-  holidays.forEach(h => { const key = (h.date||'').split('T')[0]; if (key) holidayMap[key] = h.reason || 'Holiday'; });
-  const today = new Date(); today.setHours(0,0,0,0);
+  (holidays || []).forEach(h => {
+    const key = (h.date||'').split('T')[0];
+    if (key) holidayMap[key] = h.reason || 'Holiday';
+  });
+  const today = new Date();
+  today.setHours(0,0,0,0);
   const todayStr = fmtDate(today);
   const semStart = new Date(2026, 6, 15);
-  const endMonth = today.getMonth();
+  const endMonth = Math.max(6, today.getMonth());
   let totalWorking = 0, totalHolidays = 0, totalWeekend = 0;
   let html = '';
   for (let m = 6; m <= endMonth; m++){
@@ -1323,18 +1387,30 @@ function renderWorkingDays(holidays){
     let cells = '';
     for (let i = 0; i < firstDow; i++) cells += '<div class="wd-cell empty"></div>';
     for (let d = 1; d <= daysInMonth; d++){
-      const dt = new Date(y, m, d); dt.setHours(0,0,0,0);
-      const ds = fmtDate(dt); const dow = dt.getDay();
-      if (dt < semStart) { cells += `<div class="wd-cell before">${d}</div>`; continue; }
-      if (dt > today) { cells += `<div class="wd-cell future">${d}</div>`; continue; }
+      const dt = new Date(y, m, d);
+      dt.setHours(0,0,0,0);
+      const ds = fmtDate(dt);
+      const dow = dt.getDay();
+      if (dt < semStart) { cells += `<div class="wd-cell before" title="Before Semester">${d}</div>`; continue; }
+      if (dt > today) { cells += `<div class="wd-cell future" title="Future">${d}</div>`; continue; }
       let cls = 'working', title = 'Working Day';
-      if (dow === 0 || dow === 6) { cls = 'weekend'; monthWeekend++; totalWeekend++; }
-      else if (holidayMap[ds]) { cls = 'holiday'; monthHoliday++; totalHolidays++; }
+      if (dow === 0 || dow === 6) { cls = 'weekend'; title = 'Weekend'; monthWeekend++; totalWeekend++; }
+      else if (holidayMap[ds]) { cls = 'holiday'; title = 'Holiday: ' + holidayMap[ds]; monthHoliday++; totalHolidays++; }
       else { monthWorking++; totalWorking++; }
       if (ds === todayStr) cls += ' today';
       cells += `<div class="wd-cell ${cls}" title="${title}">${d}</div>`;
     }
-    html += `<div class="wd-month"><div class="wd-month-title"><span>${MONTH_NAMES[m]} ${y}</span><span class="wd-month-stats">${monthWorking} working · ${monthHoliday} holidays</span></div><div class="wd-grid">${DAY_NAMES.map(d => `<div class="wd-day-head">${d}</div>`).join('')}${cells}</div></div>`;
+    html += `
+      <div class="wd-month">
+        <div class="wd-month-title">
+          <span>${MONTH_NAMES[m]} ${y}</span>
+          <span class="wd-month-stats">${monthWorking} working · ${monthHoliday} holidays</span>
+        </div>
+        <div class="wd-grid">
+          ${DAY_NAMES.map(d => `<div class="wd-day-head">${d}</div>`).join('')}
+          ${cells}
+        </div>
+      </div>`;
   }
   $('wdTotalWorking').textContent = totalWorking;
   $('wdTotalHolidays').textContent = totalHolidays;
@@ -1348,6 +1424,7 @@ async function initStudent(){
   tm.innerHTML = [6,7,8,9,10,11].map(m => `<option value="${m}">${MONTH_NAMES[m]}</option>`).join('');
   const now = new Date();
   if (now.getMonth() >= 6 && now.getMonth() <= 11) tm.value = now.getMonth();
+  await ensureHolidays();
   await fetchHistory();
   await updatePeriod();
   setInterval(updatePeriod, 30000);
@@ -1357,6 +1434,7 @@ async function initStudent(){
 
 async function fetchHistory(){
   try {
+    await ensureHolidays();
     const res = await fetch(`${API}/api/attendance/history/${currentUser.rollNo}`);
     const data = await res.json();
     globalHistory = data || [];
@@ -1364,11 +1442,18 @@ async function fetchHistory(){
     if (!data || data.length === 0) {
       tbody.innerHTML = '<tr><td colspan="3" class="empty">No records yet.</td></tr>';
     } else {
-      tbody.innerHTML = data.slice(0,80).map(r => `<tr><td><b>${fmtDatePretty(r.date)}</b></td><td>${r.subject}</td><td><span class="badge ${r.status === 'Present' ? 'badge-present' : r.status === 'Duty Leave' ? 'badge-dl' : 'badge-absent'}">${r.status}</span></td></tr>`).join('');
+      tbody.innerHTML = data.slice(0,80).map(r => `
+        <tr>
+          <td><b>${fmtDatePretty(r.date)}</b></td>
+          <td>${r.subject}</td>
+          <td><span class="badge ${r.status === 'Present' ? 'badge-present' : r.status === 'Duty Leave' ? 'badge-dl' : 'badge-absent'}">${r.status}</span></td>
+        </tr>`).join('');
     }
     await loadStats();
     renderAttendanceCalendar();
-  } catch(e){ $('historyBody').innerHTML = '<tr><td colspan="3" class="empty">Network error</td></tr>'; }
+  } catch(e){
+    $('historyBody').innerHTML = '<tr><td colspan="3" class="empty">Network error</td></tr>';
+  }
 }
 
 async function loadStats(){
@@ -1396,7 +1481,9 @@ async function loadStats(){
         const need = Math.max(0, Math.ceil(0.75*total - attended));
         adv.innerHTML = `Low attendance (<b style="color:var(--rose-700);">${p}%</b>). Need <b>${need}</b> more lectures.`;
       }
-    } else { adv.textContent = 'No data yet.'; }
+    } else {
+      adv.textContent = 'No data yet.';
+    }
   } catch(e){ console.error(e); }
 }
 
@@ -1429,14 +1516,23 @@ async function loadSubjectBreakdown(){
     pctEl.className = 'pct-big ' + (pct >= 75 ? 'good' : 'bad');
 
     const entries = Object.entries(stats);
-    if (!entries.length) { list.innerHTML = '<span class="text-xs text-muted">No subject data available</span>'; return; }
+    if (!entries.length) {
+      list.innerHTML = '<span class="text-xs text-muted">No subject data available</span>';
+      return;
+    }
     list.innerHTML = entries.map(([sub, st]) => {
       let c = 'bad';
       if (st.percentage > 80) c = 'good';
       else if (st.percentage >= 75) c = 'warn';
-      return `<span class="chip ${c}"><span class="chip-name">${sub.substring(0,18)}</span><span class="chip-pct">${st.percentage}%</span><span class="chip-count">(${st.present}/${st.total})</span></span>`;
+      return `<span class="chip ${c}">
+        <span class="chip-name">${sub.substring(0,18)}</span>
+        <span class="chip-pct">${st.percentage}%</span>
+        <span class="chip-count">(${st.present}/${st.total})</span>
+      </span>`;
     }).join('');
-  } catch(e) { list.innerHTML = '<span class="text-xs text-muted">Failed to load</span>'; }
+  } catch(e) {
+    list.innerHTML = '<span class="text-xs text-muted">Failed to load</span>';
+  }
 }
 
 function renderAttendanceCalendar(){
@@ -1456,15 +1552,23 @@ function renderAttendanceCalendar(){
     for (let i = 0; i < firstDow; i++) cells += '<div class="wd-cell empty"></div>';
     for (let d = 1; d <= daysInMonth; d++) {
       const dt = new Date(y, m, d); dt.setHours(0,0,0,0);
-      const ds = fmtDate(dt); const dow = dt.getDay();
+      const ds = fmtDate(dt);
+      const dow = dt.getDay();
       if (dt < SEMESTER_START) { cells += `<div class="wd-cell before">${d}</div>`; continue; }
       if (dt > today) { cells += `<div class="wd-cell future">${d}</div>`; continue; }
       if (dow === 0 || dow === 6) { cells += `<div class="wd-cell weekend">${d}</div>`; continue; }
-      if (holidaySet.has(ds)) { cells += `<div class="wd-cell holiday">${d}</div>`; continue; }
-      if (attendedDates.has(ds)) { cells += `<div class="wd-cell present">${d}</div>`; }
-      else { cells += `<div class="wd-cell absent">${d}</div>`; }
+      if (holidaySet.has(ds)) { cells += `<div class="wd-cell holiday" title="Holiday">${d}</div>`; continue; }
+      if (attendedDates.has(ds)) { cells += `<div class="wd-cell present" title="Present">${d}</div>`; }
+      else { cells += `<div class="wd-cell absent" title="Absent">${d}</div>`; }
     }
-    html += `<div class="wd-month" style="margin-bottom:14px;"><div class="wd-month-title"><span>${MONTH_NAMES[m]} ${y}</span></div><div class="wd-grid">${DAY_NAMES.map(d => `<div class="wd-day-head">${d}</div>`).join('')}${cells}</div></div>`;
+    html += `
+      <div class="wd-month" style="margin-bottom:14px;">
+        <div class="wd-month-title"><span>${MONTH_NAMES[m]} ${y}</span></div>
+        <div class="wd-grid">
+          ${DAY_NAMES.map(d => `<div class="wd-day-head">${d}</div>`).join('')}
+          ${cells}
+        </div>
+      </div>`;
   });
   wrapper.innerHTML = html || '<div class="empty">No data</div>';
 }
@@ -1477,8 +1581,6 @@ function setTrendView(v){
   $('trendMonth').style.display = v === 'daily' ? 'inline-block' : 'none';
   updateTrend();
 }
-
-/* ✅ FIX 3: Monthly trend uses monthly-summary API (correct conducted total) */
 async function updateTrend(){
   const canvas = $('trendChart');
   if (!canvas) return;
@@ -1489,7 +1591,6 @@ async function updateTrend(){
       const monthLabels = ['Jul','Aug','Sep','Oct','Nov','Dec'];
       const now = new Date();
       const nowMonth = now.getMonth();
-      // Fetch monthly-summary for each past/current month in parallel
       const promises = monthNums.map(m => {
         if (m > nowMonth) return Promise.resolve(null);
         return fetch(`${API}/api/student/monthly-summary/${currentUser.rollNo}?month=${m}`)
@@ -1522,7 +1623,8 @@ async function updateTrend(){
       const today = new Date(); today.setHours(0,0,0,0);
       for (let d = 1; d <= daysInMonth; d++) {
         const dt = new Date(y, m, d); dt.setHours(0,0,0,0);
-        const ds = fmtDate(dt); const dow = dt.getDay();
+        const ds = fmtDate(dt);
+        const dow = dt.getDay();
         labels.push(`${d}`);
         if (dt > today) { pctData.push(null); present.push(0); total.push(0); futureMask.push(true); continue; }
         if (dt < SEMESTER_START) { pctData.push(null); present.push(0); total.push(0); futureMask.push(false); continue; }
@@ -1662,27 +1764,21 @@ async function exportMyAttendance(){
   download(csv, `my_attendance_${currentUser.rollNo}.csv`);
 }
 
-/* ✅ FIX 1: Student self PDF now uses local globalHistory (no API call) */
 async function generateSelfPDF(){
   const range = $('pdfRangeSelect').value;
   const month = $('pdfMonthSelect').value;
   await generateIndividualPDF(currentUser.rollNo, currentUser.name, currentUser.branch || 'CSE', range, month, true);
 }
 
-/* ✅ FIX 1 & 2: Unified PDF generator — uses globalHistory for self, API for admin/faculty */
 async function generateIndividualPDF(studentRoll, studentName, branch, range, month, isSelf){
   showDL('Generating PDF report…');
   try {
-    if (!globalHolidays || !globalHolidays.length) {
-      try { globalHolidays = await fetch(`${API}/api/holidays`).then(r => r.json()); } catch(e){}
-    }
+    await ensureHolidays();
 
     let records = [];
     if (isSelf) {
-      // Student viewing own — use already-loaded history
       records = (globalHistory || []).slice();
     } else {
-      // Admin/faculty — fetch via API
       try {
         const attRes = await fetch(`${API}/api/attendance/student/${studentRoll}/${currentUser.rollNo}`);
         if (attRes.ok) {
@@ -1698,27 +1794,23 @@ async function generateIndividualPDF(studentRoll, studentName, branch, range, mo
       }
     }
 
-    // Range boundaries
-    const today = new Date();
-    let startDate, endDate;
-    if (range === 'FULL_SEMESTER') { startDate = new Date(2026,6,15); endDate = new Date(2026,11,31); }
-    else if (range === 'CURRENT_MONTH') { startDate = new Date(today.getFullYear(), today.getMonth(), 1); endDate = new Date(today.getFullYear(), today.getMonth()+1, 0); }
-    else { const m = parseInt(month); startDate = new Date(2026, m, 1); endDate = new Date(2026, m+1, 0); }
-    const sStr = fmtDate(startDate), eStr = fmtDate(endDate);
+    const rng = getRangeForSelection(range, month);
+    const startStr = rng.start;
+    const endStr = rng.end;
 
-    records = records.filter(r => r.date >= sStr && r.date <= eStr);
+    records = records.filter(r => r.date >= startStr && r.date <= endStr);
 
     if (!records.length) {
       hideDL();
       return toast('No records found for selected range','error');
     }
 
-    // Calculate total conducted using timetable
     const holidaySet = new Set((globalHolidays || []).map(h => (h.date||'').split('T')[0]));
     const tt = getTimetableForBranch(branch);
     let totalConducted = 0;
-    let cur = new Date(startDate);
-    while (cur <= endDate) {
+    let cur = new Date(startStr + 'T00:00:00');
+    const endD = new Date(endStr + 'T23:59:59');
+    while (cur <= endD) {
       const ds = fmtDate(cur);
       const dow = cur.getDay();
       if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) {
@@ -1732,53 +1824,58 @@ async function generateIndividualPDF(studentRoll, studentName, branch, range, mo
     const totalAttended = records.filter(r => r.status === 'Present' || r.status === 'Duty Leave').length;
     const pct = totalConducted > 0 ? Math.round((totalAttended/totalConducted)*100) : 0;
 
-    const htmlContent = `<!DOCTYPE html><html><head><title>Attendance Report ${studentRoll}</title>
-      <style>
-        body{font-family:Arial,sans-serif;padding:30px;color:#0f172a;background:#fff}
-        h1{color:#1d4ed8;margin:0 0 4px 0}
-        h2{color:#2563eb;font-weight:400;border-bottom:2px solid #dbeafe;padding-bottom:6px;margin-top:6px}
-        .meta{color:#64748b;font-size:13px;margin:4px 0}
-        table{width:100%;border-collapse:collapse;font-size:12px;margin-top:14px}
-        th{background:#dbeafe;padding:8px;text-align:left;color:#1e40af}
-        td{padding:6px 8px;border-bottom:1px solid #f1f5f9}
-        .sum{display:flex;gap:16px;margin:20px 0;flex-wrap:wrap}
-        .box{flex:1;min-width:100px;background:#f8fafc;padding:14px;border-radius:8px;text-align:center;border:1px solid #e2e8f0}
-        .box b{display:block;font-size:24px;color:#1d4ed8}
-        .label{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.05em}
-      </style></head><body>
-      <h1>BM Group of Institutions</h1>
-      <h2>Student Attendance Report</h2>
-      <p class="meta"><b>${studentName}</b> (${studentRoll}) · ${branch} · 5th Semester</p>
-      <p class="meta">Range: ${fmtDatePretty(sStr)} → ${fmtDatePretty(eStr)} · Generated: ${new Date().toLocaleString()}</p>
-      <div class="sum">
-        <div class="box"><b>${totalAttended}</b><span class="label">Attended</span></div>
-        <div class="box"><b>${totalConducted}</b><span class="label">Conducted</span></div>
-        <div class="box"><b>${pct}%</b><span class="label">Percentage</span></div>
-      </div>
-      <h3>Detailed Records</h3>
-      <table><thead><tr><th>Date</th><th>Subject</th><th>Status</th></tr></thead><tbody>
-      ${records.sort((a,b) => b.date.localeCompare(a.date)).map(r => `<tr><td>${fmtDatePretty(r.date)}</td><td>${r.subject}</td><td>${r.status}</td></tr>`).join('')}
-      </tbody></table>
-      </body></html>`;
+    const htmlContent = `<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<title>Attendance Report ${studentRoll}</title>
+<style>
+  *{box-sizing:border-box;}
+  body{font-family:Arial,sans-serif;padding:30px;color:#0f172a;background:#fff;margin:0}
+  h1{color:#1d4ed8;margin:0 0 4px 0;font-size:22px}
+  h2{color:#2563eb;font-weight:400;border-bottom:2px solid #dbeafe;padding-bottom:6px;margin-top:6px;font-size:18px}
+  .meta{color:#64748b;font-size:13px;margin:4px 0}
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-top:14px}
+  th{background:#dbeafe;padding:8px;text-align:left;color:#1e40af;border:1px solid #dbeafe}
+  td{padding:6px 8px;border-bottom:1px solid #f1f5f9;border-left:1px solid #f1f5f9;border-right:1px solid #f1f5f9}
+  .sum{display:flex;gap:16px;margin:20px 0;flex-wrap:wrap}
+  .box{flex:1;min-width:100px;background:#f8fafc;padding:14px;border-radius:8px;text-align:center;border:1px solid #e2e8f0}
+  .box b{display:block;font-size:24px;color:#1d4ed8}
+  .label{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.05em}
+  @media print{body{padding:10px}@page{margin:10mm}}
+</style>
+</head><body>
+<h1>BM Group of Institutions</h1>
+<h2>Student Attendance Report</h2>
+<p class="meta"><b>${studentName}</b> (${studentRoll}) &bull; ${branch} &bull; 5th Semester</p>
+<p class="meta">Range: ${fmtDatePretty(startStr)} &rarr; ${fmtDatePretty(endStr)} &bull; Generated: ${new Date().toLocaleString()}</p>
+<div class="sum">
+  <div class="box"><b>${totalAttended}</b><span class="label">Attended</span></div>
+  <div class="box"><b>${totalConducted}</b><span class="label">Conducted</span></div>
+  <div class="box"><b>${pct}%</b><span class="label">Percentage</span></div>
+</div>
+<h3>Detailed Records</h3>
+<table><thead><tr><th>Date</th><th>Subject</th><th>Status</th></tr></thead><tbody>
+${records.sort((a,b) => b.date.localeCompare(a.date)).map(r => `<tr><td>${fmtDatePretty(r.date)}</td><td>${r.subject}</td><td>${r.status}</td></tr>`).join('')}
+</tbody></table>
+<p style="text-align:center;font-size:10px;color:#94a3b8;margin-top:20px;">BM Group of Institutions &bull; Attendance Report</p>
+</body></html>`;
 
-    const container = document.createElement('div');
-    container.innerHTML = htmlContent;
-    container.style.position = 'fixed';
-    container.style.left = '-9999px';
-    container.style.top = '-9999px';
-    document.body.appendChild(container);
-
-    await html2pdf().set({
-      margin: [0.5,0.5,0.5,0.5],
-      filename: `Attendance_${studentRoll}_${range}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-    }).from(container).save();
-
-    document.body.removeChild(container);
+    const win = window.open('', '_blank');
+    if (!win) {
+      hideDL();
+      return toast('Allow popups to open PDF','error');
+    }
+    win.document.open();
+    win.document.write(htmlContent);
+    win.document.close();
     hideDL();
-    toast('✅ PDF downloaded!','success');
+    setTimeout(() => {
+      try {
+        win.focus();
+        win.print();
+      } catch(e){ console.warn(e); }
+      toast('✅ Use "Save as PDF" in print dialog','success');
+    }, 700);
   } catch(e) {
     hideDL();
     console.error(e);
@@ -1850,7 +1947,14 @@ async function fetchUsers(){
         const s = sumMap[u.rollNo];
         att = `${s.totalAcademicLectures||0}/${s.totalConductedLectures||0} (${s.attendancePercentage||0}%)`;
       }
-      return `<tr><td><b>${u.rollNo}</b></td><td>${u.name}</td><td>${roleBadge}</td><td>${device}</td><td>${att}</td><td>${u.role === 'student' ? `<button class="btn btn-outline btn-xs" onclick="viewStudentRecords('${u.rollNo}')">View</button>` : ''}</td></tr>`;
+      return `<tr>
+        <td><b>${u.rollNo}</b></td>
+        <td>${u.name}</td>
+        <td>${roleBadge}</td>
+        <td>${device}</td>
+        <td>${att}</td>
+        <td>${u.role === 'student' ? `<button class="btn btn-outline btn-xs" onclick="viewStudentRecords('${u.rollNo}')">View</button>` : ''}</td>
+      </tr>`;
     }).join('');
     const students2 = data.filter(u => u.role === 'student');
     ['singleStudentSelect','reportStudentSelect'].forEach(id => {
@@ -1871,7 +1975,7 @@ async function viewStudentRecords(rollNo){
     const grouped = {};
     data.forEach(r => { if (!grouped[r.date]) grouped[r.date] = []; grouped[r.date].push(r); });
     const dates = Object.keys(grouped).sort((a,b)=>b.localeCompare(a));
-    let html = `<div class="modal-backdrop open" id="viewRecordsModal"><div class="modal wide"><div class="modal-header"><div><h3>Attendance – ${rollNo}</h3><p>${data.length} records</p></div><button class="modal-close" onclick="document.getElementById('viewRecordsModal').remove()">✕</button></div><div class="modal-body">`;
+    let html = `<div class="modal-backdrop open" id="viewRecordsModal"><div class="modal wide"><div class="modal-header"><div><h3>Attendance – ${rollNo}</h3><p>${data.length} records</p></div><button type="button" class="modal-close" onclick="document.getElementById('viewRecordsModal').remove()">✕</button></div><div class="modal-body">`;
     if (dates.length === 0) html += '<div class="empty">No records</div>';
     dates.forEach(d => {
       html += `<div style="margin-bottom:14px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><b style="font-size:12px;">${fmtDatePretty(d)}</b><button class="btn btn-danger btn-xs" onclick="deleteAllDate('${rollNo}','${d}')">Delete All</button></div>`;
@@ -1914,7 +2018,20 @@ async function loadAllAttendance(){
     const tbody = $('allAttendanceBody');
     if (filtered.length === 0) return tbody.innerHTML = '<tr><td colspan="7" class="empty">No records</td></tr>';
     window._allRecords = filtered;
-    tbody.innerHTML = filtered.slice(0,200).map(r => `<tr><td><input type="checkbox" class="rec-cb" data-id="${r._id}"></td><td>${fmtDatePretty(r.date)}</td><td><b>${r.rollNo}</b></td><td>${r.studentName||''}</td><td>${r.subject}</td><td><span class="badge ${r.status==='Present'?'badge-success':r.status==='Duty Leave'?'badge-dl':'badge-danger'}">${r.status}</span></td><td><button class="btn btn-outline btn-xs" onclick="openEdit('${r._id}','${r.status}')">Edit</button><button class="btn btn-danger btn-xs" onclick="deleteRecord('${r._id}')">Del</button></td></tr>`).join('');
+    tbody.innerHTML = filtered.slice(0,200).map(r => `
+      <tr>
+        <td><input type="checkbox" class="rec-cb" data-id="${r._id}"></td>
+        <td>${fmtDatePretty(r.date)}</td>
+        <td><b>${r.rollNo}</b></td>
+        <td>${r.studentName||''}</td>
+        <td>${r.subject}</td>
+        <td><span class="badge ${r.status==='Present'?'badge-success':r.status==='Duty Leave'?'badge-dl':'badge-danger'}">${r.status}</span></td>
+        <td>
+          <button class="btn btn-outline btn-xs" onclick="openEdit('${r._id}','${r.status}')">Edit</button>
+          <button class="btn btn-danger btn-xs" onclick="deleteRecord('${r._id}')">Del</button>
+        </td>
+      </tr>
+    `).join('');
   } catch(e){ $('allAttendanceBody').innerHTML = '<tr><td colspan="7" class="empty">Network error</td></tr>'; }
 }
 function toggleAll(){ document.querySelectorAll('.rec-cb').forEach(cb => cb.checked = $('selectAll').checked); }
@@ -1923,7 +2040,9 @@ async function deleteSelected(){
   if (ids.length === 0) return toast('Select records','error');
   if (!confirm(`Delete ${ids.length} records?`)) return;
   let ok = 0;
-  for (const id of ids) { try { const r = await fetch(`${API}/api/attendance/delete/${id}/${currentUser.rollNo}`, {method:'DELETE'}); if (r.ok) ok++; } catch(e){} }
+  for (const id of ids) {
+    try { const r = await fetch(`${API}/api/attendance/delete/${id}/${currentUser.rollNo}`, {method:'DELETE'}); if (r.ok) ok++; } catch(e){}
+  }
   toast(`Deleted ${ok}`,'success');
   loadAllAttendance();
 }
@@ -2003,14 +2122,12 @@ function downloadGoogleSheets(){
   download(csv, 'google_sheets_export.csv');
 }
 
-/* ✅ FIX 2: Admin individual report — PDF now downloadable + month selector */
 async function generateStudentReport(fmt){
   const roll = $('reportStudentSelect').value;
   if (!roll) return toast('Select student','error');
   const range = $('adminReportRange').value;
   const month = $('adminReportMonth').value;
 
-  // Fetch student profile first
   let studentName = roll, branch = 'CSE';
   try {
     const profileRes = await fetch(`${API}/api/student/profile/${roll}`);
@@ -2024,19 +2141,13 @@ async function generateStudentReport(fmt){
   if (fmt === 'pdf') {
     await generateIndividualPDF(roll, studentName, branch, range, month, false);
   } else {
-    // CSV export
     try {
       const records = await fetch(`${API}/api/attendance/student/${roll}/${currentUser.rollNo}`).then(r=>r.json());
       if (!records || !records.length) return toast('No records','error');
-      const today = new Date();
-      let startDate, endDate;
-      if (range === 'FULL_SEMESTER') { startDate = new Date(2026,6,15); endDate = new Date(2026,11,31); }
-      else if (range === 'CURRENT_MONTH') { startDate = new Date(today.getFullYear(), today.getMonth(), 1); endDate = new Date(today.getFullYear(), today.getMonth()+1, 0); }
-      else { const m = parseInt(month); startDate = new Date(2026, m, 1); endDate = new Date(2026, m+1, 0); }
-      const sStr = fmtDate(startDate), eStr = fmtDate(endDate);
-      const filtered = records.filter(r => r.date >= sStr && r.date <= eStr);
+      const rng = getRangeForSelection(range, month);
+      const filtered = records.filter(r => r.date >= rng.start && r.date <= rng.end);
       if (!filtered.length) return toast('No records in range','error');
-      let csv = `Student Attendance Report\nStudent: ${studentName} (${roll})\nBranch: ${branch}\nRange: ${sStr} to ${eStr}\n\nDate,Subject,Status\n`;
+      let csv = `Student Attendance Report\nStudent: ${studentName} (${roll})\nBranch: ${branch}\nRange: ${rng.start} to ${rng.end}\n\nDate,Subject,Status\n`;
       filtered.forEach(r => { csv += `${r.date},${r.subject},${r.status}\n`; });
       download(csv, `report_${roll}_${range}.csv`);
     } catch(e) { toast('Failed: ' + e.message,'error'); }
@@ -2053,22 +2164,15 @@ async function generateClassReport(){
     const url = `${API}/api/admin/class-attendance-report?requesterRollNo=${currentUser.rollNo}&startDate=${s}&endDate=${e}&branch=${b}`;
     const data = await fetch(url).then(r=>r.json());
     if (!data.students || data.students.length === 0) { hideDL(); return toast('No students','error'); }
-    const tableRows = data.students.map((x,i)=>`<tr><td style="text-align:center;">${i+1}</td><td>${x.rollNo}</td><td>${x.name}</td><td style="text-align:center;">${x.totalPresent}</td><td style="text-align:center;">${x.percentage}%</td></tr>`).join('');
-    const htmlContent = `<!DOCTYPE html><html><head><title>Class Report</title><style>body{font-family:Arial;padding:24px;background:#f8fafc;color:#0f172a}h1{color:#1d4ed8;text-align:center}h2{color:#2563eb;text-align:center;font-weight:400}table{width:100%;border-collapse:collapse;font-size:12px;margin-top:20px;background:#fff}th{background:#dbeafe;padding:10px;text-align:left}td{padding:8px 10px;border-bottom:1px solid #f1f5f9}</style></head><body><h1>BM Group of Institutions</h1><h2>${b==='ALL'?'All Branches':b} – 5th Semester</h2><p style="text-align:center;color:#64748b;">Range: ${fmtDatePretty(s)} to ${fmtDatePretty(e)}</p><table><thead><tr><th>S.No</th><th>Roll</th><th>Name</th><th>Present</th><th>%</th></tr></thead><tbody>${tableRows}</tbody></table><p style="text-align:center;font-size:10px;color:#94a3b8;margin-top:20px;">Generated: ${new Date().toLocaleString()}</p></body></html>`;
-    const container = document.createElement('div');
-    container.innerHTML = htmlContent;
-    container.style.position = 'fixed'; container.style.left = '-9999px'; container.style.top = '-9999px';
-    document.body.appendChild(container);
-    await html2pdf().set({
-      margin: [0.5,0.5,0.5,0.5],
-      filename: `Class_Report_${b}_${s}_${e}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-    }).from(container).save();
-    document.body.removeChild(container);
+    const rows = data.students.map((x,i)=>`<tr><td style="text-align:center;">${i+1}</td><td>${x.rollNo}</td><td>${x.name}</td><td style="text-align:center;">${x.totalPresent}</td><td style="text-align:center;">${x.percentage}%</td></tr>`).join('');
+    const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Class Report</title><style>body{font-family:Arial;padding:24px;color:#0f172a}h1{color:#1d4ed8;text-align:center}h2{color:#2563eb;text-align:center;font-weight:400}table{width:100%;border-collapse:collapse;font-size:12px;margin-top:20px}th{background:#dbeafe;padding:10px;text-align:left}td{padding:8px 10px;border-bottom:1px solid #f1f5f9}@media print{@page{margin:10mm}}</style></head><body><h1>BM Group of Institutions</h1><h2>${b==='ALL'?'All Branches':b} – 5th Semester</h2><p style="text-align:center;color:#64748b;">Range: ${fmtDatePretty(s)} to ${fmtDatePretty(e)}</p><table><thead><tr><th>S.No</th><th>Roll</th><th>Name</th><th>Present</th><th>%</th></tr></thead><tbody>${rows}</tbody></table><p style="text-align:center;font-size:10px;color:#94a3b8;margin-top:20px;">Generated: ${new Date().toLocaleString()}</p></body></html>`;
+    const win = window.open('', '_blank');
+    if (!win) { hideDL(); return toast('Allow popups','error'); }
+    win.document.open();
+    win.document.write(htmlContent);
+    win.document.close();
     hideDL();
-    toast('✅ PDF downloaded!','success');
+    setTimeout(() => { try { win.focus(); win.print(); } catch(e){} toast('✅ Use "Save as PDF"','success'); }, 700);
   } catch(e){ hideDL(); toast('Failed: ' + e.message,'error'); }
 }
 
@@ -2140,7 +2244,10 @@ async function bulkMarkPreview(){
   const students = Array.from(document.querySelectorAll('.bulk-stu:checked')).map(cb => ({roll: cb.value, name: cb.dataset.name}));
   if (!students.length) return toast('Select students','error');
   if (!selectedBulkDates.length) return toast('Add dates','error');
-  let summary = `<div style="margin-bottom:14px;padding:12px;background:var(--brand-50);border:1px solid var(--brand-200);border-radius:8px;"><div style="font-size:13px;font-weight:800;color:var(--brand-900);">📊 Summary</div><div style="font-size:12px;color:var(--brand-700);margin-top:4px;"><b>${students.length}</b> students × <b>${selectedBulkDates.length}</b> dates</div></div>`;
+  let summary = `<div style="margin-bottom:14px;padding:12px;background:var(--brand-50);border:1px solid var(--brand-200);border-radius:8px;">
+    <div style="font-size:13px;font-weight:800;color:var(--brand-900);">📊 Summary</div>
+    <div style="font-size:12px;color:var(--brand-700);margin-top:4px;"><b>${students.length}</b> students × <b>${selectedBulkDates.length}</b> dates</div>
+  </div>`;
   summary += `<div class="section-title">👥 Students (${students.length})</div><div style="max-height:180px;overflow-y:auto;border:1px solid var(--slate-200);border-radius:8px;padding:8px;margin-bottom:14px;">`;
   students.forEach(s => { summary += `<div style="padding:4px 6px;font-size:11.5px;"><b>${s.roll}</b> · ${s.name}</div>`; });
   summary += `</div><div class="section-title">📅 Dates</div><div class="chips">`;
@@ -2168,7 +2275,10 @@ async function bulkDeletePreview(){
   const students = Array.from(document.querySelectorAll('.bulk-stu:checked')).map(cb => ({roll: cb.value, name: cb.dataset.name}));
   if (!students.length) return toast('Select students','error');
   if (!selectedBulkDates.length) return toast('Add dates','error');
-  let summary = `<div style="margin-bottom:14px;padding:12px;background:var(--rose-50);border:1px solid #fecdd3;border-radius:8px;"><div style="font-size:13px;font-weight:800;color:var(--rose-700);">⚠️ Delete Confirmation</div><div style="font-size:12px;color:var(--rose-600);margin-top:4px;"><b>${students.length}</b> students × <b>${selectedBulkDates.length}</b> dates</div></div>`;
+  let summary = `<div style="margin-bottom:14px;padding:12px;background:var(--rose-50);border:1px solid #fecdd3;border-radius:8px;">
+    <div style="font-size:13px;font-weight:800;color:var(--rose-700);">⚠️ Delete Confirmation</div>
+    <div style="font-size:12px;color:var(--rose-600);margin-top:4px;"><b>${students.length}</b> students × <b>${selectedBulkDates.length}</b> dates</div>
+  </div>`;
   summary += `<div class="section-title">👥 Students (${students.length})</div><div style="max-height:180px;overflow-y:auto;border:1px solid var(--slate-200);border-radius:8px;padding:8px;margin-bottom:14px;">`;
   students.forEach(s => { summary += `<div style="padding:4px 6px;font-size:11.5px;"><b>${s.roll}</b> · ${s.name}</div>`; });
   summary += `</div><div class="section-title">📅 Dates</div><div class="chips">`;
@@ -2194,12 +2304,14 @@ async function confirmBulkDelete(){
 
 async function loadHolidays(){
   try {
-    const data = await fetch(`${API}/api/holidays`).then(r=>r.json());
-    globalHolidays = data;
+    const data = await ensureHolidays();
     selectedHolidayDates.clear();
     $('holidayList').innerHTML = data.length ? data.map(h => {
       const d = (h.date||'').split('T')[0];
-      return `<div class="holiday-row"><label><input type="checkbox" class="holiday-cb" value="${d}" onchange="toggleHolidaySelect('${d}', this.checked)"> <b>${fmtDatePretty(d)}</b> · ${h.reason}</label><button class="btn btn-danger btn-xs" onclick="deleteHoliday('${d}')">Delete</button></div>`;
+      return `<div class="holiday-row">
+        <label><input type="checkbox" class="holiday-cb" value="${d}" onchange="toggleHolidaySelect('${d}', this.checked)"> <b>${fmtDatePretty(d)}</b> · ${h.reason}</label>
+        <button class="btn btn-danger btn-xs" onclick="deleteHoliday('${d}')">Delete</button>
+      </div>`;
     }).join('') : '<div class="empty">No holidays declared</div>';
   } catch(e){}
 }
@@ -2210,10 +2322,14 @@ async function deleteSelectedHolidays(){
   showDL('Deleting holidays…');
   let ok = 0;
   for (const d of selectedHolidayDates) {
-    try { const res = await fetch(`${API}/api/admin/holiday/${d}`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})}); if (res.ok) ok++; } catch(e){}
+    try {
+      const res = await fetch(`${API}/api/admin/holiday/${d}`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})});
+      if (res.ok) ok++;
+    } catch(e){}
   }
   hideDL();
   toast(`Deleted ${ok} holidays`,'success');
+  globalHolidays = []; await ensureHolidays();
   loadHolidays();
 }
 async function declareHoliday(){
@@ -2223,7 +2339,7 @@ async function declareHoliday(){
   try {
     const res = await fetch(`${API}/api/admin/holiday`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, date, reason})});
     const d = await res.json();
-    if (res.ok) { toast('Holiday declared','success'); $('holidayReason').value = ''; loadHolidays(); }
+    if (res.ok) { toast('Holiday declared','success'); $('holidayReason').value = ''; globalHolidays = []; await ensureHolidays(); loadHolidays(); }
     else toast(d.error,'error');
   } catch(e){}
 }
@@ -2231,7 +2347,7 @@ async function deleteHoliday(date){
   if (!confirm('Delete holiday?')) return;
   try {
     await fetch(`${API}/api/admin/holiday/${date}`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})});
-    toast('Deleted','success'); loadHolidays();
+    toast('Deleted','success'); globalHolidays = []; await ensureHolidays(); loadHolidays();
   } catch(e){}
 }
 function addBulkHolidayRange(){
@@ -2257,11 +2373,15 @@ async function submitBulkHolidays(){
   showDL('Adding holidays…');
   let ok = 0, fail = 0;
   for (const d of dates) {
-    try { const res = await fetch(`${API}/api/admin/holiday`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, date: d, reason: 'Bulk Holiday'})}); if (res.ok) ok++; else fail++; } catch(e){ fail++; }
+    try {
+      const res = await fetch(`${API}/api/admin/holiday`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, date: d, reason: 'Bulk Holiday'})});
+      if (res.ok) ok++; else fail++;
+    } catch(e){ fail++; }
   }
   hideDL();
   toast(`Added ${ok} holidays (${fail} skipped)`,'success');
   $('bulkHolidayText').value = '';
+  globalHolidays = []; await ensureHolidays();
   loadHolidays();
 }
 
@@ -2277,7 +2397,49 @@ async function genPass(type){
   } catch(e){}
 }
 
-function initTools(){ toggleFacultyFields(); populateFacultySubjects(); populateAssignSubjects(); }
+/* ✅ NEW: Fix all attendance subjects one-click */
+async function fixAllAttendanceSubjects(){
+  if (!confirm('⚠️ This will:\n\n• Fix all saved subject names to correct canonical form\n• Fix lab subjects (CN LAB, DAA LAB, etc.) using timetable\n• Remove duplicate records\n\nSafe to run multiple times. Continue?')) return;
+
+  const statusEl = $('fixAllStatus');
+  statusEl.textContent = '⏳ Scanning & fixing all records…';
+  showDL('Fixing all attendance subjects…');
+
+  try {
+    const res = await fetch(`${API}/api/admin/fix-all-attendance-subjects`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requesterRollNo: currentUser.rollNo })
+    });
+    const d = await res.json();
+    hideDL();
+
+    if (!res.ok) {
+      statusEl.textContent = '❌ ' + (d.error || 'Failed');
+      return toast(d.error || 'Failed', 'error');
+    }
+
+    const msg = `✅ Scanned ${d.totalScanned}, fixed ${d.fixed}, removed ${d.deleted} duplicates.`;
+    statusEl.textContent = msg;
+    toast(msg, 'success');
+
+    globalHolidays = [];
+    await ensureHolidays();
+    if (typeof fetchUsers === 'function') fetchUsers();
+    if (typeof loadAllAttendance === 'function') loadAllAttendance();
+    if (typeof loadDashboardStats === 'function') loadDashboardStats();
+  } catch(e) {
+    hideDL();
+    statusEl.textContent = '❌ Network error: ' + e.message;
+    toast('Network error: ' + e.message, 'error');
+  }
+}
+
+function initTools(){
+  toggleFacultyFields();
+  populateFacultySubjects();
+  populateAssignSubjects();
+}
 function toggleFacultyFields(){
   const role = $('toolRole').value;
   $('facultyFields').style.display = role === 'faculty' ? 'block' : 'none';
@@ -2289,7 +2451,10 @@ async function populateFacultySubjects(){
     const data = await fetch(`${API}/api/timetable/subjects`).then(r=>r.json());
     const allowed = ['BDA - Big Data Analytics','ECO - Economics for Engineers','DAA - Design & Analysis of Algorithm','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','CN - Computer Network','WT - Web Technology','Internet Lab (Ms. Geeta)','CN LAB - Computer Network Lab','DAA LAB - Algorithm Lab','WT LAB - Web Technology Lab','PA - Predictive Analysis','ML - Machine Learning','PA LAB - Predictive Analysis Lab','ML LAB - Machine Learning Lab','BDA LAB - Big Data Analytics Lab'];
     $('facultySubject').innerHTML = '<option value="">Select Subject…</option>' + data.filter(s=>allowed.includes(s)).map(s => `<option value="${s}">${s}</option>`).join('');
-    $('facultySubject').onchange = function(){ const name = FACULTY_NAME_MAP[this.value]; if (name) $('toolName').value = name; };
+    $('facultySubject').onchange = function(){
+      const name = FACULTY_NAME_MAP[this.value];
+      if (name) $('toolName').value = name;
+    };
   } catch(e){}
 }
 async function populateAssignSubjects(){
@@ -2432,7 +2597,13 @@ async function loadLeaveRequests(){
     const data = await fetch(`${API}/api/leave/requests/${currentUser.rollNo}`).then(r=>r.json());
     const el = $('leaveRequestsList');
     if (!data || data.length === 0) return el.innerHTML = '<div class="empty">No pending requests</div>';
-    el.innerHTML = data.map(l => `<div style="padding:10px 0;border-bottom:1px solid var(--slate-100);"><div style="display:flex;justify-content:space-between;align-items:center;"><b>${l.studentName}</b> <span class="badge ${l.status==='Approved'?'badge-success':l.status==='Rejected'?'badge-danger':'badge-warning'}">${l.status}</span></div><div class="text-xs text-muted">${l.rollNo} · ${fmtDatePretty(l.fromDate)} → ${fmtDatePretty(l.toDate)}</div><div class="text-xs mt-1">${l.reason}</div>${l.status === 'Pending' ? `<div class="row mt-1"><button class="btn btn-success btn-xs" onclick="reviewLeave('${l._id}','Approved')">Approve</button><button class="btn btn-danger btn-xs" onclick="reviewLeave('${l._id}','Rejected')">Reject</button></div>` : ''}</div>`).join('');
+    el.innerHTML = data.map(l => `
+      <div style="padding:10px 0;border-bottom:1px solid var(--slate-100);">
+        <div style="display:flex;justify-content:space-between;align-items:center;"><b>${l.studentName}</b> <span class="badge ${l.status==='Approved'?'badge-success':l.status==='Rejected'?'badge-danger':'badge-warning'}">${l.status}</span></div>
+        <div class="text-xs text-muted">${l.rollNo} · ${fmtDatePretty(l.fromDate)} → ${fmtDatePretty(l.toDate)}</div>
+        <div class="text-xs mt-1">${l.reason}</div>
+        ${l.status === 'Pending' ? `<div class="row mt-1"><button class="btn btn-success btn-xs" onclick="reviewLeave('${l._id}','Approved')">Approve</button><button class="btn btn-danger btn-xs" onclick="reviewLeave('${l._id}','Rejected')">Reject</button></div>` : ''}
+      </div>`).join('');
   } catch(e){}
 }
 async function reviewLeave(id, action){
@@ -2530,37 +2701,26 @@ async function facReport(fmt){
     const records = await fetch(`${API}/api/attendance/student/${roll}/${currentUser.rollNo}`).then(r=>r.json());
     const subs = window._facSubs || [];
     let filtered = records.filter(r => subs.includes(r.subject));
-    const today = new Date();
-    let startDate, endDate;
-    if (range === 'FULL_SEMESTER') { startDate = new Date(2026,6,15); endDate = new Date(2026,11,31); }
-    else if (range === 'CURRENT_MONTH') { startDate = new Date(today.getFullYear(), today.getMonth(), 1); endDate = new Date(today.getFullYear(), today.getMonth()+1, 0); }
-    else if (range === 'SELECTED_MONTH') { const m = parseInt($('facReportMonth').value); startDate = new Date(2026, m, 1); endDate = new Date(2026, m+1, 0); }
+    let startStr, endStr;
+    if (range === 'FULL_SEMESTER') { startStr = '2026-07-15'; endStr = '2026-12-31'; }
+    else if (range === 'CURRENT_MONTH') { const r = getCurrentMonthRangeStrings(); startStr = r.start; endStr = r.end; }
+    else if (range === 'SELECTED_MONTH') { const r = getMonthRangeStrings(parseInt($('facReportMonth').value)); startStr = r.start; endStr = r.end; }
     else {
       const s = $('facReportStart').value, e = $('facReportEnd').value;
       if (!s || !e) { hideDL(); return toast('Pick start & end dates','error'); }
-      startDate = new Date(s); endDate = new Date(e);
+      startStr = s; endStr = e;
     }
-    const sStr = fmtDate(startDate), eStr = fmtDate(endDate);
-    filtered = filtered.filter(r => r.date >= sStr && r.date <= eStr);
+    filtered = filtered.filter(r => r.date >= startStr && r.date <= endStr);
     if (filtered.length === 0) { hideDL(); return toast('No records in range','error'); }
     if (fmt === 'pdf') {
-      const htmlContent = `<!DOCTYPE html><html><head><title>Teacher Report ${roll}</title><style>body{font-family:Arial;padding:30px;color:#0f172a}h1{color:#1d4ed8}h2{color:#2563eb;font-weight:400;border-bottom:2px solid #dbeafe;padding-bottom:6px}table{width:100%;border-collapse:collapse;font-size:12px;margin-top:14px}th{background:#dbeafe;padding:8px;text-align:left;color:#1e40af}td{padding:6px 8px;border-bottom:1px solid #f1f5f9}</style></head><body><h1>BM Group of Institutions</h1><h2>Teacher Report – ${roll}</h2><p style="color:#64748b;font-size:13px;">Teacher: ${currentUser.name} (${currentUser.rollNo})</p><p style="color:#64748b;font-size:13px;">Range: ${sStr} → ${eStr}</p><p style="color:#64748b;font-size:13px;">Generated: ${new Date().toLocaleString()}</p><table><thead><tr><th>Date</th><th>Subject</th><th>Status</th></tr></thead><tbody>${filtered.map(r=>`<tr><td>${fmtDatePretty(r.date)}</td><td>${r.subject}</td><td>${r.status}</td></tr>`).join('')}</tbody></table></body></html>`;
-      const container = document.createElement('div');
-      container.innerHTML = htmlContent;
-      container.style.position = 'fixed'; container.style.left = '-9999px'; container.style.top = '-9999px';
-      document.body.appendChild(container);
-      await html2pdf().set({
-        margin: [0.5,0.5,0.5,0.5],
-        filename: `Teacher_Report_${roll}_${range}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-      }).from(container).save();
-      document.body.removeChild(container);
+      const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Teacher Report ${roll}</title><style>body{font-family:Arial;padding:30px;color:#0f172a}h1{color:#1d4ed8}h2{color:#2563eb;font-weight:400;border-bottom:2px solid #dbeafe;padding-bottom:6px}table{width:100%;border-collapse:collapse;font-size:12px;margin-top:14px}th{background:#dbeafe;padding:8px;text-align:left;color:#1e40af}td{padding:6px 8px;border-bottom:1px solid #f1f5f9}@media print{@page{margin:10mm}}</style></head><body><h1>BM Group of Institutions</h1><h2>Teacher Report – ${roll}</h2><p style="color:#64748b;font-size:13px;">Teacher: ${currentUser.name} (${currentUser.rollNo})</p><p style="color:#64748b;font-size:13px;">Range: ${startStr} → ${endStr}</p><p style="color:#64748b;font-size:13px;">Generated: ${new Date().toLocaleString()}</p><table><thead><tr><th>Date</th><th>Subject</th><th>Status</th></tr></thead><tbody>${filtered.map(r=>`<tr><td>${fmtDatePretty(r.date)}</td><td>${r.subject}</td><td>${r.status}</td></tr>`).join('')}</tbody></table></body></html>`;
+      const win = window.open('', '_blank');
+      if (!win) { hideDL(); return toast('Allow popups','error'); }
+      win.document.open(); win.document.write(htmlContent); win.document.close();
       hideDL();
-      toast('✅ PDF downloaded!','success');
+      setTimeout(() => { try { win.focus(); win.print(); } catch(e){} toast('✅ Use "Save as PDF"','success'); }, 700);
     } else {
-      let csv = `Teacher Report\nStudent: ${roll}\nTeacher: ${currentUser.name}\nRange: ${sStr} to ${eStr}\n\nDate,Subject,Status\n`;
+      let csv = `Teacher Report\nStudent: ${roll}\nTeacher: ${currentUser.name}\nRange: ${startStr} to ${endStr}\n\nDate,Subject,Status\n`;
       filtered.forEach(r => { csv += `${r.date},${r.subject},${r.status}\n`; });
       download(csv, `teacher_report_${roll}.csv`);
       hideDL();
@@ -2625,7 +2785,12 @@ function renderChatWelcome(){
   else if (hour < 17) { greeting = 'Good afternoon'; emoji = '🌤️'; }
   else { greeting = 'Good evening'; emoji = '🌙'; }
   const name = currentUser ? currentUser.name : 'there';
-  el.innerHTML = `<div class="chat-welcome"><span class="greeting-emoji">${emoji}</span><div><strong>${greeting}, ${name}!</strong> I'm <strong>BM Bot</strong>, your AI assistant.</div><div>Ask me about attendance, timetable, holidays, or anything!</div><div style="font-size:10px;margin-top:6px;">💡 Try: "What is my attendance?" or "Today's timetable"</div></div>`;
+  el.innerHTML = `<div class="chat-welcome">
+    <span class="greeting-emoji">${emoji}</span>
+    <div><strong>${greeting}, ${name}!</strong> I'm <strong>BM Bot</strong>, your AI assistant.</div>
+    <div>Ask me about attendance, timetable, holidays, or anything!</div>
+    <div style="font-size:10px;margin-top:6px;">💡 Try: "What is my attendance?" or "Today's timetable"</div>
+  </div>`;
 }
 async function fetchChatHistory(){
   if (!currentUser) return;
@@ -2638,8 +2803,16 @@ async function fetchChatHistory(){
 }
 function renderChatHistory(){
   const list = $('chatHistoryList');
-  if (!chatHistory || chatHistory.length === 0) { list.innerHTML = '<div class="empty" style="padding:16px 0;font-size:10px;">No chats yet</div>'; return; }
-  list.innerHTML = chatHistory.map(c => `<div class="chat-sidebar-item ${c.threadId === currentThreadId ? 'active' : ''}" onclick="loadChatThread('${c.threadId}')"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.title || 'New Chat'}</span><span class="del-chat" onclick="event.stopPropagation(); deleteChatThread('${c.threadId}')">✕</span></div>`).join('');
+  if (!chatHistory || chatHistory.length === 0) {
+    list.innerHTML = '<div class="empty" style="padding:16px 0;font-size:10px;">No chats yet</div>';
+    return;
+  }
+  list.innerHTML = chatHistory.map(c => `
+    <div class="chat-sidebar-item ${c.threadId === currentThreadId ? 'active' : ''}" onclick="loadChatThread('${c.threadId}')">
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.title || 'New Chat'}</span>
+      <span class="del-chat" onclick="event.stopPropagation(); deleteChatThread('${c.threadId}')">✕</span>
+    </div>
+  `).join('');
 }
 async function loadChatThread(threadId){
   currentThreadId = threadId;
@@ -2656,10 +2829,19 @@ async function deleteChatThread(threadId){
   if (!confirm('Delete this chat?')) return;
   try {
     const res = await fetch(`${API}/api/chats/${threadId}`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo})});
-    if (res.ok) { if (currentThreadId === threadId) newChat(); fetchChatHistory(); toast('Chat deleted','success'); }
+    if (res.ok) {
+      if (currentThreadId === threadId) newChat();
+      fetchChatHistory();
+      toast('Chat deleted','success');
+    }
   } catch(e){}
 }
-function newChat(){ currentThreadId = null; chatGreeted = false; renderChatWelcome(); renderChatHistory(); }
+function newChat(){
+  currentThreadId = null;
+  chatGreeted = false;
+  renderChatWelcome();
+  renderChatHistory();
+}
 async function sendChat(){
   const inp = $('chatInput');
   const msg = inp.value.trim();
@@ -2679,7 +2861,10 @@ async function sendChat(){
     const res = await fetch(`${API}/api/chat`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message: msg, rollNo: currentUser.rollNo, role: currentUser.role, name: currentUser.name, branch: currentUser.branch, threadId: currentThreadId, skipGreeting: chatGreeted})});
     const d = await res.json();
     typing.remove();
-    if (d.threadId) { currentThreadId = d.threadId; fetchChatHistory(); }
+    if (d.threadId) {
+      currentThreadId = d.threadId;
+      fetchChatHistory();
+    }
     chatGreeted = true;
     appendChat('bot', d.reply || 'Sorry, I could not process that.');
   } catch(e){
@@ -2711,7 +2896,9 @@ function download(content, filename){
 
 document.addEventListener('DOMContentLoaded', () => {
   const pdfRange = $('pdfRangeSelect');
-  if (pdfRange) pdfRange.onchange = function(){ $('pdfMonthSelect').style.display = this.value === 'SELECTED_MONTH' ? 'block' : 'none'; };
+  if (pdfRange) pdfRange.onchange = function(){
+    $('pdfMonthSelect').style.display = this.value === 'SELECTED_MONTH' ? 'block' : 'none';
+  };
   const adminRepRange = $('adminReportRange');
   if (adminRepRange) adminRepRange.onchange = toggleAdminReportRange;
   if (localStorage.getItem('token')) loadDashboard();
