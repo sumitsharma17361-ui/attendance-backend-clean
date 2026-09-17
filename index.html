@@ -268,6 +268,13 @@ tbody tr:hover{background:var(--slate-50);}
 .bulk-select-list{max-height:200px;overflow-y:auto;border:1px solid var(--slate-200);border-radius:8px;padding:8px;background:#fff;}
 .bulk-select-item{display:flex;align-items:center;gap:8px;padding:5px 8px;font-size:11.5px;cursor:pointer;border-radius:6px;}
 .bulk-select-item:hover{background:var(--slate-50);}
+.collapsible-card{background:#fff;border:1px solid var(--slate-200);border-radius:var(--radius);margin-bottom:16px;overflow:hidden;}
+.collapsible-header{padding:14px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;touch-action:manipulation;transition:background .15s;}
+.collapsible-header:hover{background:var(--slate-50);}
+.collapsible-header h3{font-size:12px;font-weight:700;color:var(--slate-500);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:6px;}
+.collapsible-header .toggle-icon{font-size:12px;color:var(--slate-400);transition:transform .25s;display:flex;align-items:center;gap:8px;}
+.collapsible-body{padding:0 16px 16px;display:none;animation:fadeIn .2s ease;}
+.collapsible-body.open{display:block;}
 @media(max-width:480px){
   body{padding:12px;}
   .app-body{padding:16px;}
@@ -382,18 +389,39 @@ tbody tr:hover{background:var(--slate-50);}
         <div class="stat"><div class="stat-value" id="statWorkingDaysPct">0%</div><div class="stat-label">Working Days %</div><div class="stat-hint">Present / Working</div></div>
       </div>
 
-      <div class="card" id="subjectBreakdownCard" style="display:none;">
-        <div class="card-title"><span>📚 Subject-wise Attendance</span>
-          <select id="subjectMonthFilter" style="width:auto;padding:5px 10px;font-size:11px;" onchange="loadSubjectBreakdown()">
-            <option value="ALL">All Time</option><option value="6">July 2026</option><option value="7">August 2026</option>
-            <option value="8">September 2026</option><option value="9">October 2026</option><option value="10">November 2026</option>
-            <option value="11">December 2026</option>
-          </select></div>
-        <div class="subject-summary-line" id="subjectSummaryLine">
-          <span>📊 <span id="subjAttendedLine">Loading…</span></span>
-          <span class="pct-big" id="subjPctLine">—</span>
+      <div class="attendance-actions-card" id="attendanceActionsCard" style="display:none;">
+        <button class="btn btn-primary btn-block mb-2" onclick="markFullDay()" style="padding:14px;">
+          <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Mark Full Day Attendance
+        </button>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;background:#fff;border:1px solid var(--slate-200);border-radius:var(--radius-sm);">
+          <div style="min-width:0;"><div class="text-xs text-muted font-bold" id="periodLabel">CHECKING…</div>
+            <div class="font-bold" id="periodName" style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</div></div>
+          <button class="btn btn-success btn-sm" id="markPeriodBtn" onclick="markActivePeriod()" style="flex-shrink:0;">Mark</button>
         </div>
-        <div id="subjectBreakdownList" class="chips"><span class="text-xs text-muted">Loading…</span></div>
+      </div>
+
+      <div class="collapsible-card" id="subjectBreakdownCard" style="display:none;">
+        <div class="collapsible-header" id="subjectBreakdownHeader" onclick="toggleSubjectBreakdown()">
+          <h3>📚 Subject-wise Attendance</h3>
+          <div class="toggle-icon">
+            <span id="subjectBreakdownHeaderInfo" style="font-size:11px;color:var(--slate-500);font-weight:600;">Tap to view</span>
+            <span id="subjectBreakdownArrow" style="transition:transform .25s;">▼</span>
+          </div>
+        </div>
+        <div class="collapsible-body" id="subjectBreakdownBody">
+          <div class="row mb-1">
+            <select id="subjectMonthFilter" style="width:auto;padding:5px 10px;font-size:11px;" onchange="loadSubjectBreakdown()">
+              <option value="ALL">All Time</option><option value="6">July 2026</option><option value="7">August 2026</option>
+              <option value="8">September 2026</option><option value="9">October 2026</option><option value="10">November 2026</option>
+              <option value="11">December 2026</option>
+            </select>
+          </div>
+          <div class="subject-summary-line" id="subjectSummaryLine">
+            <span>📊 <span id="subjAttendedLine">Loading…</span></span>
+            <span class="pct-big" id="subjPctLine">—</span>
+          </div>
+          <div id="subjectBreakdownList" class="chips"><span class="text-xs text-muted">Loading…</span></div>
+        </div>
       </div>
 
       <button class="working-days-cta" onclick="openWorkingDays()">
@@ -431,17 +459,6 @@ tbody tr:hover{background:var(--slate-50);}
       </div>
 
       <div id="tab-mark">
-        <div class="attendance-actions-card">
-          <button class="btn btn-primary btn-block mb-2" onclick="markFullDay()" style="padding:14px;">
-            <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Mark Full Day Attendance
-          </button>
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;background:#fff;border:1px solid var(--slate-200);border-radius:var(--radius-sm);">
-            <div style="min-width:0;"><div class="text-xs text-muted font-bold" id="periodLabel">CHECKING…</div>
-              <div class="font-bold" id="periodName" style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</div></div>
-            <button class="btn btn-success btn-sm" id="markPeriodBtn" onclick="markActivePeriod()" style="flex-shrink:0;">Mark</button>
-          </div>
-        </div>
-
         <div class="chart-wrap">
           <div class="chart-head"><h4>📈 Attendance Trend</h4>
             <div class="chart-controls">
@@ -456,9 +473,17 @@ tbody tr:hover{background:var(--slate-50);}
 
         <div class="card">
           <div class="card-title"><span>📅 Attendance Calendar</span>
-            <select id="calendarViewMode" onchange="renderAttendanceCalendar()" style="width:auto;padding:5px 10px;font-size:11px;">
-              <option value="CURRENT_MONTH">Current Month</option><option value="FULL_SEMESTER">Full Semester</option>
+            <select id="calendarViewMode" onchange="onCalendarModeChange()" style="width:auto;padding:5px 10px;font-size:11px;">
+              <option value="CURRENT_MONTH">Current Month</option>
+              <option value="SELECTED_MONTH">Select Month</option>
+              <option value="FULL_SEMESTER">Full Semester</option>
             </select></div>
+          <div id="calendarSelectedMonthWrap" style="display:none;margin-bottom:10px;">
+            <select id="calendarSelectedMonth" onchange="renderAttendanceCalendar()" style="width:auto;padding:5px 10px;font-size:11px;">
+              <option value="6">July 2026</option><option value="7">August 2026</option><option value="8">September 2026</option>
+              <option value="9">October 2026</option><option value="10">November 2026</option><option value="11">December 2026</option>
+            </select>
+          </div>
           <div class="wd-legend" style="margin-bottom:10px;">
             <span class="wd-legend-item"><span class="wd-legend-dot" style="background:#d1fae5;"></span>Present</span>
             <span class="wd-legend-item"><span class="wd-legend-dot" style="background:#ffe4e6;"></span>Absent</span>
@@ -575,7 +600,6 @@ tbody tr:hover{background:var(--slate-50);}
               <button class="btn btn-primary btn-sm" onclick="generateStudentReport('pdf')">📄 Download PDF</button>
               <button class="btn btn-success btn-sm" onclick="generateStudentReport('csv')">📥 CSV</button>
             </div>
-            <p class="text-xs text-muted mt-1" style="text-align:center;">PDF opens in new tab → tap "Save as PDF"</p>
           </div>
           <div class="card">
             <div class="card-title">📋 Class Attendance Report</div>
@@ -931,7 +955,6 @@ let trendChart = null;
 let isRegistering = false;
 let currentManualBranch = 'CSE';
 let impersonating = false;
-let origAdminToken = null, origAdminUser = null;
 let chatGreeted = false;
 let currentThreadId = null;
 let pendingEditId = null;
@@ -940,6 +963,7 @@ let facSelectedBulkDates = [];
 let pendingBulkAction = null;
 let chatHistory = [];
 let selectedHolidayDates = new Set();
+let subjectBreakdownOpen = false;
 
 function $(id){return document.getElementById(id);}
 function toast(msg, type='info'){
@@ -1042,11 +1066,36 @@ async function handleAuth(){
     }
   } catch(e){ toast(e.message,'error'); }
 }
-function logout(){localStorage.removeItem('token');localStorage.removeItem('user');location.reload();}
+
+// ✅ FIX 3: Impersonate logout — restore admin via localStorage
+function logout(){
+  const origToken = localStorage.getItem('BM_ORIG_TOKEN');
+  const origUser = localStorage.getItem('BM_ORIG_USER');
+  if (origToken && origUser) {
+    // Restore admin session — impersonation active
+    localStorage.setItem('token', origToken);
+    localStorage.setItem('user', origUser);
+    localStorage.removeItem('BM_ORIG_TOKEN');
+    localStorage.removeItem('BM_ORIG_USER');
+    impersonating = false;
+    location.reload();
+    return;
+  }
+  // Normal logout
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  localStorage.removeItem('BM_ORIG_TOKEN');
+  localStorage.removeItem('BM_ORIG_USER');
+  location.reload();
+}
 async function switchBack(){
-  if (!origAdminToken || !origAdminUser) return;
-  localStorage.setItem('token', origAdminToken);
-  localStorage.setItem('user', JSON.stringify(origAdminUser));
+  const origToken = localStorage.getItem('BM_ORIG_TOKEN');
+  const origUser = localStorage.getItem('BM_ORIG_USER');
+  if (!origToken || !origUser) return;
+  localStorage.setItem('token', origToken);
+  localStorage.setItem('user', origUser);
+  localStorage.removeItem('BM_ORIG_TOKEN');
+  localStorage.removeItem('BM_ORIG_USER');
   impersonating = false;
   location.reload();
 }
@@ -1067,6 +1116,19 @@ function loadDashboard(){
   $('roleBadge').className = 'pill role-' + currentUser.role;
   $('branchBadge').textContent = currentUser.branch || 'CSE';
 
+  // ✅ FIX 3: Check impersonation state via localStorage (survives reload)
+  const origToken = localStorage.getItem('BM_ORIG_TOKEN');
+  const origUser = localStorage.getItem('BM_ORIG_USER');
+  if (origToken && origUser) {
+    impersonating = true;
+    $('impersonationBanner').style.display = 'flex';
+    $('impName').textContent = currentUser.name;
+    $('impRoll').textContent = currentUser.rollNo;
+  } else {
+    impersonating = false;
+    $('impersonationBanner').style.display = 'none';
+  }
+
   const now = new Date();
   const pdfMonthSelect = $('pdfMonthSelect');
   if (pdfMonthSelect && now.getMonth() >= 6 && now.getMonth() <= 11) pdfMonthSelect.value = now.getMonth().toString();
@@ -1074,6 +1136,8 @@ function loadDashboard(){
   if (subjFilter && now.getMonth() >= 6 && now.getMonth() <= 11) subjFilter.value = now.getMonth().toString();
   const adminRepMonth = $('adminReportMonth');
   if (adminRepMonth && now.getMonth() >= 6 && now.getMonth() <= 11) adminRepMonth.value = now.getMonth().toString();
+  const calSelectedMonth = $('calendarSelectedMonth');
+  if (calSelectedMonth && now.getMonth() >= 6 && now.getMonth() <= 11) calSelectedMonth.value = now.getMonth().toString();
 
   ensureHolidays();
 
@@ -1083,6 +1147,7 @@ function loadDashboard(){
     $('studentStatsGrid').style.display = 'none';
     $('advisorBox').style.display = 'none';
     $('subjectBreakdownCard').style.display = 'none';
+    $('attendanceActionsCard').style.display = 'none';
     $('quickPortalsCard').style.display = 'none';
     $('studentPdfCard').style.display = 'none';
     switchTab('tab-admin');
@@ -1096,6 +1161,7 @@ function loadDashboard(){
     $('studentStatsGrid').style.display = 'grid';
     $('advisorBox').style.display = 'flex';
     $('subjectBreakdownCard').style.display = 'none';
+    $('attendanceActionsCard').style.display = 'none';
     $('quickPortalsCard').style.display = 'none';
     $('studentPdfCard').style.display = 'none';
     switchTab('tab-faculty');
@@ -1106,6 +1172,7 @@ function loadDashboard(){
     $('studentStatsGrid').style.display = 'grid';
     $('advisorBox').style.display = 'flex';
     $('subjectBreakdownCard').style.display = 'block';
+    $('attendanceActionsCard').style.display = 'block';
     $('quickPortalsCard').style.display = 'block';
     $('studentPdfCard').style.display = 'block';
     switchTab('tab-mark');
@@ -1151,6 +1218,26 @@ function showAdmin(id){
   if (id === 'a-passcode') { $('fdPasscode').textContent = '—'; $('slPasscode').textContent = '—'; }
   if (id === 'a-tools') initTools();
   if (id === 'a-leave') loadLeaveRequests();
+}
+
+function toggleSubjectBreakdown(){
+  subjectBreakdownOpen = !subjectBreakdownOpen;
+  const body = $('subjectBreakdownBody');
+  const header = $('subjectBreakdownHeader');
+  const arrow = $('subjectBreakdownArrow');
+  const info = $('subjectBreakdownHeaderInfo');
+  if (subjectBreakdownOpen) {
+    body.classList.add('open');
+    header.classList.add('open');
+    if (arrow) arrow.style.transform = 'rotate(180deg)';
+    if (info) info.textContent = 'Tap to hide';
+    loadSubjectBreakdown();
+  } else {
+    body.classList.remove('open');
+    header.classList.remove('open');
+    if (arrow) arrow.style.transform = 'rotate(0deg)';
+    if (info) info.textContent = 'Tap to view';
+  }
 }
 
 async function loadDashboardStats(){
@@ -1229,7 +1316,7 @@ async function initStudent(){
   await updatePeriod();
   setInterval(updatePeriod, 30000);
   await updateTrend();
-  await loadSubjectBreakdown();
+  if (subjectBreakdownOpen) await loadSubjectBreakdown();
 }
 
 async function fetchHistory(){
@@ -1290,6 +1377,8 @@ async function loadSubjectBreakdown(){
     const pctEl = $('subjPctLine');
     pctEl.textContent = pct + '%';
     pctEl.className = 'pct-big ' + (pct >= 75 ? 'good' : 'bad');
+    const info = $('subjectBreakdownHeaderInfo');
+    if (info) info.textContent = `${pct}% · ${attended}/${conducted}`;
     const entries = Object.entries(stats);
     if (!entries.length) { list.innerHTML = '<span class="text-xs text-muted">No subject data available</span>'; return; }
     list.innerHTML = entries.map(([sub, st]) => {
@@ -1300,6 +1389,12 @@ async function loadSubjectBreakdown(){
   } catch(e) { list.innerHTML = '<span class="text-xs text-muted">Failed to load</span>'; }
 }
 
+function onCalendarModeChange(){
+  const mode = $('calendarViewMode').value;
+  $('calendarSelectedMonthWrap').style.display = mode === 'SELECTED_MONTH' ? 'block' : 'none';
+  renderAttendanceCalendar();
+}
+
 function renderAttendanceCalendar(){
   const wrapper = $('calendarDisplay');
   if (!wrapper) return;
@@ -1307,7 +1402,10 @@ function renderAttendanceCalendar(){
   const holidaySet = new Set((globalHolidays || []).map(h => (h.date||'').split('T')[0]));
   const attendedDates = new Set((globalHistory || []).filter(r => r.status === 'Present' || r.status === 'Duty Leave').map(r => r.date));
   const today = new Date(); today.setHours(0,0,0,0);
-  const months = mode === 'CURRENT_MONTH' ? [today.getMonth()] : [6,7,8,9,10,11];
+  let months = [];
+  if (mode === 'CURRENT_MONTH') months = [today.getMonth()];
+  else if (mode === 'SELECTED_MONTH') months = [parseInt($('calendarSelectedMonth').value)];
+  else months = [6,7,8,9,10,11];
   let html = '';
   months.forEach(m => {
     const y = 2026;
@@ -1473,7 +1571,7 @@ async function markFullDay(){
     navigator.geolocation.getCurrentPosition(async (pos) => {
       const res = await fetch(`${API}/api/attendance/mark-fullday`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo, name: currentUser.name, latitude: pos.coords.latitude, longitude: pos.coords.longitude, passcode: pc.trim()})});
       const d = await res.json();
-      if (res.ok) { toast(d.message || 'Marked!','success'); fetchHistory(); loadSubjectBreakdown(); }
+      if (res.ok) { toast(d.message || 'Marked!','success'); fetchHistory(); if (subjectBreakdownOpen) loadSubjectBreakdown(); }
       else toast(d.error || 'Failed','error');
     }, () => toast('GPS required','error'));
   } catch(e){ toast(e.message,'error'); }
@@ -1491,7 +1589,7 @@ async function markActivePeriod(){
     navigator.geolocation.getCurrentPosition(async (pos) => {
       const res = await fetch(`${API}/api/attendance/mark-lecture`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo, name: currentUser.name, subject: window._activeSubject, latitude: pos.coords.latitude, longitude: pos.coords.longitude, passcode: pc.trim()})});
       const d = await res.json();
-      if (res.ok) { toast(d.message || 'Marked!','success'); fetchHistory(); loadSubjectBreakdown(); }
+      if (res.ok) { toast(d.message || 'Marked!','success'); fetchHistory(); if (subjectBreakdownOpen) loadSubjectBreakdown(); }
       else toast(d.error || 'Failed','error');
     }, () => toast('GPS required','error'));
   } catch(e){ toast(e.message,'error'); }
@@ -2018,10 +2116,7 @@ async function fixAllAttendanceSubjects(){
   statusEl.textContent = '⏳ Scanning & fixing…';
   showDL('Fixing all attendance subjects…');
   try {
-    const res = await fetch(`${API}/api/admin/fix-all-attendance-subjects`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requesterRollNo: currentUser.rollNo })
-    });
+    const res = await fetch(`${API}/api/admin/fix-all-attendance-subjects`, {method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo }) });
     const d = await res.json();
     hideDL();
     if (!res.ok) { statusEl.textContent = '❌ ' + (d.error || 'Failed'); return toast(d.error || 'Failed', 'error'); }
@@ -2172,6 +2267,8 @@ async function deleteUser(){
     else toast(d.error,'error');
   } catch(e){}
 }
+
+// ✅ FIX 3: Save admin session to localStorage before switching
 async function impersonate(){
   const r = $('impRollInput').value.trim().toUpperCase();
   if (!r) return toast('Enter roll','error');
@@ -2179,8 +2276,10 @@ async function impersonate(){
     const res = await fetch(`${API}/api/admin/login-as-student`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, targetRollNo: r})});
     const d = await res.json();
     if (res.ok) {
-      origAdminToken = localStorage.getItem('token');
-      origAdminUser = JSON.parse(localStorage.getItem('user'));
+      // ✅ Save current admin session to localStorage BEFORE switching
+      localStorage.setItem('BM_ORIG_TOKEN', localStorage.getItem('token'));
+      localStorage.setItem('BM_ORIG_USER', localStorage.getItem('user'));
+      // Switch to student
       localStorage.setItem('token', d.token);
       localStorage.setItem('user', JSON.stringify(d.user));
       impersonating = true;
@@ -2298,18 +2397,11 @@ async function facBulkMark(){
   if (!confirm(`Mark ${status} for ${students.length} students × ${facSelectedBulkDates.length} dates? (Your subjects only)`)) return;
   showDL('Marking bulk…');
   try {
-    const res = await fetch(`${API}/api/teacher/bulk-mark-attendance`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requesterRollNo: currentUser.rollNo, studentRollNos: students, dates: facSelectedBulkDates, status })
-    });
+    const res = await fetch(`${API}/api/teacher/bulk-mark-attendance`, {method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, studentRollNos: students, dates: facSelectedBulkDates, status }) });
     const d = await res.json();
     hideDL();
-    if (res.ok) {
-      toast(d.message || 'Marked','success');
-      facSelectedBulkDates = []; renderFacBulkDates();
-      fetchTeacherStudents();
-      loadFacultyRecent();
-    } else toast(d.error || 'Failed','error');
+    if (res.ok) { toast(d.message || 'Marked','success'); facSelectedBulkDates = []; renderFacBulkDates(); fetchTeacherStudents(); loadFacultyRecent(); }
+    else toast(d.error || 'Failed','error');
   } catch(e){ hideDL(); toast('Network: ' + e.message,'error'); }
 }
 async function facBulkDelete(){
@@ -2319,18 +2411,11 @@ async function facBulkDelete(){
   if (!confirm(`Delete ${students.length} students × ${facSelectedBulkDates.length} dates records? (Your subjects only)`)) return;
   showDL('Deleting…');
   try {
-    const res = await fetch(`${API}/api/teacher/bulk-delete-attendance`, {
-      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requesterRollNo: currentUser.rollNo, studentRollNos: students, dates: facSelectedBulkDates })
-    });
+    const res = await fetch(`${API}/api/teacher/bulk-delete-attendance`, {method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, studentRollNos: students, dates: facSelectedBulkDates }) });
     const d = await res.json();
     hideDL();
-    if (res.ok) {
-      toast(d.message || 'Deleted','success');
-      facSelectedBulkDates = []; renderFacBulkDates();
-      fetchTeacherStudents();
-      loadFacultyRecent();
-    } else toast(d.error || 'Failed','error');
+    if (res.ok) { toast(d.message || 'Deleted','success'); facSelectedBulkDates = []; renderFacBulkDates(); fetchTeacherStudents(); loadFacultyRecent(); }
+    else toast(d.error || 'Failed','error');
   } catch(e){ hideDL(); toast('Network: ' + e.message,'error'); }
 }
 function toggleFacMonth(){
@@ -2406,12 +2491,7 @@ function quickAsk(q){ $('chatInput').value = q; sendChat(); }
 function toggleChat(){
   const p = $('chatPanel');
   p.classList.toggle('open');
-  if (p.classList.contains('open')) {
-    chatGreeted = false;
-    setTimeout(() => $('chatInput').focus(), 100);
-    fetchChatHistory();
-    renderChatWelcome();
-  }
+  if (p.classList.contains('open')) { chatGreeted = false; setTimeout(() => $('chatInput').focus(), 100); fetchChatHistory(); renderChatWelcome(); }
 }
 function toggleChatSidebar(){ $('chatSidebar').classList.toggle('open'); }
 function renderChatWelcome(){
