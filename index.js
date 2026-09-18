@@ -16,10 +16,11 @@ app.use(cors());
 // ---------- Environment Variables ----------
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
-const GROQ_API_KEY = process.env.GROQ_API_KEY ? process.env.GROQ_API_KEY.trim() : null;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : null;
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const COLLEGE_LAT = 28.4509370;
 const COLLEGE_LNG = 76.7688120;
-const COLLEGE_RADIUS = 50;
+const COLLEGE_RADIUS = 100;
 
 const SEMESTER_START = new Date('2026-07-15T00:00:00+05:30');
 const SEMESTER_END = new Date('2026-12-31T23:59:59+05:30');
@@ -28,8 +29,8 @@ if (!MONGO_URI) {
   console.error('❌ FATAL: MONGO_URI environment variable is not set!');
   process.exit(1);
 }
-if (!GROQ_API_KEY) {
-  console.warn('⚠️ GROQ_API_KEY is not set. Chat AI will fallback to static responses.');
+if (!GEMINI_API_KEY) {
+  console.warn('⚠️ GEMINI_API_KEY is not set. Chat AI will fallback to static responses.');
 }
 
 // ---------- HELPER: Get IST Date String ----------
@@ -74,10 +75,7 @@ function normalizeSubject(subject) {
 }
 
 // ---------- ✅ FIXED: Subject Alias Mapping ----------
-// Rule: canonical self-mappings FIRST, then short aliases.
-// mapToCanonical will sort by length DESC so specific names win.
 const SUBJECT_ALIAS_MAP = {
-  // --- Canonical self-mappings (exact match wins immediately) ---
   'BDA - Big Data Analytics': 'BDA - Big Data Analytics',
   'ECO - Economics for Engineers': 'ECO - Economics for Engineers',
   'DAA - Design & Analysis of Algorithm': 'DAA - Design & Analysis of Algorithm',
@@ -96,7 +94,6 @@ const SUBJECT_ALIAS_MAP = {
   'BDA LAB - Big Data Analytics Lab': 'BDA LAB - Big Data Analytics Lab',
   'LIB - Library': 'LIB - Library',
   'Sports': 'Sports',
-  // --- Short aliases (fallback only) ---
   'BDA': 'BDA - Big Data Analytics',
   'ECO': 'ECO - Economics for Engineers',
   'DAA': 'DAA - Design & Analysis of Algorithm',
@@ -117,28 +114,18 @@ const SUBJECT_ALIAS_MAP = {
   'LIB': 'LIB - Library'
 };
 
-// ✅ FIXED: longest alias wins, no accidental substring matches like "CN" matching "CN LAB"
 function mapToCanonical(subject) {
   if (!subject) return '';
   const normalized = normalizeSubject(subject);
-
-  // 1. Exact match (canonical self-map)
   if (SUBJECT_ALIAS_MAP[normalized]) return SUBJECT_ALIAS_MAP[normalized];
-
-  // 2. Sort aliases by length DESC so more-specific names are checked first
   const sortedAliases = Object.keys(SUBJECT_ALIAS_MAP).sort((a, b) => b.length - a.length);
-
-  // 3. Word-boundary prefix match ("CN LAB - Computer Network Lab".startsWith("CN LAB ") → correct)
   for (const alias of sortedAliases) {
     if (normalized === alias) return SUBJECT_ALIAS_MAP[alias];
     if (normalized.startsWith(alias + ' ')) return SUBJECT_ALIAS_MAP[alias];
   }
-
-  // 4. Last-resort substring match (still longest first)
   for (const alias of sortedAliases) {
     if (normalized.includes(alias)) return SUBJECT_ALIAS_MAP[alias];
   }
-
   return normalized;
 }
 
@@ -689,7 +676,7 @@ async function getStudentSummary(rollNo) {
 // ---------- Routes ----------
 app.get('/', (req, res) => res.send('BM Group Enterprise ERP Active!'));
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', ai: GEMINI_API_KEY ? 'gemini' : 'disabled', timestamp: new Date().toISOString() });
 });
 
 // ========== AUTH ==========
@@ -918,7 +905,7 @@ app.post('/api/admin/login-as-student', async (req, res) => {
   }
 });
 
-// ========== ✅ NEW: FIX ALL ATTENDANCE SUBJECTS (ONE-CLICK) ==========
+// ========== FIX ALL ATTENDANCE SUBJECTS (ONE-CLICK) ==========
 app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
   try {
     const { requesterRollNo } = req.body;
@@ -1101,8 +1088,6 @@ app.post('/api/teacher/mark-attendance', async (req, res) => {
 
 // ============================================================
 // PASSCODE GENERATION
-// ✅ Full Day: valid till 23:59:59 today
-// ✅ Single Lecture: fixed for the current lecture slot (5 min)
 // ============================================================
 app.post('/api/admin/generate-passcode', async (req, res) => {
   try {
@@ -1143,7 +1128,7 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
       return res.json({ message: 'Passcode generated for lecture', passcode, type, expiresAt: expiry });
     }
 
-    // ---------- FULL DAY (valid whole day) ----------
+    // ---------- FULL DAY ----------
     if (type === 'full_day') {
       const now = new Date();
       const dateStr = getISTDateString(now);
@@ -2724,18 +2709,30 @@ app.get('/api/admin/defaulters/:requesterRollNo', async (req, res) => {
   }
 });
 
-// ==================== CHAT AI ENDPOINT ====================
+// ============================================================
+//  CHAT AI ENDPOINT  →  GEMINI 2.5 FLASH
+// ============================================================
 app.post('/api/chat', async (req, res) => {
   try {
     const { message, rollNo, role, name, branch, threadId, skipGreeting } = req.body;
     if (!message) return res.status(400).json({ error: 'Message is required.' });
     const cleanRoll = rollNo?.trim().toUpperCase() || 'guest';
+
     let userData = null;
     let attendanceSummary = null;
     let workingDays = 0;
     let holidays = [];
-    let timetable = {};
     let currentPeriod = null;
+
+    // ---------- Existing chat thread (for multi-turn context) ----------
+    let existingChat = null;
+    if (cleanRoll !== 'guest' && threadId) {
+      try {
+        existingChat = await Chat.findOne({ threadId, rollNo: cleanRoll });
+      } catch (e) {
+        console.warn('Chat history fetch failed:', e.message);
+      }
+    }
 
     if (cleanRoll !== 'guest') {
       try {
@@ -2748,7 +2745,6 @@ app.post('/api/chat', async (req, res) => {
           workingDays = await getWorkingDays(SEMESTER_START, today);
           holidays = await Holiday.find({ date: { $gte: startStr, $lte: todayStr } });
           const branchName = userData.branch || 'CSE';
-          timetable = getTimetableForBranch(branchName);
           currentPeriod = getCurrentPeriod(branchName);
         }
       } catch (err) {
@@ -2756,6 +2752,7 @@ app.post('/api/chat', async (req, res) => {
       }
     }
 
+    // ---------- Detect requested date / day ----------
     let requestedDate = null;
     let requestedDay = null;
     const msgLower = message.toLowerCase();
@@ -2803,10 +2800,11 @@ app.post('/api/chat', async (req, res) => {
       }
     } else if (requestedDay) {
       const branchName = userData?.branch || branch || 'CSE';
-      const timetable = getTimetableForBranch(branchName);
-      requestedTimetable = timetable[requestedDay] || [];
+      const tt = getTimetableForBranch(branchName);
+      requestedTimetable = tt[requestedDay] || [];
     }
 
+    // ---------- Greeting ----------
     const now = new Date();
     const hour = now.getHours();
     let greeting = '';
@@ -2819,6 +2817,7 @@ app.post('/api/chat', async (req, res) => {
     const userName = userData?.name || name || 'Guest';
     const userRole = userData?.role || role || 'student';
 
+    // ---------- Build context ----------
     let contextStr = `Current date/time: ${now.toLocaleString()}\n`;
     contextStr += `User: ${userName} (Roll: ${cleanRoll}, Role: ${userRole})\n`;
     contextStr += `Branch: ${userData?.branch || branch || 'CSE'}\n`;
@@ -2855,7 +2854,7 @@ app.post('/api/chat', async (req, res) => {
       }
     }
 
-    let systemPrompt = `You are an AI assistant for BM Group of Institutions attendance portal.
+    const systemPrompt = `You are an AI assistant for BM Group of Institutions attendance portal.
 Your name is "BM Bot".
 ${greeting ? `${greeting}, ${userName} ${emoji}!` : ''}
 You have the following context:
@@ -2868,63 +2867,77 @@ If the user asks about holidays, use the holiday list.
 Always be friendly, concise, and use emojis where appropriate.
 Do not perform actions (like marking attendance) – only provide information.
 Respond in the same language as the user (Hindi/English).
-If the user asks for notes or study material, provide helpful content with bullet points.
-Now respond to the user's message: "${message}"`;
+If the user asks for notes or study material, provide helpful content with bullet points.`;
 
+    // ---------- GEMINI CALL ----------
     let reply = '';
     let aiError = false;
-    if (GROQ_API_KEY) {
-      const models = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
-      let usedModel = null;
-      for (const model of models) {
-        try {
-          const groqPayload = {
-            model: model,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: message }
-            ],
-            temperature: 0.7,
-            max_tokens: 1000
-          };
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 15000);
-          const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${GROQ_API_KEY}`
-            },
-            body: JSON.stringify(groqPayload),
-            signal: controller.signal
-          });
-          clearTimeout(timeout);
-          if (response.ok) {
-            const data = await response.json();
-            reply = data.choices?.[0]?.message?.content || 'Sorry, I could not understand.';
-            usedModel = model;
-            break;
-          } else {
-            const errorText = await response.text();
-            console.warn(`⚠️ Groq model ${model} failed (${response.status}): ${errorText}`);
-            if (response.status === 400 && errorText.includes('model_decommissioned')) {
-              continue;
-            }
-            aiError = true;
-            break;
+
+    if (GEMINI_API_KEY) {
+      try {
+        // Build multi-turn contents
+        const contents = [];
+        if (existingChat && Array.isArray(existingChat.messages)) {
+          for (const m of existingChat.messages.slice(-10)) {
+            if (!m || !m.content) continue;
+            contents.push({
+              role: m.role === 'assistant' ? 'model' : 'user',
+              parts: [{ text: m.content }]
+            });
           }
-        } catch (err) {
-          console.warn(`⚠️ Groq model ${model} exception:`, err.message);
-          continue;
         }
+        contents.push({ role: 'user', parts: [{ text: message }] });
+
+        const geminiPayload = {
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents,
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 1000,
+            topP: 0.95
+          }
+        };
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 25000);
+
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+
+        const response = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(geminiPayload),
+          signal: controller.signal
+        });
+        clearTimeout(timeout);
+
+        if (response.ok) {
+          const data = await response.json();
+          const candidate = data?.candidates?.[0];
+          const parts = candidate?.content?.parts || [];
+          const text = parts.map(p => (typeof p.text === 'string' ? p.text : '')).join('').trim();
+
+          if (text) {
+            reply = text;
+          } else {
+            console.warn('⚠️ Gemini returned empty text. finishReason:', candidate?.finishReason);
+            aiError = true;
+          }
+        } else {
+          const errorText = await response.text();
+          console.warn(`⚠️ Gemini failed (${response.status}): ${errorText}`);
+          aiError = true;
+        }
+      } catch (err) {
+        console.warn('⚠️ Gemini exception:', err.message);
+        aiError = true;
       }
-      if (!reply && !aiError) aiError = true;
-      if (usedModel) console.log(`✅ Used Groq model: ${usedModel}`);
     } else {
-      console.warn('⚠️ GROQ_API_KEY not set');
+      console.warn('⚠️ GEMINI_API_KEY not set');
       aiError = true;
     }
 
+    // ---------- FALLBACK ----------
     if (aiError || !reply) {
       let fallback = '';
       if (greeting) fallback = `${greeting}, ${userName} ${emoji}! `;
@@ -2961,55 +2974,42 @@ Now respond to the user's message: "${message}"`;
       reply = fallback;
     }
 
+    // ---------- Save thread ----------
     let newThreadId = threadId;
+    let newTitle = 'New Chat';
+
     if (cleanRoll !== 'guest') {
-      const existingMessages = [];
-      if (threadId) {
-        const chatThread = await Chat.findOne({ threadId, rollNo: cleanRoll });
-        if (chatThread) {
-          existingMessages.push(...chatThread.messages.map(m => ({ role: m.role, content: m.content })));
+      if (existingChat) {
+        existingChat.messages.push({ role: 'user', content: message });
+        existingChat.messages.push({ role: 'assistant', content: reply });
+        existingChat.updatedAt = new Date();
+        if (!existingChat.title || existingChat.title === 'New Chat') {
+          existingChat.title = message.substring(0, 50);
         }
-      }
-      const newMessages = [
-        ...existingMessages,
-        { role: 'user', content: message },
-        { role: 'assistant', content: reply }
-      ];
-      let title = '';
-      if (threadId) {
-        const chatThread = await Chat.findOne({ threadId, rollNo: cleanRoll });
-        if (chatThread) {
-          chatThread.messages = newMessages;
-          chatThread.updatedAt = new Date();
-          if (!chatThread.title || chatThread.title === 'New Chat') {
-            const firstUserMsg = newMessages.find(m => m.role === 'user');
-            if (firstUserMsg) {
-              chatThread.title = firstUserMsg.content.substring(0, 50);
-            }
-          }
-          await chatThread.save();
-          title = chatThread.title;
-          newThreadId = chatThread.threadId;
-        }
+        await existingChat.save();
+        newThreadId = existingChat.threadId;
+        newTitle = existingChat.title;
       } else {
-        const firstUserMsg = newMessages.find(m => m.role === 'user');
-        const autoTitle = firstUserMsg ? firstUserMsg.content.substring(0, 50) : 'New Chat';
+        const autoTitle = message.substring(0, 50) || 'New Chat';
         const newThread = new Chat({
           rollNo: cleanRoll,
           threadId: `chat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
           title: autoTitle,
-          messages: newMessages
+          messages: [
+            { role: 'user', content: message },
+            { role: 'assistant', content: reply }
+          ]
         });
         await newThread.save();
         newThreadId = newThread.threadId;
-        title = autoTitle;
+        newTitle = autoTitle;
       }
     }
 
     res.json({
       reply,
       threadId: newThreadId || null,
-      title: 'Chat',
+      title: newTitle,
       messages: []
     });
   } catch (err) {
@@ -3047,7 +3047,6 @@ app.post('/api/admin/restore-from-csv', async (req, res) => {
       return res.status(400).json({ error: 'No data found in CSV' });
     }
 
-    let dataRows = [];
     let headers = null;
     for (const row of rows) {
       const keys = Object.keys(row);
@@ -3070,6 +3069,7 @@ app.post('/api/admin/restore-from-csv', async (req, res) => {
       return res.status(400).json({ error: 'CSV must contain Roll No, Date, and Subject columns' });
     }
 
+    const dataRows = [];
     for (const row of rows) {
       const roll = row[headers[rollIdx]]?.trim();
       const date = row[headers[dateIdx]]?.trim();
@@ -3133,4 +3133,4 @@ process.on('uncaughtException', (err) => {
 
 // ---------- Start Server ----------
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT} | AI: ${GEMINI_API_KEY ? GEMINI_MODEL : 'disabled'}`));
