@@ -11,7 +11,7 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --brand-50:#eff6ff;--brand-100:#dbeafe;--brand-200:#bfdbfe;--brand-500:#3b82f6;--brand-600:#2563eb;--brand-700:#1d4ed8;--brand-900:#1e3a8a;
+  --brand-50:#eff6ff;--brand-100:#dbeafe;--brand-200:#bfdbfe;--brand-300:#93c5fd;--brand-500:#3b82f6;--brand-600:#2563eb;--brand-700:#1d4ed8;--brand-900:#1e3a8a;
   --slate-50:#f8fafc;--slate-100:#f1f5f9;--slate-200:#e2e8f0;--slate-300:#cbd5e1;--slate-400:#94a3b8;--slate-500:#64748b;--slate-600:#475569;--slate-700:#334155;--slate-800:#1e293b;--slate-900:#0f172a;
   --emerald-50:#ecfdf5;--emerald-100:#d1fae5;--emerald-500:#10b981;--emerald-600:#059669;--emerald-700:#047857;
   --amber-50:#fffbeb;--amber-100:#fef3c7;--amber-500:#f59e0b;--amber-600:#d97706;--amber-700:#b45309;
@@ -84,6 +84,8 @@ body{font-family:var(--font);background:var(--slate-100);color:var(--slate-800);
 .btn-purple{background:var(--purple-600);color:#fff;}.btn-purple:hover{background:var(--purple-500);}
 .btn-outline{background:#fff;color:var(--slate-700);border:1px solid var(--slate-300);}
 .btn-outline:hover{background:var(--slate-50);border-color:var(--slate-400);}
+.btn-ai{background:linear-gradient(135deg,var(--brand-500),var(--brand-700));color:#fff;}
+.btn-ai:hover{background:linear-gradient(135deg,var(--brand-600),var(--brand-900));box-shadow:0 4px 12px rgba(37,99,235,.3);}
 .btn-block{width:100%;}
 .btn-sm{padding:7px 12px;font-size:11px;border-radius:8px;}
 .btn-xs{padding:4px 9px;font-size:10px;border-radius:6px;}
@@ -221,7 +223,7 @@ tbody tr:hover{background:var(--slate-50);}
 .chat-main{flex:1;display:flex;flex-direction:column;min-width:0;position:relative;z-index:1;}
 .chat-head{padding:14px 16px;border-bottom:1px solid var(--slate-200);display:flex;align-items:center;justify-content:space-between;background:#fff;flex-shrink:0;position:relative;z-index:3;}
 .chat-head h4{font-size:14px;font-weight:800;color:var(--slate-900);display:flex;align-items:center;gap:8px;}
-.chat-head .ai-tag{font-size:9px;font-weight:700;background:var(--brand-100);color:var(--brand-700);padding:2px 8px;border-radius:var(--radius-full);letter-spacing:.03em;}
+.chat-head .ai-tag{font-size:9px;font-weight:700;background:linear-gradient(135deg,var(--brand-100),var(--brand-200));color:var(--brand-700);padding:2px 8px;border-radius:var(--radius-full);letter-spacing:.03em;}
 .chat-head-right{display:flex;align-items:center;gap:4px;}
 .chat-sidebar-toggle{background:transparent;border:1px solid transparent;font-size:18px;cursor:pointer;color:var(--slate-500);padding:6px 10px;border-radius:8px;transition:all .15s;touch-action:manipulation;position:relative;z-index:10;}
 .chat-sidebar-toggle:hover{background:var(--slate-100);color:var(--slate-800);}
@@ -229,21 +231,35 @@ tbody tr:hover{background:var(--slate-50);}
 .chat-msgs{flex:1;overflow-y:auto;padding:14px 16px;background:var(--slate-50);display:flex;flex-direction:column;gap:10px;}
 .msg{display:flex;}
 .msg.user{justify-content:flex-end;}
-.msg .bubble{max-width:82%;padding:9px 14px;border-radius:14px;font-size:12.5px;line-height:1.5;word-wrap:break-word;white-space:pre-wrap;}
+.msg .bubble{max-width:82%;padding:9px 14px;border-radius:14px;font-size:12.5px;line-height:1.55;word-wrap:break-word;white-space:normal;}
+.msg.bot .bubble strong{color:var(--slate-900);font-weight:700;}
+.msg.bot .bubble em{font-style:italic;}
+.msg.bot .bubble h1,.msg.bot .bubble h2,.msg.bot .bubble h3{font-size:13px;margin:6px 0 3px;color:var(--slate-900);font-weight:800;}
+.msg.bot .bubble code{background:var(--slate-100);padding:1px 5px;border-radius:4px;font-family:monospace;font-size:11.5px;}
+.msg.bot .bubble ul{margin:4px 0 4px 16px;padding:0;}
+.msg.bot .bubble li{margin-bottom:2px;}
 .msg.user .bubble{background:var(--brand-600);color:#fff;border-bottom-right-radius:4px;}
 .msg.bot .bubble{background:#fff;color:var(--slate-800);border:1px solid var(--slate-200);border-bottom-left-radius:4px;}
 .msg .time{font-size:9px;opacity:.6;display:block;margin-top:3px;text-align:right;}
 .chat-quick{padding:8px 12px;display:flex;flex-wrap:wrap;gap:6px;border-top:1px solid var(--slate-200);background:#fff;max-height:100px;overflow-y:auto;flex-shrink:0;}
 .chat-quick .qc{font-size:10px;font-weight:600;padding:4px 10px;border-radius:var(--radius-full);background:var(--slate-100);border:1px solid var(--slate-200);color:var(--slate-600);cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;}
 .chat-quick .qc:hover{background:var(--brand-50);border-color:var(--brand-300);color:var(--brand-700);}
-.chat-input{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--slate-200);background:#fff;flex-shrink:0;}
-.chat-input input{flex:1;padding:9px 14px;border-radius:var(--radius-full);border:1px solid var(--slate-300);font-size:12.5px;}
-.chat-input button{width:40px;height:40px;border-radius:50%;background:var(--brand-600);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;touch-action:manipulation;}
+.chat-input{display:flex;gap:6px;padding:10px 12px;border-top:1px solid var(--slate-200);background:#fff;flex-shrink:0;align-items:center;}
+.chat-input input[type="text"]{flex:1;padding:9px 14px;border-radius:var(--radius-full);border:1px solid var(--slate-300);font-size:12.5px;}
+.chat-input button{width:40px;height:40px;border-radius:50%;background:var(--brand-600);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;touch-action:manipulation;transition:all .15s;}
 .chat-input button:hover{background:var(--brand-700);}
 .chat-input button:disabled{opacity:.5;cursor:not-allowed;}
+.chat-input .secondary-btn{background:#fff;border:1px solid var(--slate-300);color:var(--slate-600);}
+.chat-input .secondary-btn:hover{background:var(--slate-100);color:var(--slate-900);}
+.chat-input .secondary-btn.recording{background:var(--rose-600);color:#fff;border-color:var(--rose-600);animation:pulse 1s infinite;}
+.chat-file-preview{padding:8px 12px;background:var(--brand-50);border-top:1px solid var(--brand-200);font-size:11px;color:var(--brand-700);display:none;align-items:center;justify-content:space-between;gap:8px;}
+.chat-file-preview.show{display:flex;}
+.chat-file-preview button{background:transparent;border:none;color:var(--rose-600);cursor:pointer;font-size:14px;padding:2px 6px;font-weight:800;}
 .chat-welcome{text-align:center;padding:20px 12px;color:var(--slate-500);font-size:12px;line-height:1.9;}
 .chat-welcome .greeting-emoji{font-size:32px;display:block;margin-bottom:8px;}
 .chat-welcome b{color:var(--slate-900);}
+.voice-indicator{font-size:11px;color:var(--rose-600);font-weight:700;padding:2px 8px;background:var(--rose-50);border-radius:12px;display:none;align-items:center;gap:4px;}
+.voice-indicator.show{display:inline-flex;}
 .toast-wrap{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:99999;width:calc(100% - 32px);max-width:420px;pointer-events:none;}
 .toast{background:#fff;border:1px solid var(--slate-200);border-left:4px solid var(--brand-600);border-radius:var(--radius-sm);padding:12px 16px;font-size:12.5px;font-weight:600;color:var(--slate-800);box-shadow:var(--shadow-md);display:flex;align-items:center;gap:10px;opacity:0;transform:translateY(-12px);transition:all .25s ease;pointer-events:auto;}
 .toast.show{opacity:1;transform:translateY(0);}
@@ -275,6 +291,17 @@ tbody tr:hover{background:var(--slate-50);}
 .collapsible-header .toggle-icon{font-size:12px;color:var(--slate-400);transition:transform .25s;display:flex;align-items:center;gap:8px;}
 .collapsible-body{padding:0 16px 16px;display:none;animation:fadeIn .2s ease;}
 .collapsible-body.open{display:block;}
+/* Admin AI insights card */
+.ai-insights-card{background:linear-gradient(135deg,var(--brand-50),#f8fafc);border:1px solid var(--brand-200);border-radius:var(--radius);padding:16px;margin-bottom:16px;position:relative;overflow:hidden;}
+.ai-insights-card::before{content:'✨';position:absolute;top:8px;right:12px;font-size:20px;opacity:.4;}
+.ai-insights-card .ai-title{font-size:12px;font-weight:800;color:var(--brand-700);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.ai-insights-card .ai-subtitle{font-size:11px;color:var(--brand-600);margin-bottom:10px;line-height:1.5;}
+.ai-insight-box{background:#fff;border:1px solid var(--brand-200);border-radius:8px;padding:14px;margin-top:10px;font-size:12px;line-height:1.7;white-space:pre-wrap;max-height:320px;overflow-y:auto;}
+.ai-insight-box h1,.ai-insight-box h2,.ai-insight-box h3{font-size:13px;font-weight:800;color:var(--slate-900);margin:8px 0 4px;}
+.alert-item{padding:10px 12px;background:#fff;border:1px solid var(--brand-200);border-radius:8px;margin-bottom:8px;font-size:11.5px;line-height:1.6;}
+.alert-item .alert-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-weight:700;}
+.alert-item .alert-msg{color:var(--slate-600);}
+.alert-item .copy-btn{font-size:9px;padding:3px 8px;border-radius:6px;background:var(--brand-50);color:var(--brand-700);border:none;cursor:pointer;font-family:inherit;font-weight:700;}
 @media(max-width:480px){
   body{padding:12px;}
   .app-body{padding:16px;}
@@ -289,6 +316,7 @@ tbody tr:hover{background:var(--slate-50);}
   .chat-head h4{font-size:13px;}
   .chat-sidebar-toggle{padding:8px 12px;font-size:20px;}
   .modal-close{width:40px;height:40px;font-size:18px;}
+  .chat-input button{width:36px;height:36px;}
 }
 ::-webkit-scrollbar{width:6px;height:6px;}
 ::-webkit-scrollbar-track{background:transparent;}
@@ -376,6 +404,33 @@ tbody tr:hover{background:var(--slate-50);}
           <div class="stat"><div class="stat-value" id="adminWorkingDaysSoFar">0</div><div class="stat-label">Working Days (so far)</div></div>
           <div class="stat"><div class="stat-value" id="adminTotalWorkingDays">0</div><div class="stat-label">Total Working Days (Sem)</div></div>
         </div>
+
+        <div class="ai-insights-card" id="adminInsightsCard">
+          <div class="ai-title">🧠 AI Admin Insights</div>
+          <div class="ai-subtitle">Get instant AI-powered analysis of attendance patterns, concerns, and recommendations.</div>
+          <button class="btn btn-ai btn-block btn-sm" onclick="loadAdminInsights()">✨ Generate AI Insights</button>
+          <div id="adminInsightsResult"></div>
+        </div>
+
+        <div class="ai-insights-card" id="adminAlertsCard">
+          <div class="ai-title">📢 Smart Alerts (AI)</div>
+          <div class="ai-subtitle">Auto-generated warning messages for defaulters (below 75%).</div>
+          <div class="row mb-1">
+            <input type="number" id="alertThreshold" value="75" placeholder="Threshold %" style="font-size:12px;" />
+            <button class="btn btn-ai btn-sm" onclick="loadSmartAlerts()">Generate</button>
+          </div>
+          <div id="smartAlertsResult"></div>
+        </div>
+
+        <div class="ai-insights-card">
+          <div class="ai-title">📄 AI Report Downloads (PDF)</div>
+          <div class="ai-subtitle">Generate professional PDF reports with one click.</div>
+          <div class="row">
+            <button class="btn btn-primary btn-sm" onclick="downloadAdminPDF('admin-defaulters')">⚠️ Defaulters PDF</button>
+            <button class="btn btn-primary btn-sm" onclick="downloadAdminPDF('class-report')">📊 Class Report PDF</button>
+          </div>
+        </div>
+
         <div class="card" style="margin-bottom:0;">
           <div class="card-title"><span>📋 Today's Present Students</span><button class="btn btn-outline btn-xs" onclick="loadDashboardStats()">🔄 Refresh</button></div>
           <div id="adminPresentList" style="max-height:220px;overflow-y:auto;font-size:12px;"><div class="text-muted text-xs">Loading…</div></div>
@@ -494,7 +549,7 @@ tbody tr:hover{background:var(--slate-50);}
         </div>
 
         <div class="card" id="studentPdfCard" style="display:none;">
-          <div class="card-title">📄 My Attendance Report (PDF / CSV)</div>
+          <div class="card-title">📄 My Reports (PDF / CSV)</div>
           <div class="row mb-1">
             <select id="pdfRangeSelect">
               <option value="CURRENT_MONTH">Current Month</option>
@@ -502,16 +557,15 @@ tbody tr:hover{background:var(--slate-50);}
               <option value="FULL_SEMESTER">Full Semester</option>
             </select>
             <select id="pdfMonthSelect" style="display:none;">
-              <option value="6">July 2026</option><option value="7">August 2026</option>
-              <option value="8" selected>September 2026</option><option value="9">October 2026</option>
+              <option value="6">July 2026</option><option value="7">August 2026</option><option value="8" selected>September 2026</option><option value="9">October 2026</option>
               <option value="10">November 2026</option><option value="11">December 2026</option>
             </select>
           </div>
           <div class="row">
-            <button class="btn btn-primary btn-sm" onclick="generateSelfPDF()">📄 Download PDF</button>
+            <button class="btn btn-ai btn-sm" onclick="downloadSelfAIPDF()">📄 AI PDF Report</button>
             <button class="btn btn-success btn-sm" onclick="exportMyAttendance()">📥 CSV</button>
           </div>
-          <p class="text-xs text-muted mt-1" style="text-align:center;">PDF opens in new tab → tap "Save as PDF"</p>
+          <p class="text-xs text-muted mt-1" style="text-align:center;">AI PDF auto-downloads — professional layout</p>
         </div>
 
         <div class="card">
@@ -587,7 +641,7 @@ tbody tr:hover{background:var(--slate-50);}
             <button class="btn btn-primary btn-block" onclick="downloadSingle()">Download CSV</button>
           </div>
           <div class="card">
-            <div class="card-title">📄 Individual Report (PDF / CSV)</div>
+            <div class="card-title">📄 Individual Report (AI PDF / CSV)</div>
             <select id="reportStudentSelect" class="mb-2"><option value="">Select Student…</option></select>
             <select id="adminReportRange" class="mb-2" onchange="toggleAdminReportRange()">
               <option value="CURRENT_MONTH">Current Month</option><option value="SELECTED_MONTH">Selected Month</option><option value="FULL_SEMESTER">Full Semester</option>
@@ -597,17 +651,17 @@ tbody tr:hover{background:var(--slate-50);}
               <option value="9">October 2026</option><option value="10">November 2026</option><option value="11">December 2026</option>
             </select>
             <div class="row">
-              <button class="btn btn-primary btn-sm" onclick="generateStudentReport('pdf')">📄 Download PDF</button>
+              <button class="btn btn-ai btn-sm" onclick="generateStudentReport('pdf')">📄 AI PDF</button>
               <button class="btn btn-success btn-sm" onclick="generateStudentReport('csv')">📥 CSV</button>
             </div>
           </div>
           <div class="card">
-            <div class="card-title">📋 Class Attendance Report</div>
+            <div class="card-title">📋 Class Attendance Report (AI PDF)</div>
             <div class="row mb-1"><input type="date" id="classStart" /><input type="date" id="classEnd" /></div>
             <select id="classBranch" class="mb-2">
               <option value="ALL">All Branches</option><option value="CSE">CSE</option><option value="AIDS">AIDS</option>
             </select>
-            <button class="btn btn-primary btn-block" onclick="generateClassReport()">Generate PDF</button>
+            <button class="btn btn-ai btn-block" onclick="generateClassReport()">📄 Generate AI PDF</button>
           </div>
         </div>
 
@@ -905,7 +959,7 @@ tbody tr:hover{background:var(--slate-50);}
 </button>
 <div class="chat-panel" id="chatPanel">
   <div class="chat-head">
-    <h4>🤖 BM Bot <span class="ai-tag">AI</span></h4>
+    <h4>🤖 BM Bot <span class="ai-tag">Gemini AI</span></h4>
     <div class="chat-head-right">
       <button type="button" class="chat-sidebar-toggle" onclick="toggleChatSidebar()" title="History">☰</button>
       <button type="button" class="modal-close" onclick="toggleChat()" title="Close">✕</button>
@@ -920,13 +974,25 @@ tbody tr:hover{background:var(--slate-50);}
     </div>
     <div class="chat-main">
       <div class="chat-msgs" id="chatMsgs"></div>
+      <div class="chat-file-preview" id="chatFilePreview">
+        <span>📎 <b id="chatFileName">file.pdf</b></span>
+        <button type="button" onclick="clearChatFile()">✕</button>
+      </div>
       <div class="chat-quick" id="chatQuick"></div>
       <div class="chat-input">
+        <input type="file" id="chatFileInput" accept=".pdf,.txt" style="display:none;" onchange="onChatFileSelected(event)" />
+        <button type="button" class="secondary-btn" onclick="document.getElementById('chatFileInput').click()" title="Upload PDF/TXT" id="chatAttachBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        </button>
+        <button type="button" class="secondary-btn" id="chatVoiceBtn" onclick="toggleVoiceInput()" title="Voice input">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+        </button>
         <input type="text" id="chatInput" placeholder="Ask anything…" onkeydown="if(event.key==='Enter') sendChat()" />
-        <button id="chatSendBtn" onclick="sendChat()">
+        <button type="button" id="chatSendBtn" onclick="sendChat()">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         </button>
       </div>
+      <div id="voiceIndicator" class="voice-indicator" style="position:absolute;top:8px;right:16px;z-index:5;">🎤 Listening…</div>
     </div>
   </div>
 </div>
@@ -964,6 +1030,8 @@ let pendingBulkAction = null;
 let chatHistory = [];
 let selectedHolidayDates = new Set();
 let subjectBreakdownOpen = false;
+let pendingChatFile = null;
+let recognition = null;
 
 function $(id){return document.getElementById(id);}
 function toast(msg, type='info'){
@@ -987,6 +1055,20 @@ function sanitizeRoll(r){return r ? r.toUpperCase().replace(/[^A-Z0-9]/g,'') : '
 function isValidStudentRoll(r){return /^24(CSE|AIDS)\d{2}$/.test(r);}
 function togglePassword(){const p = $('password');p.type = p.type === 'password' ? 'text' : 'password';}
 function escapeHtml(t){ const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+function renderMarkdown(text) {
+  if (!text) return '';
+  let html = escapeHtml(text);
+  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, '$1<em>$2</em>');
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  html = html.replace(/^[•\-]\s+(.+)$/gm, '• $1');
+  html = html.replace(/\n/g, '<br>');
+  return html;
+}
 
 function getMonthRangeStrings(monthNum){
   const mm = String(monthNum + 1).padStart(2, '0');
@@ -1067,12 +1149,10 @@ async function handleAuth(){
   } catch(e){ toast(e.message,'error'); }
 }
 
-// ✅ FIX 3: Impersonate logout — restore admin via localStorage
 function logout(){
   const origToken = localStorage.getItem('BM_ORIG_TOKEN');
   const origUser = localStorage.getItem('BM_ORIG_USER');
   if (origToken && origUser) {
-    // Restore admin session — impersonation active
     localStorage.setItem('token', origToken);
     localStorage.setItem('user', origUser);
     localStorage.removeItem('BM_ORIG_TOKEN');
@@ -1081,7 +1161,6 @@ function logout(){
     location.reload();
     return;
   }
-  // Normal logout
   localStorage.removeItem('token');
   localStorage.removeItem('user');
   localStorage.removeItem('BM_ORIG_TOKEN');
@@ -1116,7 +1195,6 @@ function loadDashboard(){
   $('roleBadge').className = 'pill role-' + currentUser.role;
   $('branchBadge').textContent = currentUser.branch || 'CSE';
 
-  // ✅ FIX 3: Check impersonation state via localStorage (survives reload)
   const origToken = localStorage.getItem('BM_ORIG_TOKEN');
   const origUser = localStorage.getItem('BM_ORIG_USER');
   if (origToken && origUser) {
@@ -1602,58 +1680,125 @@ async function exportMyAttendance(){
   download(csv, `my_attendance_${currentUser.rollNo}.csv`);
 }
 
-async function generateSelfPDF(){
+async function downloadSelfAIPDF(){
   const range = $('pdfRangeSelect').value;
   const month = $('pdfMonthSelect').value;
-  await generateIndividualPDF(currentUser.rollNo, currentUser.name, currentUser.branch || 'CSE', range, month, true);
+  const rng = getRangeForSelection(range, month);
+  showDL('Generating AI PDF…');
+  try {
+    const res = await fetch(`${API}/api/ai/generate-report-pdf`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        rollNo: currentUser.rollNo,
+        reportType: 'student-attendance',
+        targetRollNo: currentUser.rollNo,
+        startDate: rng.start,
+        endDate: rng.end
+      })
+    });
+    hideDL();
+    if (!res.ok) {
+      const err = await res.json().catch(()=>({error:'Failed'}));
+      return toast(err.error || 'Failed to generate PDF', 'error');
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `attendance_${currentUser.rollNo}_${rng.start}.pdf`;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 3000);
+    toast('✅ PDF downloaded!', 'success');
+  } catch(e){ hideDL(); toast('Error: ' + e.message, 'error'); }
 }
 
-async function generateIndividualPDF(studentRoll, studentName, branch, range, month, isSelf){
-  showDL('Generating PDF…');
+async function loadAdminInsights(){
+  const el = $('adminInsightsResult');
+  el.innerHTML = '<div class="text-xs text-muted" style="text-align:center;padding:8px;">🤖 AI analyzing dashboard data…</div>';
   try {
-    await ensureHolidays();
-    let records = [];
-    if (isSelf) records = (globalHistory || []).slice();
-    else {
-      try {
-        const attRes = await fetch(`${API}/api/attendance/student/${studentRoll}/${currentUser.rollNo}`);
-        if (attRes.ok) records = await attRes.json();
-        else { const err = await attRes.json().catch(()=>({})); hideDL(); return toast(err.error || `Failed (${attRes.status})`, 'error'); }
-      } catch(e) { hideDL(); return toast('Network: ' + e.message, 'error'); }
+    const res = await fetch(`${API}/api/ai/admin-insights`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requesterRollNo: currentUser.rollNo })
+    });
+    const d = await res.json();
+    if (!res.ok) {
+      if (res.status === 503) { el.innerHTML = '<div class="text-xs" style="color:var(--amber-700);padding:8px;">⏳ AI busy hai. 15 sec baad try karo 🙏</div>'; return; }
+      el.innerHTML = `<div class="text-xs" style="color:var(--rose-600);padding:8px;">❌ ${d.error}</div>`; return;
     }
-    const rng = getRangeForSelection(range, month);
-    records = records.filter(r => r.date >= rng.start && r.date <= rng.end);
-    if (!records.length) { hideDL(); return toast('No records found for range','error'); }
-    const holidaySet = new Set((globalHolidays || []).map(h => (h.date||'').split('T')[0]));
-    const tt = getTimetableForBranch(branch);
-    let totalConducted = 0;
-    let cur = new Date(rng.start + 'T00:00:00');
-    const endD = new Date(rng.end + 'T23:59:59');
-    while (cur <= endD) {
-      const ds = fmtDate(cur); const dow = cur.getDay();
-      if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) {
-        const subs = (tt[FULL_DAY_NAMES[dow]] || []).filter(s => !s.includes('Sports') && !s.includes('LIB') && !s.includes('Library'));
-        totalConducted += subs.length;
-      }
-      cur.setDate(cur.getDate()+1);
+    let html = `<div class="ai-insight-box" style="margin-top:10px;">${renderMarkdown(d.insights)}</div>`;
+    if (d.topDefaulters && d.topDefaulters.length > 0) {
+      html += `<div style="margin-top:10px;"><div class="text-xs font-bold" style="margin-bottom:6px;color:var(--slate-600);">Top Defaulters (${d.stats.defaulterCount})</div>`;
+      html += d.topDefaulters.slice(0,5).map(s => `<span class="badge badge-danger" style="margin-right:6px;margin-bottom:4px;">${s.rollNo}: ${s.pct}%</span>`).join('');
+      html += `</div>`;
     }
-    const totalAttended = records.filter(r => r.status === 'Present' || r.status === 'Duty Leave').length;
-    const pct = totalConducted > 0 ? Math.round((totalAttended/totalConducted)*100) : 0;
-    const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Attendance ${studentRoll}</title>
-<style>*{box-sizing:border-box;}body{font-family:Arial,sans-serif;padding:30px;color:#0f172a;background:#fff;margin:0}h1{color:#1d4ed8;margin:0 0 4px;font-size:22px}h2{color:#2563eb;font-weight:400;border-bottom:2px solid #dbeafe;padding-bottom:6px;margin-top:6px;font-size:18px}.meta{color:#64748b;font-size:13px;margin:4px 0}table{width:100%;border-collapse:collapse;font-size:12px;margin-top:14px}th{background:#dbeafe;padding:8px;text-align:left;color:#1e40af;border:1px solid #dbeafe}td{padding:6px 8px;border-bottom:1px solid #f1f5f9;border-left:1px solid #f1f5f9;border-right:1px solid #f1f5f9}.sum{display:flex;gap:16px;margin:20px 0;flex-wrap:wrap}.box{flex:1;min-width:100px;background:#f8fafc;padding:14px;border-radius:8px;text-align:center;border:1px solid #e2e8f0}.box b{display:block;font-size:24px;color:#1d4ed8}.label{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.05em}@media print{body{padding:10px}@page{margin:10mm}}</style>
-</head><body><h1>BM Group of Institutions</h1><h2>Student Attendance Report</h2>
-<p class="meta"><b>${studentName}</b> (${studentRoll}) &bull; ${branch} &bull; 5th Semester</p>
-<p class="meta">Range: ${fmtDatePretty(rng.start)} &rarr; ${fmtDatePretty(rng.end)} &bull; Generated: ${new Date().toLocaleString()}</p>
-<div class="sum"><div class="box"><b>${totalAttended}</b><span class="label">Attended</span></div><div class="box"><b>${totalConducted}</b><span class="label">Conducted</span></div><div class="box"><b>${pct}%</b><span class="label">Percentage</span></div></div>
-<h3>Detailed Records</h3><table><thead><tr><th>Date</th><th>Subject</th><th>Status</th></tr></thead><tbody>
-${records.sort((a,b) => b.date.localeCompare(a.date)).map(r => `<tr><td>${fmtDatePretty(r.date)}</td><td>${r.subject}</td><td>${r.status}</td></tr>`).join('')}
-</tbody></table></body></html>`;
-    const win = window.open('', '_blank');
-    if (!win) { hideDL(); return toast('Allow popups to open PDF','error'); }
-    win.document.open(); win.document.write(htmlContent); win.document.close();
+    el.innerHTML = html;
+  } catch(e){ el.innerHTML = `<div class="text-xs" style="color:var(--rose-600);padding:8px;">❌ ${e.message}</div>`; }
+}
+
+async function loadSmartAlerts(){
+  const el = $('smartAlertsResult');
+  const threshold = parseInt($('alertThreshold').value) || 75;
+  el.innerHTML = '<div class="text-xs text-muted" style="text-align:center;padding:8px;">🤖 AI warnings bana raha hai…</div>';
+  try {
+    const res = await fetch(`${API}/api/ai/smart-alerts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requesterRollNo: currentUser.rollNo, threshold, limit: 10 })
+    });
+    const d = await res.json();
+    if (!res.ok) {
+      if (res.status === 503) { el.innerHTML = '<div class="text-xs" style="color:var(--amber-700);padding:8px;">⏳ AI busy hai. 15 sec baad try karo 🙏</div>'; return; }
+      el.innerHTML = `<div class="text-xs" style="color:var(--rose-600);padding:8px;">❌ ${d.error}</div>`; return;
+    }
+    if (!d.alerts || d.alerts.length === 0) {
+      el.innerHTML = `<div class="text-xs text-muted" style="padding:8px;">✅ No defaulters below ${threshold}%</div>`;
+      return;
+    }
+    let html = `<div class="text-xs" style="margin-bottom:8px;color:var(--slate-600);">Total: <b>${d.totalDefaulters}</b> · Top ${d.alertsSent}</div>`;
+    d.alerts.forEach((a) => {
+      const safeMsg = (a.message||'').replace(/\\/g,'\\\\').replace(/'/g, "\\'").replace(/\n/g, ' ');
+      html += `<div class="alert-item">
+        <div class="alert-head"><span>${a.rollNo} · ${a.name} <span class="badge badge-danger">${a.pct}%</span></span>
+          <button type="button" class="copy-btn" onclick="copyAlert('${safeMsg}')">📋 Copy</button></div>
+        <div class="alert-msg">${escapeHtml(a.message)}</div>
+      </div>`;
+    });
+    el.innerHTML = html;
+  } catch(e){ el.innerHTML = `<div class="text-xs" style="color:var(--rose-600);padding:8px;">❌ ${e.message}</div>`; }
+}
+function copyAlert(text){
+  if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => toast('Copied!', 'success')).catch(() => toast('Failed to copy', 'error'));
+  else toast('Copy not supported','error');
+}
+
+async function downloadAdminPDF(reportType){
+  let payload = { rollNo: currentUser.rollNo, reportType };
+  if (reportType === 'admin-defaulters') payload.threshold = parseInt($('alertThreshold').value) || 75;
+  if (reportType === 'class-report') {
+    payload.startDate = $('classStart')?.value || '2026-07-15';
+    payload.endDate = $('classEnd')?.value || fmtDate(new Date());
+    payload.branch = $('classBranch')?.value || 'ALL';
+  }
+  showDL('Generating AI PDF…');
+  try {
+    const res = await fetch(`${API}/api/ai/generate-report-pdf`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
     hideDL();
-    setTimeout(() => { try { win.focus(); win.print(); } catch(e){ console.warn(e); } toast('✅ Use "Save as PDF"','success'); }, 700);
-  } catch(e) { hideDL(); console.error(e); toast('Failed: ' + e.message, 'error'); }
+    if (!res.ok) { const err = await res.json().catch(()=>({error:'Failed'})); return toast(err.error || 'Failed', 'error'); }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${reportType}_${fmtDate(new Date())}.pdf`;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 3000);
+    toast('✅ PDF downloaded!', 'success');
+  } catch(e){ hideDL(); toast('Error: ' + e.message, 'error'); }
 }
 
 function getTimetableForBranch(branch){
@@ -1874,20 +2019,39 @@ async function generateStudentReport(fmt){
   if (!roll) return toast('Select student','error');
   const range = $('adminReportRange').value;
   const month = $('adminReportMonth').value;
-  let studentName = roll, branch = 'CSE';
-  try {
-    const profileRes = await fetch(`${API}/api/student/profile/${roll}`);
-    if (profileRes.ok) { const profile = await profileRes.json(); studentName = profile.name || roll; branch = profile.branch || 'CSE'; }
-  } catch(e){}
-  if (fmt === 'pdf') await generateIndividualPDF(roll, studentName, branch, range, month, false);
-  else {
+  const rng = getRangeForSelection(range, month);
+  if (fmt === 'pdf') {
+    showDL('Generating AI PDF…');
+    try {
+      const res = await fetch(`${API}/api/ai/generate-report-pdf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rollNo: currentUser.rollNo,
+          reportType: 'student-attendance',
+          targetRollNo: roll,
+          startDate: rng.start,
+          endDate: rng.end
+        })
+      });
+      hideDL();
+      if (!res.ok) { const err = await res.json().catch(()=>({error:'Failed'})); return toast(err.error || 'Failed', 'error'); }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `report_${roll}_${rng.start}.pdf`;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 3000);
+      toast('✅ PDF downloaded!', 'success');
+    } catch(e){ hideDL(); toast('Error: ' + e.message, 'error'); }
+  } else {
     try {
       const records = await fetch(`${API}/api/attendance/student/${roll}/${currentUser.rollNo}`).then(r=>r.json());
       if (!records || !records.length) return toast('No records','error');
-      const rng = getRangeForSelection(range, month);
       const filtered = records.filter(r => r.date >= rng.start && r.date <= rng.end);
       if (!filtered.length) return toast('No records in range','error');
-      let csv = `Student Attendance Report\nStudent: ${studentName} (${roll})\nBranch: ${branch}\nRange: ${rng.start} to ${rng.end}\n\nDate,Subject,Status\n`;
+      let csv = `Student Attendance Report\nStudent: ${roll}\nRange: ${rng.start} to ${rng.end}\n\nDate,Subject,Status\n`;
       filtered.forEach(r => { csv += `${r.date},${r.subject},${r.status}\n`; });
       download(csv, `report_${roll}_${range}.csv`);
     } catch(e) { toast('Failed: ' + e.message,'error'); }
@@ -1897,19 +2061,24 @@ async function generateStudentReport(fmt){
 async function generateClassReport(){
   const s = $('classStart').value, e = $('classEnd').value, b = $('classBranch').value;
   if (!s || !e) return toast('Select dates','error');
-  showDL('Generating…');
+  showDL('AI class report PDF…');
   try {
-    const url = `${API}/api/admin/class-attendance-report?requesterRollNo=${currentUser.rollNo}&startDate=${s}&endDate=${e}&branch=${b}`;
-    const data = await fetch(url).then(r=>r.json());
-    if (!data.students || data.students.length === 0) { hideDL(); return toast('No students','error'); }
-    const rows = data.students.map((x,i)=>`<tr><td style="text-align:center;">${i+1}</td><td>${x.rollNo}</td><td>${x.name}</td><td style="text-align:center;">${x.totalPresent}</td><td style="text-align:center;">${x.percentage}%</td></tr>`).join('');
-    const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Class Report</title><style>body{font-family:Arial;padding:24px;color:#0f172a}h1{color:#1d4ed8;text-align:center}h2{color:#2563eb;text-align:center;font-weight:400}table{width:100%;border-collapse:collapse;font-size:12px;margin-top:20px}th{background:#dbeafe;padding:10px;text-align:left}td{padding:8px 10px;border-bottom:1px solid #f1f5f9}@media print{@page{margin:10mm}}</style></head><body><h1>BM Group of Institutions</h1><h2>${b==='ALL'?'All Branches':b} – 5th Semester</h2><p style="text-align:center;color:#64748b;">Range: ${fmtDatePretty(s)} to ${fmtDatePretty(e)}</p><table><thead><tr><th>S.No</th><th>Roll</th><th>Name</th><th>Present</th><th>%</th></tr></thead><tbody>${rows}</tbody></table><p style="text-align:center;font-size:10px;color:#94a3b8;margin-top:20px;">Generated: ${new Date().toLocaleString()}</p></body></html>`;
-    const win = window.open('', '_blank');
-    if (!win) { hideDL(); return toast('Allow popups','error'); }
-    win.document.open(); win.document.write(htmlContent); win.document.close();
+    const res = await fetch(`${API}/api/ai/generate-report-pdf`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rollNo: currentUser.rollNo, reportType: 'class-report', startDate: s, endDate: e, branch: b })
+    });
     hideDL();
-    setTimeout(() => { try { win.focus(); win.print(); } catch(e){} toast('✅ Use "Save as PDF"','success'); }, 700);
-  } catch(e){ hideDL(); toast('Failed: ' + e.message,'error'); }
+    if (!res.ok) { const err = await res.json().catch(()=>({error:'Failed'})); return toast(err.error || 'Failed', 'error'); }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `class_report_${b}_${s}.pdf`;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 3000);
+    toast('✅ Class report PDF downloaded!', 'success');
+  } catch(e){ hideDL(); toast('Error: ' + e.message, 'error'); }
 }
 
 function initEntry(){ setBranch(currentManualBranch); $('manualDate').value = fmtDate(new Date()); loadBulkStudents(); }
@@ -2120,7 +2289,7 @@ async function fixAllAttendanceSubjects(){
     const d = await res.json();
     hideDL();
     if (!res.ok) { statusEl.textContent = '❌ ' + (d.error || 'Failed'); return toast(d.error || 'Failed', 'error'); }
-    const msg = `✅ Scanned ${d.totalScanned}, fixed ${d.fixed}, replaced ${d.replaced}, deleted ${d.deleted}.`;
+    const msg = `✅ Scanned ${d.totalScanned}, fixed ${d.fixed}, merged ${d.merged}, deleted ${d.deleted}.`;
     statusEl.textContent = msg;
     toast(msg, 'success');
     globalHolidays = []; await ensureHolidays();
@@ -2268,7 +2437,6 @@ async function deleteUser(){
   } catch(e){}
 }
 
-// ✅ FIX 3: Save admin session to localStorage before switching
 async function impersonate(){
   const r = $('impRollInput').value.trim().toUpperCase();
   if (!r) return toast('Enter roll','error');
@@ -2276,10 +2444,8 @@ async function impersonate(){
     const res = await fetch(`${API}/api/admin/login-as-student`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, targetRollNo: r})});
     const d = await res.json();
     if (res.ok) {
-      // ✅ Save current admin session to localStorage BEFORE switching
       localStorage.setItem('BM_ORIG_TOKEN', localStorage.getItem('token'));
       localStorage.setItem('BM_ORIG_USER', localStorage.getItem('user'));
-      // Switch to student
       localStorage.setItem('token', d.token);
       localStorage.setItem('user', JSON.stringify(d.user));
       impersonating = true;
@@ -2440,12 +2606,23 @@ async function facReport(fmt){
     filtered = filtered.filter(r => r.date >= startStr && r.date <= endStr);
     if (filtered.length === 0) { hideDL(); return toast('No records in range','error'); }
     if (fmt === 'pdf') {
-      const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Teacher Report ${roll}</title><style>body{font-family:Arial;padding:30px;color:#0f172a}h1{color:#1d4ed8}h2{color:#2563eb;font-weight:400;border-bottom:2px solid #dbeafe;padding-bottom:6px}table{width:100%;border-collapse:collapse;font-size:12px;margin-top:14px}th{background:#dbeafe;padding:8px;text-align:left;color:#1e40af}td{padding:6px 8px;border-bottom:1px solid #f1f5f9}@media print{@page{margin:10mm}}</style></head><body><h1>BM Group of Institutions</h1><h2>Teacher Report – ${roll}</h2><p style="color:#64748b;font-size:13px;">Teacher: ${currentUser.name} (${currentUser.rollNo})</p><p style="color:#64748b;font-size:13px;">Range: ${startStr} → ${endStr}</p><p style="color:#64748b;font-size:13px;">Generated: ${new Date().toLocaleString()}</p><table><thead><tr><th>Date</th><th>Subject</th><th>Status</th></tr></thead><tbody>${filtered.map(r=>`<tr><td>${fmtDatePretty(r.date)}</td><td>${r.subject}</td><td>${r.status}</td></tr>`).join('')}</tbody></table></body></html>`;
-      const win = window.open('', '_blank');
-      if (!win) { hideDL(); return toast('Allow popups','error'); }
-      win.document.open(); win.document.write(htmlContent); win.document.close();
-      hideDL();
-      setTimeout(() => { try { win.focus(); win.print(); } catch(e){} toast('✅ Use "Save as PDF"','success'); }, 700);
+      try {
+        const res = await fetch(`${API}/api/ai/generate-report-pdf`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rollNo: currentUser.rollNo, reportType: 'student-attendance', targetRollNo: roll, startDate: startStr, endDate: endStr })
+        });
+        hideDL();
+        if (!res.ok) return toast('Failed to generate PDF','error');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `teacher_report_${roll}_${startStr}.pdf`;
+        document.body.appendChild(a); a.click();
+        setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 3000);
+        toast('✅ PDF downloaded!','success');
+      } catch(e){ hideDL(); toast('Failed: ' + e.message,'error'); }
     } else {
       let csv = `Teacher Report\nStudent: ${roll}\nTeacher: ${currentUser.name}\nRange: ${startStr} to ${endStr}\n\nDate,Subject,Status\n`;
       filtered.forEach(r => { csv += `${r.date},${r.subject},${r.status}\n`; });
@@ -2476,16 +2653,15 @@ async function loadMyLeaves(){
 function renderChatQuick(){
   const chips = [
     {t:'📊 My Attendance', q:'What is my attendance percentage?'},
+    {t:'🎯 Can I Bunk?', q:'How many lectures can I bunk?'},
     {t:'📅 Today\'s Timetable', q:'What is today\'s timetable?'},
     {t:'🎉 Holidays', q:'Are there any holidays this month?'},
-    {t:'📆 Working Days', q:'How many working days so far?'},
     {t:'📝 BDA Notes', q:'Give me notes for BDA - Big Data Analytics'},
     {t:'📝 CN Notes', q:'Give me notes for CN - Computer Network'},
-    {t:'📝 DAA Notes', q:'Give me notes for DAA - Design & Analysis of Algorithm'},
-    {t:'📝 WT Notes', q:'Give me notes for WT - Web Technology'},
+    {t:'💡 Study Plan', q:'Give me a study plan for this week'},
     {t:'❓ Help', q:'Help'}
   ];
-  $('chatQuick').innerHTML = chips.map(c => `<button class="qc" onclick="quickAsk('${c.q.replace(/'/g,"\\'")}')">${c.t}</button>`).join('');
+  $('chatQuick').innerHTML = chips.map(c => `<button type="button" class="qc" onclick="quickAsk('${c.q.replace(/'/g,"\\'")}')">${c.t}</button>`).join('');
 }
 function quickAsk(q){ $('chatInput').value = q; sendChat(); }
 function toggleChat(){
@@ -2503,7 +2679,7 @@ function renderChatWelcome(){
   else if (hour < 17) { greeting = 'Good afternoon'; emoji = '🌤️'; }
   else { greeting = 'Good evening'; emoji = '🌙'; }
   const name = currentUser ? currentUser.name : 'there';
-  el.innerHTML = `<div class="chat-welcome"><span class="greeting-emoji">${emoji}</span><div><strong>${greeting}, ${name}!</strong> I'm <strong>BM Bot</strong>, your AI assistant.</div><div>Ask me about attendance, timetable, holidays, or anything!</div><div style="font-size:10px;margin-top:6px;">💡 Try: "What is my attendance?"</div></div>`;
+  el.innerHTML = `<div class="chat-welcome"><span class="greeting-emoji">${emoji}</span><div><strong>${greeting}, ${name}!</strong> I'm <strong>BM Bot</strong>, your AI assistant.</div><div>Ask me about attendance, timetable, holidays, notes, or upload PDF!</div><div style="font-size:10px;margin-top:6px;">💡 Try: "What is my attendance?"</div></div>`;
 }
 async function fetchChatHistory(){
   if (!currentUser) return;
@@ -2538,15 +2714,110 @@ async function deleteChatThread(threadId){
   } catch(e){}
 }
 function newChat(){ currentThreadId = null; chatGreeted = false; renderChatWelcome(); renderChatHistory(); }
+
+// ✅ File select — only PDF and TXT
+function onChatFileSelected(ev){
+  const file = ev.target.files[0];
+  if (!file) return;
+  if (file.size > 8 * 1024 * 1024) { toast('File too large (max 8MB)','error'); ev.target.value=''; return; }
+  const allowed = ['application/pdf','text/plain'];
+  if (!allowed.includes(file.type)) { toast('Only PDF and TXT allowed','error'); ev.target.value=''; return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    const base64 = reader.result.split(',')[1];
+    pendingChatFile = { base64, mimeType: file.type, name: file.name };
+    $('chatFileName').textContent = file.name;
+    $('chatFilePreview').classList.add('show');
+  };
+  reader.readAsDataURL(file);
+}
+function clearChatFile(){
+  pendingChatFile = null;
+  $('chatFileInput').value = '';
+  $('chatFilePreview').classList.remove('show');
+}
+
+function toggleVoiceInput(){
+  const btn = $('chatVoiceBtn');
+  const indicator = $('voiceIndicator');
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { toast('Voice input not supported in this browser','error'); return; }
+  if (recognition) {
+    try { recognition.stop(); } catch(e){}
+    recognition = null;
+    btn.classList.remove('recording');
+    indicator.classList.remove('show');
+    return;
+  }
+  recognition = new SR();
+  recognition.lang = 'en-IN';
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.onstart = () => { btn.classList.add('recording'); indicator.classList.add('show'); };
+  recognition.onend = () => { btn.classList.remove('recording'); indicator.classList.remove('show'); recognition = null; };
+  recognition.onerror = (e) => { toast('Voice error: ' + e.error,'error'); btn.classList.remove('recording'); indicator.classList.remove('show'); recognition = null; };
+  recognition.onresult = (e) => { $('chatInput').value = e.results[0][0].transcript; };
+  recognition.start();
+}
+
 async function sendChat(){
   const inp = $('chatInput');
   const msg = inp.value.trim();
-  if (!msg) return;
+  if (!msg && !pendingChatFile) return;
   const btn = $('chatSendBtn');
   btn.disabled = true;
   inp.value = '';
   const welcome = $('chatMsgs').querySelector('.chat-welcome');
   if (welcome) welcome.remove();
+
+  // File upload path — save ref to local var BEFORE clearing
+  if (pendingChatFile) {
+    const fileData = { base64: pendingChatFile.base64, mimeType: pendingChatFile.mimeType, name: pendingChatFile.name };
+    const fileInfo = `📎 [${fileData.name}]`;
+    appendChat('user', `${fileInfo} ${msg || 'Explain this'}`);
+    clearChatFile();
+    const typing = document.createElement('div');
+    typing.className = 'msg bot';
+    typing.innerHTML = '<div class="bubble" style="opacity:0.6;">🤖 Reading file… (30-60s)</div>';
+    $('chatMsgs').appendChild(typing);
+    $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
+    try {
+      const res = await fetch(`${API}/api/ai/chat-with-file`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: msg || 'Explain this document and give me a summary with key points.',
+          fileBase64: fileData.base64,
+          mimeType: fileData.mimeType,
+          rollNo: currentUser.rollNo,
+          role: currentUser.role,
+          name: currentUser.name,
+          branch: currentUser.branch,
+          threadId: currentThreadId
+        })
+      });
+      let d;
+      try { d = await res.json(); } catch(_) { d = {}; }
+      typing.remove();
+      if (d.threadId) { currentThreadId = d.threadId; fetchChatHistory(); }
+      if (res.ok && d.reply) {
+        appendChat('bot', d.reply, true);
+      } else if (res.status === 503 || res.status === 429) {
+        appendChat('bot', '⏳ AI server busy hai. 15-20 second baad try karo 🙏');
+      } else {
+        appendChat('bot', '⚠️ ' + (d.error || 'Failed to process file'));
+      }
+    } catch(e){
+      typing.remove();
+      appendChat('bot', '⚠️ Network error: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
+    }
+    return;
+  }
+
+  // Text chat
   appendChat('user', msg);
   const typing = document.createElement('div');
   typing.className = 'msg bot';
@@ -2554,12 +2825,19 @@ async function sendChat(){
   $('chatMsgs').appendChild(typing);
   $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
   try {
-    const res = await fetch(`${API}/api/chat`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message: msg, rollNo: currentUser.rollNo, role: currentUser.role, name: currentUser.name, branch: currentUser.branch, threadId: currentThreadId, skipGreeting: chatGreeted})});
-    const d = await res.json();
+    const res = await fetch(`${API}/api/ai/chat`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message: msg, rollNo: currentUser.rollNo, role: currentUser.role, name: currentUser.name, branch: currentUser.branch, threadId: currentThreadId, skipGreeting: chatGreeted})});
+    let d;
+    try { d = await res.json(); } catch(_) { d = {}; }
     typing.remove();
     if (d.threadId) { currentThreadId = d.threadId; fetchChatHistory(); }
     chatGreeted = true;
-    appendChat('bot', d.reply || 'Sorry, could not process.');
+    if (res.status === 503 || res.status === 429) {
+      appendChat('bot', '⏳ AI server busy hai. 15-20 second baad try karo 🙏');
+    } else if (res.ok && d.reply) {
+      appendChat('bot', d.reply, true);
+    } else {
+      appendChat('bot', '⚠️ ' + (d.error || 'Sorry, could not process.'));
+    }
   } catch(e){
     typing.remove();
     appendChat('bot', '⚠️ Network error. Please try again.');
@@ -2568,11 +2846,12 @@ async function sendChat(){
     $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
   }
 }
-function appendChat(role, text){
+function appendChat(role, text, renderMD){
   const time = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
   const div = document.createElement('div');
   div.className = 'msg ' + role;
-  div.innerHTML = `<div class="bubble">${escapeHtml(text)}<span class="time">${time}</span></div>`;
+  const content = (role === 'bot' && renderMD) ? renderMarkdown(text) : escapeHtml(text);
+  div.innerHTML = `<div class="bubble">${content}<span class="time">${time}</span></div>`;
   $('chatMsgs').appendChild(div);
   $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
 }
