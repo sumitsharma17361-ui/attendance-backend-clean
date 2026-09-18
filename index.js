@@ -16,13 +16,34 @@ app.set('trust proxy', 1);
 app.use(express.json({ limit: '50mb' }));
 app.use(cors());
 
-// ---------- Env ----------
+// ---------- Multi-key Gemini rotation ----------
+const GEMINI_API_KEYS = [
+  process.env.GEMINI_API_KEY,
+  process.env.GEMINI_API_KEY_2,
+  process.env.GEMINI_API_KEY_3,
+  process.env.GEMINI_API_KEY_4,
+  process.env.GEMINI_API_KEY_5,
+  process.env.GEMINI_API_KEY_6
+].filter(k => k && k.trim() && k.trim().length > 5).map(k => k.trim());
+
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const GEMINI_FALLBACK_MODELS = ['gemini-2.0-flash', 'gemini-flash-latest'];
+
+let currentKeyIndex = 0;
+function getNextApiKey() {
+  if (GEMINI_API_KEYS.length === 0) return null;
+  const key = GEMINI_API_KEYS[currentKeyIndex % GEMINI_API_KEYS.length];
+  currentKeyIndex = (currentKeyIndex + 1) % GEMINI_API_KEYS.length;
+  return key;
+}
+function peekCurrentKey() {
+  if (GEMINI_API_KEYS.length === 0) return null;
+  return GEMINI_API_KEYS[currentKeyIndex];
+}
+
+// ---------- Other env ----------
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : null;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-// ✅ Fallback models to try if primary fails
-const GEMINI_FALLBACK_MODELS = ['gemini-2.0-flash', 'gemini-flash-latest'];
 const COLLEGE_LAT = 28.4509370;
 const COLLEGE_LNG = 76.7688120;
 const COLLEGE_RADIUS = 100;
@@ -30,7 +51,8 @@ const SEMESTER_START = new Date('2026-07-15T00:00:00+05:30');
 const SEMESTER_END = new Date('2026-12-31T23:59:59+05:30');
 
 if (!MONGO_URI) { console.error('❌ MONGO_URI missing'); process.exit(1); }
-if (!GEMINI_API_KEY) console.warn('⚠️ GEMINI_API_KEY missing');
+if (GEMINI_API_KEYS.length === 0) console.warn('⚠️ No GEMINI API keys set');
+else console.log(`🔑 Loaded ${GEMINI_API_KEYS.length} Gemini API key(s)`);
 
 // ---------- Helpers ----------
 function getISTDateString(dateObj) {
@@ -531,17 +553,17 @@ async function getStudentSummary(rollNo) {
 }
 
 // ============================================================
-//  AI HELPER — with retry + model fallback
+//  AI HELPER — Multi-key rotation + retry + fallback
 // ============================================================
 function parseGeminiError(err) {
   const msg = err.message || String(err);
   if (msg.includes('429') || msg.toLowerCase().includes('quota') || msg.toLowerCase().includes('rate')) {
-    return { code: 429, type: 'RATE_LIMIT', friendly: '⏳ AI ka per-minute limit reach ho gaya hai. Please 15-30 second wait karke dobara try karo. 🙏' };
+    return { code: 429, type: 'RATE_LIMIT', friendly: '⏳ AI ka limit reach ho gaya. 30 sec baad try karo 🙏' };
   }
   if (msg.includes('503') || msg.toLowerCase().includes('high demand') || msg.toLowerCase().includes('unavailable')) {
-    return { code: 503, type: 'OVERLOADED', friendly: '⏳ AI server busy hai (high demand). 10-15 second me retry ho raha hai…' };
+    return { code: 503, type: 'OVERLOADED', friendly: '⏳ AI server busy hai (high demand). 15 sec baad try karo 🙏' };
   }
-  if (msg.includes('504') || msg.toLowerCase().includes('deadline')) {
+  if (msg.includes('504') || msg.toLowerCase().includes('deadline') || msg.toLowerCase().includes('aborted')) {
     return { code: 504, type: 'TIMEOUT', friendly: '⏳ AI ne time liya zyada. Thodi der baad try karo.' };
   }
   if (msg.includes('404') || msg.toLowerCase().includes('not found')) {
@@ -553,9 +575,9 @@ function parseGeminiError(err) {
   return { code: 500, type: 'UNKNOWN', friendly: '⚠️ AI error: ' + msg.substring(0, 100) };
 }
 
-// Single call to Gemini with one specific model
-async function callGeminiOnce({ prompt, systemPrompt = null, fileBase64 = null, mimeType = null, history = null, maxTokens = 1500, temperature = 0.7, timeoutMs = 55000, model = null }) {
-  if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY not set');
+async function callGeminiOnce({ prompt, systemPrompt = null, fileBase64 = null, mimeType = null, history = null, maxTokens = 1500, temperature = 0.7, timeoutMs = 45000, model = null, apiKey = null }) {
+  const useKey = apiKey || getNextApiKey();
+  if (!useKey) throw new Error('No API key available');
   const useModel = model || GEMINI_MODEL;
   const contents = [];
   if (history && Array.isArray(history)) {
@@ -573,7 +595,7 @@ async function callGeminiOnce({ prompt, systemPrompt = null, fileBase64 = null, 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${useModel}:generateContent?key=${GEMINI_API_KEY}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${useModel}:generateContent?key=${useKey}`;
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -597,41 +619,46 @@ async function callGeminiOnce({ prompt, systemPrompt = null, fileBase64 = null, 
   }
 }
 
-// ✅ Smart retry with model fallback
+// ✅ Smart retry with key rotation + model fallback
 async function callGemini(args) {
+  // Try each model with each key
   const modelsToTry = [args.model || GEMINI_MODEL, ...GEMINI_FALLBACK_MODELS];
+  const totalKeys = Math.max(GEMINI_API_KEYS.length, 1);
   let lastError = null;
+
   for (let mi = 0; mi < modelsToTry.length; mi++) {
     const model = modelsToTry[mi];
-    // For each model, retry on 503 (server busy), not on 429 (quota)
-    for (let attempt = 0; attempt < 3; attempt++) {
+    // For each model, try up to (keys count) times with different keys
+    const attemptsForThisModel = Math.min(totalKeys, 3);
+    for (let attempt = 0; attempt < attemptsForThisModel; attempt++) {
+      const apiKey = getNextApiKey();
+      if (!apiKey) throw new Error('No API key available');
       try {
-        console.log(`🤖 Trying model: ${model} (attempt ${attempt + 1})`);
-        return await callGeminiOnce({ ...args, model });
+        console.log(`🤖 Trying ${model} with key #${currentKeyIndex} (attempt ${attempt + 1})`);
+        return await callGeminiOnce({ ...args, model, apiKey });
       } catch (err) {
         lastError = err;
         const parsed = parseGeminiError(err);
-        console.warn(`⚠️ ${model} failed: [${parsed.code} ${parsed.type}] ${err.message.substring(0, 150)}`);
-        // 503 → retry same model with backoff
-        if (parsed.type === 'OVERLOADED' && attempt < 2) {
-          const wait = 2500 * (attempt + 1);
-          console.log(`   ⏳ Retrying ${model} after ${wait}ms...`);
-          await new Promise(r => setTimeout(r, wait));
+        console.warn(`⚠️ ${model} failed: [${parsed.code} ${parsed.type}] ${err.message.substring(0, 100)}`);
+        // 429 → try next key immediately (small delay)
+        if (parsed.type === 'RATE_LIMIT') {
+          console.log(`   🔑 Rate limited, trying next key...`);
+          await new Promise(r => setTimeout(r, 500));
           continue;
         }
-        // 429 → don't retry same model, try next
-        if (parsed.type === 'RATE_LIMIT') {
-          console.log(`   🚫 Rate limited on ${model}, trying next model...`);
-          break;
+        // 503 → try next key after small delay
+        if (parsed.type === 'OVERLOADED') {
+          console.log(`   ⏳ Overloaded, trying next key...`);
+          await new Promise(r => setTimeout(r, 800));
+          continue;
         }
-        // 404 → model not available, try next
+        // 404 model → break to next model
         if (parsed.type === 'MODEL_NOT_FOUND') break;
-        // Other errors → break to next model
+        // Other errors → break
         break;
       }
     }
   }
-  // All models failed → throw the parsed error
   const parsed = parseGeminiError(lastError);
   const finalErr = new Error(parsed.friendly);
   finalErr.code = parsed.code;
@@ -680,8 +707,25 @@ function generatePDFBuffer({ title, subtitle, sections = [], footer = null }) {
 
 // ---------- Routes ----------
 app.get('/', (req, res) => res.send('BM Group ERP Active!'));
-app.get('/health', (req, res) => res.json({ status: 'ok', ai: GEMINI_API_KEY ? 'gemini' : 'disabled', model: GEMINI_MODEL, fallbackModels: GEMINI_FALLBACK_MODELS, pdf: 'enabled', timestamp: new Date().toISOString() }));
-app.get('/api/ai/health', (req, res) => res.json({ aiEnabled: !!GEMINI_API_KEY, primaryModel: GEMINI_MODEL, fallbackModels: GEMINI_FALLBACK_MODELS, features: ['chat','chat-with-file','predict','admin-insights','generate-report-pdf','generate-notes-pdf','smart-alerts','subject-analysis'], rateLimits: { note: 'Gemini Free tier: 10-15 requests/minute, 250-1500 requests/day', docs: 'https://ai.google.dev/gemini-api/docs/rate-limits' } }));
+app.get('/health', (req, res) => res.json({
+  status: 'ok',
+  ai: GEMINI_API_KEYS.length > 0 ? 'gemini' : 'disabled',
+  primaryModel: GEMINI_MODEL,
+  fallbackModels: GEMINI_FALLBACK_MODELS,
+  keysLoaded: GEMINI_API_KEYS.length,
+  pdf: 'enabled',
+  imageSupport: 'disabled',
+  timestamp: new Date().toISOString()
+}));
+app.get('/api/ai/health', (req, res) => res.json({
+  aiEnabled: GEMINI_API_KEYS.length > 0,
+  primaryModel: GEMINI_MODEL,
+  fallbackModels: GEMINI_FALLBACK_MODELS,
+  keysLoaded: GEMINI_API_KEYS.length,
+  imageSupport: false,
+  fileTypes: ['application/pdf', 'text/plain'],
+  features: ['chat', 'chat-with-file', 'predict', 'admin-insights', 'generate-report-pdf', 'generate-notes-pdf', 'smart-alerts', 'subject-analysis']
+}));
 
 // ========== AUTH ==========
 app.post('/api/auth/register', async (req, res) => {
@@ -1852,7 +1896,7 @@ app.get('/api/admin/defaulters/:requesterRollNo', async (req, res) => {
 });
 
 // ============================================================
-//  ROLE-AWARE PROMPT BUILDER
+//  ROLE-AWARE PROMPT
 // ============================================================
 function buildRoleSystemPrompt({ role, userName, contextStr, greeting, emoji }) {
   const base = greeting ? `${greeting}, ${userName} ${emoji}!` : '';
@@ -1896,14 +1940,13 @@ Role:
 - Answer questions on attendance, timetable, holidays, working days.
 - If user asks "kitne bunk kar sakta hun" — calculate honestly using 75% rule.
 - If asked for notes/study material/MCQs — provide with headings, bullets, examples.
-- If user uploads PDF/image — read it and explain.
 - Warn politely if attendance below 75%.
 - Be friendly, encouraging, use emojis.
 - Respond in user's language (Hindi/English).`;
 }
 
 // ============================================================
-//  AI: Main Chat (role-aware, multi-turn, retry)
+//  AI: Main Chat
 // ============================================================
 app.post('/api/ai/chat', async (req, res) => {
   try {
@@ -1933,7 +1976,6 @@ app.post('/api/ai/chat', async (req, res) => {
       } catch (err) { console.error('Error fetching user data:', err); }
     }
 
-    // Date/day detection
     let requestedDate = null, requestedDay = null;
     const mLow = message.toLowerCase();
     if (mLow.includes('kal') || mLow.includes('tomorrow')) {
@@ -1998,7 +2040,6 @@ app.post('/api/ai/chat', async (req, res) => {
 
     const systemPrompt = buildRoleSystemPrompt({ role: userRole, userName, contextStr, greeting, emoji });
 
-    // ✅ Try AI with retry
     let reply = '';
     let aiOk = false;
     try {
@@ -2007,15 +2048,15 @@ app.post('/api/ai/chat', async (req, res) => {
         systemPrompt,
         history: existingChat?.messages,
         maxTokens: 1500,
-        temperature: 0.7
+        temperature: 0.7,
+        timeoutMs: 45000
       });
       aiOk = true;
     } catch (err) {
       console.warn('⚠️ AI failed:', err.message, '| type:', err.type);
-      reply = err.message; // ✅ already friendly from parseGeminiError
+      reply = err.message;
     }
 
-    // ✅ Don't save to history if AI failed
     let newThreadId = threadId, newTitle = 'New Chat';
     if (cr !== 'guest' && aiOk) {
       if (existingChat) {
@@ -2032,7 +2073,6 @@ app.post('/api/ai/chat', async (req, res) => {
         newThreadId = nt.threadId; newTitle = autoTitle;
       }
     } else if (cr !== 'guest' && !aiOk) {
-      // Still return threadId so frontend knows
       newThreadId = threadId || null;
     }
 
@@ -2044,16 +2084,18 @@ app.post('/api/ai/chat', async (req, res) => {
 });
 
 // ============================================================
-//  AI: Chat with FILE — with retry
+//  AI: Chat with FILE — PDF + TXT only (no images)
 // ============================================================
 app.post('/api/ai/chat-with-file', async (req, res) => {
   try {
     const { prompt, fileBase64, mimeType, rollNo, role, name, branch, threadId } = req.body;
     if (!fileBase64 || !mimeType) return res.status(400).json({ error: 'fileBase64 and mimeType required.' });
     const userPrompt = prompt || 'Explain this document/file. Give me a clear summary with key points.';
-    const allowed = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'text/plain'];
+
+    // ✅ Only PDF and TXT (no images)
+    const allowed = ['application/pdf', 'text/plain'];
     if (!allowed.some(t => mimeType.includes(t.split('/')[1]) || mimeType === t)) {
-      return res.status(400).json({ error: `Unsupported: ${mimeType}. Allowed: PDF, PNG, JPG, WEBP, TXT.` });
+      return res.status(400).json({ error: `Unsupported file type: ${mimeType}. Only PDF and TXT allowed.` });
     }
 
     const cr = rollNo?.trim().toUpperCase() || 'guest';
@@ -2069,7 +2111,7 @@ app.post('/api/ai/chat-with-file', async (req, res) => {
     contextStr += `Branch: ${userData?.branch || branch || 'CSE'}\n`;
     if (attendanceSummary) contextStr += `Attendance: ${attendanceSummary.attendancePercentage}% (${attendanceSummary.totalAcademicLectures}/${attendanceSummary.totalConductedLectures})\n`;
 
-    const fileLabels = { pdf: 'PDF document', png: 'image', jpg: 'image', jpeg: 'image', webp: 'image', plain: 'text file' };
+    const fileLabels = { pdf: 'PDF document', plain: 'text file' };
     const fileTypeLabel = fileLabels[mimeType.split('/')[1]] || 'file';
 
     const systemPrompt = `You are "BM Bot" for BM Group.
@@ -2081,7 +2123,6 @@ Task:
 - Carefully read the uploaded ${fileTypeLabel}.
 - Answer user's question based on content in the file.
 - If notes/study material — extract, summarize, explain.
-- If image of notes/handwriting — transcribe relevant parts.
 - If PDF of a book/chapter — provide summary, key points, important topics.
 - If unrelated to studies, still help politely.
 - Use markdown formatting: headings, bullets, bold.
@@ -2097,7 +2138,7 @@ Task:
         mimeType,
         maxTokens: 3000,
         temperature: 0.4,
-        timeoutMs: 70000
+        timeoutMs: 60000
       });
       aiOk = true;
     } catch (err) {
@@ -2240,7 +2281,7 @@ app.post('/api/ai/generate-report-pdf', async (req, res) => {
 });
 
 // ============================================================
-//  AI: Notes PDF — with retry
+//  AI: Notes PDF
 // ============================================================
 app.post('/api/ai/generate-notes-pdf', async (req, res) => {
   try {
@@ -2249,7 +2290,7 @@ app.post('/api/ai/generate-notes-pdf', async (req, res) => {
     const cr = rollNo?.trim().toUpperCase();
     let userName = 'Student';
     if (cr) { const u = await User.findOne({ rollNo: cr }); if (u) userName = u.name; }
-    if (!GEMINI_API_KEY) return res.status(503).json({ error: 'AI not configured.' });
+    if (GEMINI_API_KEYS.length === 0) return res.status(503).json({ error: 'AI not configured.' });
 
     const prompt = `Generate comprehensive study notes on "${topic}"${subject ? ` (Subject: ${subject})` : ''} for ${level}.
 Requirements:
@@ -2268,7 +2309,7 @@ Format: plain text, use ## for headings, • for bullets. NO ** asterisks.`;
         systemPrompt: 'You are an expert teacher creating structured study notes. Use ## for headings, • for bullets. Avoid asterisks.',
         maxTokens: 3500,
         temperature: 0.5,
-        timeoutMs: 75000
+        timeoutMs: 60000
       });
     } catch (err) {
       console.warn('⚠️ Notes AI failed:', err.message);
@@ -2335,20 +2376,20 @@ app.post('/api/ai/predict-attendance', async (req, res) => {
     simPct = sC > 0 ? Math.round((sA / sC) * 100) : 0;
 
     let aiMessage = '';
-    if (GEMINI_API_KEY) {
+    if (GEMINI_API_KEYS.length > 0) {
       try {
         aiMessage = await callGemini({
           prompt: `Student ${user.name} (${cr}) has ${currentPct}% attendance (${attended}/${conducted}). Min required: ${target}%. Give short encouraging Hinglish response (2-3 lines): current situation, max ${maxBunks} bunks OR ${requiredAttends} attends needed, motivational tip. No asterisks.`,
           systemPrompt: 'You are BM Bot, friendly student assistant at BM Group. Respond in Hinglish, short.',
           maxTokens: 300,
           temperature: 0.7,
-          timeoutMs: 30000
+          timeoutMs: 25000
         });
       } catch (err) { console.warn('Predict AI msg failed:', err.message); }
     }
     if (!aiMessage) {
       aiMessage = currentPct >= target
-        ? `Bhai, tu safe hai! Abhi tu ${maxBunks} lectures bunk kar sakta hai ${target}% pe rehne ke liye. Keep it up! 💪`
+        ? `Bhai, tu safe hai! Abhi tu ${maxBunks} lectures bunk kar sakta hai ${target}% pe rehne ke liye. 💪`
         : `Bhai, tu ${target}% se neeche hai. Next ${requiredAttends} lectures consecutively attend kar. 📚`;
     }
     res.json({ currentPercentage: currentPct, attended, conducted, targetPercentage: target, maxBunksAllowed: maxBunks > 0 ? maxBunks : 0, requiredConsecutiveAttends: requiredAttends, simulated: { plannedAttends, plannedBunks, resultingPercentage: simPct }, aiMessage });
@@ -2388,26 +2429,26 @@ app.post('/api/ai/admin-insights', async (req, res) => {
     const contextStr = `Dashboard:\n- Total students: ${totalStudents}\n- Total faculty: ${totalFaculty}\n- Total attendance records: ${totalAttendance}\n- Overall %: ${overallPct}%\n- Today present: ${todayPresent.length}\n- Defaulters (<75%): ${defaulters.length}\n- Top 10 defaulters: ${defaulters.slice(0, 10).map(d => `${d.rollNo}(${d.name}): ${d.pct}%`).join(', ')}\n- Subject-wise (lowest 5): ${subAgg.slice(0, 5).map(s => `${mapToCanonical(s._id)}: ${Math.round((s.present/s.total)*100)}%`).join(', ')}`;
 
     let insights = '';
-    if (GEMINI_API_KEY) {
+    if (GEMINI_API_KEYS.length > 0) {
       try {
         insights = await callGemini({
           prompt: `Analyze this admin dashboard data. Structure with:\n1. Overview (2 lines)\n2. Key Concerns (top 3)\n3. Recommended Actions (3-4 bullets)\n4. Positive Highlights\nUse ## for headings, • for bullets. No ** asterisks.\n\n${contextStr}`,
           systemPrompt: 'You are BM Bot Admin Assistant. Provide data-driven, professional insights. Concise, actionable.',
           maxTokens: 1200,
           temperature: 0.5,
-          timeoutMs: 60000
+          timeoutMs: 45000
         });
       } catch (err) { console.warn('AI insights failed:', err.message); insights = '⚠️ ' + err.message; }
     }
     if (!insights) {
-      insights = `## Overview\nTotal ${totalStudents} students, ${overallPct}% overall attendance. ${defaulters.length} defaulters.\n\n## Key Concerns\n• ${defaulters.length} students below 75%\n• Today: ${todayPresent.length}/${totalStudents} present\n\n## Recommended Actions\n• Send warnings to defaulters\n• Review subject-wise low attendance`;
+      insights = `## Overview\nTotal ${totalStudents} students, ${overallPct}% overall. ${defaulters.length} defaulters.\n\n## Key Concerns\n• ${defaulters.length} below 75%\n• Today: ${todayPresent.length}/${totalStudents} present\n\n## Recommended Actions\n• Send warnings\n• Review subject-wise`;
     }
     res.json({ stats: { totalStudents, totalFaculty, totalAttendance, overallPct, todayPresentCount: todayPresent.length, defaulterCount: defaulters.length }, topDefaulters: defaulters.slice(0, 10), subjectAggregate: subAgg.map(s => ({ subject: mapToCanonical(s._id), total: s.total, present: s.present, pct: Math.round((s.present/s.total)*100) })), insights });
   } catch (err) { console.error('❌ Admin insights error:', err); res.status(500).json({ error: err.message }); }
 });
 
 // ============================================================
-//  AI: Subject Analysis — with retry
+//  AI: Subject Analysis
 // ============================================================
 app.post('/api/ai/subject-analysis', async (req, res) => {
   try {
@@ -2424,14 +2465,14 @@ app.post('/api/ai/subject-analysis', async (req, res) => {
     const strong = subjects.filter(s => s.percentage >= 75);
 
     let aiAnalysis = '';
-    if (GEMINI_API_KEY && subjects.length > 0) {
+    if (GEMINI_API_KEYS.length > 0 && subjects.length > 0) {
       try {
         aiAnalysis = await callGemini({
           prompt: `Student ${user.name} (${cr}) attendance:\n${subjects.map(s => `• ${s.subject}: ${s.present}/${s.total} (${s.percentage}%)`).join('\n')}\n\nProvide:\n1. Weak subjects (<75%) with specific advice\n2. Strong subjects — positive reinforcement\n3. Overall strategy (2-3 bullets)\nUse ## headings, • bullets. No ** asterisks. Hinglish, encouraging.`,
           systemPrompt: 'You are BM Bot, friendly student mentor. Personalized, actionable advice in Hinglish. Plain text.',
           maxTokens: 1000,
           temperature: 0.6,
-          timeoutMs: 60000
+          timeoutMs: 45000
         });
       } catch (err) { console.warn('Subject analysis AI failed:', err.message); }
     }
@@ -2465,7 +2506,7 @@ app.post('/api/ai/smart-alerts', async (req, res) => {
     const alerts = [];
     for (const d of top) {
       let message = '';
-      if (GEMINI_API_KEY) {
+      if (GEMINI_API_KEYS.length > 0) {
         try {
           message = await callGemini({
             prompt: `Write short polite warning (2-3 lines, Hinglish) for parent/student:\nStudent: ${d.name} (${d.rollNo}, ${d.branch})\nAttendance: ${d.pct}% (${d.present}/${d.total})\nRequired: ${threshold}%\nNo asterisks.`,
@@ -2490,7 +2531,7 @@ app.post('/api/ai/study-material', async (req, res) => {
   try {
     const { topic, subject, type = 'notes' } = req.body;
     if (!topic) return res.status(400).json({ error: 'topic required' });
-    if (!GEMINI_API_KEY) return res.status(503).json({ error: 'AI not configured.' });
+    if (GEMINI_API_KEYS.length === 0) return res.status(503).json({ error: 'AI not configured.' });
     const typeMap = { notes: 'detailed study notes with headings and bullets', mcq: '10 MCQs with 4 options each', summary: 'concise summary', important: 'important topics for exam', examples: 'real-world examples' };
     const styleGuide = typeMap[type] || typeMap.notes;
     let reply;
@@ -2500,7 +2541,7 @@ app.post('/api/ai/study-material', async (req, res) => {
         systemPrompt: 'Expert teacher for B.Tech students at BM Group. Clear, structured study material.',
         maxTokens: 2500,
         temperature: 0.5,
-        timeoutMs: 60000
+        timeoutMs: 45000
       });
     } catch (err) { return res.status(503).json({ error: err.message }); }
     res.json({ topic, subject, type, content: reply });
@@ -2565,4 +2606,4 @@ process.on('unhandledRejection', (reason) => console.error('Unhandled:', reason)
 process.on('uncaughtException', (err) => { console.error('Uncaught:', err); process.exit(1); });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server on port ${PORT} | AI: ${GEMINI_API_KEY ? GEMINI_MODEL : 'disabled'} | PDF: pdfkit`));
+app.listen(PORT, () => console.log(`🚀 Port ${PORT} | AI: ${GEMINI_API_KEYS.length} keys | Model: ${GEMINI_MODEL} | PDF: enabled | Images: disabled`));
