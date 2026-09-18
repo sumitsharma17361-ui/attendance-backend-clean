@@ -27,7 +27,7 @@ const GEMINI_API_KEYS = [
 ].filter(k => k && k.trim() && k.trim().length > 5).map(k => k.trim());
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-const GEMINI_FALLBACK_MODELS = ['gemini-2.0-flash', 'gemini-flash-latest'];
+const GEMINI_FALLBACK_MODELS = ['gemini-flash-latest'];
 
 let currentKeyIndex = 0;
 function getNextApiKey() {
