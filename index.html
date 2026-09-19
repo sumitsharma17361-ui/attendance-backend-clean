@@ -964,8 +964,8 @@ tbody tr:hover{background:var(--slate-50);}
       </div>
       <div class="chat-quick" id="chatQuick"></div>
       <div class="chat-input">
-        <input type="file" id="chatFileInput" accept=".pdf,.txt" style="display:none;" onchange="onChatFileSelected(event)" />
-        <button type="button" class="secondary-btn" onclick="document.getElementById('chatFileInput').click()" title="Upload PDF/TXT" id="chatAttachBtn">
+        <input type="file" id="chatFileInput" accept=".pdf,.txt,image/jpeg,image/png,image/webp,image/gif" style="display:none;" onchange="onChatFileSelected(event)" />
+        <button type="button" class="secondary-btn" onclick="document.getElementById('chatFileInput').click()" title="Upload PDF/TXT/Image" id="chatAttachBtn">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
         </button>
         <button type="button" class="secondary-btn" id="chatVoiceBtn" onclick="toggleVoiceInput()" title="Voice input">
@@ -2659,7 +2659,7 @@ function renderChatWelcome(){
   else if (hour < 17) { greeting = 'Good afternoon'; emoji = '🌤️'; }
   else { greeting = 'Good evening'; emoji = '🌙'; }
   const name = currentUser ? currentUser.name : 'there';
-  el.innerHTML = `<div class="chat-welcome"><span class="greeting-emoji">${emoji}</span><div><strong>${greeting}, ${name}!</strong> I'm <strong>BM Bot</strong>, your AI assistant.</div><div>Ask me about attendance, timetable, holidays, notes, or upload PDF!</div><div style="font-size:10px;margin-top:6px;">💡 Try: "What is my attendance?"</div></div>`;
+  el.innerHTML = `<div class="chat-welcome"><span class="greeting-emoji">${emoji}</span><div><strong>${greeting}, ${name}!</strong> I'm <strong>BM Bot</strong>, your AI assistant.</div><div>Ask me about attendance, timetable, holidays, notes, or upload PDF/TXT/image!</div><div style="font-size:10px;margin-top:6px;">💡 Try: "What is my attendance?"</div></div>`;
 }
 async function fetchChatHistory(){
   if (!currentUser) return;
@@ -2695,12 +2695,13 @@ async function deleteChatThread(threadId){
 }
 function newChat(){ currentThreadId = null; chatGreeted = false; renderChatWelcome(); renderChatHistory(); }
 
+// ✅ Updated: Now accepts PDF, TXT, and images (JPEG/PNG/WEBP/GIF)
 function onChatFileSelected(ev){
   const file = ev.target.files[0];
   if (!file) return;
   if (file.size > 8 * 1024 * 1024) { toast('File too large (max 8MB)','error'); ev.target.value=''; return; }
-  const allowed = ['application/pdf','text/plain'];
-  if (!allowed.includes(file.type)) { toast('Only PDF and TXT allowed','error'); ev.target.value=''; return; }
+  const allowed = ['application/pdf','text/plain','image/jpeg','image/jpg','image/png','image/webp','image/gif'];
+  if (!allowed.includes(file.type)) { toast('Only PDF, TXT, or images (JPEG/PNG/WEBP/GIF) allowed','error'); ev.target.value=''; return; }
   const reader = new FileReader();
   reader.onload = () => {
     const base64 = reader.result.split(',')[1];
@@ -2751,12 +2752,13 @@ async function sendChat(){
 
   if (pendingChatFile) {
     const fileData = { base64: pendingChatFile.base64, mimeType: pendingChatFile.mimeType, name: pendingChatFile.name };
-    const fileInfo = `📎 [${fileData.name}]`;
+    const isImage = fileData.mimeType.startsWith('image/');
+    const fileInfo = isImage ? `🖼️ [${fileData.name}]` : `📎 [${fileData.name}]`;
     appendChat('user', `${fileInfo} ${msg || 'Explain this'}`);
     clearChatFile();
     const typing = document.createElement('div');
     typing.className = 'msg bot';
-    typing.innerHTML = '<div class="bubble" style="opacity:0.6;">🤖 Reading file… (30-60s)</div>';
+    typing.innerHTML = `<div class="bubble" style="opacity:0.6;">🤖 ${isImage ? 'Analyzing image' : 'Reading file'}… (30-60s)</div>`;
     $('chatMsgs').appendChild(typing);
     $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
     try {
@@ -2764,7 +2766,7 @@ async function sendChat(){
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: msg || 'Explain this document and give me a summary with key points.',
+          prompt: msg || (isImage ? 'Explain this image and describe what you see.' : 'Explain this document and give me a summary with key points.'),
           fileBase64: fileData.base64,
           mimeType: fileData.mimeType,
           rollNo: currentUser.rollNo,
