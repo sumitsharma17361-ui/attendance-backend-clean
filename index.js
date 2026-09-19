@@ -28,7 +28,8 @@ const GEMINI_API_KEYS = [
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 const GEMINI_FALLBACK_MODELS = ['gemini-flash-latest'];
-const GEMINI_GLOBAL_TIMEOUT_MS = parseInt(process.env.GEMINI_GLOBAL_TIMEOUT_MS || '25000', 10);
+// ✅ Normal chat ke liye 10 seconds (practical)
+const GEMINI_GLOBAL_TIMEOUT_MS = parseInt(process.env.GEMINI_GLOBAL_TIMEOUT_MS || '10000', 10);
 
 let currentKeyIndex = 0;
 function getNextApiKey() {
@@ -618,14 +619,17 @@ async function callGeminiOnce({ prompt, systemPrompt = null, fileBase64 = null, 
   }
 }
 
-// ✅ UPDATED: Smart retry — 0ms wait on 503, 25s global timeout, max 6 attempts
+// ✅ Smart retry — per-call timeout + attempts override support
 async function callGemini(args) {
   const modelsToTry = [args.model || GEMINI_MODEL, ...GEMINI_FALLBACK_MODELS];
   const totalKeys = GEMINI_API_KEYS.length;
   if (totalKeys === 0) throw new Error('No API key available');
 
+  // ✅ Per-call override (file upload ke liye zyada time, normal chat ke liye kam)
+  const perCallTimeout = args.globalTimeoutMs || GEMINI_GLOBAL_TIMEOUT_MS;
+  const maxAttempts = args.maxAttempts || 6;
+
   const startTime = Date.now();
-  const MAX_TOTAL_ATTEMPTS = 6;
   let lastError = null;
   let attemptsMade = 0;
   let globalTimeoutHit = false;
@@ -636,13 +640,13 @@ async function callGemini(args) {
     let skipToNextModel = false;
 
     for (let attempt = 0; attempt < keysPerModel; attempt++) {
-      if (Date.now() - startTime > GEMINI_GLOBAL_TIMEOUT_MS) {
-        console.warn(`⏱️ Global timeout hit (${GEMINI_GLOBAL_TIMEOUT_MS}ms) — aborting chain`);
+      if (Date.now() - startTime > perCallTimeout) {
+        console.warn(`⏱️ Global timeout hit (${perCallTimeout}ms) — aborting chain`);
         globalTimeoutHit = true;
         break;
       }
-      if (attemptsMade >= MAX_TOTAL_ATTEMPTS) {
-        console.warn(`🛑 Max attempts (${MAX_TOTAL_ATTEMPTS}) reached — aborting`);
+      if (attemptsMade >= maxAttempts) {
+        console.warn(`🛑 Max attempts (${maxAttempts}) reached — aborting`);
         break;
       }
 
@@ -651,7 +655,7 @@ async function callGemini(args) {
       attemptsMade++;
 
       try {
-        console.log(`🤖 ${model} (${attempt + 1}/${keysPerModel}) [total #${attemptsMade}]`);
+        console.log(`🤖 ${model} (${attempt + 1}/${keysPerModel}) [total #${attemptsMade}] [timeout:${perCallTimeout}ms]`);
         return await callGeminiOnce({ ...args, model, apiKey });
       } catch (err) {
         lastError = err;
@@ -674,7 +678,7 @@ async function callGemini(args) {
     }
 
     if (globalTimeoutHit) break;
-    if (attemptsMade >= MAX_TOTAL_ATTEMPTS) break;
+    if (attemptsMade >= maxAttempts) break;
     if (skipToNextModel) continue;
   }
 
@@ -735,9 +739,11 @@ app.get('/health', (req, res) => res.json({
   primaryModel: GEMINI_MODEL,
   fallbackModels: GEMINI_FALLBACK_MODELS,
   globalTimeoutMs: GEMINI_GLOBAL_TIMEOUT_MS,
+  fileUploadTimeoutMs: 60000,
   keysLoaded: GEMINI_API_KEYS.length,
   pdf: 'enabled',
-  imageSupport: 'disabled',
+  imageSupport: 'enabled',
+  fileTypes: ['application/pdf', 'text/plain', 'image/jpeg', 'image/png', 'image/webp', 'image/gif'],
   timestamp: new Date().toISOString()
 }));
 app.get('/api/ai/health', (req, res) => res.json({
@@ -745,10 +751,11 @@ app.get('/api/ai/health', (req, res) => res.json({
   primaryModel: GEMINI_MODEL,
   fallbackModels: GEMINI_FALLBACK_MODELS,
   globalTimeoutMs: GEMINI_GLOBAL_TIMEOUT_MS,
+  fileUploadTimeoutMs: 60000,
   keysLoaded: GEMINI_API_KEYS.length,
-  imageSupport: false,
-  fileTypes: ['application/pdf', 'text/plain'],
-  features: ['chat', 'chat-with-file', 'predict', 'admin-insights', 'generate-report-pdf', 'generate-notes-pdf', 'smart-alerts', 'subject-analysis']
+  imageSupport: true,
+  fileTypes: ['application/pdf', 'text/plain', 'image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+  features: ['chat', 'chat-with-file', 'chat-with-image', 'predict', 'admin-insights', 'generate-report-pdf', 'generate-notes-pdf', 'smart-alerts', 'subject-analysis']
 }));
 
 // ========== AUTH ==========
@@ -2095,7 +2102,7 @@ Role:
 }
 
 // ============================================================
-//  AI: Main Chat
+//  AI: Main Chat (10s timeout — fast chat)
 // ============================================================
 app.post('/api/ai/chat', async (req, res) => {
   try {
@@ -2198,7 +2205,8 @@ app.post('/api/ai/chat', async (req, res) => {
         history: existingChat?.messages,
         maxTokens: 1500,
         temperature: 0.7,
-        timeoutMs: 45000
+        timeoutMs: 20000
+        // Uses default 10s global timeout, 6 attempts (fast chat)
       });
       aiOk = true;
     } catch (err) {
@@ -2233,16 +2241,28 @@ app.post('/api/ai/chat', async (req, res) => {
 });
 
 // ============================================================
-//  AI: Chat with FILE — PDF + TXT only
+//  AI: Chat with FILE / IMAGE (60s timeout — heavy processing)
+//  ✅ Supports: PDF, TXT, JPEG, PNG, WEBP, GIF
 // ============================================================
 app.post('/api/ai/chat-with-file', async (req, res) => {
   try {
     const { prompt, fileBase64, mimeType, rollNo, role, name, branch, threadId } = req.body;
     if (!fileBase64 || !mimeType) return res.status(400).json({ error: 'fileBase64 and mimeType required.' });
     const userPrompt = prompt || 'Explain this document/file. Give me a clear summary with key points.';
-    const allowed = ['application/pdf', 'text/plain'];
-    if (!allowed.some(t => mimeType.includes(t.split('/')[1]) || mimeType === t)) {
-      return res.status(400).json({ error: `Unsupported file type: ${mimeType}. Only PDF and TXT allowed.` });
+
+    // ✅ Expanded allowed types — PDF, TXT, and images
+    const allowed = [
+      'application/pdf',
+      'text/plain',
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/webp',
+      'image/gif'
+    ];
+    const isAllowed = allowed.some(t => mimeType === t || mimeType.includes(t));
+    if (!isAllowed) {
+      return res.status(400).json({ error: `Unsupported file type: ${mimeType}. Allowed: PDF, TXT, JPEG, PNG, WEBP, GIF.` });
     }
 
     const cr = rollNo?.trim().toUpperCase() || 'guest';
@@ -2258,18 +2278,28 @@ app.post('/api/ai/chat-with-file', async (req, res) => {
     contextStr += `Branch: ${userData?.branch || branch || 'CSE'}\n`;
     if (attendanceSummary) contextStr += `Attendance: ${attendanceSummary.attendancePercentage}% (${attendanceSummary.totalAcademicLectures}/${attendanceSummary.totalConductedLectures})\n`;
 
-    const fileLabels = { pdf: 'PDF document', plain: 'text file' };
-    const fileTypeLabel = fileLabels[mimeType.split('/')[1]] || 'file';
+    // ✅ File type label — ab images bhi support
+    const fileLabels = {
+      pdf: 'PDF document',
+      plain: 'text file',
+      jpeg: 'image (JPEG)',
+      jpg: 'image (JPEG)',
+      png: 'image (PNG)',
+      webp: 'image (WebP)',
+      gif: 'image (GIF)'
+    };
+    const subtype = mimeType.split('/')[1];
+    const fileTypeLabel = fileLabels[subtype] || 'file';
 
     const systemPrompt = `You are "BM Bot" for BM Group.
 Helping ${userName} (${userRole}) with a ${fileTypeLabel}.
 Context:
 ${contextStr}
 Task:
-- Carefully read the uploaded ${fileTypeLabel}.
-- Answer user's question based on content in the file.
-- If notes — extract, summarize, explain.
-- If PDF of a book/chapter — provide summary, key points.
+- Carefully read/analyze the uploaded ${fileTypeLabel}.
+- If image — describe contents, extract text if any, answer user's question about it.
+- If PDF/text — extract, summarize, explain.
+- If notes — provide structured summary with headings and bullets.
 - Use markdown formatting: headings, bullets, bold.
 - NEVER use markdown tables. Use bullet points instead.
 - Respond in user's language (Hindi/English).`;
@@ -2284,11 +2314,14 @@ Task:
         mimeType,
         maxTokens: 3000,
         temperature: 0.4,
-        timeoutMs: 60000
+        timeoutMs: 60000,
+        // ✅ File/Image ke liye 60s timeout, 2 attempts (heavy processing)
+        globalTimeoutMs: 60000,
+        maxAttempts: 2
       });
       aiOk = true;
     } catch (err) {
-      console.warn('⚠️ File AI failed:', err.message, '| type:', err.type);
+      console.warn('⚠️ File/Image AI failed:', err.message, '| type:', err.type);
       reply = err.message;
     }
 
@@ -2455,7 +2488,9 @@ Format: plain text, use ## for headings, • for bullets. NO ** asterisks. NO ma
         systemPrompt: 'You are an expert teacher creating structured study notes. Use ## for headings, • for bullets. Avoid asterisks. Avoid tables.',
         maxTokens: 3500,
         temperature: 0.5,
-        timeoutMs: 60000
+        timeoutMs: 45000,
+        globalTimeoutMs: 45000,
+        maxAttempts: 2
       });
     } catch (err) {
       console.warn('⚠️ Notes AI failed:', err.message);
@@ -2529,7 +2564,9 @@ app.post('/api/ai/predict-attendance', async (req, res) => {
           systemPrompt: 'You are BM Bot, friendly student assistant at BM Group. Respond in Hinglish, short.',
           maxTokens: 300,
           temperature: 0.7,
-          timeoutMs: 25000
+          timeoutMs: 15000,
+          globalTimeoutMs: 10000,
+          maxAttempts: 2
         });
       } catch (err) { console.warn('Predict AI msg failed:', err.message); }
     }
@@ -2582,7 +2619,9 @@ app.post('/api/ai/admin-insights', async (req, res) => {
           systemPrompt: 'You are BM Bot Admin Assistant. Provide data-driven insights. Concise, actionable.',
           maxTokens: 1200,
           temperature: 0.5,
-          timeoutMs: 45000
+          timeoutMs: 45000,
+          globalTimeoutMs: 45000,
+          maxAttempts: 2
         });
       } catch (err) { console.warn('AI insights failed:', err.message); insights = '⚠️ ' + err.message; }
     }
@@ -2618,7 +2657,9 @@ app.post('/api/ai/subject-analysis', async (req, res) => {
           systemPrompt: 'You are BM Bot, friendly student mentor. Personalized advice in Hinglish.',
           maxTokens: 1000,
           temperature: 0.6,
-          timeoutMs: 45000
+          timeoutMs: 45000,
+          globalTimeoutMs: 45000,
+          maxAttempts: 2
         });
       } catch (err) { console.warn('Subject analysis AI failed:', err.message); }
     }
@@ -2659,7 +2700,9 @@ app.post('/api/ai/smart-alerts', async (req, res) => {
             systemPrompt: 'You are BM Bot writing official warning notices for BM Group.',
             maxTokens: 200,
             temperature: 0.6,
-            timeoutMs: 20000
+            timeoutMs: 15000,
+            globalTimeoutMs: 10000,
+            maxAttempts: 2
           });
         } catch (err) { message = ''; }
       }
@@ -2687,7 +2730,9 @@ app.post('/api/ai/study-material', async (req, res) => {
         systemPrompt: 'Expert teacher for B.Tech students at BM Group.',
         maxTokens: 2500,
         temperature: 0.5,
-        timeoutMs: 45000
+        timeoutMs: 45000,
+        globalTimeoutMs: 45000,
+        maxAttempts: 2
       });
     } catch (err) { return res.status(503).json({ error: err.message }); }
     res.json({ topic, subject, type, content: reply });
@@ -2752,4 +2797,4 @@ process.on('unhandledRejection', (reason) => console.error('Unhandled:', reason)
 process.on('uncaughtException', (err) => { console.error('Uncaught:', err); process.exit(1); });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Port ${PORT} | AI: ${GEMINI_API_KEYS.length} keys | Model: ${GEMINI_MODEL} | Timeout: ${GEMINI_GLOBAL_TIMEOUT_MS}ms | PDF: enabled | Images: disabled`));
+app.listen(PORT, () => console.log(`🚀 Port ${PORT} | AI: ${GEMINI_API_KEYS.length} keys | Model: ${GEMINI_MODEL} | Chat timeout: ${GEMINI_GLOBAL_TIMEOUT_MS}ms | File/Image timeout: 60000ms | PDF: enabled | Images: enabled`));
