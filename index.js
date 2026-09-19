@@ -28,7 +28,6 @@ const GEMINI_API_KEYS = [
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 const GEMINI_FALLBACK_MODELS = ['gemini-flash-latest'];
-// ✅ Normal chat ke liye 10 seconds (practical)
 const GEMINI_GLOBAL_TIMEOUT_MS = parseInt(process.env.GEMINI_GLOBAL_TIMEOUT_MS || '10000', 10);
 
 let currentKeyIndex = 0;
@@ -553,7 +552,7 @@ async function getStudentSummary(rollNo) {
 }
 
 // ============================================================
-//  AI HELPER — Multi-key rotation
+//  AI HELPER
 // ============================================================
 function parseGeminiError(err) {
   const msg = err.message || String(err);
@@ -619,13 +618,11 @@ async function callGeminiOnce({ prompt, systemPrompt = null, fileBase64 = null, 
   }
 }
 
-// ✅ Smart retry — per-call timeout + attempts override support
 async function callGemini(args) {
   const modelsToTry = [args.model || GEMINI_MODEL, ...GEMINI_FALLBACK_MODELS];
   const totalKeys = GEMINI_API_KEYS.length;
   if (totalKeys === 0) throw new Error('No API key available');
 
-  // ✅ Per-call override (file upload ke liye zyada time, normal chat ke liye kam)
   const perCallTimeout = args.globalTimeoutMs || GEMINI_GLOBAL_TIMEOUT_MS;
   const maxAttempts = args.maxAttempts || 6;
 
@@ -903,7 +900,7 @@ app.post('/api/admin/login-as-student', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== ✅ FIX ALL ATTENDANCE ==========
+// ========== FIX ALL ATTENDANCE ==========
 app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
   try {
     const { requesterRollNo, testRollNo } = req.body;
@@ -1128,16 +1125,32 @@ app.post('/api/teacher/mark-attendance', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== PASSCODE ==========
+// ============================================================
+//  ✅ PASSCODE — with force flag support
+// ============================================================
 app.post('/api/admin/generate-passcode', async (req, res) => {
   try {
-    const { requesterRollNo, type } = req.body;
+    const { requesterRollNo, type, force } = req.body;
     const req1 = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
     if (!req1) return res.status(403).json({ error: 'User not found!' });
     if (req1.role === 'admin') { /* ok */ }
     else if (req1.role === 'faculty' && type === 'single_lecture') { /* ok */ }
     else return res.status(403).json({ error: 'Access Denied.' });
     if (!type || !['full_day', 'single_lecture'].includes(type)) return res.status(400).json({ error: 'Invalid type.' });
+
+    // ✅ Block on weekend/holiday
+    const todayStr = getISTDateString(new Date());
+    const dateStatus = await checkDateStatus(todayStr);
+    if (dateStatus.isBlocked) {
+      return res.status(400).json({
+        error: dateStatus.type === 'WEEKEND'
+          ? `📅 ${dateStatus.dayName}: College closed. Passcode not needed.`
+          : `🎉 ${dateStatus.holiday || 'Holiday'}: College closed. Passcode not needed.`,
+        blocked: true,
+        type: dateStatus.type
+      });
+    }
+
     if (type === 'single_lecture') {
       const branch = req1.branch || 'CSE';
       const period = getCurrentPeriod(branch);
@@ -1145,31 +1158,46 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
       const now = new Date();
       const ds = getISTDateString(now);
       const key = `single_lecture_${ds}_${period.start}`;
-      let doc = await Passcode.findOne({ key, type: 'single_lecture' });
-      if (doc && doc.expiresAt > new Date()) return res.json({ message: 'Existing', passcode: doc.passcode, type, expiresAt: doc.expiresAt });
+
+      // ✅ If force = true, delete existing and generate new
+      if (force) {
+        await Passcode.deleteMany({ key, type: 'single_lecture' });
+      } else {
+        // Return existing if valid
+        let doc = await Passcode.findOne({ key, type: 'single_lecture' });
+        if (doc && doc.expiresAt > new Date()) return res.json({ message: 'Existing', passcode: doc.passcode, type, expiresAt: doc.expiresAt });
+      }
+
       const passcode = Math.floor(1000 + Math.random() * 9000).toString();
       const expiry = new Date(now.getTime() + 5 * 60 * 1000);
-      await Passcode.deleteMany({ key, type: 'single_lecture' });
       await new Passcode({ passcode, type, key, expiresAt: expiry }).save();
-      await Passcode.deleteMany({ type, expiresAt: { $lt: new Date() } });
-      return res.json({ message: 'Generated', passcode, type, expiresAt: expiry });
+      await Passcode.deleteMany({ type: 'single_lecture', expiresAt: { $lt: new Date() } });
+      return res.json({ message: force ? 'Changed' : 'Generated', passcode, type, expiresAt: expiry, changed: !!force });
     }
+
     if (type === 'full_day') {
       const now = new Date();
       const ds = getISTDateString(now);
       const key = `full_day_${ds}`;
-      let doc = await Passcode.findOne({ key, type: 'full_day' });
-      if (doc && doc.expiresAt > new Date()) return res.json({ message: 'Existing', passcode: doc.passcode, type, expiresAt: doc.expiresAt });
+
+      if (force) {
+        await Passcode.deleteMany({ key, type: 'full_day' });
+      } else {
+        let doc = await Passcode.findOne({ key, type: 'full_day' });
+        if (doc && doc.expiresAt > new Date()) return res.json({ message: 'Existing', passcode: doc.passcode, type, expiresAt: doc.expiresAt });
+      }
+
       const passcode = Math.floor(10000 + Math.random() * 90000).toString();
       const expiry = new Date(now); expiry.setHours(23, 59, 59, 999);
-      await Passcode.deleteMany({ key, type: 'full_day' });
       await new Passcode({ passcode, type, key, expiresAt: expiry }).save();
       await Passcode.deleteMany({ type: 'full_day', expiresAt: { $lt: new Date() } });
-      return res.json({ message: 'Generated', passcode, type, expiresAt: expiry });
+      return res.json({ message: force ? 'Changed' : 'Generated', passcode, type, expiresAt: expiry, changed: !!force });
     }
+
     res.status(400).json({ error: 'Invalid type' });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
+
 app.get('/api/admin/current-passcode/:type/:requesterRollNo', async (req, res) => {
   try {
     const { type, requesterRollNo } = req.params;
@@ -1667,6 +1695,8 @@ app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) => {
     if (range === 'CURRENT_MONTH') { sD = new Date(today.getFullYear(), today.getMonth(), 1); eD = new Date(today.getFullYear(), today.getMonth() + 1, 0); }
     else if (range === 'SELECTED_MONTH') { const m = parseInt(month); if (isNaN(m) || m < 0 || m > 11) return res.status(400).json({ error: 'Invalid month' }); sD = new Date(2026, m, 1); eD = new Date(2026, m + 1, 0); }
     else { sD = new Date(SEMESTER_START); eD = new Date(SEMESTER_END); }
+    // ✅ Clamp end date to today
+    if (eD > today) eD = today;
     const startStr = getISTDateString(sD), endStr = getISTDateString(eD);
     let records = await Attendance.find({ rollNo: cs, date: { $gte: startStr, $lte: endStr } }).sort({ date: 1 });
     if (isT) {
@@ -1675,7 +1705,7 @@ app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) => {
     }
     if (records.length === 0) return res.status(404).json({ error: 'No records.' });
     const sName = records[0].studentName || 'Unknown';
-    let csvOut = `Student Attendance Report\nStudent: ${sName} (${cs})\nRange: ${startStr} to ${endStr}\nGenerated: ${new Date().toLocaleString()}\n\nDate,Subject,Status,Location,IP Address\n`;
+    let csvOut = `Student Attendance Report\nStudent: ${sName} (${cs})\nRange: ${startStr} to ${endStr} (up to today)\nGenerated: ${new Date().toLocaleString()}\n\nDate,Subject,Status,Location,IP Address\n`;
     records.forEach(r => {
       const loc = r.location ? `(${r.location.latitude}, ${r.location.longitude})` : 'N/A';
       csvOut += `${r.date},${mapToCanonical(r.subject)},${r.status},${loc},${r.ipAddress || 'N/A'}\n`;
@@ -1710,7 +1740,9 @@ app.get('/api/admin/class-attendance-report', async (req, res) => {
     const req1 = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
     if (!req1 || req1.role !== 'admin') return res.status(403).json({ error: 'Admin only!' });
     const start = startDate ? new Date(startDate) : new Date(SEMESTER_START);
-    const end = endDate ? new Date(endDate) : new Date(SEMESTER_END);
+    let end = endDate ? new Date(endDate) : new Date(SEMESTER_END);
+    const today = new Date();
+    if (end > today) end = today;
     const sStr = getISTDateString(start), eStr = getISTDateString(end);
     let q = { role: 'student' };
     if (branch && branch !== 'ALL' && branch !== 'undefined' && branch !== 'null') q.branch = branch.toUpperCase();
@@ -2055,7 +2087,7 @@ app.get('/api/admin/defaulters/:requesterRollNo', async (req, res) => {
 });
 
 // ============================================================
-//  ROLE-AWARE PROMPT
+//  AI: Chat
 // ============================================================
 function buildRoleSystemPrompt({ role, userName, contextStr, greeting, emoji }) {
   const base = greeting ? `${greeting}, ${userName} ${emoji}!` : '';
@@ -2101,9 +2133,6 @@ Role:
 - NEVER use markdown tables. Use bullet points for any comparison.`;
 }
 
-// ============================================================
-//  AI: Main Chat (10s timeout — fast chat)
-// ============================================================
 app.post('/api/ai/chat', async (req, res) => {
   try {
     const { message, rollNo, role, name, branch, threadId, skipGreeting } = req.body;
@@ -2206,7 +2235,6 @@ app.post('/api/ai/chat', async (req, res) => {
         maxTokens: 1500,
         temperature: 0.7,
         timeoutMs: 20000
-        // Uses default 10s global timeout, 6 attempts (fast chat)
       });
       aiOk = true;
     } catch (err) {
@@ -2241,8 +2269,7 @@ app.post('/api/ai/chat', async (req, res) => {
 });
 
 // ============================================================
-//  AI: Chat with FILE / IMAGE (60s timeout — heavy processing)
-//  ✅ Supports: PDF, TXT, JPEG, PNG, WEBP, GIF
+//  AI: Chat with FILE / IMAGE
 // ============================================================
 app.post('/api/ai/chat-with-file', async (req, res) => {
   try {
@@ -2250,7 +2277,6 @@ app.post('/api/ai/chat-with-file', async (req, res) => {
     if (!fileBase64 || !mimeType) return res.status(400).json({ error: 'fileBase64 and mimeType required.' });
     const userPrompt = prompt || 'Explain this document/file. Give me a clear summary with key points.';
 
-    // ✅ Expanded allowed types — PDF, TXT, and images
     const allowed = [
       'application/pdf',
       'text/plain',
@@ -2278,7 +2304,6 @@ app.post('/api/ai/chat-with-file', async (req, res) => {
     contextStr += `Branch: ${userData?.branch || branch || 'CSE'}\n`;
     if (attendanceSummary) contextStr += `Attendance: ${attendanceSummary.attendancePercentage}% (${attendanceSummary.totalAcademicLectures}/${attendanceSummary.totalConductedLectures})\n`;
 
-    // ✅ File type label — ab images bhi support
     const fileLabels = {
       pdf: 'PDF document',
       plain: 'text file',
@@ -2299,6 +2324,7 @@ Task:
 - Carefully read/analyze the uploaded ${fileTypeLabel}.
 - If image — describe contents, extract text if any, answer user's question about it.
 - If PDF/text — extract, summarize, explain.
+- If code file — explain the code, fix bugs, improve.
 - If notes — provide structured summary with headings and bullets.
 - Use markdown formatting: headings, bullets, bold.
 - NEVER use markdown tables. Use bullet points instead.
@@ -2315,7 +2341,6 @@ Task:
         maxTokens: 3000,
         temperature: 0.4,
         timeoutMs: 60000,
-        // ✅ File/Image ke liye 60s timeout, 2 attempts (heavy processing)
         globalTimeoutMs: 60000,
         maxAttempts: 2
       });
@@ -2371,7 +2396,9 @@ app.post('/api/ai/generate-report-pdf', async (req, res) => {
       const summary = await getStudentSummary(target);
       if (!summary) return res.status(500).json({ error: 'Could not generate summary' });
       const rStart = startDate || getISTDateString(SEMESTER_START);
-      const rEnd = endDate || getISTDateString(new Date());
+      let rEnd = endDate || getISTDateString(new Date());
+      const todayStr = getISTDateString(new Date());
+      if (rEnd > todayStr) rEnd = todayStr;
       const records = await Attendance.find({ rollNo: target, date: { $gte: rStart, $lte: rEnd } }).sort({ date: 1 }).lean();
       const subRows = Object.entries(summary.subjectStats).map(([sub, st]) => [sub, `${st.present}/${st.total}`, `${st.percentage}%`]);
       const sections = [
@@ -2385,7 +2412,7 @@ app.post('/api/ai/generate-report-pdf', async (req, res) => {
         { heading: '📚 Subject-wise', table: { headers: ['Subject', 'Present/Total', 'Percentage'], rows: subRows } },
         { heading: '📅 Recent 30 Records', table: { headers: ['Date', 'Subject', 'Status'], rows: records.slice(-30).reverse().map(r => [r.date, mapToCanonical(r.subject), r.status]) } }
       ];
-      pdfBuffer = await generatePDFBuffer({ title: 'Student Attendance Report', subtitle: `${targetUser.name} (${target}) • ${targetUser.branch || 'CSE'} • ${rStart} to ${rEnd}`, sections });
+      pdfBuffer = await generatePDFBuffer({ title: 'Student Attendance Report', subtitle: `${targetUser.name} (${target}) • ${targetUser.branch || 'CSE'} • ${rStart} to ${rEnd} (up to today)`, sections });
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename=attendance_${target}_${rStart}.pdf`);
       return res.send(pdfBuffer);
@@ -2416,7 +2443,9 @@ app.post('/api/ai/generate-report-pdf', async (req, res) => {
 
     if (reportType === 'class-report') {
       const start = startDate ? new Date(startDate) : new Date(SEMESTER_START);
-      const end = endDate ? new Date(endDate) : new Date(SEMESTER_END);
+      let end = endDate ? new Date(endDate) : new Date(SEMESTER_END);
+      const today = new Date();
+      if (end > today) end = today;
       const startStr = getISTDateString(start), endStr = getISTDateString(end);
       let q = { role: 'student' };
       if (branch && branch !== 'ALL' && branch !== 'undefined') q.branch = branch.toUpperCase();
