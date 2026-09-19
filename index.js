@@ -36,12 +36,8 @@ function getNextApiKey() {
   currentKeyIndex = (currentKeyIndex + 1) % GEMINI_API_KEYS.length;
   return key;
 }
-function peekCurrentKey() {
-  if (GEMINI_API_KEYS.length === 0) return null;
-  return GEMINI_API_KEYS[currentKeyIndex];
-}
 
-// ---------- Other env ----------
+// ---------- Env ----------
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
 const COLLEGE_LAT = 28.4509370;
@@ -51,8 +47,8 @@ const SEMESTER_START = new Date('2026-07-15T00:00:00+05:30');
 const SEMESTER_END = new Date('2026-12-31T23:59:59+05:30');
 
 if (!MONGO_URI) { console.error('❌ MONGO_URI missing'); process.exit(1); }
-if (GEMINI_API_KEYS.length === 0) console.warn('⚠️ No GEMINI API keys set');
-else console.log(`🔑 Loaded ${GEMINI_API_KEYS.length} Gemini API key(s)`);
+if (GEMINI_API_KEYS.length === 0) console.warn('⚠️ No GEMINI keys set');
+else console.log(`🔑 Loaded ${GEMINI_API_KEYS.length} Gemini key(s)`);
 
 // ---------- Helpers ----------
 function getISTDateString(dateObj) {
@@ -504,6 +500,7 @@ async function getStudentSummary(rollNo) {
     const holidays = await Holiday.find({}).lean();
     const holidaySet = new Set(holidays.map(h => h.date.split('T')[0]));
     const today = new Date();
+    const todayStr = getISTDateString(today);
     const semesterStart = new Date('2026-07-15T00:00:00+05:30');
     let current = new Date(semesterStart);
     let totalConducted = 0;
@@ -518,6 +515,7 @@ async function getStudentSummary(rollNo) {
     }
     while (current <= today) {
       const ds = getISTDateString(current);
+      if (ds > todayStr) { current.setDate(current.getDate() + 1); continue; }
       const dow = current.getDay();
       const isWknd = (dow === 0 || dow === 6);
       const isHoliday = holidaySet.has(ds);
@@ -553,7 +551,7 @@ async function getStudentSummary(rollNo) {
 }
 
 // ============================================================
-//  AI HELPER — Multi-key rotation + retry + fallback
+//  AI HELPER — Multi-key rotation
 // ============================================================
 function parseGeminiError(err) {
   const msg = err.message || String(err);
@@ -561,16 +559,16 @@ function parseGeminiError(err) {
     return { code: 429, type: 'RATE_LIMIT', friendly: '⏳ AI ka limit reach ho gaya. 30 sec baad try karo 🙏' };
   }
   if (msg.includes('503') || msg.toLowerCase().includes('high demand') || msg.toLowerCase().includes('unavailable')) {
-    return { code: 503, type: 'OVERLOADED', friendly: '⏳ AI server busy hai (high demand). 15 sec baad try karo 🙏' };
+    return { code: 503, type: 'OVERLOADED', friendly: '⏳ AI server busy hai. 15 sec baad try karo 🙏' };
   }
   if (msg.includes('504') || msg.toLowerCase().includes('deadline') || msg.toLowerCase().includes('aborted')) {
     return { code: 504, type: 'TIMEOUT', friendly: '⏳ AI ne time liya zyada. Thodi der baad try karo.' };
   }
   if (msg.includes('404') || msg.toLowerCase().includes('not found')) {
-    return { code: 404, type: 'MODEL_NOT_FOUND', friendly: '⚠️ Model available nahi hai. Admin se contact karo.' };
+    return { code: 404, type: 'MODEL_NOT_FOUND', friendly: '⚠️ Model available nahi hai.' };
   }
   if (msg.includes('400') || msg.toLowerCase().includes('invalid')) {
-    return { code: 400, type: 'BAD_REQUEST', friendly: '⚠️ Request invalid thi. Check karke dobara bhejo.' };
+    return { code: 400, type: 'BAD_REQUEST', friendly: '⚠️ Request invalid thi.' };
   }
   return { code: 500, type: 'UNKNOWN', friendly: '⚠️ AI error: ' + msg.substring(0, 100) };
 }
@@ -619,42 +617,27 @@ async function callGeminiOnce({ prompt, systemPrompt = null, fileBase64 = null, 
   }
 }
 
-// ✅ Smart retry with key rotation + model fallback
 async function callGemini(args) {
-  // Try each model with each key
   const modelsToTry = [args.model || GEMINI_MODEL, ...GEMINI_FALLBACK_MODELS];
   const totalKeys = Math.max(GEMINI_API_KEYS.length, 1);
   let lastError = null;
-
   for (let mi = 0; mi < modelsToTry.length; mi++) {
     const model = modelsToTry[mi];
-    // For each model, try up to (keys count) times with different keys
     const attemptsForThisModel = Math.min(totalKeys, 3);
     for (let attempt = 0; attempt < attemptsForThisModel; attempt++) {
       const apiKey = getNextApiKey();
       if (!apiKey) throw new Error('No API key available');
       try {
-        console.log(`🤖 Trying ${model} with key #${currentKeyIndex} (attempt ${attempt + 1})`);
+        console.log(`🤖 Trying ${model} (attempt ${attempt + 1})`);
         return await callGeminiOnce({ ...args, model, apiKey });
       } catch (err) {
         lastError = err;
         const parsed = parseGeminiError(err);
-        console.warn(`⚠️ ${model} failed: [${parsed.code} ${parsed.type}] ${err.message.substring(0, 100)}`);
-        // 429 → try next key immediately (small delay)
-        if (parsed.type === 'RATE_LIMIT') {
-          console.log(`   🔑 Rate limited, trying next key...`);
-          await new Promise(r => setTimeout(r, 500));
+        console.warn(`⚠️ ${model} failed: [${parsed.code} ${parsed.type}]`);
+        if (parsed.type === 'RATE_LIMIT' || parsed.type === 'OVERLOADED') {
+          await new Promise(r => setTimeout(r, 600));
           continue;
         }
-        // 503 → try next key after small delay
-        if (parsed.type === 'OVERLOADED') {
-          console.log(`   ⏳ Overloaded, trying next key...`);
-          await new Promise(r => setTimeout(r, 800));
-          continue;
-        }
-        // 404 model → break to next model
-        if (parsed.type === 'MODEL_NOT_FOUND') break;
-        // Other errors → break
         break;
       }
     }
@@ -872,28 +855,156 @@ app.post('/api/admin/login-as-student', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ========== ✅ FIX ALL ATTENDANCE (extra remove + missing add + rename + dedupe) ==========
 app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
   try {
-    const { requesterRollNo } = req.body;
-    const req1 = await User.findOne({ rollNo: requesterRollNo?.trim().toUpperCase() });
-    if (!req1 || req1.role !== 'admin') return res.status(403).json({ error: 'Admin only!' });
-    const all = await Attendance.find({}).lean();
-    if (!all.length) return res.json({ message: 'No records.', fixed: 0, merged: 0, deleted: 0, totalScanned: 0 });
-    let fixed = 0, merged = 0, untouched = 0;
-    const toDelete = [], toUpdate = [];
-    const seen = new Map();
-    for (const rec of all) {
-      const canon = mapToCanonical(rec.subject);
-      const key = `${rec.rollNo}|${rec.date}|${canon}`;
-      if (seen.has(key)) { toDelete.push(rec._id); merged++; continue; }
-      seen.set(key, rec._id);
-      if (rec.subject !== canon) { toUpdate.push({ _id: rec._id, subject: canon }); fixed++; }
-      else untouched++;
+    const { requesterRollNo, testRollNo } = req.body;
+    const requester = await User.findOne({ rollNo: requesterRollNo?.trim().toUpperCase() });
+    if (!requester || requester.role !== 'admin') {
+      return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     }
-    for (const u of toUpdate) await Attendance.updateOne({ _id: u._id }, { $set: { subject: u.subject } });
-    if (toDelete.length) await Attendance.deleteMany({ _id: { $in: toDelete } });
-    res.json({ message: `Fixed ${fixed}, merged ${merged}`, totalScanned: all.length, fixed, merged, untouched, deleted: toDelete.length });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+
+    const todayStr = getISTDateString(new Date());
+    const semesterStart = new Date('2026-07-15T00:00:00+05:30');
+
+    // ✅ Test mode: only process 1 student
+    let studentQuery = { role: 'student' };
+    if (testRollNo && testRollNo.trim()) {
+      studentQuery.rollNo = testRollNo.trim().toUpperCase();
+    }
+    const students = await User.find(studentQuery);
+    if (!students.length) {
+      return res.status(404).json({ error: testRollNo ? `Student ${testRollNo} not found!` : 'No students found' });
+    }
+
+    const allHolidays = await Holiday.find({});
+    const holidaySet = new Set(allHolidays.map(h => h.date.split('T')[0]));
+
+    let totalRemoved = 0, totalAdded = 0, totalRenamed = 0, totalDedup = 0;
+    const report = [];
+
+    for (const student of students) {
+      const branch = student.branch || 'CSE';
+      const timetable = getTimetableForBranch(branch);
+      const allRecords = await Attendance.find({ rollNo: student.rollNo }).lean();
+      if (!allRecords.length) {
+        report.push({ rollNo: student.rollNo, name: student.name, branch, removed: 0, added: 0, renamed: 0, dedup: 0 });
+        continue;
+      }
+
+      let sRemoved = 0, sAdded = 0, sRenamed = 0, sDedup = 0;
+      const removedDetails = [], addedDetails = [];
+
+      // Step 1: Rename to canonical + dedupe
+      const grouped = {};
+      for (const rec of allRecords) {
+        const canon = mapToCanonical(rec.subject);
+        if (!grouped[rec.date]) grouped[rec.date] = new Map();
+        if (grouped[rec.date].has(canon)) {
+          await Attendance.deleteOne({ _id: rec._id });
+          sDedup++;
+        } else {
+          grouped[rec.date].set(canon, rec);
+          if (rec.subject !== canon) {
+            await Attendance.updateOne({ _id: rec._id }, { $set: { subject: canon } });
+            sRenamed++;
+          }
+        }
+      }
+
+      // Step 2: Iterate through each working day from semester start to today
+      let cur = new Date(semesterStart);
+      const endDate = new Date(todayStr + 'T23:59:59Z');
+
+      while (cur <= endDate) {
+        const dateStr = getISTDateString(cur);
+        const dow = cur.getDay();
+        const isWeekend = (dow === 0 || dow === 6);
+        const isHoliday = holidaySet.has(dateStr);
+
+        if (!isWeekend && !isHoliday) {
+          const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][dow];
+          const ttSubjects = [...new Set(
+            (timetable[dayName] || [])
+              .map(s => mapToCanonical(s.subject))
+              .filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports'))
+          )];
+
+          const studentSubjects = grouped[dateStr] || new Map();
+
+          // 2a: Remove EXTRAS — subjects NOT in timetable for that day
+          for (const [sub, rec] of studentSubjects) {
+            if (!ttSubjects.includes(sub)) {
+              await Attendance.deleteOne({ _id: rec._id });
+              studentSubjects.delete(sub);
+              sRemoved++;
+              removedDetails.push(`${dateStr}: ${sub}`);
+            }
+          }
+
+          // 2b: Add MISSING (if student attended ≥ 50% of the day)
+          const presentCount = ttSubjects.filter(s => studentSubjects.has(s)).length;
+          const totalCount = ttSubjects.length;
+
+          if (totalCount > 0 && presentCount >= Math.ceil(totalCount / 2) && presentCount < totalCount) {
+            const missing = ttSubjects.filter(s => !studentSubjects.has(s));
+            for (const missSub of missing) {
+              try {
+                await new Attendance({
+                  rollNo: student.rollNo,
+                  studentName: student.name,
+                  subject: missSub,
+                  date: dateStr,
+                  status: 'Present',
+                  location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG },
+                  ipAddress: 'fix-all-auto',
+                  isVerified: true,
+                  branch: branch
+                }).save();
+                sAdded++;
+                addedDetails.push(`${dateStr}: ${missSub}`);
+              } catch (e) {
+                if (e.code !== 11000) throw e;
+              }
+            }
+          }
+        }
+        cur.setDate(cur.getDate() + 1);
+      }
+
+      totalRemoved += sRemoved;
+      totalAdded += sAdded;
+      totalRenamed += sRenamed;
+      totalDedup += sDedup;
+
+      report.push({
+        rollNo: student.rollNo,
+        name: student.name,
+        branch,
+        removed: sRemoved,
+        added: sAdded,
+        renamed: sRenamed,
+        dedup: sDedup,
+        removedDetails: removedDetails.slice(0, 30),
+        addedDetails: addedDetails.slice(0, 30)
+      });
+    }
+
+    console.log(`🛠️ Fix-all: removed=${totalRemoved}, added=${totalAdded}, renamed=${totalRenamed}, dedup=${totalDedup}`);
+    res.json({
+      message: `✅ Scanned ${students.length} students. Removed ${totalRemoved} extras, added ${totalAdded} missing, renamed ${totalRenamed}, dedup ${totalDedup}.`,
+      totalStudents: students.length,
+      removed: totalRemoved,
+      added: totalAdded,
+      renamed: totalRenamed,
+      deduplicated: totalDedup,
+      testMode: !!testRollNo,
+      report
+    });
+  } catch (err) {
+    console.error('Fix all attendance error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ========== TEACHER SUBJECTS ==========
@@ -961,9 +1072,9 @@ app.post('/api/teacher/mark-attendance', async (req, res) => {
     const teacher = await User.findOne({ rollNo: cr, role: 'faculty' });
     if (!teacher) return res.status(403).json({ error: 'Faculty only.' });
     const subj = mapToCanonical(subject);
-    if (!(await TeacherSubject.findOne({ teacherRollNo: cr, subject: subj }))) return res.status(403).json({ error: `Not authorized for "${subject}".` });
+    if (!(await TeacherSubject.findOne({ teacherRollNo: cr, subject: subj }))) return res.status(403).json({ error: `Not authorized.` });
     const lc = checkLocation(latitude, longitude);
-    if (!lc.isInside) return res.status(400).json({ error: `Outside college (${lc.distance}m)` });
+    if (!lc.isInside) return res.status(400).json({ error: `Outside (${lc.distance}m)` });
     if (!studentRollNo) return res.status(400).json({ error: 'Student roll required.' });
     const cs = studentRollNo.trim().toUpperCase();
     const su = await User.findOne({ rollNo: cs, role: 'student' });
@@ -1290,7 +1401,7 @@ app.delete('/api/attendance/delete-day/:rollNo/:date/:requesterRollNo', async (r
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== MONTHLY SUMMARY ==========
+// ========== MONTHLY SUMMARY (WITH FUTURE DATE SKIP) ==========
 app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
   try {
     const cr = req.params.rollNo.trim().toUpperCase();
@@ -1310,9 +1421,14 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
     let totalConducted = 0;
     const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const holidaySet = new Set((await Holiday.find({ date: { $gte: startStr, $lte: endStr } })).map(h => h.date.split('T')[0]));
+
+    // ✅ Skip future dates
+    const todayStr = getISTDateString(new Date());
+
     let cur = new Date(startD);
     while (cur <= endD) {
       const ds = getISTDateString(cur);
+      if (ds > todayStr) { cur.setDate(cur.getDate() + 1); continue; }
       const dow = cur.getDay();
       if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) {
         const dayName = dayNameMap[dow];
@@ -1328,6 +1444,7 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
     cur = new Date(startD);
     while (cur <= endD) {
       const ds = getISTDateString(cur);
+      if (ds > todayStr) { cur.setDate(cur.getDate() + 1); continue; }
       const dow = cur.getDay();
       if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) {
         const dayName = dayNameMap[dow];
@@ -1423,6 +1540,7 @@ app.get('/api/student/summary/:rollNo', async (req, res) => {
     const holidays = await Holiday.find({}).lean();
     const holidaySet = new Set(holidays.map(h => h.date.split('T')[0]));
     const today = new Date();
+    const todayStr = getISTDateString(today);
     const semesterStart = new Date('2026-07-15T00:00:00+05:30');
     let cur = new Date(semesterStart);
     let totalConducted = 0;
@@ -1438,6 +1556,7 @@ app.get('/api/student/summary/:rollNo', async (req, res) => {
     }
     while (cur <= today) {
       const ds = getISTDateString(cur);
+      if (ds > todayStr) { cur.setDate(cur.getDate() + 1); continue; }
       const dow = cur.getDay();
       if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) {
         acadDays.add(ds);
@@ -1794,9 +1913,7 @@ app.delete('/api/chats/:threadId', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ============================================================
-//  LEAVE
-// ============================================================
+// ========== LEAVE ==========
 app.post('/api/leave/apply', async (req, res) => {
   try {
     const { rollNo, fromDate, toDate, reason, leaveType } = req.body;
@@ -1901,19 +2018,18 @@ app.get('/api/admin/defaulters/:requesterRollNo', async (req, res) => {
 function buildRoleSystemPrompt({ role, userName, contextStr, greeting, emoji }) {
   const base = greeting ? `${greeting}, ${userName} ${emoji}!` : '';
   if (role === 'admin') {
-    return `You are "BM Bot Admin Assistant" for BM Group of Institutions ERP.
+    return `You are "BM Bot Admin Assistant" for BM Group ERP.
 ${base}
 Assisting ADMIN.
 Context:
 ${contextStr}
-
 Role:
 - Provide admin-level insights (stats, defaulters, class trends).
-- Suggest admin actions (bulk mark, holiday, notice).
+- Suggest admin actions.
 - Draft notices & warnings professionally.
-- If asked for PDF, tell user to click "Download PDF" button.
 - Be professional, data-driven.
-- Respond in user's language (Hindi/English).`;
+- Respond in user's language (Hindi/English).
+- NEVER use markdown tables. Use bullet points for comparison.`;
   }
   if (role === 'faculty') {
     return `You are "BM Bot Faculty Assistant" for BM Group.
@@ -1921,28 +2037,26 @@ ${base}
 Assisting FACULTY.
 Context:
 ${contextStr}
-
 Role:
-- Help with assigned subjects, student lists, class averages.
-- Guide attendance marking (single-lecture passcode, GPS).
-- Suggest teaching material ideas.
-- If asked for notes, generate with headings & bullets.
+- Help with assigned subjects, students, class averages.
+- Suggest teaching material.
 - Be supportive, concise.
-- Respond in user's language (Hindi/English).`;
+- Respond in user's language (Hindi/English).
+- NEVER use markdown tables. Use bullet points.`;
   }
   return `You are "BM Bot" for BM Group of Institutions attendance portal.
 ${base}
 Assisting STUDENT.
 Context:
 ${contextStr}
-
 Role:
-- Answer questions on attendance, timetable, holidays, working days.
-- If user asks "kitne bunk kar sakta hun" — calculate honestly using 75% rule.
-- If asked for notes/study material/MCQs — provide with headings, bullets, examples.
+- Answer questions on attendance, timetable, holidays.
+- If user asks "kitne bunk kar sakta hun" — calculate using 75% rule.
+- If asked for notes — provide with headings, bullets, examples.
 - Warn politely if attendance below 75%.
 - Be friendly, encouraging, use emojis.
-- Respond in user's language (Hindi/English).`;
+- Respond in user's language (Hindi/English).
+- NEVER use markdown tables. Use bullet points for any comparison.`;
 }
 
 // ============================================================
@@ -2091,8 +2205,6 @@ app.post('/api/ai/chat-with-file', async (req, res) => {
     const { prompt, fileBase64, mimeType, rollNo, role, name, branch, threadId } = req.body;
     if (!fileBase64 || !mimeType) return res.status(400).json({ error: 'fileBase64 and mimeType required.' });
     const userPrompt = prompt || 'Explain this document/file. Give me a clear summary with key points.';
-
-    // ✅ Only PDF and TXT (no images)
     const allowed = ['application/pdf', 'text/plain'];
     if (!allowed.some(t => mimeType.includes(t.split('/')[1]) || mimeType === t)) {
       return res.status(400).json({ error: `Unsupported file type: ${mimeType}. Only PDF and TXT allowed.` });
@@ -2118,14 +2230,13 @@ app.post('/api/ai/chat-with-file', async (req, res) => {
 Helping ${userName} (${userRole}) with a ${fileTypeLabel}.
 Context:
 ${contextStr}
-
 Task:
 - Carefully read the uploaded ${fileTypeLabel}.
 - Answer user's question based on content in the file.
-- If notes/study material — extract, summarize, explain.
-- If PDF of a book/chapter — provide summary, key points, important topics.
-- If unrelated to studies, still help politely.
+- If notes — extract, summarize, explain.
+- If PDF of a book/chapter — provide summary, key points.
 - Use markdown formatting: headings, bullets, bold.
+- NEVER use markdown tables. Use bullet points instead.
 - Respond in user's language (Hindi/English).`;
 
     let reply = '';
@@ -2300,13 +2411,13 @@ Requirements:
 - Include 2-3 real-world examples
 ${includeMCQ ? '- Include 5 MCQs with 4 options each and mark correct answer' : ''}
 - End with "Quick Revision" of 5-6 bullets
-Format: plain text, use ## for headings, • for bullets. NO ** asterisks.`;
+Format: plain text, use ## for headings, • for bullets. NO ** asterisks. NO markdown tables.`;
 
     let notesText;
     try {
       notesText = await callGemini({
         prompt,
-        systemPrompt: 'You are an expert teacher creating structured study notes. Use ## for headings, • for bullets. Avoid asterisks.',
+        systemPrompt: 'You are an expert teacher creating structured study notes. Use ## for headings, • for bullets. Avoid asterisks. Avoid tables.',
         maxTokens: 3500,
         temperature: 0.5,
         timeoutMs: 60000
@@ -2426,14 +2537,14 @@ app.post('/api/ai/admin-insights', async (req, res) => {
       { $group: { _id: '$subject', total: { $sum: 1 }, present: { $sum: { $cond: [{ $in: ['$status', ['Present', 'Duty Leave']] }, 1, 0] } } } },
       { $sort: { present: 1 } }
     ]);
-    const contextStr = `Dashboard:\n- Total students: ${totalStudents}\n- Total faculty: ${totalFaculty}\n- Total attendance records: ${totalAttendance}\n- Overall %: ${overallPct}%\n- Today present: ${todayPresent.length}\n- Defaulters (<75%): ${defaulters.length}\n- Top 10 defaulters: ${defaulters.slice(0, 10).map(d => `${d.rollNo}(${d.name}): ${d.pct}%`).join(', ')}\n- Subject-wise (lowest 5): ${subAgg.slice(0, 5).map(s => `${mapToCanonical(s._id)}: ${Math.round((s.present/s.total)*100)}%`).join(', ')}`;
+    const contextStr = `Dashboard:\n- Total students: ${totalStudents}\n- Total faculty: ${totalFaculty}\n- Total records: ${totalAttendance}\n- Overall %: ${overallPct}%\n- Today present: ${todayPresent.length}\n- Defaulters (<75%): ${defaulters.length}\n- Top 10 defaulters: ${defaulters.slice(0, 10).map(d => `${d.rollNo}(${d.name}): ${d.pct}%`).join(', ')}\n- Subject-wise (lowest 5): ${subAgg.slice(0, 5).map(s => `${mapToCanonical(s._id)}: ${Math.round((s.present/s.total)*100)}%`).join(', ')}`;
 
     let insights = '';
     if (GEMINI_API_KEYS.length > 0) {
       try {
         insights = await callGemini({
-          prompt: `Analyze this admin dashboard data. Structure with:\n1. Overview (2 lines)\n2. Key Concerns (top 3)\n3. Recommended Actions (3-4 bullets)\n4. Positive Highlights\nUse ## for headings, • for bullets. No ** asterisks.\n\n${contextStr}`,
-          systemPrompt: 'You are BM Bot Admin Assistant. Provide data-driven, professional insights. Concise, actionable.',
+          prompt: `Analyze this admin dashboard data. Structure:\n1. Overview (2 lines)\n2. Key Concerns (top 3)\n3. Recommended Actions (3-4 bullets)\n4. Positive Highlights\nUse ## for headings, • for bullets. No ** asterisks. No tables.\n\n${contextStr}`,
+          systemPrompt: 'You are BM Bot Admin Assistant. Provide data-driven insights. Concise, actionable.',
           maxTokens: 1200,
           temperature: 0.5,
           timeoutMs: 45000
@@ -2441,7 +2552,7 @@ app.post('/api/ai/admin-insights', async (req, res) => {
       } catch (err) { console.warn('AI insights failed:', err.message); insights = '⚠️ ' + err.message; }
     }
     if (!insights) {
-      insights = `## Overview\nTotal ${totalStudents} students, ${overallPct}% overall. ${defaulters.length} defaulters.\n\n## Key Concerns\n• ${defaulters.length} below 75%\n• Today: ${todayPresent.length}/${totalStudents} present\n\n## Recommended Actions\n• Send warnings\n• Review subject-wise`;
+      insights = `## Overview\nTotal ${totalStudents} students, ${overallPct}% overall. ${defaulters.length} defaulters.\n\n## Key Concerns\n• ${defaulters.length} below 75%\n• Today: ${todayPresent.length}/${totalStudents} present\n\n## Recommended Actions\n• Send warnings\n• Review subjects`;
     }
     res.json({ stats: { totalStudents, totalFaculty, totalAttendance, overallPct, todayPresentCount: todayPresent.length, defaulterCount: defaulters.length }, topDefaulters: defaulters.slice(0, 10), subjectAggregate: subAgg.map(s => ({ subject: mapToCanonical(s._id), total: s.total, present: s.present, pct: Math.round((s.present/s.total)*100) })), insights });
   } catch (err) { console.error('❌ Admin insights error:', err); res.status(500).json({ error: err.message }); }
@@ -2468,8 +2579,8 @@ app.post('/api/ai/subject-analysis', async (req, res) => {
     if (GEMINI_API_KEYS.length > 0 && subjects.length > 0) {
       try {
         aiAnalysis = await callGemini({
-          prompt: `Student ${user.name} (${cr}) attendance:\n${subjects.map(s => `• ${s.subject}: ${s.present}/${s.total} (${s.percentage}%)`).join('\n')}\n\nProvide:\n1. Weak subjects (<75%) with specific advice\n2. Strong subjects — positive reinforcement\n3. Overall strategy (2-3 bullets)\nUse ## headings, • bullets. No ** asterisks. Hinglish, encouraging.`,
-          systemPrompt: 'You are BM Bot, friendly student mentor. Personalized, actionable advice in Hinglish. Plain text.',
+          prompt: `Student ${user.name} (${cr}) attendance:\n${subjects.map(s => `• ${s.subject}: ${s.present}/${s.total} (${s.percentage}%)`).join('\n')}\n\nProvide:\n1. Weak subjects (<75%) with specific advice\n2. Strong subjects — positive reinforcement\n3. Overall strategy (2-3 bullets)\nUse ## headings, • bullets. No tables. Hinglish, encouraging.`,
+          systemPrompt: 'You are BM Bot, friendly student mentor. Personalized advice in Hinglish.',
           maxTokens: 1000,
           temperature: 0.6,
           timeoutMs: 45000
@@ -2510,7 +2621,7 @@ app.post('/api/ai/smart-alerts', async (req, res) => {
         try {
           message = await callGemini({
             prompt: `Write short polite warning (2-3 lines, Hinglish) for parent/student:\nStudent: ${d.name} (${d.rollNo}, ${d.branch})\nAttendance: ${d.pct}% (${d.present}/${d.total})\nRequired: ${threshold}%\nNo asterisks.`,
-            systemPrompt: 'You are BM Bot writing official warning notices for BM Group. Polite, professional, friendly.',
+            systemPrompt: 'You are BM Bot writing official warning notices for BM Group.',
             maxTokens: 200,
             temperature: 0.6,
             timeoutMs: 20000
@@ -2525,7 +2636,7 @@ app.post('/api/ai/smart-alerts', async (req, res) => {
 });
 
 // ============================================================
-//  AI: Study Material (text only)
+//  AI: Study Material
 // ============================================================
 app.post('/api/ai/study-material', async (req, res) => {
   try {
@@ -2537,8 +2648,8 @@ app.post('/api/ai/study-material', async (req, res) => {
     let reply;
     try {
       reply = await callGemini({
-        prompt: `Generate ${styleGuide} on: "${topic}"${subject ? ` (Subject: ${subject})` : ''}.\nUse ## for headings, • for bullets. No ** asterisks.`,
-        systemPrompt: 'Expert teacher for B.Tech students at BM Group. Clear, structured study material.',
+        prompt: `Generate ${styleGuide} on: "${topic}"${subject ? ` (Subject: ${subject})` : ''}.\nUse ## for headings, • for bullets. No tables.`,
+        systemPrompt: 'Expert teacher for B.Tech students at BM Group.',
         maxTokens: 2500,
         temperature: 0.5,
         timeoutMs: 45000
