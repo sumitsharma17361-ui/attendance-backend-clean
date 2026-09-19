@@ -27,7 +27,6 @@ const GEMINI_API_KEYS = [
 ].filter(k => k && k.trim() && k.trim().length > 5).map(k => k.trim());
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
-// ✅ Fallback models kept as-is. Remove from here only if logs show persistent errors.
 const GEMINI_FALLBACK_MODELS = ['gemini-flash-latest'];
 const GEMINI_GLOBAL_TIMEOUT_MS = parseInt(process.env.GEMINI_GLOBAL_TIMEOUT_MS || '20000', 10);
 
@@ -39,7 +38,6 @@ function getNextApiKey() {
   return key;
 }
 
-// ---------- Env ----------
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
 const COLLEGE_LAT = 28.4509370;
@@ -52,19 +50,16 @@ if (!MONGO_URI) { console.error('❌ MONGO_URI missing'); process.exit(1); }
 if (GEMINI_API_KEYS.length === 0) console.warn('⚠️ No GEMINI keys set');
 else console.log(`🔑 Loaded ${GEMINI_API_KEYS.length} Gemini key(s)`);
 
-// ---------- Helpers ----------
 function getISTDateString(dateObj) {
   const istDate = new Date(dateObj.getTime() + (5.5 * 60 * 60 * 1000));
   return istDate.toISOString().split('T')[0];
 }
 
-// ---------- Rate Limit ----------
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { error: 'Too many attempts.' } });
 const apiLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 200, message: { error: 'Too many requests.' } });
 app.use('/api/auth/', authLimiter);
 app.use('/api/', apiLimiter);
 
-// ---------- Zod ----------
 const registerSchema = z.object({
   name: z.string().min(2).max(50),
   rollNo: z.string().min(3),
@@ -123,7 +118,6 @@ function mapToCanonical(subject) {
   return normalized;
 }
 
-// ---------- TIMETABLES ----------
 const CSE_TIME_TABLE = {
   Monday: [
     { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' },
@@ -222,7 +216,6 @@ function getTimetableForBranch(branch) {
   return CSE_TIME_TABLE;
 }
 
-// ---------- Helper Functions ----------
 async function checkDateStatus(dateStr) {
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const dateObj = new Date(dateStr + 'T00:00:00Z');
@@ -295,7 +288,6 @@ async function generateTeacherId(subject) {
   return `${code}${String(max + 1).padStart(2, '0')}`;
 }
 
-// ---------- Schedules ----------
 const CSE_SCHEDULE = {
   1: [
     { start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1" },
@@ -422,12 +414,10 @@ function getTimetableForDate(dateStr, branch = 'CSE') {
   return getTimetableForBranch(branch)[dayName] || [];
 }
 
-// ---------- MongoDB ----------
 mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 5000, socketTimeoutMS: 45000 })
   .then(() => console.log('✅ MongoDB Connected!'))
   .catch(err => { console.error('❌ MongoDB Error:', err.message); process.exit(1); });
 
-// ---------- Schemas ----------
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   rollNo: { type: String, required: true, unique: true },
@@ -491,7 +481,6 @@ const Chat = mongoose.model('Chat', chatSchema);
 const Leave = mongoose.model('Leave', leaveSchema);
 Attendance.createIndexes().catch(err => console.error('Index error:', err));
 
-// ---------- getStudentSummary ----------
 async function getStudentSummary(rollNo) {
   try {
     const user = await User.findOne({ rollNo });
@@ -552,9 +541,6 @@ async function getStudentSummary(rollNo) {
   } catch (e) { console.error('getStudentSummary error:', e); return null; }
 }
 
-// ============================================================
-//  AI HELPER
-// ============================================================
 function parseGeminiError(err) {
   const msg = err.message || String(err);
   if (msg.includes('429') || msg.toLowerCase().includes('quota') || msg.toLowerCase().includes('rate')) {
@@ -625,7 +611,6 @@ async function callGemini(args) {
   if (totalKeys === 0) throw new Error('No API key available');
 
   const perCallTimeout = args.globalTimeoutMs || GEMINI_GLOBAL_TIMEOUT_MS;
-  // ✅ Allow up to 12 attempts total (6 keys × 2 models)
   const maxAttempts = args.maxAttempts || 12;
 
   const startTime = Date.now();
@@ -635,7 +620,6 @@ async function callGemini(args) {
 
   for (let mi = 0; mi < modelsToTry.length; mi++) {
     const model = modelsToTry[mi];
-    // ✅ Use ALL available keys per model (was 3)
     const keysPerModel = Math.min(totalKeys, 6);
     let skipToNextModel = false;
 
@@ -692,7 +676,6 @@ async function callGemini(args) {
   throw finalErr;
 }
 
-// ---------- PDF Helper ----------
 function generatePDFBuffer({ title, subtitle, sections = [], footer = null }) {
   return new Promise((resolve, reject) => {
     try {
@@ -731,7 +714,6 @@ function generatePDFBuffer({ title, subtitle, sections = [], footer = null }) {
   });
 }
 
-// ---------- Routes ----------
 app.get('/', (req, res) => res.send('BM Group ERP Active!'));
 app.get('/health', (req, res) => res.json({
   status: 'ok',
@@ -740,7 +722,7 @@ app.get('/health', (req, res) => res.json({
   fallbackModels: GEMINI_FALLBACK_MODELS,
   globalTimeoutMs: GEMINI_GLOBAL_TIMEOUT_MS,
   chatTimeoutMs: 20000,
-  fileUploadTimeoutMs: 60000,
+  fileUploadTimeoutMs: 90000,
   keysLoaded: GEMINI_API_KEYS.length,
   pdf: 'enabled',
   imageSupport: 'enabled',
@@ -753,14 +735,13 @@ app.get('/api/ai/health', (req, res) => res.json({
   fallbackModels: GEMINI_FALLBACK_MODELS,
   globalTimeoutMs: GEMINI_GLOBAL_TIMEOUT_MS,
   chatTimeoutMs: 20000,
-  fileUploadTimeoutMs: 60000,
+  fileUploadTimeoutMs: 90000,
   keysLoaded: GEMINI_API_KEYS.length,
   imageSupport: true,
   fileTypes: ['application/pdf', 'text/plain', 'image/jpeg', 'image/png', 'image/webp', 'image/gif'],
   features: ['chat', 'chat-with-file', 'chat-with-image', 'predict', 'admin-insights', 'generate-report-pdf', 'generate-notes-pdf', 'smart-alerts', 'subject-analysis']
 }));
 
-// ========== AUTH ==========
 app.post('/api/auth/register', async (req, res) => {
   try {
     const parsed = registerSchema.safeParse(req.body);
@@ -824,7 +805,6 @@ app.post('/api/auth/verify-passcode', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== PROFILE ==========
 app.post('/api/student/profile', async (req, res) => {
   try {
     const { rollNo, email, phone, profilePic, semester, branch } = req.body;
@@ -848,7 +828,6 @@ app.get('/api/student/profile/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== ADMIN ==========
 app.post('/api/admin/reset-password', async (req, res) => {
   try {
     const { requesterRollNo, targetRollNo, newPassword } = req.body;
@@ -905,7 +884,6 @@ app.post('/api/admin/login-as-student', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== FIX ALL ATTENDANCE ==========
 app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
   try {
     const { requesterRollNo, testRollNo } = req.body;
@@ -913,10 +891,8 @@ app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
     if (!requester || requester.role !== 'admin') {
       return res.status(403).json({ error: 'Access Denied: Admin Only!' });
     }
-
     const todayStr = getISTDateString(new Date());
     const semesterStart = new Date('2026-07-15T00:00:00+05:30');
-
     let studentQuery = { role: 'student' };
     if (testRollNo && testRollNo.trim()) {
       studentQuery.rollNo = testRollNo.trim().toUpperCase();
@@ -925,13 +901,10 @@ app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
     if (!students.length) {
       return res.status(404).json({ error: testRollNo ? `Student ${testRollNo} not found!` : 'No students found' });
     }
-
     const allHolidays = await Holiday.find({});
     const holidaySet = new Set(allHolidays.map(h => h.date.split('T')[0]));
-
     let totalRemoved = 0, totalAdded = 0, totalRenamed = 0, totalDedup = 0;
     const report = [];
-
     for (const student of students) {
       const branch = student.branch || 'CSE';
       const timetable = getTimetableForBranch(branch);
@@ -940,10 +913,8 @@ app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
         report.push({ rollNo: student.rollNo, name: student.name, branch, removed: 0, added: 0, renamed: 0, dedup: 0 });
         continue;
       }
-
       let sRemoved = 0, sAdded = 0, sRenamed = 0, sDedup = 0;
       const removedDetails = [], addedDetails = [];
-
       const grouped = {};
       for (const rec of allRecords) {
         const canon = mapToCanonical(rec.subject);
@@ -959,16 +930,13 @@ app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
           }
         }
       }
-
       let cur = new Date(semesterStart);
       const endDate = new Date(todayStr + 'T23:59:59Z');
-
       while (cur <= endDate) {
         const dateStr = getISTDateString(cur);
         const dow = cur.getDay();
         const isWeekend = (dow === 0 || dow === 6);
         const isHoliday = holidaySet.has(dateStr);
-
         if (!isWeekend && !isHoliday) {
           const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][dow];
           const ttSubjects = [...new Set(
@@ -976,9 +944,7 @@ app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
               .map(s => mapToCanonical(s.subject))
               .filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports'))
           )];
-
           const studentSubjects = grouped[dateStr] || new Map();
-
           for (const [sub, rec] of studentSubjects) {
             if (!ttSubjects.includes(sub)) {
               await Attendance.deleteOne({ _id: rec._id });
@@ -987,10 +953,8 @@ app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
               removedDetails.push(`${dateStr}: ${sub}`);
             }
           }
-
           const presentCount = ttSubjects.filter(s => studentSubjects.has(s)).length;
           const totalCount = ttSubjects.length;
-
           if (totalCount > 0 && presentCount >= Math.ceil(totalCount / 2) && presentCount < totalCount) {
             const missing = ttSubjects.filter(s => !studentSubjects.has(s));
             for (const missSub of missing) {
@@ -1016,12 +980,10 @@ app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
         }
         cur.setDate(cur.getDate() + 1);
       }
-
       totalRemoved += sRemoved;
       totalAdded += sAdded;
       totalRenamed += sRenamed;
       totalDedup += sDedup;
-
       report.push({
         rollNo: student.rollNo,
         name: student.name,
@@ -1034,7 +996,6 @@ app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
         addedDetails: addedDetails.slice(0, 30)
       });
     }
-
     console.log(`🛠️ Fix-all: removed=${totalRemoved}, added=${totalAdded}, renamed=${totalRenamed}, dedup=${totalDedup}`);
     res.json({
       message: `✅ Scanned ${students.length} students. Removed ${totalRemoved} extras, added ${totalAdded} missing, renamed ${totalRenamed}, dedup ${totalDedup}.`,
@@ -1052,7 +1013,6 @@ app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
   }
 });
 
-// ========== TEACHER SUBJECTS ==========
 app.post('/api/admin/assign-subject', async (req, res) => {
   try {
     const { requesterRollNo, teacherRollNo, subject } = req.body;
@@ -1130,9 +1090,6 @@ app.post('/api/teacher/mark-attendance', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ============================================================
-//  ✅ PASSCODE — with force flag support
-// ============================================================
 app.post('/api/admin/generate-passcode', async (req, res) => {
   try {
     const { requesterRollNo, type, force } = req.body;
@@ -1162,14 +1119,12 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
       const now = new Date();
       const ds = getISTDateString(now);
       const key = `single_lecture_${ds}_${period.start}`;
-
       if (force) {
         await Passcode.deleteMany({ key, type: 'single_lecture' });
       } else {
         let doc = await Passcode.findOne({ key, type: 'single_lecture' });
         if (doc && doc.expiresAt > new Date()) return res.json({ message: 'Existing', passcode: doc.passcode, type, expiresAt: doc.expiresAt });
       }
-
       const passcode = Math.floor(1000 + Math.random() * 9000).toString();
       const expiry = new Date(now.getTime() + 5 * 60 * 1000);
       await new Passcode({ passcode, type, key, expiresAt: expiry }).save();
@@ -1181,21 +1136,18 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
       const now = new Date();
       const ds = getISTDateString(now);
       const key = `full_day_${ds}`;
-
       if (force) {
         await Passcode.deleteMany({ key, type: 'full_day' });
       } else {
         let doc = await Passcode.findOne({ key, type: 'full_day' });
         if (doc && doc.expiresAt > new Date()) return res.json({ message: 'Existing', passcode: doc.passcode, type, expiresAt: doc.expiresAt });
       }
-
       const passcode = Math.floor(10000 + Math.random() * 90000).toString();
       const expiry = new Date(now); expiry.setHours(23, 59, 59, 999);
       await new Passcode({ passcode, type, key, expiresAt: expiry }).save();
       await Passcode.deleteMany({ type: 'full_day', expiresAt: { $lt: new Date() } });
       return res.json({ message: force ? 'Changed' : 'Generated', passcode, type, expiresAt: expiry, changed: !!force });
     }
-
     res.status(400).json({ error: 'Invalid type' });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -1217,7 +1169,6 @@ app.get('/api/admin/current-passcode/:type/:requesterRollNo', async (req, res) =
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== ATTENDANCE MARKING ==========
 app.post('/api/attendance/mark-lecture', async (req, res) => {
   try {
     const { rollNo, name, subject, latitude, longitude, passcode } = req.body;
@@ -1313,7 +1264,6 @@ app.post('/api/attendance/mark', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== NOTICES ==========
 app.get('/api/notices', async (req, res) => {
   try { res.json(await Notice.find().sort({ date: -1 }).limit(10)); } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -1328,7 +1278,6 @@ app.post('/api/admin/notice', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== HOLIDAYS ==========
 app.post('/api/admin/holiday', async (req, res) => {
   try {
     const { requesterRollNo, date, reason } = req.body;
@@ -1361,7 +1310,6 @@ app.get('/api/date-status/:date', async (req, res) => {
   try { res.json(await checkDateStatus(req.params.date)); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== DASHBOARD ==========
 app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
   try {
     const req1 = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
@@ -1402,7 +1350,6 @@ app.get('/api/admin/faculty/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== ATTENDANCE VIEW ==========
 app.get('/api/attendance/student/:rollNo/:requesterRollNo', async (req, res) => {
   try {
     const rrn = req.params.requesterRollNo.trim().toUpperCase();
@@ -1474,7 +1421,6 @@ app.delete('/api/attendance/delete-day/:rollNo/:date/:requesterRollNo', async (r
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== MONTHLY SUMMARY ==========
 app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
   try {
     const cr = req.params.rollNo.trim().toUpperCase();
@@ -1494,9 +1440,7 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
     let totalConducted = 0;
     const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const holidaySet = new Set((await Holiday.find({ date: { $gte: startStr, $lte: endStr } })).map(h => h.date.split('T')[0]));
-
     const todayStr = getISTDateString(new Date());
-
     let cur = new Date(startD);
     while (cur <= endD) {
       const ds = getISTDateString(cur);
@@ -1541,7 +1485,6 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== MANUAL ATTENDANCE ==========
 app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNo, date, subjects, status } = req.body;
@@ -1577,7 +1520,6 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== HISTORY / ALL ==========
 app.get('/api/attendance/history/:rollNo', async (req, res) => {
   try {
     const records = await Attendance.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ date: -1 });
@@ -1600,7 +1542,6 @@ app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== STUDENT SUMMARY ==========
 app.get('/api/student/summary/:rollNo', async (req, res) => {
   try {
     const cr = req.params.rollNo.trim().toUpperCase();
@@ -1665,7 +1606,6 @@ app.get('/api/student/summary/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== EXPORT ==========
 app.get('/api/export/google-sheets/:requesterRollNo', async (req, res) => {
   try {
     const req1 = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
@@ -1721,7 +1661,6 @@ app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== SUBJECTS ==========
 app.get('/api/timetable/subjects', async (req, res) => {
   try {
     const set = new Set();
@@ -1733,7 +1672,6 @@ app.get('/api/timetable/subjects', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== CLASS REPORT ==========
 app.get('/api/admin/class-attendance-report', async (req, res) => {
   try {
     const { requesterRollNo, startDate, endDate, branch } = req.query;
@@ -1776,7 +1714,6 @@ app.get('/api/admin/class-attendance-report', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== BULK CSE ==========
 app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
   try {
     const req1 = await User.findOne({ rollNo: req.body.requesterRollNo?.trim().toUpperCase() || '' });
@@ -1844,7 +1781,6 @@ app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== BULK AIDS ==========
 app.post('/api/admin/bulk-register-and-update-attendance-aids', async (req, res) => {
   try {
     const req1 = await User.findOne({ rollNo: req.body.requesterRollNo?.trim().toUpperCase() || '' });
@@ -1899,7 +1835,6 @@ app.post('/api/admin/bulk-register-and-update-attendance-aids', async (req, res)
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== BULK MARK/DELETE ==========
 app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNos, dates, subjects } = req.body;
@@ -1949,7 +1884,6 @@ app.delete('/api/admin/bulk-delete-attendance', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== CHAT ==========
 app.get('/api/chats/:rollNo', async (req, res) => {
   try {
     const cr = req.params.rollNo.trim().toUpperCase();
@@ -1988,7 +1922,6 @@ app.delete('/api/chats/:threadId', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== LEAVE ==========
 app.post('/api/leave/apply', async (req, res) => {
   try {
     const { rollNo, fromDate, toDate, reason, leaveType } = req.body;
@@ -2046,7 +1979,6 @@ app.post('/api/leave/action/:id', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== TREND ==========
 app.get('/api/student/trend/:rollNo', async (req, res) => {
   try {
     const cr = req.params.rollNo.trim().toUpperCase();
@@ -2065,7 +1997,6 @@ app.get('/api/student/trend/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== DEFAULTERS ==========
 app.get('/api/admin/defaulters/:requesterRollNo', async (req, res) => {
   try {
     const req1 = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
@@ -2088,8 +2019,9 @@ app.get('/api/admin/defaulters/:requesterRollNo', async (req, res) => {
 });
 
 // ============================================================
-//  AI: Chat
+//  AI ROUTES
 // ============================================================
+
 function buildRoleSystemPrompt({ role, userName, contextStr, greeting, emoji }) {
   const base = greeting ? `${greeting}, ${userName} ${emoji}!` : '';
   if (role === 'admin') {
@@ -2134,6 +2066,7 @@ Role:
 - NEVER use markdown tables. Use bullet points for any comparison.`;
 }
 
+// TEXT-ONLY CHAT — Fast (15s per attempt, 20s total, 3 attempts)
 app.post('/api/ai/chat', async (req, res) => {
   try {
     const { message, rollNo, role, name, branch, threadId, skipGreeting } = req.body;
@@ -2229,7 +2162,7 @@ app.post('/api/ai/chat', async (req, res) => {
     let reply = '';
     let aiOk = false;
     try {
-      // ✅ FAST CHAT: 15s per attempt, 20s total across up to 3 keys
+      // ✅ FAST CHAT (text only): 15s per attempt, 20s total, 3 attempts
       reply = await callGemini({
         prompt: message,
         systemPrompt,
@@ -2272,9 +2205,7 @@ app.post('/api/ai/chat', async (req, res) => {
   }
 });
 
-// ============================================================
-//  AI: Chat with FILE / IMAGE
-// ============================================================
+// FILE / IMAGE CHAT — Try all 6 keys with fast per-attempt timeout
 app.post('/api/ai/chat-with-file', async (req, res) => {
   try {
     const { prompt, fileBase64, mimeType, rollNo, role, name, branch, threadId } = req.body;
@@ -2337,7 +2268,7 @@ Task:
     let reply = '';
     let aiOk = false;
     try {
-      // ✅ FASTER FILE: 40s per attempt, 60s total across up to 2 keys
+      // ✅ FILE UPLOAD: Try ALL 6 keys, per-attempt 25s, global 90s
       reply = await callGemini({
         prompt: userPrompt,
         systemPrompt,
@@ -2345,9 +2276,9 @@ Task:
         mimeType,
         maxTokens: 3000,
         temperature: 0.4,
-        timeoutMs: 40000,
-        globalTimeoutMs: 60000,
-        maxAttempts: 2
+        timeoutMs: 25000,
+        globalTimeoutMs: 90000,
+        maxAttempts: 6
       });
       aiOk = true;
     } catch (err) {
@@ -2379,9 +2310,6 @@ Task:
   }
 });
 
-// ============================================================
-//  AI: Generate PDF Report
-// ============================================================
 app.post('/api/ai/generate-report-pdf', async (req, res) => {
   try {
     const { rollNo, reportType = 'student-attendance', targetRollNo, startDate, endDate, branch } = req.body;
@@ -2493,9 +2421,6 @@ app.post('/api/ai/generate-report-pdf', async (req, res) => {
   } catch (err) { console.error('❌ PDF report error:', err); res.status(500).json({ error: err.message }); }
 });
 
-// ============================================================
-//  AI: Notes PDF
-// ============================================================
 app.post('/api/ai/generate-notes-pdf', async (req, res) => {
   try {
     const { topic, subject, rollNo, level = 'B.Tech 5th Semester', includeMCQ = false } = req.body;
@@ -2522,9 +2447,9 @@ Format: plain text, use ## for headings, • for bullets. NO ** asterisks. NO ma
         systemPrompt: 'You are an expert teacher creating structured study notes. Use ## for headings, • for bullets. Avoid asterisks. Avoid tables.',
         maxTokens: 3500,
         temperature: 0.5,
-        timeoutMs: 40000,
+        timeoutMs: 30000,
         globalTimeoutMs: 60000,
-        maxAttempts: 2
+        maxAttempts: 3
       });
     } catch (err) {
       console.warn('⚠️ Notes AI failed:', err.message);
@@ -2566,9 +2491,6 @@ Format: plain text, use ## for headings, • for bullets. NO ** asterisks. NO ma
   } catch (err) { console.error('❌ Notes PDF error:', err); res.status(500).json({ error: err.message }); }
 });
 
-// ============================================================
-//  AI: Predict Attendance
-// ============================================================
 app.post('/api/ai/predict-attendance', async (req, res) => {
   try {
     const { rollNo, targetPercentage = 75, plannedBunks = 0, plannedAttends = 0 } = req.body;
@@ -2600,7 +2522,7 @@ app.post('/api/ai/predict-attendance', async (req, res) => {
           temperature: 0.7,
           timeoutMs: 15000,
           globalTimeoutMs: 20000,
-          maxAttempts: 2
+          maxAttempts: 3
         });
       } catch (err) { console.warn('Predict AI msg failed:', err.message); }
     }
@@ -2613,9 +2535,6 @@ app.post('/api/ai/predict-attendance', async (req, res) => {
   } catch (err) { console.error('❌ Predict error:', err); res.status(500).json({ error: err.message }); }
 });
 
-// ============================================================
-//  AI: Admin Insights
-// ============================================================
 app.post('/api/ai/admin-insights', async (req, res) => {
   try {
     const { requesterRollNo } = req.body;
@@ -2653,9 +2572,9 @@ app.post('/api/ai/admin-insights', async (req, res) => {
           systemPrompt: 'You are BM Bot Admin Assistant. Provide data-driven insights. Concise, actionable.',
           maxTokens: 1200,
           temperature: 0.5,
-          timeoutMs: 40000,
+          timeoutMs: 30000,
           globalTimeoutMs: 60000,
-          maxAttempts: 2
+          maxAttempts: 3
         });
       } catch (err) { console.warn('AI insights failed:', err.message); insights = '⚠️ ' + err.message; }
     }
@@ -2666,9 +2585,6 @@ app.post('/api/ai/admin-insights', async (req, res) => {
   } catch (err) { console.error('❌ Admin insights error:', err); res.status(500).json({ error: err.message }); }
 });
 
-// ============================================================
-//  AI: Subject Analysis
-// ============================================================
 app.post('/api/ai/subject-analysis', async (req, res) => {
   try {
     const { rollNo } = req.body;
@@ -2691,9 +2607,9 @@ app.post('/api/ai/subject-analysis', async (req, res) => {
           systemPrompt: 'You are BM Bot, friendly student mentor. Personalized advice in Hinglish.',
           maxTokens: 1000,
           temperature: 0.6,
-          timeoutMs: 40000,
+          timeoutMs: 30000,
           globalTimeoutMs: 60000,
-          maxAttempts: 2
+          maxAttempts: 3
         });
       } catch (err) { console.warn('Subject analysis AI failed:', err.message); }
     }
@@ -2704,9 +2620,6 @@ app.post('/api/ai/subject-analysis', async (req, res) => {
   } catch (err) { console.error('❌ Subject analysis error:', err); res.status(500).json({ error: err.message }); }
 });
 
-// ============================================================
-//  AI: Smart Alerts
-// ============================================================
 app.post('/api/ai/smart-alerts', async (req, res) => {
   try {
     const { requesterRollNo, threshold = 75, limit = 20 } = req.body;
@@ -2736,7 +2649,7 @@ app.post('/api/ai/smart-alerts', async (req, res) => {
             temperature: 0.6,
             timeoutMs: 15000,
             globalTimeoutMs: 20000,
-            maxAttempts: 2
+            maxAttempts: 3
           });
         } catch (err) { message = ''; }
       }
@@ -2747,9 +2660,6 @@ app.post('/api/ai/smart-alerts', async (req, res) => {
   } catch (err) { console.error('❌ Smart alerts error:', err); res.status(500).json({ error: err.message }); }
 });
 
-// ============================================================
-//  AI: Study Material
-// ============================================================
 app.post('/api/ai/study-material', async (req, res) => {
   try {
     const { topic, subject, type = 'notes' } = req.body;
@@ -2764,18 +2674,15 @@ app.post('/api/ai/study-material', async (req, res) => {
         systemPrompt: 'Expert teacher for B.Tech students at BM Group.',
         maxTokens: 2500,
         temperature: 0.5,
-        timeoutMs: 40000,
+        timeoutMs: 30000,
         globalTimeoutMs: 60000,
-        maxAttempts: 2
+        maxAttempts: 3
       });
     } catch (err) { return res.status(503).json({ error: err.message }); }
     res.json({ topic, subject, type, content: reply });
   } catch (err) { console.error('❌ Study material error:', err); res.status(500).json({ error: err.message }); }
 });
 
-// ============================================================
-//  RESTORE FROM CSV
-// ============================================================
 app.post('/api/admin/restore-from-csv', async (req, res) => {
   try {
     const { requesterRollNo, csvData } = req.body;
@@ -2826,9 +2733,8 @@ app.post('/api/admin/restore-from-csv', async (req, res) => {
   } catch (err) { console.error('Restore error:', err); res.status(500).json({ error: err.message }); }
 });
 
-// ---------- Global Handlers ----------
 process.on('unhandledRejection', (reason) => console.error('Unhandled:', reason));
 process.on('uncaughtException', (err) => { console.error('Uncaught:', err); process.exit(1); });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Port ${PORT} | AI: ${GEMINI_API_KEYS.length} keys | Model: ${GEMINI_MODEL} | Chat timeout: 20s | File/Image timeout: 60s | PDF: enabled | Images: enabled`));
+app.listen(PORT, () => console.log(`🚀 Port ${PORT} | AI: ${GEMINI_API_KEYS.length} keys | Model: ${GEMINI_MODEL} | Chat timeout: 20s | File timeout: 90s (6 keys) | PDF: enabled | Images: enabled`));
