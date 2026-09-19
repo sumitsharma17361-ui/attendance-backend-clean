@@ -27,6 +27,7 @@ const GEMINI_API_KEYS = [
 ].filter(k => k && k.trim() && k.trim().length > 5).map(k => k.trim());
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+// ✅ Fallback models kept as-is. Remove from here only if logs show persistent errors.
 const GEMINI_FALLBACK_MODELS = ['gemini-flash-latest'];
 const GEMINI_GLOBAL_TIMEOUT_MS = parseInt(process.env.GEMINI_GLOBAL_TIMEOUT_MS || '20000', 10);
 
@@ -557,21 +558,21 @@ async function getStudentSummary(rollNo) {
 function parseGeminiError(err) {
   const msg = err.message || String(err);
   if (msg.includes('429') || msg.toLowerCase().includes('quota') || msg.toLowerCase().includes('rate')) {
-    return { code: 429, type: 'RATE_LIMIT', friendly: '⏳ AI ka limit reach ho gaya. 30 sec baad try karo 🙏' };
+    return { code: 429, type: 'RATE_LIMIT', friendly: 'AI rate limit reached. Please try again in about 30 seconds.' };
   }
   if (msg.includes('503') || msg.toLowerCase().includes('high demand') || msg.toLowerCase().includes('unavailable')) {
-    return { code: 503, type: 'OVERLOADED', friendly: '⏳ AI server busy hai. 15 sec baad try karo 🙏' };
+    return { code: 503, type: 'OVERLOADED', friendly: 'AI service is currently busy. Please try again in about 15 seconds.' };
   }
   if (msg.includes('504') || msg.toLowerCase().includes('deadline') || msg.toLowerCase().includes('aborted')) {
-    return { code: 504, type: 'TIMEOUT', friendly: '⏳ AI ne time liya zyada. Thodi der baad try karo.' };
+    return { code: 504, type: 'TIMEOUT', friendly: 'AI took too long to respond. Please try again shortly.' };
   }
   if (msg.includes('404') || msg.toLowerCase().includes('not found')) {
-    return { code: 404, type: 'MODEL_NOT_FOUND', friendly: '⚠️ Model available nahi hai.' };
+    return { code: 404, type: 'MODEL_NOT_FOUND', friendly: 'Requested AI model is not available right now. Please try again later.' };
   }
   if (msg.includes('400') || msg.toLowerCase().includes('invalid')) {
-    return { code: 400, type: 'BAD_REQUEST', friendly: '⚠️ Request invalid thi.' };
+    return { code: 400, type: 'BAD_REQUEST', friendly: 'The request could not be processed. Please check your input and try again.' };
   }
-  return { code: 500, type: 'UNKNOWN', friendly: '⚠️ AI error: ' + msg.substring(0, 100) };
+  return { code: 500, type: 'UNKNOWN', friendly: 'AI service encountered an unexpected error. Please try again shortly.' };
 }
 
 async function callGeminiOnce({ prompt, systemPrompt = null, fileBase64 = null, mimeType = null, history = null, maxTokens = 1500, temperature = 0.7, timeoutMs = 45000, model = null, apiKey = null }) {
@@ -624,7 +625,8 @@ async function callGemini(args) {
   if (totalKeys === 0) throw new Error('No API key available');
 
   const perCallTimeout = args.globalTimeoutMs || GEMINI_GLOBAL_TIMEOUT_MS;
-  const maxAttempts = args.maxAttempts || 6;
+  // ✅ Allow up to 12 attempts total (6 keys × 2 models)
+  const maxAttempts = args.maxAttempts || 12;
 
   const startTime = Date.now();
   let lastError = null;
@@ -633,7 +635,8 @@ async function callGemini(args) {
 
   for (let mi = 0; mi < modelsToTry.length; mi++) {
     const model = modelsToTry[mi];
-    const keysPerModel = Math.min(totalKeys, 3);
+    // ✅ Use ALL available keys per model (was 3)
+    const keysPerModel = Math.min(totalKeys, 6);
     let skipToNextModel = false;
 
     for (let attempt = 0; attempt < keysPerModel; attempt++) {
@@ -681,7 +684,7 @@ async function callGemini(args) {
 
   const parsed = parseGeminiError(lastError);
   const friendly = globalTimeoutHit
-    ? '⏳ AI ne zyada time liya. 30 second baad try karo 🙏'
+    ? 'AI took too long to respond. Please try again in about 30 seconds.'
     : parsed.friendly;
   const finalErr = new Error(friendly);
   finalErr.code = parsed.code;
@@ -736,6 +739,7 @@ app.get('/health', (req, res) => res.json({
   primaryModel: GEMINI_MODEL,
   fallbackModels: GEMINI_FALLBACK_MODELS,
   globalTimeoutMs: GEMINI_GLOBAL_TIMEOUT_MS,
+  chatTimeoutMs: 20000,
   fileUploadTimeoutMs: 60000,
   keysLoaded: GEMINI_API_KEYS.length,
   pdf: 'enabled',
@@ -748,6 +752,7 @@ app.get('/api/ai/health', (req, res) => res.json({
   primaryModel: GEMINI_MODEL,
   fallbackModels: GEMINI_FALLBACK_MODELS,
   globalTimeoutMs: GEMINI_GLOBAL_TIMEOUT_MS,
+  chatTimeoutMs: 20000,
   fileUploadTimeoutMs: 60000,
   keysLoaded: GEMINI_API_KEYS.length,
   imageSupport: true,
@@ -1138,7 +1143,6 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
     else return res.status(403).json({ error: 'Access Denied.' });
     if (!type || !['full_day', 'single_lecture'].includes(type)) return res.status(400).json({ error: 'Invalid type.' });
 
-    // ✅ Block on weekend/holiday
     const todayStr = getISTDateString(new Date());
     const dateStatus = await checkDateStatus(todayStr);
     if (dateStatus.isBlocked) {
@@ -1159,11 +1163,9 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
       const ds = getISTDateString(now);
       const key = `single_lecture_${ds}_${period.start}`;
 
-      // ✅ If force = true, delete existing and generate new
       if (force) {
         await Passcode.deleteMany({ key, type: 'single_lecture' });
       } else {
-        // Return existing if valid
         let doc = await Passcode.findOne({ key, type: 'single_lecture' });
         if (doc && doc.expiresAt > new Date()) return res.json({ message: 'Existing', passcode: doc.passcode, type, expiresAt: doc.expiresAt });
       }
@@ -1695,7 +1697,6 @@ app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) => {
     if (range === 'CURRENT_MONTH') { sD = new Date(today.getFullYear(), today.getMonth(), 1); eD = new Date(today.getFullYear(), today.getMonth() + 1, 0); }
     else if (range === 'SELECTED_MONTH') { const m = parseInt(month); if (isNaN(m) || m < 0 || m > 11) return res.status(400).json({ error: 'Invalid month' }); sD = new Date(2026, m, 1); eD = new Date(2026, m + 1, 0); }
     else { sD = new Date(SEMESTER_START); eD = new Date(SEMESTER_END); }
-    // ✅ Clamp end date to today
     if (eD > today) eD = today;
     const startStr = getISTDateString(sD), endStr = getISTDateString(eD);
     let records = await Attendance.find({ rollNo: cs, date: { $gte: startStr, $lte: endStr } }).sort({ date: 1 });
@@ -2228,13 +2229,16 @@ app.post('/api/ai/chat', async (req, res) => {
     let reply = '';
     let aiOk = false;
     try {
+      // ✅ FAST CHAT: 15s per attempt, 20s total across up to 3 keys
       reply = await callGemini({
         prompt: message,
         systemPrompt,
         history: existingChat?.messages,
         maxTokens: 1500,
         temperature: 0.7,
-        timeoutMs: 20000
+        timeoutMs: 15000,
+        globalTimeoutMs: 20000,
+        maxAttempts: 3
       });
       aiOk = true;
     } catch (err) {
@@ -2333,6 +2337,7 @@ Task:
     let reply = '';
     let aiOk = false;
     try {
+      // ✅ FASTER FILE: 40s per attempt, 60s total across up to 2 keys
       reply = await callGemini({
         prompt: userPrompt,
         systemPrompt,
@@ -2340,7 +2345,7 @@ Task:
         mimeType,
         maxTokens: 3000,
         temperature: 0.4,
-        timeoutMs: 60000,
+        timeoutMs: 40000,
         globalTimeoutMs: 60000,
         maxAttempts: 2
       });
@@ -2517,8 +2522,8 @@ Format: plain text, use ## for headings, • for bullets. NO ** asterisks. NO ma
         systemPrompt: 'You are an expert teacher creating structured study notes. Use ## for headings, • for bullets. Avoid asterisks. Avoid tables.',
         maxTokens: 3500,
         temperature: 0.5,
-        timeoutMs: 45000,
-        globalTimeoutMs: 45000,
+        timeoutMs: 40000,
+        globalTimeoutMs: 60000,
         maxAttempts: 2
       });
     } catch (err) {
@@ -2594,7 +2599,7 @@ app.post('/api/ai/predict-attendance', async (req, res) => {
           maxTokens: 300,
           temperature: 0.7,
           timeoutMs: 15000,
-          globalTimeoutMs: 10000,
+          globalTimeoutMs: 20000,
           maxAttempts: 2
         });
       } catch (err) { console.warn('Predict AI msg failed:', err.message); }
@@ -2648,8 +2653,8 @@ app.post('/api/ai/admin-insights', async (req, res) => {
           systemPrompt: 'You are BM Bot Admin Assistant. Provide data-driven insights. Concise, actionable.',
           maxTokens: 1200,
           temperature: 0.5,
-          timeoutMs: 45000,
-          globalTimeoutMs: 45000,
+          timeoutMs: 40000,
+          globalTimeoutMs: 60000,
           maxAttempts: 2
         });
       } catch (err) { console.warn('AI insights failed:', err.message); insights = '⚠️ ' + err.message; }
@@ -2686,8 +2691,8 @@ app.post('/api/ai/subject-analysis', async (req, res) => {
           systemPrompt: 'You are BM Bot, friendly student mentor. Personalized advice in Hinglish.',
           maxTokens: 1000,
           temperature: 0.6,
-          timeoutMs: 45000,
-          globalTimeoutMs: 45000,
+          timeoutMs: 40000,
+          globalTimeoutMs: 60000,
           maxAttempts: 2
         });
       } catch (err) { console.warn('Subject analysis AI failed:', err.message); }
@@ -2730,7 +2735,7 @@ app.post('/api/ai/smart-alerts', async (req, res) => {
             maxTokens: 200,
             temperature: 0.6,
             timeoutMs: 15000,
-            globalTimeoutMs: 10000,
+            globalTimeoutMs: 20000,
             maxAttempts: 2
           });
         } catch (err) { message = ''; }
@@ -2759,8 +2764,8 @@ app.post('/api/ai/study-material', async (req, res) => {
         systemPrompt: 'Expert teacher for B.Tech students at BM Group.',
         maxTokens: 2500,
         temperature: 0.5,
-        timeoutMs: 45000,
-        globalTimeoutMs: 45000,
+        timeoutMs: 40000,
+        globalTimeoutMs: 60000,
         maxAttempts: 2
       });
     } catch (err) { return res.status(503).json({ error: err.message }); }
@@ -2826,4 +2831,4 @@ process.on('unhandledRejection', (reason) => console.error('Unhandled:', reason)
 process.on('uncaughtException', (err) => { console.error('Uncaught:', err); process.exit(1); });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Port ${PORT} | AI: ${GEMINI_API_KEYS.length} keys | Model: ${GEMINI_MODEL} | Chat timeout: ${GEMINI_GLOBAL_TIMEOUT_MS}ms | File/Image timeout: 40000ms | PDF: enabled | Images: enabled`));
+app.listen(PORT, () => console.log(`🚀 Port ${PORT} | AI: ${GEMINI_API_KEYS.length} keys | Model: ${GEMINI_MODEL} | Chat timeout: 20s | File/Image timeout: 60s | PDF: enabled | Images: enabled`));
