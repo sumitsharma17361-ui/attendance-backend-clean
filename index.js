@@ -28,7 +28,7 @@ const GEMINI_API_KEYS = [
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 const GEMINI_FALLBACK_MODELS = ['gemini-flash-latest'];
-const GEMINI_GLOBAL_TIMEOUT_MS = parseInt(process.env.GEMINI_GLOBAL_TIMEOUT_MS || '10000', 10);
+const GEMINI_GLOBAL_TIMEOUT_MS = parseInt(process.env.GEMINI_GLOBAL_TIMEOUT_MS || '20000', 10);
 
 let currentKeyIndex = 0;
 function getNextApiKey() {
@@ -2826,4 +2826,4 @@ process.on('unhandledRejection', (reason) => console.error('Unhandled:', reason)
 process.on('uncaughtException', (err) => { console.error('Uncaught:', err); process.exit(1); });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Port ${PORT} | AI: ${GEMINI_API_KEYS.length} keys | Model: ${GEMINI_MODEL} | Chat timeout: ${GEMINI_GLOBAL_TIMEOUT_MS}ms | File/Image timeout: 60000ms | PDF: enabled | Images: enabled`));
+app.listen(PORT, () => console.log(`🚀 Port ${PORT} | AI: ${GEMINI_API_KEYS.length} keys | Model: ${GEMINI_MODEL} | Chat timeout: ${GEMINI_GLOBAL_TIMEOUT_MS}ms | File/Image timeout: 40000ms | PDF: enabled | Images: enabled`));
