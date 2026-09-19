@@ -26,8 +26,9 @@ const GEMINI_API_KEYS = [
   process.env.GEMINI_API_KEY_6
 ].filter(k => k && k.trim() && k.trim().length > 5).map(k => k.trim());
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 const GEMINI_FALLBACK_MODELS = ['gemini-flash-latest'];
+const GEMINI_GLOBAL_TIMEOUT_MS = parseInt(process.env.GEMINI_GLOBAL_TIMEOUT_MS || '25000', 10);
 
 let currentKeyIndex = 0;
 function getNextApiKey() {
@@ -617,33 +618,71 @@ async function callGeminiOnce({ prompt, systemPrompt = null, fileBase64 = null, 
   }
 }
 
+// ✅ UPDATED: Smart retry — 0ms wait on 503, 25s global timeout, max 6 attempts
 async function callGemini(args) {
   const modelsToTry = [args.model || GEMINI_MODEL, ...GEMINI_FALLBACK_MODELS];
-  const totalKeys = Math.max(GEMINI_API_KEYS.length, 1);
+  const totalKeys = GEMINI_API_KEYS.length;
+  if (totalKeys === 0) throw new Error('No API key available');
+
+  const startTime = Date.now();
+  const MAX_TOTAL_ATTEMPTS = 6;
   let lastError = null;
+  let attemptsMade = 0;
+  let globalTimeoutHit = false;
+
   for (let mi = 0; mi < modelsToTry.length; mi++) {
     const model = modelsToTry[mi];
-    const attemptsForThisModel = Math.min(totalKeys, 3);
-    for (let attempt = 0; attempt < attemptsForThisModel; attempt++) {
+    const keysPerModel = Math.min(totalKeys, 3);
+    let skipToNextModel = false;
+
+    for (let attempt = 0; attempt < keysPerModel; attempt++) {
+      if (Date.now() - startTime > GEMINI_GLOBAL_TIMEOUT_MS) {
+        console.warn(`⏱️ Global timeout hit (${GEMINI_GLOBAL_TIMEOUT_MS}ms) — aborting chain`);
+        globalTimeoutHit = true;
+        break;
+      }
+      if (attemptsMade >= MAX_TOTAL_ATTEMPTS) {
+        console.warn(`🛑 Max attempts (${MAX_TOTAL_ATTEMPTS}) reached — aborting`);
+        break;
+      }
+
       const apiKey = getNextApiKey();
-      if (!apiKey) throw new Error('No API key available');
+      if (!apiKey) break;
+      attemptsMade++;
+
       try {
-        console.log(`🤖 Trying ${model} (attempt ${attempt + 1})`);
+        console.log(`🤖 ${model} (${attempt + 1}/${keysPerModel}) [total #${attemptsMade}]`);
         return await callGeminiOnce({ ...args, model, apiKey });
       } catch (err) {
         lastError = err;
         const parsed = parseGeminiError(err);
-        console.warn(`⚠️ ${model} failed: [${parsed.code} ${parsed.type}]`);
-        if (parsed.type === 'RATE_LIMIT' || parsed.type === 'OVERLOADED') {
-          await new Promise(r => setTimeout(r, 600));
+        console.warn(`⚠️ ${model}: [${parsed.code} ${parsed.type}]`);
+
+        if (parsed.type === 'RATE_LIMIT') {
+          await new Promise(r => setTimeout(r, 300));
           continue;
         }
-        break;
+        if (parsed.type === 'OVERLOADED' || parsed.type === 'TIMEOUT') {
+          continue;
+        }
+        if (parsed.type === 'MODEL_NOT_FOUND' || parsed.type === 'BAD_REQUEST') {
+          skipToNextModel = true;
+          break;
+        }
+        continue;
       }
     }
+
+    if (globalTimeoutHit) break;
+    if (attemptsMade >= MAX_TOTAL_ATTEMPTS) break;
+    if (skipToNextModel) continue;
   }
+
   const parsed = parseGeminiError(lastError);
-  const finalErr = new Error(parsed.friendly);
+  const friendly = globalTimeoutHit
+    ? '⏳ AI ne zyada time liya. 30 second baad try karo 🙏'
+    : parsed.friendly;
+  const finalErr = new Error(friendly);
   finalErr.code = parsed.code;
   finalErr.type = parsed.type;
   throw finalErr;
@@ -695,6 +734,7 @@ app.get('/health', (req, res) => res.json({
   ai: GEMINI_API_KEYS.length > 0 ? 'gemini' : 'disabled',
   primaryModel: GEMINI_MODEL,
   fallbackModels: GEMINI_FALLBACK_MODELS,
+  globalTimeoutMs: GEMINI_GLOBAL_TIMEOUT_MS,
   keysLoaded: GEMINI_API_KEYS.length,
   pdf: 'enabled',
   imageSupport: 'disabled',
@@ -704,6 +744,7 @@ app.get('/api/ai/health', (req, res) => res.json({
   aiEnabled: GEMINI_API_KEYS.length > 0,
   primaryModel: GEMINI_MODEL,
   fallbackModels: GEMINI_FALLBACK_MODELS,
+  globalTimeoutMs: GEMINI_GLOBAL_TIMEOUT_MS,
   keysLoaded: GEMINI_API_KEYS.length,
   imageSupport: false,
   fileTypes: ['application/pdf', 'text/plain'],
@@ -855,7 +896,7 @@ app.post('/api/admin/login-as-student', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== ✅ FIX ALL ATTENDANCE (extra remove + missing add + rename + dedupe) ==========
+// ========== ✅ FIX ALL ATTENDANCE ==========
 app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
   try {
     const { requesterRollNo, testRollNo } = req.body;
@@ -867,7 +908,6 @@ app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
     const todayStr = getISTDateString(new Date());
     const semesterStart = new Date('2026-07-15T00:00:00+05:30');
 
-    // ✅ Test mode: only process 1 student
     let studentQuery = { role: 'student' };
     if (testRollNo && testRollNo.trim()) {
       studentQuery.rollNo = testRollNo.trim().toUpperCase();
@@ -895,7 +935,6 @@ app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
       let sRemoved = 0, sAdded = 0, sRenamed = 0, sDedup = 0;
       const removedDetails = [], addedDetails = [];
 
-      // Step 1: Rename to canonical + dedupe
       const grouped = {};
       for (const rec of allRecords) {
         const canon = mapToCanonical(rec.subject);
@@ -912,7 +951,6 @@ app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
         }
       }
 
-      // Step 2: Iterate through each working day from semester start to today
       let cur = new Date(semesterStart);
       const endDate = new Date(todayStr + 'T23:59:59Z');
 
@@ -932,7 +970,6 @@ app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
 
           const studentSubjects = grouped[dateStr] || new Map();
 
-          // 2a: Remove EXTRAS — subjects NOT in timetable for that day
           for (const [sub, rec] of studentSubjects) {
             if (!ttSubjects.includes(sub)) {
               await Attendance.deleteOne({ _id: rec._id });
@@ -942,7 +979,6 @@ app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
             }
           }
 
-          // 2b: Add MISSING (if student attended ≥ 50% of the day)
           const presentCount = ttSubjects.filter(s => studentSubjects.has(s)).length;
           const totalCount = ttSubjects.length;
 
@@ -1401,7 +1437,7 @@ app.delete('/api/attendance/delete-day/:rollNo/:date/:requesterRollNo', async (r
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== MONTHLY SUMMARY (WITH FUTURE DATE SKIP) ==========
+// ========== MONTHLY SUMMARY ==========
 app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
   try {
     const cr = req.params.rollNo.trim().toUpperCase();
@@ -1422,7 +1458,6 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
     const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const holidaySet = new Set((await Holiday.find({ date: { $gte: startStr, $lte: endStr } })).map(h => h.date.split('T')[0]));
 
-    // ✅ Skip future dates
     const todayStr = getISTDateString(new Date());
 
     let cur = new Date(startD);
@@ -2198,7 +2233,7 @@ app.post('/api/ai/chat', async (req, res) => {
 });
 
 // ============================================================
-//  AI: Chat with FILE — PDF + TXT only (no images)
+//  AI: Chat with FILE — PDF + TXT only
 // ============================================================
 app.post('/api/ai/chat-with-file', async (req, res) => {
   try {
@@ -2717,4 +2752,4 @@ process.on('unhandledRejection', (reason) => console.error('Unhandled:', reason)
 process.on('uncaughtException', (err) => { console.error('Uncaught:', err); process.exit(1); });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Port ${PORT} | AI: ${GEMINI_API_KEYS.length} keys | Model: ${GEMINI_MODEL} | PDF: enabled | Images: disabled`));
+app.listen(PORT, () => console.log(`🚀 Port ${PORT} | AI: ${GEMINI_API_KEYS.length} keys | Model: ${GEMINI_MODEL} | Timeout: ${GEMINI_GLOBAL_TIMEOUT_MS}ms | PDF: enabled | Images: disabled`));
