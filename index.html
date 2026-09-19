@@ -240,7 +240,6 @@ tbody tr:hover{background:var(--slate-50);}
 .msg.bot .bubble hr{border:none;border-top:1px dashed var(--slate-300);margin:10px 0;}
 .msg.bot .bubble ul{margin:4px 0 4px 18px;padding:0;}
 .msg.bot .bubble li{margin-bottom:3px;}
-/* Table styling inside chat bubbles */
 .chat-table-wrap{overflow-x:auto;margin:8px 0;border-radius:8px;border:1px solid var(--slate-200);}
 .msg.bot .bubble table{border-collapse:collapse;width:100%;font-size:11.5px;min-width:200px;background:#fff;}
 .msg.bot .bubble table th{background:var(--brand-50);color:var(--brand-900);font-weight:700;text-align:left;padding:6px 10px;border-bottom:1px solid var(--brand-200);font-size:10.5px;text-transform:uppercase;letter-spacing:.02em;}
@@ -737,14 +736,26 @@ tbody tr:hover{background:var(--slate-50);}
           <div class="card"><div class="card-title">🔑 Reset Password</div><input type="text" id="pwResetRoll" placeholder="ID" class="mb-1" /><input type="text" id="pwResetPass" placeholder="New password" class="mb-1" /><button class="btn btn-warning btn-block" onclick="resetPassword()">Reset</button></div>
           <div class="card"><div class="card-title">🔄 Bulk Register CSE</div><button class="btn btn-primary btn-block" onclick="bulkRegCSE()">Run CSE Bulk Update</button></div>
           <div class="card"><div class="card-title">🔄 Bulk Register AIDS</div><button class="btn btn-purple btn-block" onclick="bulkRegAIDS()">Run AIDS Bulk Update</button></div>
+
           <div class="card" style="border-color:#fecdd3;background:linear-gradient(135deg,#fff,#fff1f2);">
             <div class="card-title" style="color:#be123c;">🛠️ Fix All Student Attendance Subjects</div>
-            <p class="text-xs text-muted" style="margin-bottom:10px;line-height:1.6;">Timetable-aware fix — renames wrong subjects (CN → CN LAB), replaces duplicates. Safe to run multiple times.</p>
-            <button class="btn btn-danger btn-block" onclick="fixAllAttendanceSubjects()">
-              <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>Run One-Click Fix
+            <p class="text-xs text-muted" style="margin-bottom:10px;line-height:1.6;">
+              Timetable-aware fix — renames wrong subjects, <b>removes extras</b> (not in timetable), <b>adds missing</b> (if ≥50% attended), and dedupes. Safe to run multiple times.
+            </p>
+            <div style="background:#fff;border:1px solid #fecdd3;border-radius:8px;padding:10px;margin-bottom:10px;">
+              <label class="form-label" style="color:#be123c;font-size:10px;margin-bottom:4px;">🧪 Test Mode (recommended first)</label>
+              <input type="text" id="fixAllTestRoll" placeholder="e.g. 24CSE48" style="font-size:11.5px;" />
+              <button class="btn btn-block mt-1" style="border:1px solid #be123c;background:#fff;color:#be123c;font-size:11.5px;" onclick="fixAllAttendanceSubjects(true)">
+                🧪 Test on Single Student
+              </button>
+            </div>
+            <button class="btn btn-danger btn-block" onclick="fixAllAttendanceSubjects(false)">
+              <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>⚠️ Run One-Click Fix (All Students)
             </button>
-            <p id="fixAllStatus" class="text-xs text-muted" style="margin-top:8px;text-align:center;"></p>
+            <p id="fixAllStatus" class="text-xs text-muted" style="margin-top:10px;text-align:center;font-weight:700;"></p>
+            <div id="fixAllReport" style="margin-top:10px;"></div>
           </div>
+
           <div class="card"><div class="card-title">🔑 Admin Login as Student</div><input type="text" id="impRollInput" placeholder="Student Roll No" class="mb-1" /><button class="btn btn-warning btn-block" onclick="impersonate()">Login as Student</button></div>
           <div class="card"><div class="card-title">🗑️ Delete Account</div><input type="text" id="deleteRoll" placeholder="ID to delete" class="mb-1" /><button class="btn btn-danger btn-block" onclick="deleteUser()">Delete Permanently</button></div>
         </div>
@@ -1029,22 +1040,18 @@ function isValidStudentRoll(r){return /^24(CSE|AIDS)\d{2}$/.test(r);}
 function togglePassword(){const p = $('password');p.type = p.type === 'password' ? 'text' : 'password';}
 function escapeHtml(t){ const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
 
-// ✅ IMPROVED: Better markdown rendering with table support
 function renderMarkdown(text) {
   if (!text) return '';
   let html = escapeHtml(text);
 
-  // Extract markdown tables FIRST and replace with placeholders
   const tables = [];
   html = html.replace(/((?:^\|.+\|[\r\n]+)+)/gm, function(match) {
     const lines = match.trim().split('\n').map(l => l.trim()).filter(Boolean);
     if (lines.length < 2) return match;
-    // Check 2nd line is separator
     if (!/^[\|\s\-:]+$/.test(lines[1])) return match;
     const headers = lines[0].split('|').map(h => h.trim()).filter((_, i, arr) => !(i === 0 && arr[0] === '') && !(i === arr.length - 1 && arr[arr.length-1] === ''));
     const rows = lines.slice(2).map(l => {
       const parts = l.split('|').map(c => c.trim());
-      // Remove leading/trailing empties from split
       if (parts[0] === '') parts.shift();
       if (parts[parts.length-1] === '') parts.pop();
       return parts;
@@ -1063,27 +1070,18 @@ function renderMarkdown(text) {
     return key;
   });
 
-  // Headings
   html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
   html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
   html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-  // Bold
   html = html.replace(/\*\*([^*]+?)\*\*/g, '<strong>$1</strong>');
-  // Italic (single asterisk, not part of bold)
   html = html.replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, '$1<em>$2</em>');
-  // Inline code
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-  // Horizontal rule
   html = html.replace(/^\s*-{3,}\s*$/gm, '<hr>');
-  // Bullets
   html = html.replace(/^[•\-]\s+(.+)$/gm, '• $1');
-  // Numbered lists — keep as-is with better spacing
   html = html.replace(/^(\d+)\.\s+(.+)$/gm, '$1. $2');
-  // Line breaks — collapse multiple newlines
   html = html.replace(/\n{2,}/g, '<br><br>');
   html = html.replace(/\n/g, '<br>');
 
-  // Restore tables
   tables.forEach((t, i) => {
     html = html.replace(`__TBL_${i}__`, t);
   });
@@ -1701,7 +1699,6 @@ async function exportMyAttendance(){
   download(csv, `my_attendance_${currentUser.rollNo}.csv`);
 }
 
-// ============ PDF GENERATION (window.print based) ============
 async function generateIndividualPDF(studentRoll, studentName, branch, range, month, isSelf){
   showDL('Generating PDF…');
   try {
@@ -2210,26 +2207,89 @@ async function genPass(type){
   } catch(e){}
 }
 
-async function fixAllAttendanceSubjects(){
-  if (!confirm('⚠️ This will fix all saved subject names using timetable & replace duplicates. Safe to run multiple times. Continue?')) return;
+async function fixAllAttendanceSubjects(isTest){
+  const testRoll = isTest ? ($('fixAllTestRoll').value || '').trim().toUpperCase() : '';
+  if (isTest && !testRoll) return toast('Test roll number required (e.g. 24CSE48)','error');
+  const confirmMsg = isTest
+    ? `🧪 Test fix on ${testRoll} only?\n\nNo other students will be affected.`
+    : '⚠️ DESTRUCTIVE OPERATION!\n\nThis will:\n• REMOVE extras (subjects not in timetable)\n• ADD missing lectures (if ≥50% attended that day)\n• RENAME to canonical subjects\n• DEDUPE duplicates\n\nFor ALL students. Safe to re-run.\n\nMake sure MongoDB backup is taken. Continue?';
+  if (!confirm(confirmMsg)) return;
+
   const statusEl = $('fixAllStatus');
-  statusEl.textContent = '⏳ Scanning & fixing…';
-  showDL('Fixing all attendance subjects…');
+  const reportEl = $('fixAllReport');
+  statusEl.textContent = isTest ? `⏳ Testing on ${testRoll}…` : '⏳ Scanning & fixing all students…';
+  reportEl.innerHTML = '';
+  showDL(isTest ? `Testing fix on ${testRoll}…` : 'Fixing all attendance subjects…');
+
   try {
-    const res = await fetch(`${API}/api/admin/fix-all-attendance-subjects`, {method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo }) });
+    const body = { requesterRollNo: currentUser.rollNo };
+    if (isTest) body.testRollNo = testRoll;
+    const res = await fetch(`${API}/api/admin/fix-all-attendance-subjects`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
     const d = await res.json();
     hideDL();
-    if (!res.ok) { statusEl.textContent = '❌ ' + (d.error || 'Failed'); return toast(d.error || 'Failed', 'error'); }
-    const msg = `✅ Scanned ${d.totalScanned}, fixed ${d.fixed}, merged ${d.merged}, deleted ${d.deleted}.`;
-    statusEl.textContent = msg;
-    toast(msg, 'success');
-    globalHolidays = []; await ensureHolidays();
-    if (typeof fetchUsers === 'function') fetchUsers();
-    if (typeof loadAllAttendance === 'function') loadAllAttendance();
-    if (typeof loadDashboardStats === 'function') loadDashboardStats();
+    if (!res.ok) {
+      statusEl.textContent = '❌ ' + (d.error || 'Failed');
+      statusEl.style.color = '#be123c';
+      return toast(d.error || 'Failed', 'error');
+    }
+
+    statusEl.textContent = d.message || '✅ Done';
+    statusEl.style.color = '#047857';
+
+    let html = `<div style="background:#fff;border:1px solid var(--slate-200);border-radius:8px;padding:12px;font-size:11.5px;">`;
+    html += `<div style="font-weight:800;color:var(--slate-900);margin-bottom:8px;">📊 ${isTest ? 'Test Result — ' + testRoll : 'Fix Summary'}</div>`;
+    html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:8px;background:var(--slate-50);border-radius:6px;">`;
+    html += `<div>👥 <b>${d.totalStudents || 0}</b> scanned</div>`;
+    html += `<div>🚫 <b style="color:#be123c;">${d.removed || 0}</b> extras removed</div>`;
+    html += `<div>➕ <b style="color:#047857;">${d.added || 0}</b> missing added</div>`;
+    html += `<div>✏️ <b style="color:#b45309;">${d.renamed || 0}</b> renamed</div>`;
+    html += `<div>🧹 <b style="color:#475569;">${d.deduplicated || 0}</b> deduped</div>`;
+    html += `</div>`;
+
+    const activeReport = (d.report || []).filter(r => r.removed || r.added || r.renamed || r.dedup);
+    if (activeReport.length) {
+      html += `<div style="margin-top:10px;font-weight:700;color:var(--slate-700);font-size:11px;">📋 Affected Students (${activeReport.length})</div>`;
+      html += `<div style="margin-top:6px;max-height:280px;overflow-y:auto;border-top:1px solid var(--slate-200);">`;
+      activeReport.forEach(r => {
+        html += `<div style="padding:8px 0;border-bottom:1px solid var(--slate-100);">`;
+        html += `<div><b>${r.rollNo}</b> · ${r.name} <span class="badge badge-info" style="font-size:9px;">${r.branch}</span></div>`;
+        html += `<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:8px;font-size:10.5px;">`;
+        if (r.removed) html += `<span style="color:#be123c;">🚫 ${r.removed} removed</span>`;
+        if (r.added) html += `<span style="color:#047857;">➕ ${r.added} added</span>`;
+        if (r.renamed) html += `<span style="color:#b45309;">✏️ ${r.renamed} renamed</span>`;
+        if (r.dedup) html += `<span style="color:#475569;">🧹 ${r.dedup} deduped</span>`;
+        html += `</div>`;
+        if (r.removedDetails && r.removedDetails.length) {
+          html += `<div style="color:#64748b;font-size:10px;margin-top:3px;line-height:1.5;">🚫 Removed: ${r.removedDetails.slice(0, 6).join(' · ')}${r.removedDetails.length > 6 ? ' …+' + (r.removedDetails.length - 6) : ''}</div>`;
+        }
+        if (r.addedDetails && r.addedDetails.length) {
+          html += `<div style="color:#64748b;font-size:10px;line-height:1.5;">➕ Added: ${r.addedDetails.slice(0, 6).join(' · ')}${r.addedDetails.length > 6 ? ' …+' + (r.addedDetails.length - 6) : ''}</div>`;
+        }
+        html += `</div>`;
+      });
+      html += `</div>`;
+    } else {
+      html += `<div style="margin-top:10px;padding:10px;background:var(--emerald-50);border:1px solid #a7f3d0;border-radius:6px;color:#047857;text-align:center;font-weight:600;">✅ No changes needed — data is already clean!</div>`;
+    }
+    html += `</div>`;
+    reportEl.innerHTML = html;
+
+    toast(isTest ? `✅ Test done on ${testRoll}` : `✅ Fix complete for ${d.totalStudents} students`, 'success');
+
+    if (!isTest) {
+      globalHolidays = []; await ensureHolidays();
+      if (typeof fetchUsers === 'function') fetchUsers();
+      if (typeof loadAllAttendance === 'function') loadAllAttendance();
+      if (typeof loadDashboardStats === 'function') loadDashboardStats();
+    }
   } catch(e) {
     hideDL();
     statusEl.textContent = '❌ ' + e.message;
+    statusEl.style.color = '#be123c';
     toast('Error: ' + e.message, 'error');
   }
 }
