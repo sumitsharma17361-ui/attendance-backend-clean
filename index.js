@@ -26,8 +26,9 @@ const GEMINI_API_KEYS = [
   process.env.GEMINI_API_KEY_6
 ].filter(k => k && k.trim() && k.trim().length > 5).map(k => k.trim());
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
-const GEMINI_FALLBACK_MODELS = ['gemini-flash-latest'];
+// ✅ FIX #1 — Fast primary + 2 strong fallbacks
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
+const GEMINI_FALLBACK_MODELS = ['gemini-3.8-flash', 'gemini-2.5-flash'];
 const GEMINI_GLOBAL_TIMEOUT_MS = parseInt(process.env.GEMINI_GLOBAL_TIMEOUT_MS || '20000', 10);
 
 let currentKeyIndex = 0;
@@ -737,7 +738,7 @@ app.get('/health', (req, res) => res.json({
   primaryModel: GEMINI_MODEL,
   fallbackModels: GEMINI_FALLBACK_MODELS,
   globalTimeoutMs: GEMINI_GLOBAL_TIMEOUT_MS,
-  chatTimeoutMs: 25000,
+  chatTimeoutMs: 12000,
   fileUploadTimeoutMs: 90000,
   keysLoaded: GEMINI_API_KEYS.length,
   features: ['smart-context', 'file-analysis', 'pdf', 'images'],
@@ -2087,7 +2088,7 @@ app.post('/api/ai/chat', async (req, res) => {
     const { message, rollNo, role, name, branch, threadId, skipGreeting, useContext } = req.body;
     if (!message) return res.status(400).json({ error: 'Message is required.' });
     const cr = rollNo?.trim().toUpperCase() || 'guest';
-    const useCtx = useContext === true; // ✅ default false
+    const useCtx = useContext === true;
 
     let userData = null, existingChat = null;
     if (cr !== 'guest') {
@@ -2165,9 +2166,9 @@ app.post('/api/ai/chat', async (req, res) => {
         history: existingChat?.messages,
         maxTokens: 1500,
         temperature: 0.7,
-        timeoutMs: 25000,
+        timeoutMs: 12000,
         globalTimeoutMs: 45000,
-        maxAttempts: 3
+        maxAttempts: 6
       });
       aiOk = true;
     } catch (err) {
@@ -2248,9 +2249,9 @@ Task:
         mimeType,
         maxTokens: 3000,
         temperature: 0.4,
-        timeoutMs: 30000,
+        timeoutMs: 20000,
         globalTimeoutMs: 90000,
-        maxAttempts: 6
+        maxAttempts: 12
       });
       aiOk = true;
     } catch (err) {
@@ -2427,7 +2428,7 @@ Format: plain text, use ## for headings, • for bullets. NO ** asterisks. NO ma
         temperature: 0.5,
         timeoutMs: 30000,
         globalTimeoutMs: 60000,
-        maxAttempts: 3
+        maxAttempts: 6
       });
     } catch (err) {
       console.warn('⚠️ Notes AI failed:', err.message);
@@ -2501,9 +2502,9 @@ app.post('/api/ai/predict-attendance', async (req, res) => {
           systemPrompt: 'You are BM Bot, friendly student assistant at BM Group. Respond in Hinglish, short.',
           maxTokens: 300,
           temperature: 0.7,
-          timeoutMs: 15000,
+          timeoutMs: 12000,
           globalTimeoutMs: 25000,
-          maxAttempts: 3
+          maxAttempts: 6
         });
       } catch (err) { console.warn('Predict AI msg failed:', err.message); }
     }
@@ -2556,9 +2557,9 @@ app.post('/api/ai/admin-insights', async (req, res) => {
           systemPrompt: 'You are BM Bot Admin Assistant. Provide data-driven insights. Concise, actionable.',
           maxTokens: 1200,
           temperature: 0.5,
-          timeoutMs: 30000,
+          timeoutMs: 25000,
           globalTimeoutMs: 60000,
-          maxAttempts: 3
+          maxAttempts: 6
         });
       } catch (err) { console.warn('AI insights failed:', err.message); insights = '⚠️ ' + err.message; }
     }
@@ -2594,9 +2595,9 @@ app.post('/api/ai/subject-analysis', async (req, res) => {
           systemPrompt: 'You are BM Bot, friendly student mentor. Personalized advice in Hinglish.',
           maxTokens: 1000,
           temperature: 0.6,
-          timeoutMs: 30000,
+          timeoutMs: 25000,
           globalTimeoutMs: 60000,
-          maxAttempts: 3
+          maxAttempts: 6
         });
       } catch (err) { console.warn('Subject analysis AI failed:', err.message); }
     }
@@ -2637,9 +2638,9 @@ app.post('/api/ai/smart-alerts', async (req, res) => {
             systemPrompt: 'You are BM Bot writing official warning notices for BM Group.',
             maxTokens: 200,
             temperature: 0.6,
-            timeoutMs: 15000,
+            timeoutMs: 12000,
             globalTimeoutMs: 25000,
-            maxAttempts: 3
+            maxAttempts: 6
           });
         } catch (err) { message = ''; }
       }
@@ -2667,9 +2668,9 @@ app.post('/api/ai/study-material', async (req, res) => {
         systemPrompt: 'Expert teacher for B.Tech students at BM Group.',
         maxTokens: 2500,
         temperature: 0.5,
-        timeoutMs: 30000,
+        timeoutMs: 25000,
         globalTimeoutMs: 60000,
-        maxAttempts: 3
+        maxAttempts: 6
       });
     } catch (err) { return res.status(503).json({ error: err.message }); }
     res.json({ topic, subject, type, content: reply });
@@ -2734,4 +2735,4 @@ process.on('unhandledRejection', (reason) => console.error('Unhandled:', reason)
 process.on('uncaughtException', (err) => { console.error('Uncaught:', err); process.exit(1); });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Port ${PORT} | AI: ${GEMINI_API_KEYS.length} keys | Model: ${GEMINI_MODEL} | Chat timeout: 45s (smart context) | File timeout: 90s | PDF: enabled | Images: enabled`));
+app.listen(PORT, () => console.log(`🚀 Port ${PORT} | AI: ${GEMINI_API_KEYS.length} keys | Primary: ${GEMINI_MODEL} | Fallbacks: ${GEMINI_FALLBACK_MODELS.join(', ')} | Chat timeout: 12s × 6 attempts (45s global) | File: 20s × 12 attempts (90s global)`));
