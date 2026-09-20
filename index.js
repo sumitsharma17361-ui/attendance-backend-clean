@@ -256,6 +256,20 @@ function checkLocation(lat, lng) {
   const d = calculateDistance(lat, lng, COLLEGE_LAT, COLLEGE_LNG);
   return { isInside: d <= COLLEGE_RADIUS, distance: d.toFixed(0) };
 }
+
+// ✅ NEW: Detailed location verification for requests
+function verifyLocationForRequest(lat, lng) {
+  if (!lat || !lng || lat === 0 || lng === 0) {
+    return { valid: false, distance: null, message: 'Location not provided. Please enable GPS on your device and try again.' };
+  }
+  const d = calculateDistance(lat, lng, COLLEGE_LAT, COLLEGE_LNG);
+  const dInt = Math.round(d);
+  if (dInt > COLLEGE_RADIUS) {
+    return { valid: false, distance: dInt, message: `You are ${dInt}m away from BM Group college. Attendance request can only be submitted within ${COLLEGE_RADIUS}m of the campus.` };
+  }
+  return { valid: true, distance: dInt, message: `Location verified — ${dInt}m from college (within ${COLLEGE_RADIUS}m limit). ✅` };
+}
+
 async function checkStudentBlocked(rollNo) {
   const user = await User.findOne({ rollNo });
   if (!user) return { blocked: false };
@@ -290,101 +304,101 @@ async function generateTeacherId(subject) {
 
 const CSE_SCHEDULE = {
   1: [
-    { start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1" },
-    { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2" },
-    { start:"10:50", end:"11:35", subject:"DAA - Design & Analysis of Algorithm", period:"P3" },
-    { start:"11:35", end:"12:20", subject:"FLA - Formal Language & Automata", period:"P4" },
-    { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH" },
-    { start:"13:05", end:"13:50", subject:"HRM - Human Resource Mgmt", period:"P6" },
-    { start:"13:50", end:"14:35", subject:"CN - Computer Network", period:"P7" },
-    { start:"14:35", end:"15:20", subject:"Sports", period:"P8" }
+    { start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1", faculty:"Ms. Geeta" },
+    { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" },
+    { start:"10:50", end:"11:35", subject:"DAA - Design & Analysis of Algorithm", period:"P3", faculty:"Ms. Rashmi" },
+    { start:"11:35", end:"12:20", subject:"FLA - Formal Language & Automata", period:"P4", faculty:"Ms. Nisha Yadav" },
+    { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" },
+    { start:"13:05", end:"13:50", subject:"HRM - Human Resource Mgmt", period:"P6", faculty:"Mr. Lokesh" },
+    { start:"13:50", end:"14:35", subject:"CN - Computer Network", period:"P7", faculty:"Mr. Chhetrapal" },
+    { start:"14:35", end:"15:20", subject:"Sports", period:"P8", faculty:"Sports Dept" }
   ],
   2: [
-    { start:"09:20", end:"10:05", subject:"WT - Web Technology", period:"P1" },
-    { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2" },
-    { start:"10:50", end:"11:35", subject:"Internet Lab (Ms. Geeta)", period:"P3" },
-    { start:"11:35", end:"12:20", subject:"FLA - Formal Language & Automata", period:"P4" },
-    { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH" },
-    { start:"13:05", end:"13:50", subject:"HRM - Human Resource Mgmt", period:"P6" },
-    { start:"13:50", end:"14:35", subject:"BDA - Big Data Analytics", period:"P7" },
-    { start:"14:35", end:"15:20", subject:"Sports", period:"P8" }
+    { start:"09:20", end:"10:05", subject:"WT - Web Technology", period:"P1", faculty:"Mr. Avish Yadav" },
+    { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" },
+    { start:"10:50", end:"11:35", subject:"Internet Lab (Ms. Geeta)", period:"P3", faculty:"Ms. Geeta" },
+    { start:"11:35", end:"12:20", subject:"FLA - Formal Language & Automata", period:"P4", faculty:"Ms. Nisha Yadav" },
+    { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" },
+    { start:"13:05", end:"13:50", subject:"HRM - Human Resource Mgmt", period:"P6", faculty:"Mr. Lokesh" },
+    { start:"13:50", end:"14:35", subject:"BDA - Big Data Analytics", period:"P7", faculty:"Ms. Geeta" },
+    { start:"14:35", end:"15:20", subject:"Sports", period:"P8", faculty:"Sports Dept" }
   ],
   3: [
-    { start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1" },
-    { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2" },
-    { start:"10:50", end:"11:35", subject:"FLA - Formal Language & Automata", period:"P3" },
-    { start:"11:35", end:"12:20", subject:"Sports / Activity", period:"P4" },
-    { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH" },
-    { start:"13:05", end:"13:50", subject:"WT - Web Technology", period:"P6" },
-    { start:"13:50", end:"15:20", subject:"CN LAB - Computer Network Lab", period:"P7-P8" }
+    { start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1", faculty:"Ms. Geeta" },
+    { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" },
+    { start:"10:50", end:"11:35", subject:"FLA - Formal Language & Automata", period:"P3", faculty:"Ms. Nisha Yadav" },
+    { start:"11:35", end:"12:20", subject:"Sports / Activity", period:"P4", faculty:"Sports Dept" },
+    { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" },
+    { start:"13:05", end:"13:50", subject:"WT - Web Technology", period:"P6", faculty:"Mr. Avish Yadav" },
+    { start:"13:50", end:"15:20", subject:"CN LAB - Computer Network Lab", period:"P7-P8", faculty:"Mr. Chhetrapal" }
   ],
   4: [
-    { start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1" },
-    { start:"10:05", end:"10:50", subject:"WT - Web Technology", period:"P2" },
-    { start:"10:50", end:"11:35", subject:"CN - Computer Network", period:"P3" },
-    { start:"11:35", end:"12:20", subject:"DAA - Design & Analysis of Algorithm", period:"P4" },
-    { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH" },
-    { start:"13:05", end:"14:35", subject:"DAA LAB - Algorithm Lab", period:"P6-P7" },
-    { start:"14:35", end:"15:20", subject:"HRM - Human Resource Mgmt", period:"P8" }
+    { start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1", faculty:"Ms. Geeta" },
+    { start:"10:05", end:"10:50", subject:"WT - Web Technology", period:"P2", faculty:"Mr. Avish Yadav" },
+    { start:"10:50", end:"11:35", subject:"CN - Computer Network", period:"P3", faculty:"Mr. Chhetrapal" },
+    { start:"11:35", end:"12:20", subject:"DAA - Design & Analysis of Algorithm", period:"P4", faculty:"Ms. Rashmi" },
+    { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" },
+    { start:"13:05", end:"14:35", subject:"DAA LAB - Algorithm Lab", period:"P6-P7", faculty:"Ms. Rashmi" },
+    { start:"14:35", end:"15:20", subject:"HRM - Human Resource Mgmt", period:"P8", faculty:"Mr. Lokesh" }
   ],
   5: [
-    { start:"09:20", end:"10:05", subject:"DAA - Design & Analysis of Algorithm", period:"P1" },
-    { start:"10:05", end:"10:50", subject:"CN - Computer Network", period:"P2" },
-    { start:"10:50", end:"11:35", subject:"FLA - Formal Language & Automata", period:"P3" },
-    { start:"11:35", end:"12:20", subject:"BDA - Big Data Analytics", period:"P4" },
-    { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH" },
-    { start:"13:05", end:"14:35", subject:"WT LAB - Web Technology Lab", period:"P6-P7" },
-    { start:"14:35", end:"15:20", subject:"Sports", period:"P8" }
+    { start:"09:20", end:"10:05", subject:"DAA - Design & Analysis of Algorithm", period:"P1", faculty:"Ms. Rashmi" },
+    { start:"10:05", end:"10:50", subject:"CN - Computer Network", period:"P2", faculty:"Mr. Chhetrapal" },
+    { start:"10:50", end:"11:35", subject:"FLA - Formal Language & Automata", period:"P3", faculty:"Ms. Nisha Yadav" },
+    { start:"11:35", end:"12:20", subject:"BDA - Big Data Analytics", period:"P4", faculty:"Ms. Geeta" },
+    { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" },
+    { start:"13:05", end:"14:35", subject:"WT LAB - Web Technology Lab", period:"P6-P7", faculty:"Mr. Avish Yadav" },
+    { start:"14:35", end:"15:20", subject:"Sports", period:"P8", faculty:"Sports Dept" }
   ]
 };
 
 const AIDS_SCHEDULE = {
   1: [
-    { start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1" },
-    { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2" },
-    { start:"10:50", end:"11:35", subject:"LIB - Library", period:"P3" },
-    { start:"11:35", end:"12:20", subject:"FLA - Formal Language & Automata", period:"P4" },
-    { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH" },
-    { start:"13:05", end:"13:50", subject:"HRM - Human Resource Mgmt", period:"P6" },
-    { start:"13:50", end:"14:35", subject:"PA - Predictive Analysis", period:"P7" },
-    { start:"14:35", end:"15:20", subject:"Sports", period:"P8" }
+    { start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1", faculty:"Ms. Geeta" },
+    { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" },
+    { start:"10:50", end:"11:35", subject:"LIB - Library", period:"P3", faculty:"Library Staff" },
+    { start:"11:35", end:"12:20", subject:"FLA - Formal Language & Automata", period:"P4", faculty:"Ms. Nisha Yadav" },
+    { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" },
+    { start:"13:05", end:"13:50", subject:"HRM - Human Resource Mgmt", period:"P6", faculty:"Mr. Lokesh" },
+    { start:"13:50", end:"14:35", subject:"PA - Predictive Analysis", period:"P7", faculty:"Ms. Pooja" },
+    { start:"14:35", end:"15:20", subject:"Sports", period:"P8", faculty:"Sports Dept" }
   ],
   2: [
-    { start:"09:20", end:"10:05", subject:"WT - Web Technology", period:"P1" },
-    { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2" },
-    { start:"10:50", end:"11:35", subject:"PA - Predictive Analysis", period:"P3" },
-    { start:"11:35", end:"12:20", subject:"FLA - Formal Language & Automata", period:"P4" },
-    { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH" },
-    { start:"13:05", end:"13:50", subject:"HRM - Human Resource Mgmt", period:"P6" },
-    { start:"13:50", end:"14:35", subject:"BDA - Big Data Analytics", period:"P7" },
-    { start:"14:35", end:"15:20", subject:"ML - Machine Learning", period:"P8" }
+    { start:"09:20", end:"10:05", subject:"WT - Web Technology", period:"P1", faculty:"Mr. Avish Yadav" },
+    { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" },
+    { start:"10:50", end:"11:35", subject:"PA - Predictive Analysis", period:"P3", faculty:"Ms. Pooja" },
+    { start:"11:35", end:"12:20", subject:"FLA - Formal Language & Automata", period:"P4", faculty:"Ms. Nisha Yadav" },
+    { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" },
+    { start:"13:05", end:"13:50", subject:"HRM - Human Resource Mgmt", period:"P6", faculty:"Mr. Lokesh" },
+    { start:"13:50", end:"14:35", subject:"BDA - Big Data Analytics", period:"P7", faculty:"Ms. Geeta" },
+    { start:"14:35", end:"15:20", subject:"ML - Machine Learning", period:"P8", faculty:"Mr. Harsh" }
   ],
   3: [
-    { start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1" },
-    { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2" },
-    { start:"10:50", end:"11:35", subject:"FLA - Formal Language & Automata", period:"P3" },
-    { start:"11:35", end:"12:20", subject:"Sports / Project", period:"P4" },
-    { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH" },
-    { start:"13:05", end:"13:50", subject:"WT - Web Technology", period:"P6" },
-    { start:"13:50", end:"15:20", subject:"PA LAB - Predictive Analysis Lab", period:"P7-P8" }
+    { start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1", faculty:"Ms. Geeta" },
+    { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" },
+    { start:"10:50", end:"11:35", subject:"FLA - Formal Language & Automata", period:"P3", faculty:"Ms. Nisha Yadav" },
+    { start:"11:35", end:"12:20", subject:"Sports / Project", period:"P4", faculty:"Sports Dept" },
+    { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" },
+    { start:"13:05", end:"13:50", subject:"WT - Web Technology", period:"P6", faculty:"Mr. Avish Yadav" },
+    { start:"13:50", end:"15:20", subject:"PA LAB - Predictive Analysis Lab", period:"P7-P8", faculty:"Ms. Pooja" }
   ],
   4: [
-    { start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1" },
-    { start:"10:05", end:"10:50", subject:"WT - Web Technology", period:"P2" },
-    { start:"10:50", end:"11:35", subject:"ML - Machine Learning", period:"P3" },
-    { start:"11:35", end:"12:20", subject:"PA - Predictive Analysis", period:"P4" },
-    { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH" },
-    { start:"13:05", end:"14:35", subject:"ML LAB - Machine Learning Lab", period:"P6-P7" },
-    { start:"14:35", end:"15:20", subject:"HRM - Human Resource Mgmt", period:"P8" }
+    { start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1", faculty:"Ms. Geeta" },
+    { start:"10:05", end:"10:50", subject:"WT - Web Technology", period:"P2", faculty:"Mr. Avish Yadav" },
+    { start:"10:50", end:"11:35", subject:"ML - Machine Learning", period:"P3", faculty:"Mr. Harsh" },
+    { start:"11:35", end:"12:20", subject:"PA - Predictive Analysis", period:"P4", faculty:"Ms. Pooja" },
+    { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" },
+    { start:"13:05", end:"14:35", subject:"ML LAB - Machine Learning Lab", period:"P6-P7", faculty:"Mr. Harsh" },
+    { start:"14:35", end:"15:20", subject:"HRM - Human Resource Mgmt", period:"P8", faculty:"Mr. Lokesh" }
   ],
   5: [
-    { start:"09:20", end:"10:05", subject:"ML - Machine Learning", period:"P1" },
-    { start:"10:05", end:"10:50", subject:"LIB - Library", period:"P2" },
-    { start:"10:50", end:"11:35", subject:"FLA - Formal Language & Automata", period:"P3" },
-    { start:"11:35", end:"12:20", subject:"BDA - Big Data Analytics", period:"P4" },
-    { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH" },
-    { start:"13:05", end:"14:35", subject:"BDA LAB - Big Data Analytics Lab", period:"P6-P7" },
-    { start:"14:35", end:"15:20", subject:"Sports", period:"P8" }
+    { start:"09:20", end:"10:05", subject:"ML - Machine Learning", period:"P1", faculty:"Mr. Harsh" },
+    { start:"10:05", end:"10:50", subject:"LIB - Library", period:"P2", faculty:"Library Staff" },
+    { start:"10:50", end:"11:35", subject:"FLA - Formal Language & Automata", period:"P3", faculty:"Ms. Nisha Yadav" },
+    { start:"11:35", end:"12:20", subject:"BDA - Big Data Analytics", period:"P4", faculty:"Ms. Geeta" },
+    { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" },
+    { start:"13:05", end:"14:35", subject:"BDA LAB - Big Data Analytics Lab", period:"P6-P7", faculty:"Ms. Geeta" },
+    { start:"14:35", end:"15:20", subject:"Sports", period:"P8", faculty:"Sports Dept" }
   ]
 };
 
@@ -412,6 +426,18 @@ function getTimetableForDate(dateStr, branch = 'CSE') {
   const dayName = dayNames[d.getDay()];
   if (dayName === 'Saturday' || dayName === 'Sunday') return [];
   return getTimetableForBranch(branch)[dayName] || [];
+}
+
+// ✅ NEW: Get schedule for a specific date (with times + faculty)
+function getScheduleForDate(dateStr, branch = 'CSE') {
+  const parts = dateStr.split('-');
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const dayName = dayNames[d.getDay()];
+  if (dayName === 'Saturday' || dayName === 'Sunday') return { isBlocked: true, dayName, schedule: [] };
+  const dowIndex = d.getDay(); // 0=Sunday, 1=Monday
+  const schedule = getScheduleForBranch(branch);
+  return { isBlocked: false, dayName, schedule: schedule[dowIndex] || [] };
 }
 
 mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 5000, socketTimeoutMS: 45000 })
@@ -453,16 +479,15 @@ attendanceSchema.index({ rollNo: 1, subject: 1, date: 1 }, { unique: true });
 const holidaySchema = new mongoose.Schema({ date: { type: String, required: true, unique: true }, reason: { type: String, default: 'Holiday' } }, { timestamps: true });
 const noticeSchema = new mongoose.Schema({ title: String, message: String, date: { type: Date, default: Date.now } });
 
-// Passcode extended with publish support
 const passcodeSchema = new mongoose.Schema({
   passcode: { type: String, required: true },
   type: { type: String, enum: ['full_day', 'single_lecture'], required: true },
   key: { type: String, unique: true, sparse: true },
   expiresAt: { type: Date, required: true },
-  published: { type: Boolean, default: false },           // 👈 NEW: publicly visible to students
+  published: { type: Boolean, default: false },
   publishedAt: { type: Date, default: null },
   publishedBy: { type: String, default: null },
-  durationMinutes: { type: Number, default: null }         // 👈 FIXED duration publish
+  durationMinutes: { type: Number, default: null }
 }, { timestamps: true });
 
 const teacherSubjectSchema = new mongoose.Schema({ teacherRollNo: { type: String, required: true }, subject: { type: String, required: true }, assignedBy: { type: String, required: true }, createdAt: { type: Date, default: Date.now } }, { timestamps: true });
@@ -483,20 +508,30 @@ const leaveSchema = new mongoose.Schema({
   branch: { type: String, default: 'CSE' }
 }, { timestamps: true });
 
-// 👇 NEW: Student attendance correction requests
+// ✅ NEW: Attendance Request schema with location + lecture type + review history
 const attendanceRequestSchema = new mongoose.Schema({
   rollNo: { type: String, required: true },
   studentName: { type: String, required: true },
   branch: { type: String, default: 'CSE' },
-  dates: [{ type: String }],                                // YYYY-MM-DD list
-  subjects: [{ type: String }],                             // optional specific subjects
-  reason: { type: String, required: true },
-  requestType: { type: String, enum: ['Attendance Correction', 'Leave', 'Other'], default: 'Attendance Correction' },
-  status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
+  date: { type: String, required: true },
+  lectureType: { type: String, enum: ['full_day', 'single_lecture', 'double_lecture'], required: true },
+  subject: { type: String, default: null },
+  subjects: [{ type: String }],
+  period: { type: String, default: null },
+  reason: { type: String, default: 'Manual attendance request from chat' },
+  location: { latitude: Number, longitude: Number },
+  distanceFromCollege: { type: Number, default: null },
+  locationVerified: { type: Boolean, default: false },
+  status: { type: String, enum: ['Pending', 'Approved', 'Rejected', 'Partially Approved'], default: 'Pending' },
   reviewedBy: { type: String, default: null },
   adminNote: { type: String, default: '' },
-  reviewedDates: [{ type: String }],                        // date-by-date review
-  rejectedDates: [{ type: String }]
+  reviewHistory: [{
+    action: { type: String, enum: ['Approved', 'Rejected'] },
+    by: String,
+    at: { type: Date, default: Date.now },
+    note: { type: String, default: '' },
+    reviewedSubjects: [String]
+  }]
 }, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);
@@ -508,7 +543,6 @@ const TeacherSubject = mongoose.model('TeacherSubject', teacherSubjectSchema);
 const Chat = mongoose.model('Chat', chatSchema);
 const Leave = mongoose.model('Leave', leaveSchema);
 const AttendanceRequest = mongoose.model('AttendanceRequest', attendanceRequestSchema);
-
 Attendance.createIndexes().catch(err => console.error('Index error:', err));
 
 async function getStudentSummary(rollNo) {
@@ -742,376 +776,17 @@ function generatePDFBuffer({ title, subtitle, sections = [], footer = null }) {
   });
 }
 
-// ============================================================
-//  SMART CONTEXT — Detect intent for optional context inclusion
-// ============================================================
 function detectContextNeeds(msg) {
   const m = (msg || '').toLowerCase();
   return {
     attendance: /attendance|present|absent|bunk|percentage|hazri|upasthiti|kitni|kitne|75|skip/i.test(m),
-    timetable: /timetable|schedule|class|period|lecture|kab hai|kya hai class|today'?s|kal|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday/i.test(m),
+    timetable: /timetable|schedule|class|period|lecture|kab hai|kya hai class|today'?s|kal|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|aaj|parso/i.test(m),
     holiday: /holiday|chutti|closed|band hai|avkash|tyohar/i.test(m),
     currentPeriod: /current|abhi|now|chalu|active|right now/i.test(m),
     passcode: /passcode|password|otp|code/i.test(m),
-    requests: /request|leave|correction|approval/i.test(m)
+    requests: /request|leave|correction|approval/i.test(m),
+    faculty: /faculty|teacher|professor|kaun padha|kisne|who teaches/i.test(m)
   };
-}
-
-// ============================================================
-//  DATABASE ASSISTANT — Intent Detection Prompt
-// ============================================================
-const DB_OPERATION_PROMPT = `You are a Database Assistant for BM Group ERP (attendance portal). Your job: convert user's natural language request into a JSON database operation OR a general reply.
-
-## User Context (will be injected):
-- Role: student/faculty/admin
-- RollNo, Name, Branch
-
-## Available Collections (MongoDB):
-1. **users** — { rollNo, name, role, branch, email, phone, semester }
-2. **attendances** — { rollNo, studentName, subject, date (YYYY-MM-DD), status (Present/Absent/Duty Leave), branch }
-3. **holidays** — { date (YYYY-MM-DD), reason }
-4. **notices** — { title, message, date }
-5. **leaves** — { rollNo, studentName, fromDate, toDate, reason, leaveType, status }
-6. **passcodes** — { passcode, type (full_day/single_lecture), expiresAt, published }
-7. **teachersubjects** — { teacherRollNo, subject, assignedBy }
-8. **attendancerequests** — { rollNo, studentName, dates[], subjects[], reason, status }
-
-## Response format (STRICT JSON only, NO markdown, NO code fence):
-{
-  "action": "reply" | "db_read" | "db_count" | "db_aggregate" | "db_create" | "db_update" | "db_delete" | "db_publish_passcode" | "db_create_request" | "db_review_request",
-  "collection": "users" | "attendances" | "holidays" | "notices" | "leaves" | "passcodes" | "teachersubjects" | "attendancerequests" | null,
-  "filter": { ...MongoDB filter... } | null,
-  "update": { ...fields... } | null,
-  "data": { ...new doc... } | null,
-  "limit": number | null,
-  "sort": { "field": 1|-1 } | null,
-  "explanation": "Short Hinglish explanation (1-2 lines)",
-  "requiresConfirmation": true|false,
-  "reply": "If action is 'reply', the AI's natural language response here (Hinglish/English mix). Otherwise null."
-}
-
-## Rules:
-1. If user's message is just chat/greeting/notes/study-help → action "reply", put answer in "reply"
-2. If user asks to see/check data → db_read (no confirmation)
-3. If user asks to add/create something → db_create
-4. If user asks to modify/update → db_update (confirm: true)
-5. If user asks to delete/remove → db_delete (confirm: true)
-6. If user asks to count/find how many → db_count (no confirmation)
-7. If user asks "how many days can I bunk" or attendance % → db_aggregate (no confirmation)
-8. If user asks to publish passcode for a duration → db_publish_passcode (admin only)
-9. If student asks to send attendance correction request → db_create_request
-10. If admin/faculty wants to approve/reject request → db_review_request
-11. NEVER let students modify attendances/users/holidays/passcodes directly
-12. Date format strictly YYYY-MM-DD
-13. "meri/my/apni" → use user's own rollNo
-14. Role restrictions enforced separately — you just structure the operation
-15. Return ONLY valid JSON, no explanation outside JSON
-
-## Examples:
-User: "Meri attendance kitni hai?"  Role: student
-→ { "action": "db_aggregate", "collection": "attendances", "filter": { "rollNo": "{USER_ROLL}" }, "explanation": "Aapki attendance calculate kar raha hun", "requiresConfirmation": false, "reply": null }
-
-User: "Kitne students 75% se neeche hai?"  Role: admin
-→ { "action": "db_aggregate", "collection": "attendances", "explanation": "Defaulters count kar raha hun", "requiresConfirmation": false, "reply": null }
-
-User: "Diwali holiday add karo 25 Oct 2026"  Role: admin
-→ { "action": "db_create", "collection": "holidays", "data": { "date": "2026-10-25", "reason": "Diwali" }, "explanation": "Diwali holiday add kar raha hun", "requiresConfirmation": false, "reply": null }
-
-User: "Notice post karo: Exam kal hai"  Role: admin
-→ { "action": "db_create", "collection": "notices", "data": { "title": "Announcement", "message": "Exam kal hai" }, "explanation": "Notice publish kar raha hun", "requiresConfirmation": false, "reply": null }
-
-User: "24CSE48 ki attendance 30 records delete karo"  Role: admin
-→ { "action": "db_delete", "collection": "attendances", "filter": { "rollNo": "24CSE48" }, "limit": 30, "explanation": "24CSE48 ki 30 attendance records delete karunga", "requiresConfirmation": true, "reply": null }
-
-User: "Passcode publish karo next 30 minutes ke liye single lecture"  Role: admin
-→ { "action": "db_publish_passcode", "data": { "type": "single_lecture", "durationMinutes": 30 }, "explanation": "Passcode 30 min ke liye publish kar raha hun", "requiresConfirmation": false, "reply": null }
-
-User: "Main 12 Oct aur 13 Oct present tha, request bhej do"  Role: student
-→ { "action": "db_create_request", "collection": "attendancerequests", "data": { "dates": ["2026-10-12", "2026-10-13"], "reason": "Attendance correction", "requestType": "Attendance Correction" }, "explanation": "Attendance correction request bhej raha hun", "requiresConfirmation": true, "reply": null }
-
-User: "Pending requests dikhao"  Role: admin
-→ { "action": "db_read", "collection": "attendancerequests", "filter": { "status": "Pending" }, "explanation": "Pending requests fetch kar raha hun", "requiresConfirmation": false, "reply": null }
-
-User: "Request 12345 approve kar do"  Role: admin
-→ { "action": "db_review_request", "data": { "requestId": "12345", "action": "Approved" }, "explanation": "Request approve kar raha hun", "requiresConfirmation": false, "reply": null }
-
-User: "Hello"
-→ { "action": "reply", "reply": "Hello! Kaise help kar sakta hun?", "explanation": "Greeting", "requiresConfirmation": false, "collection": null }
-
-User: "BDA notes do"
-→ { "action": "reply", "reply": "## BDA - Big Data Analytics\\n\\n...", "explanation": "Notes de raha hun", "requiresConfirmation": false, "collection": null }
-`;
-
-async function detectIntent(message, userContext) {
-  const ctx = `Role: ${userContext.role}\nRollNo: ${userContext.rollNo}\nName: ${userContext.name}\nBranch: ${userContext.branch}\nToday: ${getISTDateString(new Date())}`;
-  const prompt = `${ctx}\n\nUser message: "${message}"\n\nReturn ONLY valid JSON.`;
-  try {
-    const reply = await callGemini({
-      prompt,
-      systemPrompt: DB_OPERATION_PROMPT,
-      maxTokens: 1500,
-      temperature: 0.3,
-      timeoutMs: 12000,
-      globalTimeoutMs: 30000,
-      maxAttempts: 4
-    });
-    let cleaned = reply.trim();
-    if (cleaned.startsWith('```')) {
-      cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
-    }
-    return JSON.parse(cleaned);
-  } catch (err) {
-    console.warn('Intent detection failed:', err.message);
-    return { action: 'reply', reply: null, explanation: 'Could not parse', requiresConfirmation: false };
-  }
-}
-
-// ============================================================
-//  ROLE-BASED DB OPERATION EXECUTOR
-// ============================================================
-async function executeDbAction(intent, userContext) {
-  const { action, collection, filter, update, data, limit, sort } = intent;
-  const isAdmin = userContext.role === 'admin';
-  const isFaculty = userContext.role === 'faculty';
-  const isStudent = userContext.role === 'student';
-
-  const collMap = {
-    users: User, attendances: Attendance, holidays: Holiday,
-    notices: Notice, leaves: Leave, passcodes: Passcode,
-    teachersubjects: TeacherSubject, attendancerequests: AttendanceRequest
-  };
-
-  // ---- Permission Gates ----
-  // Students: read-only on own data, plus can create attendance requests
-  if (isStudent) {
-    if (['db_create', 'db_update', 'db_delete'].includes(action)) {
-      if (collection !== 'attendancerequests') {
-        return { error: 'Students can only read their own data or submit attendance requests. Direct DB modification is not allowed.' };
-      }
-    }
-    if (['db_read', 'db_count', 'db_aggregate'].includes(action)) {
-      // Force own rollNo
-      if (collection === 'attendances' || collection === 'leaves' || collection === 'attendancerequests') {
-        filter = filter || {};
-        filter.rollNo = userContext.rollNo;
-      }
-      if (collection === 'users') {
-        filter = filter || {};
-        filter.rollNo = userContext.rollNo;
-      }
-      // Students can't read passcodes/notices via db (they use public endpoint)
-      if (collection === 'passcodes') return { error: 'Passcodes are accessed via a separate public endpoint.' };
-    }
-  }
-
-  // Faculty: read assigned students; can modify attendance only for assigned subjects; can review requests
-  if (isFaculty) {
-    if (['users', 'notices', 'holidays', 'passcodes'].includes(collection) && action !== 'db_read' && action !== 'db_count') {
-      return { error: 'Faculty cannot modify this collection.' };
-    }
-    if (collection === 'attendances' && ['db_create', 'db_update', 'db_delete'].includes(action)) {
-      const assigned = await TeacherSubject.find({ teacherRollNo: userContext.rollNo }).distinct('subject');
-      if (filter && filter.subject && !assigned.includes(filter.subject)) return { error: 'Only your assigned subjects.' };
-      if (update && update.subject && !assigned.includes(update.subject)) return { error: 'Only your assigned subjects.' };
-      if (data && data.subject && !assigned.includes(data.subject)) return { error: 'Only your assigned subjects.' };
-    }
-    if (collection === 'attendancerequests' && action === 'db_review_request') {
-      // allowed
-    }
-    if (collection === 'attendancerequests' && action !== 'db_read' && action !== 'db_review_request' && action !== 'db_count') {
-      return { error: 'Faculty can only read/review requests.' };
-    }
-  }
-
-  try {
-    const Model = collMap[collection];
-
-    // ---- READ ----
-    if (action === 'db_read') {
-      if (!Model) return { error: 'Unknown collection' };
-      let q = Model.find(filter || {});
-      if (sort) q = q.sort(sort);
-      q = q.limit(Math.min(limit || 20, 100));
-      const docs = await q.lean();
-      const sanitized = docs.map(d => {
-        if (!isAdmin) { delete d.password; delete d.activeSession; delete d.boundDeviceId; }
-        return d;
-      });
-      return { result: sanitized, count: sanitized.length };
-    }
-
-    // ---- COUNT ----
-    if (action === 'db_count') {
-      if (!Model) return { error: 'Unknown collection' };
-      const count = await Model.countDocuments(filter || {});
-      return { result: { count } };
-    }
-
-    // ---- AGGREGATE (attendance % specifically) ----
-    if (action === 'db_aggregate') {
-      if (collection === 'attendances') {
-        if (isAdmin && (!filter || !filter.rollNo)) {
-          // Admin-wide defaulters count
-          const students = await User.find({ role: 'student' }).select('rollNo name branch');
-          const today = getISTDateString(new Date());
-          const startStr = getISTDateString(SEMESTER_START);
-          const defaulters = [];
-          for (const s of students) {
-            const present = await Attendance.countDocuments({ rollNo: s.rollNo, date: { $gte: startStr, $lte: today }, status: { $in: ['Present','Duty Leave'] }, subject: { $nin: [/Sports/i, /LIB/i, /Library/i] } });
-            const total = await Attendance.countDocuments({ rollNo: s.rollNo, date: { $gte: startStr, $lte: today }, subject: { $nin: [/Sports/i, /LIB/i, /Library/i] } });
-            const pct = total > 0 ? Math.round((present/total)*100) : 0;
-            if (total === 0 || pct < 75) defaulters.push({ rollNo: s.rollNo, name: s.name, branch: s.branch, pct, present, total });
-          }
-          defaulters.sort((a,b) => a.pct - b.pct);
-          return { result: { totalDefaulters: defaulters.length, defaulters: defaulters.slice(0, 20) } };
-        }
-        const rollNo = (filter && filter.rollNo) || userContext.rollNo;
-        const summary = await getStudentSummary(rollNo);
-        if (!summary) return { error: 'Student not found' };
-        return { result: { rollNo, attendancePercentage: summary.attendancePercentage, attended: summary.totalAcademicLectures, conducted: summary.totalConductedLectures, subjectStats: summary.subjectStats, workingDaysSoFar: summary.workingDaysSoFar, totalWorkingDaysSemester: summary.totalWorkingDaysSemester } };
-      }
-      return { error: 'Aggregate only supported for attendances' };
-    }
-
-    // ---- CREATE ----
-    if (action === 'db_create') {
-      if (!Model) return { error: 'Unknown collection' };
-      if (collection === 'holidays') {
-        if (!isAdmin) return { error: 'Only admin can add holidays' };
-        if (!data || !data.date) return { error: 'Holiday date missing' };
-        await Holiday.findOneAndUpdate({ date: data.date }, { date: data.date, reason: data.reason || 'Holiday' }, { upsert: true });
-        return { result: { date: data.date, reason: data.reason } };
-      }
-      if (collection === 'notices') {
-        if (!isAdmin) return { error: 'Only admin can post notices' };
-        const n = await new Notice({ title: data.title || 'Announcement', message: data.message, date: new Date() }).save();
-        return { result: n.toObject() };
-      }
-      if (collection === 'attendances') {
-        if (!data || !data.rollNo || !data.subject || !data.date) return { error: 'Missing attendance fields' };
-        const stu = await User.findOne({ rollNo: data.rollNo });
-        if (!stu) return { error: 'Student not found' };
-        try {
-          const rec = await new Attendance({
-            rollNo: data.rollNo, studentName: stu.name, subject: mapToCanonical(data.subject),
-            date: data.date, status: data.status || 'Present',
-            location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG },
-            ipAddress: 'chatbot-create', isVerified: true, branch: stu.branch || 'CSE'
-          }).save();
-          return { result: rec.toObject() };
-        } catch (e) { if (e.code === 11000) return { error: 'Record already exists' }; throw e; }
-      }
-      return { error: 'Create not supported for: ' + collection };
-    }
-
-    // ---- UPDATE ----
-    if (action === 'db_update') {
-      if (!Model) return { error: 'Unknown collection' };
-      if (!update) return { error: 'Update fields missing' };
-      const r = await Model.updateMany(filter || {}, update);
-      return { result: { matched: r.matchedCount, modified: r.modifiedCount } };
-    }
-
-    // ---- DELETE ----
-    if (action === 'db_delete') {
-      if (!Model) return { error: 'Unknown collection' };
-      if (collection === 'users' && !isAdmin) return { error: 'Only admin can delete users' };
-      const r = await Model.deleteMany(filter || {});
-      return { result: { deleted: r.deletedCount } };
-    }
-
-    // ---- PUBLISH PASSCODE ----
-    if (action === 'db_publish_passcode') {
-      if (!isAdmin) return { error: 'Only admin can publish passcode' };
-      const type = data?.type || 'single_lecture';
-      const durationMinutes = parseInt(data?.durationMinutes) || (type === 'full_day' ? 1440 : 5);
-      const now = new Date();
-      const todayStr = getISTDateString(now);
-      const ds = await checkDateStatus(todayStr);
-      if (ds.isBlocked) return { error: 'College closed today — no passcode needed.' };
-
-      let passcode;
-      let expiry = new Date(now.getTime() + durationMinutes * 60 * 1000);
-      let key;
-      if (type === 'single_lecture') {
-        const period = getCurrentPeriod(userContext.branch || 'CSE');
-        if (!period) return { error: 'No active lecture now.' };
-        passcode = Math.floor(1000 + Math.random() * 9000).toString();
-        key = `single_lecture_${todayStr}_${period.start}_pub`;
-      } else {
-        passcode = Math.floor(10000 + Math.random() * 90000).toString();
-        key = `full_day_${todayStr}_pub`;
-      }
-      await Passcode.updateMany({ key }, { $set: { expiresAt: new Date(0) } });
-      const doc = await new Passcode({ passcode, type, key, expiresAt: expiry, published: true, publishedAt: now, publishedBy: userContext.rollNo, durationMinutes }).save();
-      return { result: { passcode, type, expiresAt: expiry, durationMinutes, published: true } };
-    }
-
-    // ---- CREATE ATTENDANCE REQUEST ----
-    if (action === 'db_create_request') {
-      if (!isStudent) return { error: 'Only students can submit attendance requests' };
-      if (!data || !data.dates || !data.dates.length) return { error: 'Dates missing' };
-      const validDates = data.dates.filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d));
-      if (!validDates.length) return { error: 'No valid dates' };
-      const req = await new AttendanceRequest({
-        rollNo: userContext.rollNo,
-        studentName: userContext.name,
-        branch: userContext.branch,
-        dates: validDates,
-        subjects: data.subjects || [],
-        reason: data.reason || 'Attendance correction',
-        requestType: data.requestType || 'Attendance Correction',
-        status: 'Pending'
-      }).save();
-      return { result: { requestId: req._id.toString(), dates: validDates, status: 'Pending' } };
-    }
-
-    // ---- REVIEW REQUEST ----
-    if (action === 'db_review_request') {
-      if (!isAdmin && !isFaculty) return { error: 'Only admin/faculty can review requests' };
-      if (!data || !data.requestId) return { error: 'requestId missing' };
-      const reqDoc = await AttendanceRequest.findById(data.requestId);
-      if (!reqDoc) return { error: 'Request not found' };
-      const decision = data.action === 'Approved' ? 'Approved' : (data.action === 'Rejected' ? 'Rejected' : null);
-      if (!decision) return { error: 'Invalid action' };
-      const reviewDates = data.dates || reqDoc.dates; // date-by-date support
-      if (decision === 'Approved') {
-        const b = reqDoc.branch || 'CSE';
-        const tt = getTimetableForBranch(b);
-        const FDN = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-        let marked = 0;
-        for (const dStr of reviewDates) {
-          const dObj = new Date(dStr + 'T00:00:00');
-          const dayName = FDN[dObj.getDay()];
-          const daySubs = (tt[dayName] || []).map(e => mapToCanonical(e.subject)).filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports'));
-          const subsToMark = reqDoc.subjects && reqDoc.subjects.length ? reqDoc.subjects : daySubs;
-          for (const sub of subsToMark) {
-            const exists = await Attendance.findOne({ rollNo: reqDoc.rollNo, subject: sub, date: dStr });
-            if (!exists) {
-              try {
-                await new Attendance({ rollNo: reqDoc.rollNo, studentName: reqDoc.studentName, subject: sub, date: dStr, status: 'Present', location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG }, ipAddress: 'request-approved', isVerified: true, branch: b }).save();
-                marked++;
-              } catch (e) {}
-            }
-          }
-        }
-        reqDoc.status = 'Approved';
-        reqDoc.reviewedDates = reviewDates;
-      } else {
-        reqDoc.status = 'Rejected';
-        reqDoc.rejectedDates = reviewDates;
-      }
-      reqDoc.reviewedBy = userContext.rollNo;
-      reqDoc.adminNote = data.note || '';
-      await reqDoc.save();
-      return { result: { requestId: reqDoc._id.toString(), status: reqDoc.status, reviewedDates: reviewDates } };
-    }
-
-    return { error: 'Unsupported action: ' + action };
-  } catch (err) {
-    console.error('DB execute error:', err);
-    return { error: 'Execution failed: ' + err.message };
-  }
 }
 
 // ============================================================
@@ -1124,7 +799,7 @@ app.get('/health', (req, res) => res.json({
   primaryModel: GEMINI_MODEL,
   fallbackModels: GEMINI_FALLBACK_MODELS,
   keysLoaded: GEMINI_API_KEYS.length,
-  features: ['smart-context', 'database-assistant', 'file-analysis', 'pdf', 'images', 'requests', 'passcode-publish'],
+  features: ['smart-context', 'database-assistant', 'requests', 'passcode-publish', 'location-verified-requests', 'faculty-timetable'],
   timestamp: new Date().toISOString()
 }));
 
@@ -1192,7 +867,7 @@ app.post('/api/auth/verify-passcode', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== PUBLIC PASSCODE (for students) ==========
+// ========== PUBLIC PASSCODE ==========
 app.get('/api/passcode/public/:type', async (req, res) => {
   try {
     const { type } = req.params;
@@ -1227,7 +902,7 @@ app.get('/api/student/profile/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== ADMIN (existing) ==========
+// ========== ADMIN ==========
 app.post('/api/admin/reset-password', async (req, res) => {
   try {
     const { requesterRollNo, targetRollNo, newPassword } = req.body;
@@ -1285,78 +960,262 @@ app.post('/api/admin/login-as-student', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== ATTENDANCE REQUESTS (Manual endpoints) ==========
-app.post('/api/requests/create', async (req, res) => {
+// ========== ATTENDANCE REQUEST — STUDENT SUBMIT (location verified) ==========
+app.post('/api/requests/submit', async (req, res) => {
   try {
-    const { rollNo, dates, subjects, reason, requestType } = req.body;
-    if (!rollNo || !dates || !dates.length) return res.status(400).json({ error: 'rollNo and dates required' });
-    const user = await User.findOne({ rollNo: rollNo.trim().toUpperCase(), role: 'student' });
-    if (!user) return res.status(404).json({ error: 'Student not found' });
-    const validDates = dates.filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d));
-    if (!validDates.length) return res.status(400).json({ error: 'No valid dates' });
-    const reqDoc = await new AttendanceRequest({
-      rollNo: user.rollNo, studentName: user.name, branch: user.branch || 'CSE',
-      dates: validDates, subjects: subjects || [], reason: reason || 'Attendance correction',
-      requestType: requestType || 'Attendance Correction'
-    }).save();
-    res.status(201).json({ message: 'Request submitted', request: reqDoc });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+    const { rollNo, date, lectureType, subject, subjects, period, reason, latitude, longitude } = req.body;
+    if (!rollNo || !date || !lectureType) return res.status(400).json({ error: 'rollNo, date, lectureType required.' });
+    if (!['full_day', 'single_lecture', 'double_lecture'].includes(lectureType)) return res.status(400).json({ error: 'Invalid lectureType. Use full_day, single_lecture, or double_lecture.' });
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Invalid date format (YYYY-MM-DD required).' });
+    const cr = rollNo.trim().toUpperCase();
+    const user = await User.findOne({ rollNo: cr, role: 'student' });
+    if (!user) return res.status(404).json({ error: 'Student not found.' });
+
+    // Verify date is not future
+    const todayStr = getISTDateString(new Date());
+    if (date > todayStr) return res.status(400).json({ error: 'Cannot request attendance for a future date.' });
+
+    // Date status check
+    const ds = await checkDateStatus(date);
+    if (ds.isBlocked) return res.status(400).json({ error: ds.type === 'WEEKEND' ? `College is closed on ${ds.dayName}.` : `Holiday: ${ds.holiday || 'College closed'}.` });
+
+    // ✅ LOCATION VERIFICATION
+    const locCheck = verifyLocationForRequest(latitude, longitude);
+    if (!locCheck.valid) {
+      return res.status(400).json({
+        error: locCheck.message,
+        distance: locCheck.distance,
+        locationVerified: false,
+        code: 'LOCATION_FAILED'
+      });
+    }
+
+    // Validate subject for single/double lecture
+    if (lectureType !== 'full_day' && !subject) {
+      return res.status(400).json({ error: 'subject required for single_lecture or double_lecture.' });
+    }
+
+    // Check duplicate pending request
+    const existing = await AttendanceRequest.findOne({ rollNo: cr, date, lectureType, status: 'Pending' });
+    if (existing) return res.status(400).json({ error: `You already have a pending ${lectureType.replace('_', ' ')} request for ${date}.`, existing });
+
+    const newReq = await AttendanceRequest({
+      rollNo: cr,
+      studentName: user.name,
+      branch: user.branch || 'CSE',
+      date,
+      lectureType,
+      subject: subject ? mapToCanonical(subject) : null,
+      subjects: (subjects || []).map(mapToCanonical),
+      period: period || null,
+      reason: reason || 'Manual attendance request from chat',
+      location: { latitude, longitude },
+      distanceFromCollege: locCheck.distance,
+      locationVerified: true,
+      status: 'Pending'
+    });
+    await newReq.save();
+    res.status(201).json({
+      message: `✅ Attendance request submitted successfully. Location verified (${locCheck.distance}m from college).`,
+      request: newReq,
+      locationVerified: true,
+      distance: locCheck.distance
+    });
+  } catch (err) { console.error('Request submit error:', err); res.status(500).json({ error: err.message }); }
 });
 
+// ========== REQUEST — STUDENT VIEW OWN ==========
 app.get('/api/requests/my/:rollNo', async (req, res) => {
   try {
     const cr = req.params.rollNo.trim().toUpperCase();
-    res.json(await AttendanceRequest.find({ rollNo: cr }).sort({ createdAt: -1 }));
+    const requests = await AttendanceRequest.find({ rollNo: cr }).sort({ createdAt: -1 }).limit(50);
+    res.json(requests);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ========== REQUEST — ADMIN/FACULTY VIEW ALL (filterable) ==========
 app.get('/api/requests/all/:requesterRollNo', async (req, res) => {
   try {
     const rrn = req.params.requesterRollNo.trim().toUpperCase();
     const req1 = await User.findOne({ rollNo: rrn });
-    if (!req1 || (req1.role !== 'admin' && req1.role !== 'faculty')) return res.status(403).json({ error: 'Admin/Faculty only' });
-    const filter = req1.role === 'faculty' ? { branch: req1.branch || 'CSE' } : {};
-    res.json(await AttendanceRequest.find(filter).sort({ createdAt: -1 }));
+    if (!req1 || (req1.role !== 'admin' && req1.role !== 'faculty')) return res.status(403).json({ error: 'Admin/Faculty only.' });
+    let filter = {};
+    if (req1.role === 'faculty') {
+      // Faculty sees only their branch
+      filter.branch = req1.branch || 'CSE';
+    }
+    if (req.query.status) filter.status = req.query.status;
+    if (req.query.rollNo) filter.rollNo = req.query.rollNo.trim().toUpperCase();
+    if (req.query.date) filter.date = req.query.date;
+    const requests = await AttendanceRequest.find(filter).sort({ createdAt: -1 }).limit(200);
+    res.json({ count: requests.length, requests });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ========== REQUEST — PENDING ONLY ==========
+app.get('/api/requests/pending/:requesterRollNo', async (req, res) => {
+  try {
+    const rrn = req.params.requesterRollNo.trim().toUpperCase();
+    const req1 = await User.findOne({ rollNo: rrn });
+    if (!req1 || (req1.role !== 'admin' && req1.role !== 'faculty')) return res.status(403).json({ error: 'Admin/Faculty only.' });
+    let filter = { status: 'Pending' };
+    if (req1.role === 'faculty') filter.branch = req1.branch || 'CSE';
+    const requests = await AttendanceRequest.find(filter).sort({ createdAt: -1 }).limit(200);
+    res.json({ count: requests.length, requests });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ========== REQUEST — REVIEW (Approve/Reject with optional subject selection) ==========
 app.post('/api/requests/review/:id', async (req, res) => {
   try {
-    const { requesterRollNo, action, dates, note } = req.body;
+    const { requesterRollNo, action, note, approvedSubjects } = req.body;
     const req1 = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
-    if (!req1 || (req1.role !== 'admin' && req1.role !== 'faculty')) return res.status(403).json({ error: 'Admin/Faculty only' });
-    const reqDoc = await AttendanceRequest.findById(req.params.id);
-    if (!reqDoc) return res.status(404).json({ error: 'Request not found' });
-    const reviewDates = dates && dates.length ? dates : reqDoc.dates;
+    if (!req1 || (req1.role !== 'admin' && req1.role !== 'faculty')) return res.status(403).json({ error: 'Admin/Faculty only.' });
+    if (!['Approved', 'Rejected'].includes(action)) return res.status(400).json({ error: 'Action must be Approved or Rejected.' });
+
+    const request = await AttendanceRequest.findById(req.params.id);
+    if (!request) return res.status(404).json({ error: 'Request not found.' });
+    if (request.status !== 'Pending') return res.status(400).json({ error: `Request already ${request.status}.` });
+
     if (action === 'Approved') {
-      const b = reqDoc.branch || 'CSE';
-      const tt = getTimetableForBranch(b);
-      const FDN = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-      let marked = 0;
-      for (const dStr of reviewDates) {
-        const dayName = FDN[new Date(dStr + 'T00:00:00').getDay()];
-        const daySubs = (tt[dayName] || []).map(e => mapToCanonical(e.subject)).filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports'));
-        const subsToMark = reqDoc.subjects.length ? reqDoc.subjects : daySubs;
-        for (const sub of subsToMark) {
-          const exists = await Attendance.findOne({ rollNo: reqDoc.rollNo, subject: sub, date: dStr });
-          if (!exists) {
-            try {
-              await new Attendance({ rollNo: reqDoc.rollNo, studentName: reqDoc.studentName, subject: sub, date: dStr, status: 'Present', location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG }, ipAddress: 'request-approved', isVerified: true, branch: b }).save();
-              marked++;
-            } catch (e) {}
+      // Determine which subjects to mark
+      const b = request.branch || 'CSE';
+      const dateStatus = await checkDateStatus(request.date);
+      if (dateStatus.isBlocked) return res.status(400).json({ error: `Cannot approve — date is blocked (${dateStatus.type}).` });
+
+      const schedule = getScheduleForDate(request.date, b);
+      let subjectsToMark = [];
+
+      if (request.lectureType === 'full_day') {
+        // All academic subjects for that day
+        const daySubs = schedule.schedule
+          .filter(s => !s.subject.includes('LIB') && !s.subject.includes('Library') && !s.subject.includes('Sports') && s.period !== 'LUNCH')
+          .map(s => mapToCanonical(s.subject));
+        subjectsToMark = [...new Set(daySubs)];
+      } else if (request.lectureType === 'single_lecture') {
+        subjectsToMark = request.subject ? [mapToCanonical(request.subject)] : [];
+      } else if (request.lectureType === 'double_lecture') {
+        // 2 consecutive lectures — subject + next
+        const subj = mapToCanonical(request.subject);
+        const idx = schedule.schedule.findIndex(s => mapToCanonical(s.subject) === subj);
+        if (idx >= 0) {
+          subjectsToMark.push(subj);
+          // find next academic slot
+          for (let i = idx + 1; i < schedule.schedule.length; i++) {
+            const nextSub = mapToCanonical(schedule.schedule[i].subject);
+            if (nextSub.includes('LIB') || nextSub.includes('Library') || nextSub.includes('Sports') || schedule.schedule[i].period === 'LUNCH') continue;
+            subjectsToMark.push(nextSub);
+            break;
           }
+        } else {
+          subjectsToMark = [subj];
         }
       }
-      reqDoc.status = 'Approved';
-      reqDoc.reviewedDates = reviewDates;
+
+      // If admin specified selective subjects → use only those
+      if (approvedSubjects && Array.isArray(approvedSubjects) && approvedSubjects.length > 0) {
+        subjectsToMark = approvedSubjects.map(mapToCanonical);
+      }
+
+      let markedCount = 0;
+      const markedSubjects = [];
+      for (const sub of subjectsToMark) {
+        try {
+          const exists = await Attendance.findOne({ rollNo: request.rollNo, subject: sub, date: request.date });
+          if (!exists) {
+            await Attendance.create({
+              rollNo: request.rollNo,
+              studentName: request.studentName,
+              subject: sub,
+              date: request.date,
+              status: 'Present',
+              location: request.location,
+              ipAddress: 'request-approved',
+              isVerified: true,
+              branch: b
+            });
+            markedCount++;
+            markedSubjects.push(sub);
+          }
+        } catch (e) { if (e.code !== 11000) console.warn('Mark error:', e.message); }
+      }
+
+      request.status = markedSubjects.length === subjectsToMark.length ? 'Approved' : 'Partially Approved';
+      request.reviewedBy = req1.rollNo;
+      request.adminNote = note || '';
+      request.reviewHistory.push({ action: 'Approved', by: req1.rollNo, at: new Date(), note: note || '', reviewedSubjects: markedSubjects });
+      await request.save();
+      res.json({
+        message: `✅ Request approved. ${markedCount} lecture(s) marked present.`,
+        request,
+        markedCount,
+        markedSubjects,
+        totalRequested: subjectsToMark.length
+      });
     } else {
-      reqDoc.status = 'Rejected';
-      reqDoc.rejectedDates = reviewDates;
+      // Rejected
+      request.status = 'Rejected';
+      request.reviewedBy = req1.rollNo;
+      request.adminNote = note || '';
+      request.reviewHistory.push({ action: 'Rejected', by: req1.rollNo, at: new Date(), note: note || '' });
+      await request.save();
+      res.json({ message: `❌ Request rejected.`, request });
     }
-    reqDoc.reviewedBy = req1.rollNo;
-    reqDoc.adminNote = note || '';
-    await reqDoc.save();
-    res.json({ message: `Request ${action.toLowerCase()}`, request: reqDoc });
+  } catch (err) { console.error('Review error:', err); res.status(500).json({ error: err.message }); }
+});
+
+// ========== REQUEST — BULK REVIEW (multiple IDs at once) ==========
+app.post('/api/requests/bulk-review', async (req, res) => {
+  try {
+    const { requesterRollNo, requestIds, action, note } = req.body;
+    const req1 = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+    if (!req1 || req1.role !== 'admin') return res.status(403).json({ error: 'Admin only.' });
+    if (!Array.isArray(requestIds) || !requestIds.length) return res.status(400).json({ error: 'requestIds required.' });
+    if (!['Approved', 'Rejected'].includes(action)) return res.status(400).json({ error: 'Invalid action.' });
+
+    const results = [];
+    let totalMarked = 0;
+    for (const id of requestIds) {
+      try {
+        const request = await AttendanceRequest.findById(id);
+        if (!request || request.status !== 'Pending') { results.push({ id, error: 'Not found or not pending' }); continue; }
+        if (action === 'Rejected') {
+          request.status = 'Rejected';
+          request.reviewedBy = req1.rollNo;
+          request.adminNote = note || '';
+          request.reviewHistory.push({ action: 'Rejected', by: req1.rollNo, at: new Date(), note: note || '' });
+          await request.save();
+          results.push({ id, status: 'Rejected' });
+        } else {
+          // Approved — mark attendance
+          const b = request.branch || 'CSE';
+          const schedule = getScheduleForDate(request.date, b);
+          let subjectsToMark = [];
+          if (request.lectureType === 'full_day') {
+            subjectsToMark = [...new Set(schedule.schedule
+              .filter(s => !s.subject.includes('LIB') && !s.subject.includes('Library') && !s.subject.includes('Sports') && s.period !== 'LUNCH')
+              .map(s => mapToCanonical(s.subject)))];
+          } else if (request.lectureType === 'single_lecture' && request.subject) {
+            subjectsToMark = [mapToCanonical(request.subject)];
+          }
+          let marked = 0;
+          for (const sub of subjectsToMark) {
+            try {
+              const ex = await Attendance.findOne({ rollNo: request.rollNo, subject: sub, date: request.date });
+              if (!ex) { await Attendance.create({ rollNo: request.rollNo, studentName: request.studentName, subject: sub, date: request.date, status: 'Present', location: request.location, ipAddress: 'request-approved-bulk', isVerified: true, branch: b }); marked++; }
+            } catch (e) {}
+          }
+          request.status = 'Approved';
+          request.reviewedBy = req1.rollNo;
+          request.adminNote = note || '';
+          request.reviewHistory.push({ action: 'Approved', by: req1.rollNo, at: new Date(), note: note || '', reviewedSubjects: subjectsToMark });
+          await request.save();
+          totalMarked += marked;
+          results.push({ id, status: 'Approved', marked });
+        }
+      } catch (e) { results.push({ id, error: e.message }); }
+    }
+    res.json({ message: `Bulk review complete. ${totalMarked} lectures marked.`, results });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -1517,8 +1376,7 @@ app.post('/api/attendance/mark-lecture', async (req, res) => {
     const ns = mapToCanonical(subject), nc = mapToCanonical(period.subject);
     if (ns !== nc) return res.status(400).json({ error: 'Subject mismatch.' });
     const key = `single_lecture_${todayDate}_${period.start}`;
-    const key2 = `single_lecture_${todayDate}_${period.start}_pub`;
-    const doc = await Passcode.findOne({ $or: [{ key }, { key: key2, published: true }], type: 'single_lecture', passcode, expiresAt: { $gt: new Date() } });
+    const doc = await Passcode.findOne({ key, type: 'single_lecture', passcode, expiresAt: { $gt: new Date() } });
     if (!doc) return res.status(400).json({ error: 'Invalid/expired passcode.' });
     const lc = checkLocation(latitude, longitude);
     if (!lc.isInside) { await incrementFailedAttempts(cr); return res.status(400).json({ error: `Outside (${lc.distance}m)` }); }
@@ -1642,7 +1500,8 @@ app.get('/api/admin/dashboard-stats/:requesterRollNo', async (req, res) => {
     const overallPct = totalAtt > 0 ? Math.round((presentCount / totalAtt) * 100) : 0;
     const workingDaysSoFar = await getWorkingDays(SEMESTER_START, new Date());
     const totalWorkingDaysSemester = await getWorkingDays(SEMESTER_START, SEMESTER_END);
-    res.json({ totalStudents, todayPresent, todayAbsent: absent.length, overallAttendance: totalAtt, overallPct, todayPresentStudents: presentList, workingDaysSoFar, totalWorkingDaysSemester });
+    const pendingRequests = await AttendanceRequest.countDocuments({ status: 'Pending' });
+    res.json({ totalStudents, todayPresent, todayAbsent: absent.length, overallAttendance: totalAtt, overallPct, todayPresentStudents: presentList, workingDaysSoFar, totalWorkingDaysSemester, pendingRequests });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -1934,6 +1793,16 @@ app.get('/api/timetable/subjects', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ✅ NEW: Full timetable endpoint with faculty
+app.get('/api/timetable/full/:branch', async (req, res) => {
+  try {
+    const branch = (req.params.branch || 'CSE').toUpperCase();
+    const tt = getTimetableForBranch(branch);
+    const schedule = getScheduleForBranch(branch);
+    res.json({ branch, timetable: tt, schedule });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ========== CLASS REPORT ==========
 app.get('/api/admin/class-attendance-report', async (req, res) => {
   try {
@@ -2034,6 +1903,26 @@ app.get('/api/chats/:rollNo', async (req, res) => {
     res.json(await Chat.find({ rollNo: cr }).sort({ updatedAt: -1 }));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
+app.post('/api/chats', async (req, res) => {
+  try {
+    const { rollNo, threadId, title, messages } = req.body;
+    const cr = rollNo.trim().toUpperCase();
+    if (!threadId) {
+      const newTid = `chat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+      const nc = new Chat({ rollNo: cr, threadId: newTid, title: title || 'New Chat', messages: messages || [] });
+      await nc.save();
+      return res.status(201).json(nc);
+    } else {
+      const chat = await Chat.findOne({ threadId, rollNo: cr });
+      if (!chat) return res.status(404).json({ error: 'Chat not found' });
+      if (title) chat.title = title;
+      if (messages) chat.messages = messages;
+      chat.updatedAt = new Date();
+      await chat.save();
+      return res.json(chat);
+    }
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 app.delete('/api/chats/:threadId', async (req, res) => {
   try {
     const { threadId } = req.params;
@@ -2127,23 +2016,411 @@ app.get('/api/admin/defaulters/:requesterRollNo', async (req, res) => {
 });
 
 // ============================================================
+//  DATABASE ASSISTANT — INTENT PROMPT (Improved with dates + faculty + requests)
+// ============================================================
+const DB_INTENT_PROMPT = `You are a Database Assistant for BM Group ERP (attendance portal). Convert user's natural language into a JSON operation OR a chat reply.
+
+## Today (must use for date resolution):
+- Current date will be provided in user context.
+
+## Available Collections:
+1. **users** — { rollNo, name, role, branch, email, phone, semester }
+2. **attendances** — { rollNo, studentName, subject, date (YYYY-MM-DD), status, branch }
+3. **holidays** — { date, reason }
+4. **notices** — { title, message, date }
+5. **leaves** — { rollNo, studentName, fromDate, toDate, reason, status }
+6. **passcodes** — { passcode, type, expiresAt, published }
+7. **teachersubjects** — { teacherRollNo, subject }
+8. **attendancerequests** — { rollNo, studentName, branch, date, lectureType (full_day/single_lecture/double_lecture), subject, subjects[], reason, location, distanceFromCollege, status, reviewHistory }
+
+## Response format (STRICT JSON only, no markdown):
+{
+  "action": "reply" | "db_read" | "db_count" | "db_aggregate" | "db_create" | "db_update" | "db_delete" | "db_publish_passcode" | "db_submit_request" | "db_review_request" | "db_bulk_review" | "db_submit_request_needs_location",
+  "collection": "users" | "attendances" | "holidays" | "notices" | "leaves" | "passcodes" | "teachersubjects" | "attendancerequests" | null,
+  "filter": { ...MongoDB filter... } | null,
+  "update": { ...fields... } | null,
+  "data": { ...new doc... } | null,
+  "limit": number | null,
+  "sort": { "field": 1|-1 } | null,
+  "explanation": "Short English explanation (1-2 lines)",
+  "requiresConfirmation": true|false,
+  "reply": "If action is 'reply', natural language response (Hinglish/English mix). Otherwise null."
+}
+
+## CRITICAL RULES:
+1. **STUDENT ATTENDANCE REQUESTS**: Students CANNOT directly mark attendance. When a student says "aaj ki attendance mark karo", "attendance bhej do", "present mark karo" → use action "db_submit_request_needs_location". The backend will ask for GPS location and verify. DO NOT use db_create for student attendance.
+2. **ADMIN REVIEW**: When admin says "request approve karo", "pending requests", "request dikhao" → use "db_review_request" (single) or "db_read" (collection: attendancerequests) or "db_bulk_review".
+3. **DATES**: "kal" = TOMORROW. "aaj" = TODAY. "parso" = day after tomorrow. Use the exact YYYY-MM-DD computed from today.
+4. **TIMETABLE**: If user asks "kal ka timetable", "today's classes" → action "reply" with the exact schedule (backend provides it in context). NEVER invent subjects.
+5. **FACULTY**: If user asks "who teaches X" → backend context provides faculty. Use it. Do NOT guess.
+6. **PASSCODE PUBLISH**: Admin says "publish passcode for 30 min" → action "db_publish_passcode" with data: { type, durationMinutes }.
+7. **FEES/OTHER**: Non-DB chat → action "reply".
+8. Return ONLY valid JSON. No code fence. No extra text.
+
+## Examples:
+Student says: "aaj ki attendance mark karo" 
+→ { "action": "db_submit_request_needs_location", "collection": "attendancerequests", "data": { "date": "<TODAY>", "lectureType": "full_day", "reason": "Student request from chat" }, "explanation": "Verifying your location before sending request to admin.", "requiresConfirmation": false, "reply": null }
+
+Student says: "BDA lecture ke liye attendance request bhej do aaj"
+→ { "action": "db_submit_request_needs_location", "collection": "attendancerequests", "data": { "date": "<TODAY>", "lectureType": "single_lecture", "subject": "BDA - Big Data Analytics" }, "explanation": "Checking location and sending BDA lecture request.", "requiresConfirmation": false, "reply": null }
+
+Admin says: "Pending requests dikhao"
+→ { "action": "db_read", "collection": "attendancerequests", "filter": { "status": "Pending" }, "explanation": "Fetching pending attendance requests.", "requiresConfirmation": false, "reply": null }
+
+Admin says: "24CSE48 ka 21 September wala request approve karo"
+→ { "action": "db_review_request", "data": { "rollNo": "24CSE48", "date": "2026-09-21", "action": "Approved" }, "explanation": "Approving request for 24CSE48 on 21 Sept.", "requiresConfirmation": false, "reply": null }
+
+Admin says: "Diwali holiday add karo 25 Oct 2026"
+→ { "action": "db_create", "collection": "holidays", "data": { "date": "2026-10-25", "reason": "Diwali" }, "explanation": "Adding Diwali holiday.", "requiresConfirmation": false, "reply": null }
+
+Admin says: "Notice post karo: Exam kal hai"
+→ { "action": "db_create", "collection": "notices", "data": { "title": "Announcement", "message": "Exam kal hai" }, "explanation": "Publishing notice.", "requiresConfirmation": false, "reply": null }
+
+Admin says: "Passcode publish karo 30 min ke liye"
+→ { "action": "db_publish_passcode", "data": { "type": "single_lecture", "durationMinutes": 30 }, "explanation": "Publishing passcode for 30 minutes.", "requiresConfirmation": false, "reply": null }
+
+User says: "kal ka timetable kya hai"
+→ { "action": "reply", "reply": null, "explanation": "Showing tomorrow's timetable from context", "requiresConfirmation": false, "collection": null }
+
+User says: "meri attendance kitni hai"
+→ { "action": "db_aggregate", "collection": "attendances", "filter": { "rollNo": "<USER_ROLL>" }, "explanation": "Computing attendance percentage.", "requiresConfirmation": false, "reply": null }
+
+User says: "hello"
+→ { "action": "reply", "reply": "Hello! How can I help you?", "explanation": "Greeting", "requiresConfirmation": false, "collection": null }
+
+User says: "BDA notes do"
+→ { "action": "reply", "reply": "## BDA - Big Data Analytics notes...", "explanation": "Providing notes", "requiresConfirmation": false, "collection": null }
+`;
+
+async function detectDbIntent(message, userContext) {
+  const today = getISTDateString(new Date());
+  const tomorrow = getISTDateString(new Date(Date.now() + 24 * 60 * 60 * 1000));
+  const dayAfter = getISTDateString(new Date(Date.now() + 48 * 60 * 60 * 1000));
+  const ctx = `Role: ${userContext.role}
+RollNo: ${userContext.rollNo}
+Name: ${userContext.name}
+Branch: ${userContext.branch || 'CSE'}
+Today (YYYY-MM-DD): ${today}
+Tomorrow (YYYY-MM-DD): ${tomorrow}
+Day after tomorrow: ${dayAfter}`;
+  const prompt = `${ctx}\n\nUser message: "${message}"\n\nReturn ONLY valid JSON.`;
+  try {
+    const reply = await callGemini({
+      prompt,
+      systemPrompt: DB_INTENT_PROMPT,
+      maxTokens: 1200,
+      temperature: 0.2,
+      timeoutMs: 12000,
+      globalTimeoutMs: 30000,
+      maxAttempts: 4
+    });
+    let cleaned = reply.trim();
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
+    }
+    return JSON.parse(cleaned);
+  } catch (err) {
+    console.warn('DB intent parse failed:', err.message);
+    return { action: 'reply', reply: null, explanation: 'Could not parse', requiresConfirmation: false };
+  }
+}
+
+async function executeDbAction(intent, userContext) {
+  const { action, collection, filter, update, data, limit, sort, explanation, reply } = intent;
+  const isAdmin = userContext.role === 'admin';
+  const isFaculty = userContext.role === 'faculty';
+  const isStudent = userContext.role === 'student';
+
+  const collMap = {
+    users: User, attendances: Attendance, holidays: Holiday,
+    notices: Notice, leaves: Leave, passcodes: Passcode,
+    teachersubjects: TeacherSubject, attendancerequests: AttendanceRequest
+  };
+
+  // If reply action → return the reply
+  if (action === 'reply') {
+    return { reply: reply || explanation || 'Noted.', isReply: true };
+  }
+
+  // STUDENT — submit request needs location
+  if (action === 'db_submit_request_needs_location') {
+    if (!isStudent) return { error: 'Only students can submit attendance requests.' };
+    return {
+      needsLocation: true,
+      requestData: data || {},
+      message: 'Please share your location to verify you are on campus.',
+      isLocationRequired: true
+    };
+  }
+
+  // STUDENT permissions: read own data + submit requests only
+  if (isStudent) {
+    if (['db_create', 'db_update', 'db_delete'].includes(action)) {
+      if (collection !== 'attendancerequests') {
+        return { error: 'Students can only read their own data or submit attendance requests.' };
+      }
+    }
+    if (['db_read', 'db_count', 'db_aggregate'].includes(action)) {
+      if (collection === 'attendances' || collection === 'leaves' || collection === 'attendancerequests') {
+        filter = filter || {};
+        filter.rollNo = userContext.rollNo;
+      }
+      if (collection === 'users') { filter = filter || {}; filter.rollNo = userContext.rollNo; }
+      if (collection === 'passcodes') return { error: 'Passcodes are accessed via a separate public endpoint.' };
+    }
+  }
+
+  // FACULTY permissions
+  if (isFaculty) {
+    if (['users', 'notices', 'holidays', 'passcodes'].includes(collection) && ['db_create', 'db_update', 'db_delete'].includes(action)) {
+      return { error: 'Faculty cannot modify this collection.' };
+    }
+    if (collection === 'attendances' && ['db_create', 'db_update', 'db_delete'].includes(action)) {
+      const assigned = await TeacherSubject.find({ teacherRollNo: userContext.rollNo }).distinct('subject');
+      if (filter && filter.subject && !assigned.includes(filter.subject)) return { error: 'Only your assigned subjects.' };
+    }
+  }
+
+  try {
+    const Model = collMap[collection];
+
+    if (action === 'db_read') {
+      if (!Model) return { error: 'Unknown collection' };
+      let q = Model.find(filter || {});
+      if (sort) q = q.sort(sort);
+      q = q.limit(Math.min(limit || 20, 100));
+      const docs = await q.lean();
+      const sanitized = docs.map(d => {
+        if (!isAdmin) { delete d.password; delete d.activeSession; delete d.boundDeviceId; }
+        return d;
+      });
+      return { result: sanitized, count: sanitized.length };
+    }
+
+    if (action === 'db_count') {
+      if (!Model) return { error: 'Unknown collection' };
+      const count = await Model.countDocuments(filter || {});
+      return { result: { count } };
+    }
+
+    if (action === 'db_aggregate') {
+      if (collection === 'attendances') {
+        if (isAdmin && (!filter || !filter.rollNo)) {
+          const students = await User.find({ role: 'student' }).select('rollNo name branch');
+          const today = getISTDateString(new Date());
+          const startStr = getISTDateString(SEMESTER_START);
+          const defaulters = [];
+          for (const s of students) {
+            const present = await Attendance.countDocuments({ rollNo: s.rollNo, date: { $gte: startStr, $lte: today }, status: { $in: ['Present','Duty Leave'] }, subject: { $nin: [/Sports/i, /LIB/i, /Library/i] } });
+            const total = await Attendance.countDocuments({ rollNo: s.rollNo, date: { $gte: startStr, $lte: today }, subject: { $nin: [/Sports/i, /LIB/i, /Library/i] } });
+            const pct = total > 0 ? Math.round((present/total)*100) : 0;
+            if (total === 0 || pct < 75) defaulters.push({ rollNo: s.rollNo, name: s.name, branch: s.branch, pct, present, total });
+          }
+          defaulters.sort((a,b) => a.pct - b.pct);
+          return { result: { totalDefaulters: defaulters.length, defaulters: defaulters.slice(0, 20) } };
+        }
+        const rollNo = (filter && filter.rollNo) || userContext.rollNo;
+        const summary = await getStudentSummary(rollNo);
+        if (!summary) return { error: 'Student not found' };
+        return { result: { rollNo, attendancePercentage: summary.attendancePercentage, attended: summary.totalAcademicLectures, conducted: summary.totalConductedLectures, subjectStats: summary.subjectStats, workingDaysSoFar: summary.workingDaysSoFar, totalWorkingDaysSemester: summary.totalWorkingDaysSemester } };
+      }
+      return { error: 'Aggregate only for attendances' };
+    }
+
+    if (action === 'db_create') {
+      if (!Model) return { error: 'Unknown collection' };
+      if (collection === 'holidays') {
+        if (!isAdmin) return { error: 'Only admin can add holidays' };
+        if (!data || !data.date) return { error: 'Holiday date missing' };
+        await Holiday.findOneAndUpdate({ date: data.date }, { date: data.date, reason: data.reason || 'Holiday' }, { upsert: true });
+        return { result: { date: data.date, reason: data.reason } };
+      }
+      if (collection === 'notices') {
+        if (!isAdmin) return { error: 'Only admin can post notices' };
+        const n = await new Notice({ title: data.title || 'Announcement', message: data.message, date: new Date() }).save();
+        return { result: n.toObject() };
+      }
+      if (collection === 'attendances') {
+        if (!data || !data.rollNo || !data.subject || !data.date) return { error: 'Missing attendance fields' };
+        const stu = await User.findOne({ rollNo: data.rollNo });
+        if (!stu) return { error: 'Student not found' };
+        try {
+          const rec = await new Attendance({
+            rollNo: data.rollNo, studentName: stu.name, subject: mapToCanonical(data.subject),
+            date: data.date, status: data.status || 'Present',
+            location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG },
+            ipAddress: 'chatbot-create', isVerified: true, branch: stu.branch || 'CSE'
+          }).save();
+          return { result: rec.toObject() };
+        } catch (e) { if (e.code === 11000) return { error: 'Record already exists' }; throw e; }
+      }
+      return { error: 'Create not supported for: ' + collection };
+    }
+
+    if (action === 'db_update') {
+      if (!Model) return { error: 'Unknown collection' };
+      if (!update) return { error: 'Update fields missing' };
+      const r = await Model.updateMany(filter || {}, update);
+      return { result: { matched: r.matchedCount, modified: r.modifiedCount } };
+    }
+
+    if (action === 'db_delete') {
+      if (!Model) return { error: 'Unknown collection' };
+      if (collection === 'users' && !isAdmin) return { error: 'Only admin can delete users' };
+      const r = await Model.deleteMany(filter || {});
+      return { result: { deleted: r.deletedCount } };
+    }
+
+    if (action === 'db_publish_passcode') {
+      if (!isAdmin) return { error: 'Only admin can publish passcode' };
+      const type = data?.type || 'single_lecture';
+      const durationMinutes = parseInt(data?.durationMinutes) || (type === 'full_day' ? 1440 : 5);
+      const now = new Date();
+      const todayStr = getISTDateString(now);
+      const ds = await checkDateStatus(todayStr);
+      if (ds.isBlocked) return { error: 'College closed today — no passcode needed.' };
+
+      let passcode, expiry, key;
+      if (type === 'single_lecture') {
+        const period = getCurrentPeriod(userContext.branch || 'CSE');
+        if (!period) return { error: 'No active lecture now.' };
+        passcode = Math.floor(1000 + Math.random() * 9000).toString();
+        key = `single_lecture_${todayStr}_${period.start}_pub`;
+        expiry = new Date(now.getTime() + durationMinutes * 60 * 1000);
+      } else {
+        passcode = Math.floor(10000 + Math.random() * 90000).toString();
+        key = `full_day_${todayStr}_pub`;
+        expiry = new Date(now.getTime() + durationMinutes * 60 * 1000);
+      }
+      await Passcode.updateMany({ key }, { $set: { expiresAt: new Date(0) } });
+      const doc = await new Passcode({ passcode, type, key, expiresAt: expiry, published: true, publishedAt: now, publishedBy: userContext.rollNo, durationMinutes }).save();
+      return { result: { passcode, type, expiresAt: expiry, durationMinutes, published: true } };
+    }
+
+    if (action === 'db_review_request') {
+      if (!isAdmin && !isFaculty) return { error: 'Only admin/faculty can review requests' };
+      const { rollNo, date, requestId, action: reviewAction, note } = data || {};
+      let reqDoc = null;
+      if (requestId) reqDoc = await AttendanceRequest.findById(requestId);
+      else if (rollNo && date) reqDoc = await AttendanceRequest.findOne({ rollNo: rollNo.toUpperCase(), date, status: 'Pending' }).sort({ createdAt: -1 });
+      if (!reqDoc) return { error: 'No matching pending request found.' };
+      const decision = reviewAction === 'Approved' ? 'Approved' : (reviewAction === 'Rejected' ? 'Rejected' : 'Approved');
+
+      if (decision === 'Approved') {
+        const b = reqDoc.branch || 'CSE';
+        const schedule = getScheduleForDate(reqDoc.date, b);
+        let subjectsToMark = [];
+        if (reqDoc.lectureType === 'full_day') {
+          subjectsToMark = [...new Set(schedule.schedule
+            .filter(s => !s.subject.includes('LIB') && !s.subject.includes('Library') && !s.subject.includes('Sports') && s.period !== 'LUNCH')
+            .map(s => mapToCanonical(s.subject)))];
+        } else if (reqDoc.lectureType === 'single_lecture' && reqDoc.subject) {
+          subjectsToMark = [mapToCanonical(reqDoc.subject)];
+        } else if (reqDoc.lectureType === 'double_lecture' && reqDoc.subject) {
+          const subj = mapToCanonical(reqDoc.subject);
+          const idx = schedule.schedule.findIndex(s => mapToCanonical(s.subject) === subj);
+          if (idx >= 0) {
+            subjectsToMark.push(subj);
+            for (let i = idx + 1; i < schedule.schedule.length; i++) {
+              const nxt = mapToCanonical(schedule.schedule[i].subject);
+              if (nxt.includes('LIB') || nxt.includes('Library') || nxt.includes('Sports') || schedule.schedule[i].period === 'LUNCH') continue;
+              subjectsToMark.push(nxt); break;
+            }
+          } else subjectsToMark = [subj];
+        }
+        let marked = 0;
+        const markedSubs = [];
+        for (const sub of subjectsToMark) {
+          try {
+            const ex = await Attendance.findOne({ rollNo: reqDoc.rollNo, subject: sub, date: reqDoc.date });
+            if (!ex) {
+              await Attendance.create({ rollNo: reqDoc.rollNo, studentName: reqDoc.studentName, subject: sub, date: reqDoc.date, status: 'Present', location: reqDoc.location, ipAddress: 'chatbot-review', isVerified: true, branch: b });
+              marked++;
+              markedSubs.push(sub);
+            }
+          } catch (e) {}
+        }
+        reqDoc.status = marked === subjectsToMark.length ? 'Approved' : 'Partially Approved';
+        reqDoc.reviewedBy = userContext.rollNo;
+        reqDoc.adminNote = note || '';
+        reqDoc.reviewHistory.push({ action: 'Approved', by: userContext.rollNo, at: new Date(), note: note || '', reviewedSubjects: markedSubs });
+        await reqDoc.save();
+        return { result: { requestId: reqDoc._id, status: reqDoc.status, marked, markedSubjects: markedSubs, totalRequested: subjectsToMark.length } };
+      } else {
+        reqDoc.status = 'Rejected';
+        reqDoc.reviewedBy = userContext.rollNo;
+        reqDoc.adminNote = note || '';
+        reqDoc.reviewHistory.push({ action: 'Rejected', by: userContext.rollNo, at: new Date(), note: note || '' });
+        await reqDoc.save();
+        return { result: { requestId: reqDoc._id, status: 'Rejected' } };
+      }
+    }
+
+    if (action === 'db_bulk_review') {
+      if (!isAdmin) return { error: 'Admin only.' };
+      const ids = data?.requestIds || [];
+      if (!ids.length) return { error: 'No request IDs provided.' };
+      const decision = data.action === 'Rejected' ? 'Rejected' : 'Approved';
+      let totalMarked = 0;
+      for (const id of ids) {
+        const r = await AttendanceRequest.findById(id);
+        if (!r || r.status !== 'Pending') continue;
+        if (decision === 'Rejected') { r.status = 'Rejected'; r.reviewedBy = userContext.rollNo; r.reviewHistory.push({ action: 'Rejected', by: userContext.rollNo, at: new Date() }); await r.save(); }
+        else {
+          const b = r.branch || 'CSE';
+          const schedule = getScheduleForDate(r.date, b);
+          let subs = [];
+          if (r.lectureType === 'full_day') {
+            subs = [...new Set(schedule.schedule.filter(s => !s.subject.includes('LIB') && !s.subject.includes('Library') && !s.subject.includes('Sports') && s.period !== 'LUNCH').map(s => mapToCanonical(s.subject)))];
+          } else if (r.subject) subs = [mapToCanonical(r.subject)];
+          let mk = 0;
+          for (const sub of subs) {
+            try { const ex = await Attendance.findOne({ rollNo: r.rollNo, subject: sub, date: r.date }); if (!ex) { await Attendance.create({ rollNo: r.rollNo, studentName: r.studentName, subject: sub, date: r.date, status: 'Present', location: r.location, ipAddress: 'bulk-review', isVerified: true, branch: b }); mk++; } } catch (e) {}
+          }
+          r.status = 'Approved'; r.reviewedBy = userContext.rollNo; r.reviewHistory.push({ action: 'Approved', by: userContext.rollNo, at: new Date(), reviewedSubjects: subs }); await r.save();
+          totalMarked += mk;
+        }
+      }
+      return { result: { totalReviewed: ids.length, totalMarked } };
+    }
+
+    return { error: 'Unsupported action: ' + action };
+  } catch (err) {
+    console.error('DB execute error:', err);
+    return { error: 'Execution failed: ' + err.message };
+  }
+}
+
+function formatDbResult(result, action) {
+  if (!result) return 'Done.';
+  if (result.passcode) return `Passcode: **${result.passcode}**\nType: ${result.type}\nExpires: ${new Date(result.expiresAt).toLocaleString('en-IN')}\nPublished: ${result.published ? 'Yes ✅' : 'No'}`;
+  if (result.attendancePercentage !== undefined) {
+    const weak = Object.entries(result.subjectStats || {}).filter(([_, s]) => s.percentage < 75);
+    let txt = `Roll No: **${result.rollNo}**\nOverall Attendance: **${result.attendancePercentage}%** (${result.attended}/${result.conducted})\nWorking Days So Far: ${result.workingDaysSoFar}/${result.totalWorkingDaysSemester}`;
+    if (weak.length) txt += `\n\n⚠️ Low subjects (<75%):\n${weak.map(([s, st]) => `• ${s}: ${st.percentage}% (${st.present}/${st.total})`).join('\n')}`;
+    return txt;
+  }
+  if (result.requestId) return `Request ID: ${result.requestId}\nStatus: ${result.status}\nMarked: ${result.marked || 0} lectures`;
+  if (result.deleted !== undefined) return `Deleted: ${result.deleted}`;
+  if (result.modified !== undefined) return `Modified: ${result.modified}`;
+  if (result.count !== undefined) return `Count: ${result.count}`;
+  if (Array.isArray(result)) {
+    if (!result.length) return 'No records found.';
+    // Special handling for requests
+    if (result[0] && result[0].lectureType !== undefined) {
+      return result.map(r => `• ${r.rollNo} (${r.studentName}) — ${r.date} — ${r.lectureType}${r.subject ? ' - ' + r.subject : ''} — Status: ${r.status}`).join('\n');
+    }
+    return `${result.length} record(s):\n${result.slice(0, 10).map(r => JSON.stringify(r)).join('\n')}${result.length > 10 ? '\n...' : ''}`;
+  }
+  return JSON.stringify(result, null, 2);
+}
+
+// ============================================================
 //  UNIFIED CHATBOT — Smart Context + Database Assistant
 // ============================================================
-function buildShortWelcome(role, userName) {
-  if (role === 'admin') return `Namaste ${userName}! 👋 Admin panel ready. Context aur Database toggle kar sakte ho detailed features ke liye.`;
-  if (role === 'faculty') return `Namaste ${userName}! 👋 Faculty mode ready. Context on karo students ke details ke liye, Database on karo attendance mark karne ke liye.`;
-  return `Namaste ${userName}! 👋 Kya help chahiye? Attendance, timetable, notes ya kuch aur — bas pucho!`;
-}
-
-function buildDetailedWelcome(role, userName) {
-  if (role === 'admin') return `Namaste ${userName} 👋\n\nMain aapka **Admin Assistant** hun. Aap ye sab kar sakte ho:\n• 📊 Attendance reports aur defaulters\n• 📢 Notice publish karna\n• 🎉 Holiday declare karna\n• 🔐 Passcode generate/publish karna\n• 📋 Student requests review karna\n• 👥 User management\n\n**Database toggle ON** karke seedha bol sakte ho: "Diwali holiday add karo 25 Oct", "Notice post karo" etc.`;
-  if (role === 'faculty') return `Namaste ${userName} 👋\n\nMain aapka **Faculty Assistant** hun:\n• 📚 Aapke assigned subjects ke students\n• ✅ Attendance mark karna (passcode ke sath)\n• 🔐 Lecture passcode generate karna\n• 📊 Class average aur reports\n• 📋 Student requests review karna\n\n**Database toggle ON** karke direct commands de sakte ho.`;
-  return `Namaste ${userName} 👋\n\nMain aapka **BM Bot** hun. Aap ye kar sakte ho:\n• 📊 Apni attendance check karna\n• 🗓️ Timetable dekhna\n• 🎉 Holidays jaanna\n• 📝 Notes/study material\n• 💻 Coding help\n• 📩 Attendance correction request bhejna\n\n**Context ON** → aapka personal data use hoga\n**Database ON** → attendance request bhej sakte ho`;
-}
-
 app.post('/api/ai/chat', async (req, res) => {
   try {
-    const { message, rollNo, role, name, branch, threadId, skipGreeting, useContext, useDatabase } = req.body;
+    const { message, rollNo, role, name, branch, threadId, skipGreeting, useContext, useDatabase, location } = req.body;
     if (!message) return res.status(400).json({ error: 'Message is required.' });
     const cr = rollNo?.trim().toUpperCase() || 'guest';
     const useCtx = useContext === true;
@@ -2153,7 +2430,7 @@ app.post('/api/ai/chat', async (req, res) => {
     if (cr !== 'guest') {
       try { userData = await User.findOne({ rollNo: cr }); } catch(e){}
       if (threadId) {
-        try { existingChat = await Chat.findOne({ threadId, rollNo: cr }); } catch (e) { console.warn('Chat history fetch failed:', e.message); }
+        try { existingChat = await Chat.findOne({ threadId, rollNo: cr }); } catch (e) {}
       }
     }
 
@@ -2163,91 +2440,150 @@ app.post('/api/ai/chat', async (req, res) => {
     // ===== DATABASE MODE =====
     if (useDb && userData) {
       try {
-        const intent = await detectIntent(message, {
+        const intent = await detectDbIntent(message, {
           role: userRole, rollNo: cr, name: userName, branch: userData.branch || 'CSE'
         });
-        console.log('🧠 Intent:', JSON.stringify(intent).substring(0, 300));
+        console.log('🧠 DB Intent:', JSON.stringify(intent).substring(0, 300));
 
-        // If it's a pure reply intent, fall through to normal AI chat
-        if (intent.action !== 'reply') {
-          // Execute DB action (with role checks)
-          if (intent.requiresConfirmation) {
-            // Send to frontend for confirmation
-            // We still store chat
-            if (cr !== 'guest') {
-              const autoTitle = message.substring(0, 50) || 'DB op';
-              if (existingChat) {
-                existingChat.messages.push({ role: 'user', content: message });
-                existingChat.messages.push({ role: 'assistant', content: `[Pending confirmation] ${intent.explanation}` });
-                existingChat.updatedAt = new Date();
-                await existingChat.save();
-                return res.json({ reply: `⚠️ ${intent.explanation}\n\nConfirm karo:`, threadId: existingChat.threadId, title: existingChat.title, aiOk: true, usedContext: useCtx, usedDatabase: true, dbOp: intent, requiresConfirmation: true });
-              } else {
-                const nt = new Chat({ rollNo: cr, threadId: `chat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`, title: autoTitle, messages: [{ role: 'user', content: message }, { role: 'assistant', content: `[Pending] ${intent.explanation}` }] });
-                await nt.save();
-                return res.json({ reply: `⚠️ ${intent.explanation}\n\nConfirm karo:`, threadId: nt.threadId, title: autoTitle, aiOk: true, usedContext: useCtx, usedDatabase: true, dbOp: intent, requiresConfirmation: true });
-              }
+        // Handle location-required student request
+        if (intent.action === 'db_submit_request_needs_location') {
+          // If frontend already sent location
+          if (location && location.latitude && location.longitude) {
+            const locCheck = verifyLocationForRequest(location.latitude, location.longitude);
+            if (!locCheck.valid) {
+              const replyText = `❌ ${locCheck.message}`;
+              return res.json({ reply: replyText, threadId, title: 'Request', aiOk: true, usedDatabase: true, dbError: locCheck.message, locationRejected: true, distance: locCheck.distance });
             }
-            return res.json({ reply: `⚠️ ${intent.explanation}\n\nConfirm karo:`, threadId: threadId, title: 'New Chat', aiOk: true, usedContext: useCtx, usedDatabase: true, dbOp: intent, requiresConfirmation: true });
-          }
+            // Location valid → create request
+            const requestData = intent.data || {};
+            const todayStr = getISTDateString(new Date());
+            const reqDate = requestData.date || todayStr;
+            const lectureType = requestData.lectureType || 'full_day';
+            const subject = requestData.subject ? mapToCanonical(requestData.subject) : null;
 
-          // Execute immediately
-          const execResult = await executeDbAction(intent, {
-            role: userRole, rollNo: cr, name: userName, branch: userData.branch || 'CSE'
-          });
+            // Date status check
+            const ds = await checkDateStatus(reqDate);
+            if (ds.isBlocked) {
+              return res.json({ reply: `❌ Cannot submit request — ${ds.type === 'WEEKEND' ? ds.dayName + ' is a weekend' : 'Holiday: ' + (ds.holiday || 'College closed')}.`, threadId, aiOk: true, usedDatabase: true });
+            }
 
-          let replyText = execResult.error
-            ? `❌ ${execResult.error}`
-            : `✅ ${intent.explanation}\n\n${formatResult(execResult.result)}`;
+            // Duplicate check
+            const dup = await AttendanceRequest.findOne({ rollNo: cr, date: reqDate, lectureType, status: 'Pending' });
+            if (dup) {
+              return res.json({ reply: `⚠️ You already have a pending ${lectureType.replace('_',' ')} request for ${reqDate}. Please wait for admin review.`, threadId, aiOk: true, usedDatabase: true, dbResult: dup });
+            }
 
-          // Save chat
-          if (cr !== 'guest') {
-            const autoTitle = message.substring(0, 50) || 'DB op';
+            const newReq = await AttendanceRequest.create({
+              rollNo: cr,
+              studentName: userData.name,
+              branch: userData.branch || 'CSE',
+              date: reqDate,
+              lectureType,
+              subject,
+              subjects: [],
+              reason: requestData.reason || 'Manual attendance request from chat',
+              location: { latitude: location.latitude, longitude: location.longitude },
+              distanceFromCollege: locCheck.distance,
+              locationVerified: true,
+              status: 'Pending'
+            });
+            const replyText = `✅ **Attendance request submitted successfully!**\n\n• **Date:** ${reqDate}\n• **Lecture Type:** ${lectureType.replace('_', ' ')}\n${subject ? `• **Subject:** ${subject}\n` : ''}• **Location:** ${locCheck.distance}m from college (verified ✅)\n• **Status:** Pending admin review\n\nAdmin will review your request shortly. You'll be marked present once approved.`;
             if (existingChat) {
               existingChat.messages.push({ role: 'user', content: message });
               existingChat.messages.push({ role: 'assistant', content: replyText });
               existingChat.updatedAt = new Date();
               await existingChat.save();
-              return res.json({ reply: replyText, threadId: existingChat.threadId, title: existingChat.title, aiOk: true, usedContext: useCtx, usedDatabase: true, dbResult: execResult.result, dbError: execResult.error });
-            } else {
-              const nt = new Chat({ rollNo: cr, threadId: `chat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`, title: autoTitle, messages: [{ role: 'user', content: message }, { role: 'assistant', content: replyText }] });
-              await nt.save();
-              return res.json({ reply: replyText, threadId: nt.threadId, title: autoTitle, aiOk: true, usedContext: useCtx, usedDatabase: true, dbResult: execResult.result, dbError: execResult.error });
             }
+            return res.json({ reply: replyText, threadId: existingChat?.threadId || threadId, title: existingChat?.title || 'Request', aiOk: true, usedDatabase: true, dbResult: newReq, requestSubmitted: true });
+          } else {
+            // No location yet → ask frontend for it
+            return res.json({
+              reply: `📍 **Location verification required**\n\nPlease share your location so I can verify you are on campus (within ${COLLEGE_RADIUS}m).`,
+              threadId, title: 'Request', aiOk: true, usedDatabase: true,
+              needsLocation: true,
+              requestData: intent.data || {},
+              explanation: intent.explanation
+            });
           }
-          return res.json({ reply: replyText, threadId: threadId, title: 'New Chat', aiOk: true, usedContext: useCtx, usedDatabase: true, dbResult: execResult.result, dbError: execResult.error });
         }
-        // else fall through to normal chat using intent.reply as hint
-        if (intent.reply) {
-          // Reply provided by intent detection
-          if (cr !== 'guest') {
-            const autoTitle = message.substring(0, 50) || 'Chat';
-            if (existingChat) {
-              existingChat.messages.push({ role: 'user', content: message });
-              existingChat.messages.push({ role: 'assistant', content: intent.reply });
-              existingChat.updatedAt = new Date();
-              await existingChat.save();
-              return res.json({ reply: intent.reply, threadId: existingChat.threadId, title: existingChat.title, aiOk: true, usedContext: useCtx, usedDatabase: true });
-            } else {
-              const nt = new Chat({ rollNo: cr, threadId: `chat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`, title: autoTitle, messages: [{ role: 'user', content: message }, { role: 'assistant', content: intent.reply }] });
-              await nt.save();
-              return res.json({ reply: intent.reply, threadId: nt.threadId, title: autoTitle, aiOk: true, usedContext: useCtx, usedDatabase: true });
-            }
+
+        // Handle db_review_request — needs explicit request lookup
+        if (intent.action === 'db_review_request') {
+          const reviewData = intent.data || {};
+          const execResult = await executeDbAction(intent, { role: userRole, rollNo: cr, name: userName, branch: userData.branch || 'CSE' });
+          let replyText;
+          if (execResult.error) replyText = `❌ ${execResult.error}`;
+          else {
+            const r = execResult.result;
+            replyText = `✅ **Request ${r.status}**\nRequest ID: ${r.requestId}\nMarked: ${r.marked || 0}/${r.totalRequested || 0} lectures${r.markedSubjects?.length ? '\nSubjects: ' + r.markedSubjects.join(', ') : ''}`;
           }
-          return res.json({ reply: intent.reply, threadId: threadId, title: 'Chat', aiOk: true, usedContext: useCtx, usedDatabase: true });
+          if (existingChat) {
+            existingChat.messages.push({ role: 'user', content: message });
+            existingChat.messages.push({ role: 'assistant', content: replyText });
+            existingChat.updatedAt = new Date();
+            await existingChat.save();
+          }
+          return res.json({ reply: replyText, threadId: existingChat?.threadId || threadId, title: existingChat?.title || 'DB Op', aiOk: true, usedDatabase: true, dbResult: execResult.result, dbError: execResult.error });
+        }
+
+        // Handle db_read, db_count, db_aggregate, db_create, db_update, db_delete, db_publish_passcode, db_bulk_review
+        if (intent.action !== 'reply' && intent.action !== 'db_submit_request_needs_location') {
+          // Requires confirmation?
+          if (intent.requiresConfirmation) {
+            return res.json({
+              reply: `⚠️ **${intent.explanation || 'Confirm this operation'}**`,
+              threadId, title: 'Confirm', aiOk: true, usedContext: useCtx, usedDatabase: true,
+              dbOp: intent, requiresConfirmation: true
+            });
+          }
+          const execResult = await executeDbAction(intent, { role: userRole, rollNo: cr, name: userName, branch: userData.branch || 'CSE' });
+          let replyText;
+          if (execResult.error) replyText = `❌ ${execResult.error}`;
+          else replyText = `✅ ${intent.explanation || 'Done'}\n\n${formatDbResult(execResult.result, intent.action)}`;
+          if (existingChat) {
+            existingChat.messages.push({ role: 'user', content: message });
+            existingChat.messages.push({ role: 'assistant', content: replyText });
+            existingChat.updatedAt = new Date();
+            await existingChat.save();
+          } else if (cr !== 'guest') {
+            const autoTitle = message.substring(0, 50);
+            const nt = await Chat.create({ rollNo: cr, threadId: `chat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`, title: autoTitle, messages: [{ role: 'user', content: message }, { role: 'assistant', content: replyText }] });
+            return res.json({ reply: replyText, threadId: nt.threadId, title: autoTitle, aiOk: true, usedDatabase: true, dbResult: execResult.result, dbError: execResult.error });
+          }
+          return res.json({ reply: replyText, threadId: existingChat?.threadId || threadId, title: existingChat?.title || 'DB Op', aiOk: true, usedContext: useCtx, usedDatabase: true, dbResult: execResult.result, dbError: execResult.error });
+        }
+
+        // If AI returned "reply" for a DB-mode message, fall through to normal chat with the reply
+        if (intent.reply) {
+          if (existingChat) {
+            existingChat.messages.push({ role: 'user', content: message });
+            existingChat.messages.push({ role: 'assistant', content: intent.reply });
+            existingChat.updatedAt = new Date();
+            await existingChat.save();
+          }
+          return res.json({ reply: intent.reply, threadId: existingChat?.threadId || threadId, title: existingChat?.title || 'Chat', aiOk: true, usedDatabase: true });
         }
       } catch (err) {
-        console.warn('DB mode error, falling back to normal chat:', err.message);
+        console.warn('DB mode error, falling back:', err.message);
       }
     }
 
     // ===== NORMAL CHAT MODE =====
-    // ✅ SMART CONTEXT — only if user explicitly enabled useContext
     let contextStr = '';
     if (useCtx && userData) {
       const needs = detectContextNeeds(message);
       const lines = [];
-      lines.push(`Date/time: ${new Date().toLocaleString()}`);
+      const now = new Date();
+      const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+      const todayStr = getISTDateString(now);
+      const todayDay = dayNames[now.getDay()];
+      const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = getISTDateString(tomorrow);
+      const tomorrowDay = dayNames[tomorrow.getDay()];
+
+      lines.push(`Date/time: ${now.toLocaleString()}`);
+      lines.push(`Today: ${todayStr} (${todayDay})`);
+      lines.push(`Tomorrow: ${tomorrowStr} (${tomorrowDay})`);
       lines.push(`User: ${userData.name} (${userData.rollNo}, ${userData.role})`);
       lines.push(`Branch: ${userData.branch || 'CSE'}`);
 
@@ -2262,32 +2598,55 @@ app.post('/api/ai/chat', async (req, res) => {
               lines.push(...subLines);
             }
           }
-        } catch(e) { console.warn('Attendance fetch failed:', e.message); }
+        } catch(e) {}
       }
 
       if (needs.holiday) {
         try {
-          const today = new Date();
           const startStr = getISTDateString(SEMESTER_START);
-          const todayStr = getISTDateString(today);
           const holidays = await Holiday.find({ date: { $gte: startStr, $lte: todayStr } });
-          if (holidays.length) lines.push(`Holidays: ${holidays.map(h => `${h.date} (${h.reason})`).join(', ')}`);
+          if (holidays.length) lines.push(`Holidays so far: ${holidays.map(h => `${h.date} (${h.reason})`).join(', ')}`);
         } catch(e) {}
       }
 
-      if (needs.timetable || needs.currentPeriod) {
+      // ✅ FIXED: Timetable context with BOTH today and tomorrow + faculty
+      if (needs.timetable || needs.currentPeriod || needs.faculty) {
         try {
-          const todayDay = new Date().toLocaleString('en', { weekday: 'long' });
-          const tt = getTimetableForBranch(userData.branch || 'CSE')[todayDay] || [];
-          lines.push(`Today (${todayDay}): ${tt.map(s => s.subject).join(', ')}`);
+          const branchTT = getTimetableForBranch(userData.branch || 'CSE');
+          const branchSchedule = getScheduleForBranch(userData.branch || 'CSE');
+
+          const todaySubs = branchTT[todayDay] || [];
+          lines.push(`Today (${todayDay}, ${todayStr}) timetable: ${todaySubs.length ? todaySubs.map(s => `${s.subject} (${s.faculty})`).join(', ') : 'No classes'}`);
+
+          const tomorrowSubs = branchTT[tomorrowDay] || [];
+          lines.push(`Tomorrow (${tomorrowDay}, ${tomorrowStr}) timetable: ${tomorrowSubs.length ? tomorrowSubs.map(s => `${s.subject} (${s.faculty})`).join(', ') : 'No classes'}`);
+
+          // Include full day schedule with time slots
+          const dowToday = now.getDay();
+          if (dowToday >= 1 && dowToday <= 5) {
+            const slots = branchSchedule[dowToday] || [];
+            if (slots.length) {
+              lines.push(`Today's detailed schedule (${todayDay}):`);
+              slots.forEach(sl => lines.push(`  • ${sl.start}-${sl.end} ${sl.subject} (${sl.faculty}) [${sl.period}]`));
+            }
+          }
+
+          const dowTomorrow = tomorrow.getDay();
+          if (dowTomorrow >= 1 && dowTomorrow <= 5) {
+            const slots = branchSchedule[dowTomorrow] || [];
+            if (slots.length) {
+              lines.push(`Tomorrow's detailed schedule (${tomorrowDay}):`);
+              slots.forEach(sl => lines.push(`  • ${sl.start}-${sl.end} ${sl.subject} (${sl.faculty}) [${sl.period}]`));
+            }
+          }
+
           const currentPeriod = getCurrentPeriod(userData.branch || 'CSE');
-          if (currentPeriod) lines.push(`Current period: ${currentPeriod.subject} (${currentPeriod.start}-${currentPeriod.end})`);
-        } catch(e) {}
+          if (currentPeriod) lines.push(`Current period: ${currentPeriod.subject} by ${currentPeriod.faculty} (${currentPeriod.start}-${currentPeriod.end})`);
+        } catch(e) { console.warn('Timetable context error:', e.message); }
       }
 
       if (needs.passcode) {
         try {
-          const now = new Date();
           const activePubs = await Passcode.find({ published: true, expiresAt: { $gt: now } });
           if (activePubs.length) lines.push(`Active public passcodes: ${activePubs.map(p => `${p.type}=${p.passcode}`).join(', ')}`);
         } catch(e) {}
@@ -2296,8 +2655,8 @@ app.post('/api/ai/chat', async (req, res) => {
       contextStr = lines.join('\n');
     }
 
-    const now = new Date();
-    const hour = now.getHours();
+    const now2 = new Date();
+    const hour = now2.getHours();
     let greeting = '', emoji = '';
     if (!skipGreeting) {
       if (hour < 12) { greeting = 'Good morning'; emoji = '🌞'; }
@@ -2305,10 +2664,8 @@ app.post('/api/ai/chat', async (req, res) => {
       else { greeting = 'Good evening'; emoji = '🌙'; }
     }
 
-    // Build system prompt based on context
     let systemPrompt;
     if (!useCtx) {
-      // Short, no personal context
       systemPrompt = `You are "BM Bot" for BM Group of Institutions attendance portal.
 ${greeting ? greeting + ', ' + userName + ' ' + emoji + '!' : ''}
 Assisting ${userRole}.
@@ -2319,20 +2676,25 @@ Role:
 - Use Hinglish/English as user does.
 - NEVER use markdown tables. Use bullet points.`;
     } else {
-      // Detailed with context
       const ctxBlock = contextStr ? `\nContext:\n${contextStr}` : '';
       systemPrompt = `You are "BM Bot" for BM Group of Institutions attendance portal.
 ${greeting ? greeting + ', ' + userName + ' ' + emoji + '!' : ''}
 Assisting ${userRole}.${ctxBlock}
+
+⚠️ STRICT RULES:
+- Use ONLY the timetable data provided above. Do NOT invent subjects, rooms, times, or faculty names.
+- Class timings start at 09:20 AM for CSE/AIDS. Do NOT make up 09:00 AM timings.
+- "Kal" = TOMORROW (as shown in context), NOT yesterday.
+- If Context is empty for the requested info, say "Timetable data available nahi hai, Context ON karke try karo" — DON'T make up.
+- If tomorrow is Saturday/Sunday → say college is closed.
+- Always include faculty name when answering timetable queries.
+- NEVER use markdown tables. Use bullet points.
+
 Role:
-- Answer questions on attendance, timetable, holidays, notes, coding, general help.
-- Use the provided context when relevant.
+- Answer questions on attendance, timetable, holidays, notes, coding.
+- Use provided context when relevant.
 - If user asks "kitne bunk kar sakta hun" — calculate using 75% rule.
-- If asked for notes — provide with headings, bullets, examples.
-- Warn politely if attendance below 75%.
-- Be friendly, encouraging, use emojis.
-- Use Hinglish/English as user does.
-- NEVER use markdown tables. Use bullet points for comparison.`;
+- Be friendly, use emojis. Hinglish/English mix.`;
     }
 
     let reply = '';
@@ -2350,7 +2712,7 @@ Role:
       });
       aiOk = true;
     } catch (err) {
-      console.warn('⚠️ AI failed:', err.message, '| type:', err.type);
+      console.warn('⚠️ AI failed:', err.message);
       reply = err.message;
     }
 
@@ -2365,12 +2727,9 @@ Role:
         newThreadId = existingChat.threadId; newTitle = existingChat.title;
       } else {
         const autoTitle = message.substring(0, 50) || 'New Chat';
-        const nt = new Chat({ rollNo: cr, threadId: `chat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`, title: autoTitle, messages: [{ role: 'user', content: message }, { role: 'assistant', content: reply }] });
-        await nt.save();
+        const nt = await Chat.create({ rollNo: cr, threadId: `chat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`, title: autoTitle, messages: [{ role: 'user', content: message }, { role: 'assistant', content: reply }] });
         newThreadId = nt.threadId; newTitle = autoTitle;
       }
-    } else if (cr !== 'guest' && !aiOk) {
-      newThreadId = threadId || null;
     }
 
     res.json({ reply, threadId: newThreadId, title: newTitle, aiOk, usedContext: useCtx, usedDatabase: useDb });
@@ -2379,28 +2738,6 @@ Role:
     res.status(500).json({ error: 'Internal error: ' + err.message });
   }
 });
-
-function formatResult(result) {
-  if (!result) return 'Done.';
-  if (typeof result === 'object') {
-    if (result.count !== undefined) return `Count: ${result.count}`;
-    if (result.deleted !== undefined) return `Deleted: ${result.deleted}`;
-    if (result.modified !== undefined) return `Modified: ${result.modified}`;
-    if (result.passcode) return `Passcode: **${result.passcode}**\nType: ${result.type}\nExpires: ${new Date(result.expiresAt).toLocaleString('en-IN')}\nPublished: ${result.published ? 'Yes ✅' : 'No'}`;
-    if (result.attendancePercentage !== undefined) {
-      const weak = Object.entries(result.subjectStats || {}).filter(([_, s]) => s.percentage < 75);
-      let txt = `Overall: **${result.attendancePercentage}%** (${result.attended}/${result.conducted})`;
-      if (weak.length) txt += `\n\n⚠️ Low subjects:\n${weak.map(([s, st]) => `• ${s}: ${st.percentage}%`).join('\n')}`;
-      return txt;
-    }
-    if (result.requestId) return `Request ID: ${result.requestId}\nDates: ${result.dates.join(', ')}\nStatus: ${result.status}`;
-    if (Array.isArray(result)) {
-      if (!result.length) return 'No records found.';
-      return `${result.length} record(s):\n${result.slice(0, 5).map(r => JSON.stringify(r)).join('\n')}${result.length > 5 ? '\n...' : ''}`;
-    }
-  }
-  return JSON.stringify(result);
-}
 
 // Confirm pending DB operation
 app.post('/api/ai/chat/confirm-db', async (req, res) => {
@@ -2414,7 +2751,7 @@ app.post('/api/ai/chat/confirm-db', async (req, res) => {
     });
     const replyText = execResult.error
       ? `❌ ${execResult.error}`
-      : `✅ ${operation.explanation || 'Done'}\n\n${formatResult(execResult.result)}`;
+      : `✅ ${operation.explanation || 'Done'}\n\n${formatDbResult(execResult.result, operation.action)}`;
     res.json({ reply: replyText, aiOk: true, dbResult: execResult.result, dbError: execResult.error });
   } catch (err) {
     console.error('❌ Confirm DB error:', err);
@@ -2430,45 +2767,23 @@ app.post('/api/ai/chat-with-file', async (req, res) => {
     const { prompt, fileBase64, mimeType, rollNo, role, name, branch, threadId } = req.body;
     if (!fileBase64 || !mimeType) return res.status(400).json({ error: 'fileBase64 and mimeType required.' });
     const userPrompt = prompt || 'Explain this document/file. Give me a clear summary with key points.';
-
     const allowed = ['application/pdf','text/plain','image/jpeg','image/jpg','image/png','image/webp','image/gif'];
     const isAllowed = allowed.some(t => mimeType === t || mimeType.includes(t));
     if (!isAllowed) return res.status(400).json({ error: `Unsupported file type: ${mimeType}.` });
-
     const cr = rollNo?.trim().toUpperCase() || 'guest';
     let userData = null;
     if (cr !== 'guest') userData = await User.findOne({ rollNo: cr });
     const userName = userData?.name || name || 'Guest';
     const userRole = userData?.role || role || 'student';
-
     const fileLabels = { pdf: 'PDF document', plain: 'text file', jpeg: 'image (JPEG)', jpg: 'image (JPEG)', png: 'image (PNG)', webp: 'image (WebP)', gif: 'image (GIF)' };
     const subtype = mimeType.split('/')[1];
     const fileTypeLabel = fileLabels[subtype] || 'file';
-
-    const systemPrompt = `You are "BM Bot" for BM Group.
-Helping ${userName} (${userRole}) with a ${fileTypeLabel}.
-Task:
-- Carefully read/analyze the uploaded ${fileTypeLabel}.
-- If image — describe contents, extract text if any, answer user's question about it.
-- If PDF/text — extract, summarize, explain.
-- If code file — explain the code, fix bugs, improve.
-- Use markdown formatting: headings, bullets, bold.
-- NEVER use markdown tables. Use bullet points instead.
-- Respond in user's language (Hindi/English).`;
-
-    let reply = '';
-    let aiOk = false;
+    const systemPrompt = `You are "BM Bot" for BM Group. Helping ${userName} (${userRole}) with a ${fileTypeLabel}. Analyze, summarize, extract, explain. Use markdown. NEVER use tables. Respond in user's language.`;
+    let reply = '', aiOk = false;
     try {
-      reply = await callGemini({
-        prompt: userPrompt, systemPrompt, fileBase64, mimeType,
-        maxTokens: 3000, temperature: 0.4,
-        timeoutMs: 20000, globalTimeoutMs: 90000, maxAttempts: 12
-      });
+      reply = await callGemini({ prompt: userPrompt, systemPrompt, fileBase64, mimeType, maxTokens: 3000, temperature: 0.4, timeoutMs: 20000, globalTimeoutMs: 90000, maxAttempts: 12 });
       aiOk = true;
-    } catch (err) {
-      reply = err.message;
-    }
-
+    } catch (err) { reply = err.message; }
     let newThreadId = threadId, newTitle = 'File Analysis';
     if (cr !== 'guest' && aiOk) {
       const existingChat = threadId ? await Chat.findOne({ threadId, rollNo: cr }) : null;
@@ -2480,21 +2795,16 @@ Task:
         newThreadId = existingChat.threadId; newTitle = existingChat.title;
       } else {
         const autoTitle = `File: ${userPrompt.substring(0, 40)}`;
-        const nt = new Chat({ rollNo: cr, threadId: `chat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`, title: autoTitle, messages: [{ role: 'user', content: `[Uploaded ${fileTypeLabel}] ${userPrompt}` }, { role: 'assistant', content: reply }] });
-        await nt.save();
+        const nt = await Chat.create({ rollNo: cr, threadId: `chat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`, title: autoTitle, messages: [{ role: 'user', content: `[Uploaded ${fileTypeLabel}] ${userPrompt}` }, { role: 'assistant', content: reply }] });
         newThreadId = nt.threadId; newTitle = autoTitle;
       }
     }
-
     res.json({ reply, threadId: newThreadId, title: newTitle, fileType: fileTypeLabel, aiOk });
-  } catch (err) {
-    console.error('❌ chat-with-file error:', err);
-    res.status(500).json({ error: 'Internal error: ' + err.message });
-  }
+  } catch (err) { console.error('❌ chat-with-file error:', err); res.status(500).json({ error: 'Internal error: ' + err.message }); }
 });
 
 // ============================================================
-//  AI: Generate PDF Report (kept from before)
+//  AI: Generate PDF Report (kept)
 // ============================================================
 app.post('/api/ai/generate-report-pdf', async (req, res) => {
   try {
@@ -2505,15 +2815,14 @@ app.post('/api/ai/generate-report-pdf', async (req, res) => {
     if (!requester) return res.status(404).json({ error: 'User not found' });
     if (reportType === 'admin-defaulters' && requester.role !== 'admin') return res.status(403).json({ error: 'Admin only.' });
     if (reportType === 'class-report' && requester.role !== 'admin') return res.status(403).json({ error: 'Admin only.' });
-
     let pdfBuffer;
     if (reportType === 'student-attendance') {
       const target = targetRollNo ? targetRollNo.trim().toUpperCase() : cr;
-      if (requester.role === 'student' && target !== cr) return res.status(403).json({ error: 'Can only export own report.' });
+      if (requester.role === 'student' && target !== cr) return res.status(403).json({ error: 'Own only.' });
       const targetUser = await User.findOne({ rollNo: target });
       if (!targetUser) return res.status(404).json({ error: 'Target not found' });
       const summary = await getStudentSummary(target);
-      if (!summary) return res.status(500).json({ error: 'Could not generate summary' });
+      if (!summary) return res.status(500).json({ error: 'Cannot compute' });
       const rStart = startDate || getISTDateString(SEMESTER_START);
       let rEnd = endDate || getISTDateString(new Date());
       const todayStr = getISTDateString(new Date());
@@ -2521,21 +2830,15 @@ app.post('/api/ai/generate-report-pdf', async (req, res) => {
       const records = await Attendance.find({ rollNo: target, date: { $gte: rStart, $lte: rEnd } }).sort({ date: 1 }).lean();
       const subRows = Object.entries(summary.subjectStats).map(([sub, st]) => [sub, `${st.present}/${st.total}`, `${st.percentage}%`]);
       const sections = [
-        { heading: '📊 Overview', bullets: [
-          `Overall Attendance: ${summary.attendancePercentage}%`,
-          `Lectures Attended: ${summary.totalAcademicLectures} / ${summary.totalConductedLectures}`,
-          `Days Present: ${summary.daysPresent}`,
-          `Status: ${summary.attendancePercentage >= 75 ? '✅ Safe' : '⚠️ Below 75%'}`
-        ]},
-        { heading: '📚 Subject-wise', table: { headers: ['Subject', 'Present/Total', 'Percentage'], rows: subRows } },
-        { heading: '📅 Recent 30 Records', table: { headers: ['Date', 'Subject', 'Status'], rows: records.slice(-30).reverse().map(r => [r.date, mapToCanonical(r.subject), r.status]) } }
+        { heading: '📊 Overview', bullets: [`Overall: ${summary.attendancePercentage}%`, `Attended: ${summary.totalAcademicLectures}/${summary.totalConductedLectures}`, `Days Present: ${summary.daysPresent}`, `Status: ${summary.attendancePercentage >= 75 ? '✅ Safe' : '⚠️ Below 75%'}`] },
+        { heading: '📚 Subject-wise', table: { headers: ['Subject', 'P/T', '%'], rows: subRows } },
+        { heading: '📅 Recent', table: { headers: ['Date', 'Subject', 'Status'], rows: records.slice(-30).reverse().map(r => [r.date, mapToCanonical(r.subject), r.status]) } }
       ];
       pdfBuffer = await generatePDFBuffer({ title: 'Student Attendance Report', subtitle: `${targetUser.name} (${target}) • ${targetUser.branch || 'CSE'}`, sections });
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename=attendance_${target}_${rStart}.pdf`);
+      res.setHeader('Content-Disposition', `attachment; filename=attendance_${target}.pdf`);
       return res.send(pdfBuffer);
     }
-
     if (reportType === 'admin-defaulters') {
       const threshold = parseInt(req.body.threshold) || 75;
       const students = await User.find({ role: 'student' }).select('rollNo name branch');
@@ -2550,17 +2853,16 @@ app.post('/api/ai/generate-report-pdf', async (req, res) => {
       }
       defaulters.sort((a,b) => a.pct - b.pct);
       const sections = [
-        { heading: `⚠️ Defaulters Below ${threshold}%`, text: `Total: ${defaulters.length} out of ${students.length}` },
-        { heading: '📋 List', table: { headers: ['Roll No', 'Name', 'Branch', 'Present/Total', '%'], rows: defaulters.map(d => [d.rollNo, d.name, d.branch, `${d.present}/${d.total}`, `${d.pct}%`]) } }
+        { heading: `⚠️ Defaulters Below ${threshold}%`, text: `Total: ${defaulters.length}/${students.length}` },
+        { heading: '📋 List', table: { headers: ['Roll', 'Name', 'Branch', 'P/T', '%'], rows: defaulters.map(d => [d.rollNo, d.name, d.branch, `${d.present}/${d.total}`, `${d.pct}%`]) } }
       ];
       pdfBuffer = await generatePDFBuffer({ title: 'Defaulter Watchlist', subtitle: `Threshold: ${threshold}%`, sections });
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename=defaulters_${threshold}pct.pdf`);
       return res.send(pdfBuffer);
     }
-
     res.status(400).json({ error: 'Unknown reportType.' });
-  } catch (err) { console.error('❌ PDF report error:', err); res.status(500).json({ error: err.message }); }
+  } catch (err) { console.error('❌ PDF error:', err); res.status(500).json({ error: err.message }); }
 });
 
 // ---------- Global Handlers ----------
@@ -2568,4 +2870,4 @@ process.on('unhandledRejection', (reason) => console.error('Unhandled:', reason)
 process.on('uncaughtException', (err) => { console.error('Uncaught:', err); process.exit(1); });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Port ${PORT} | AI: ${GEMINI_API_KEYS.length} keys | Primary: ${GEMINI_MODEL} | Features: Context + Database Assistant + Requests + Passcode Publish`));
+app.listen(PORT, () => console.log(`🚀 Port ${PORT} | AI: ${GEMINI_API_KEYS.length} keys | Primary: ${GEMINI_MODEL} | Features: Context + Database Assistant + Location-Verified Requests + Faculty Timetable`));
