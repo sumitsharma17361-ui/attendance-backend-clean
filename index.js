@@ -233,7 +233,7 @@ async function getWorkingDays(startDate, endDate) {
   const end = new Date(endStr + 'T23:59:59Z');
   let workingDays = 0;
   const holidays = await Holiday.find({ date: { $gte: startStr, $lte: endStr } });
-  const holidaySet = new Set(holidays.map(h => h.date.split('T')[0]));
+  const holidaySet = new Set(holidays.map(h => (h.date || '').toString().split('T')[0]));
   let current = new Date(start);
   while (current <= end) {
     const dateStr = current.toISOString().split('T')[0];
@@ -257,7 +257,6 @@ function checkLocation(lat, lng) {
   return { isInside: d <= COLLEGE_RADIUS, distance: d.toFixed(0) };
 }
 
-// ✅ NEW: Detailed location verification for requests
 function verifyLocationForRequest(lat, lng) {
   if (!lat || !lng || lat === 0 || lng === 0) {
     return { valid: false, distance: null, message: 'Location not provided. Please enable GPS on your device and try again.' };
@@ -428,14 +427,13 @@ function getTimetableForDate(dateStr, branch = 'CSE') {
   return getTimetableForBranch(branch)[dayName] || [];
 }
 
-// ✅ NEW: Get schedule for a specific date (with times + faculty)
 function getScheduleForDate(dateStr, branch = 'CSE') {
   const parts = dateStr.split('-');
   const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const dayName = dayNames[d.getDay()];
   if (dayName === 'Saturday' || dayName === 'Sunday') return { isBlocked: true, dayName, schedule: [] };
-  const dowIndex = d.getDay(); // 0=Sunday, 1=Monday
+  const dowIndex = d.getDay();
   const schedule = getScheduleForBranch(branch);
   return { isBlocked: false, dayName, schedule: schedule[dowIndex] || [] };
 }
@@ -508,7 +506,6 @@ const leaveSchema = new mongoose.Schema({
   branch: { type: String, default: 'CSE' }
 }, { timestamps: true });
 
-// ✅ NEW: Attendance Request schema with location + lecture type + review history
 const attendanceRequestSchema = new mongoose.Schema({
   rollNo: { type: String, required: true },
   studentName: { type: String, required: true },
@@ -545,6 +542,9 @@ const Leave = mongoose.model('Leave', leaveSchema);
 const AttendanceRequest = mongoose.model('AttendanceRequest', attendanceRequestSchema);
 Attendance.createIndexes().catch(err => console.error('Index error:', err));
 
+// ============================================================
+//  ✅ FIXED: getStudentSummary() — unique days count
+// ============================================================
 async function getStudentSummary(rollNo) {
   try {
     const user = await User.findOne({ rollNo });
@@ -553,7 +553,7 @@ async function getStudentSummary(rollNo) {
     const timetable = getTimetableForBranch(branch);
     const allRecords = await Attendance.find({ rollNo }).lean();
     const holidays = await Holiday.find({}).lean();
-    const holidaySet = new Set(holidays.map(h => h.date.split('T')[0]));
+    const holidaySet = new Set(holidays.map(h => (h.date || '').toString().split('T')[0]));
     const today = new Date();
     const todayStr = getISTDateString(today);
     const semesterStart = new Date('2026-07-15T00:00:00+05:30');
@@ -583,11 +583,14 @@ async function getStudentSummary(rollNo) {
       current.setDate(current.getDate() + 1);
     }
     const subPresent = {};
+    const presentDaysSet = new Set();
     allRecords.forEach(rec => {
       const sub = mapToCanonical(rec.subject);
       if (sub.includes("LIB") || sub.includes("Library") || sub.includes("Sports")) return;
       if (rec.status === 'Present' || rec.status === 'Duty Leave') {
         subPresent[sub] = (subPresent[sub] || 0) + 1;
+        const dateKey = (rec.date || '').toString().split('T')[0].trim();
+        if (dateKey && /^\d{4}-\d{2}-\d{2}$/.test(dateKey)) presentDaysSet.add(dateKey);
       }
     });
     Object.keys(subPresent).forEach(sub => { if (subjectStats[sub]) subjectStats[sub].present = subPresent[sub]; });
@@ -598,7 +601,8 @@ async function getStudentSummary(rollNo) {
     for (let [sub, stats] of Object.entries(subjectStats)) {
       subjectStatsFinal[sub] = { present: stats.present || 0, total: stats.total || 0, percentage: stats.total > 0 ? Math.round(((stats.present || 0) / stats.total) * 100) : 0 };
     }
-    const daysPresent = allRecords.filter(r => r.status === 'Present' || r.status === 'Duty Leave').length;
+    // ✅ FIXED: unique days count, not lecture count
+    const daysPresent = presentDaysSet.size;
     const workingDaysSoFar = await getWorkingDays(semesterStart, today);
     const totalWorkingDaysSemester = await getWorkingDays(semesterStart, SEMESTER_END);
     return { totalAcademicLectures: totalAttended, totalConductedLectures: totalConducted, attendancePercentage: pct, subjectStats: subjectStatsFinal, daysPresent, workingDaysSoFar, totalWorkingDaysSemester };
@@ -867,7 +871,7 @@ app.post('/api/auth/verify-passcode', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== PUBLIC PASSCODE ==========
+// ========== PUBLIC PASSCODE (for students) ==========
 app.get('/api/passcode/public/:type', async (req, res) => {
   try {
     const { type } = req.params;
@@ -971,15 +975,12 @@ app.post('/api/requests/submit', async (req, res) => {
     const user = await User.findOne({ rollNo: cr, role: 'student' });
     if (!user) return res.status(404).json({ error: 'Student not found.' });
 
-    // Verify date is not future
     const todayStr = getISTDateString(new Date());
     if (date > todayStr) return res.status(400).json({ error: 'Cannot request attendance for a future date.' });
 
-    // Date status check
     const ds = await checkDateStatus(date);
     if (ds.isBlocked) return res.status(400).json({ error: ds.type === 'WEEKEND' ? `College is closed on ${ds.dayName}.` : `Holiday: ${ds.holiday || 'College closed'}.` });
 
-    // ✅ LOCATION VERIFICATION
     const locCheck = verifyLocationForRequest(latitude, longitude);
     if (!locCheck.valid) {
       return res.status(400).json({
@@ -990,12 +991,10 @@ app.post('/api/requests/submit', async (req, res) => {
       });
     }
 
-    // Validate subject for single/double lecture
     if (lectureType !== 'full_day' && !subject) {
       return res.status(400).json({ error: 'subject required for single_lecture or double_lecture.' });
     }
 
-    // Check duplicate pending request
     const existing = await AttendanceRequest.findOne({ rollNo: cr, date, lectureType, status: 'Pending' });
     if (existing) return res.status(400).json({ error: `You already have a pending ${lectureType.replace('_', ' ')} request for ${date}.`, existing });
 
@@ -1041,7 +1040,6 @@ app.get('/api/requests/all/:requesterRollNo', async (req, res) => {
     if (!req1 || (req1.role !== 'admin' && req1.role !== 'faculty')) return res.status(403).json({ error: 'Admin/Faculty only.' });
     let filter = {};
     if (req1.role === 'faculty') {
-      // Faculty sees only their branch
       filter.branch = req1.branch || 'CSE';
     }
     if (req.query.status) filter.status = req.query.status;
@@ -1078,7 +1076,6 @@ app.post('/api/requests/review/:id', async (req, res) => {
     if (request.status !== 'Pending') return res.status(400).json({ error: `Request already ${request.status}.` });
 
     if (action === 'Approved') {
-      // Determine which subjects to mark
       const b = request.branch || 'CSE';
       const dateStatus = await checkDateStatus(request.date);
       if (dateStatus.isBlocked) return res.status(400).json({ error: `Cannot approve — date is blocked (${dateStatus.type}).` });
@@ -1087,7 +1084,6 @@ app.post('/api/requests/review/:id', async (req, res) => {
       let subjectsToMark = [];
 
       if (request.lectureType === 'full_day') {
-        // All academic subjects for that day
         const daySubs = schedule.schedule
           .filter(s => !s.subject.includes('LIB') && !s.subject.includes('Library') && !s.subject.includes('Sports') && s.period !== 'LUNCH')
           .map(s => mapToCanonical(s.subject));
@@ -1095,12 +1091,10 @@ app.post('/api/requests/review/:id', async (req, res) => {
       } else if (request.lectureType === 'single_lecture') {
         subjectsToMark = request.subject ? [mapToCanonical(request.subject)] : [];
       } else if (request.lectureType === 'double_lecture') {
-        // 2 consecutive lectures — subject + next
         const subj = mapToCanonical(request.subject);
         const idx = schedule.schedule.findIndex(s => mapToCanonical(s.subject) === subj);
         if (idx >= 0) {
           subjectsToMark.push(subj);
-          // find next academic slot
           for (let i = idx + 1; i < schedule.schedule.length; i++) {
             const nextSub = mapToCanonical(schedule.schedule[i].subject);
             if (nextSub.includes('LIB') || nextSub.includes('Library') || nextSub.includes('Sports') || schedule.schedule[i].period === 'LUNCH') continue;
@@ -1112,7 +1106,6 @@ app.post('/api/requests/review/:id', async (req, res) => {
         }
       }
 
-      // If admin specified selective subjects → use only those
       if (approvedSubjects && Array.isArray(approvedSubjects) && approvedSubjects.length > 0) {
         subjectsToMark = approvedSubjects.map(mapToCanonical);
       }
@@ -1153,7 +1146,6 @@ app.post('/api/requests/review/:id', async (req, res) => {
         totalRequested: subjectsToMark.length
       });
     } else {
-      // Rejected
       request.status = 'Rejected';
       request.reviewedBy = req1.rollNo;
       request.adminNote = note || '';
@@ -1187,7 +1179,6 @@ app.post('/api/requests/bulk-review', async (req, res) => {
           await request.save();
           results.push({ id, status: 'Rejected' });
         } else {
-          // Approved — mark attendance
           const b = request.branch || 'CSE';
           const schedule = getScheduleForDate(request.date, b);
           let subjectsToMark = [];
@@ -1611,7 +1602,7 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
     const subSet = new Set();
     let totalConducted = 0;
     const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    const holidaySet = new Set((await Holiday.find({ date: { $gte: startStr, $lte: endStr } })).map(h => h.date.split('T')[0]));
+    const holidaySet = new Set((await Holiday.find({ date: { $gte: startStr, $lte: endStr } })).map(h => (h.date || '').toString().split('T')[0]));
     const todayStr = getISTDateString(new Date());
     let cur = new Date(startD);
     while (cur <= endD) {
@@ -1647,7 +1638,7 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
     let totalAttended = 0;
     Object.values(stats).forEach(st => totalAttended += st.present);
     const pct = totalConducted > 0 ? Math.round((totalAttended / totalConducted) * 100) : 0;
-    const presentDays = new Set(records.filter(r => r.status === 'Present' || r.status === 'Duty Leave').map(r => r.date));
+    const presentDays = new Set(records.filter(r => r.status === 'Present' || r.status === 'Duty Leave').map(r => (r.date || '').toString().split('T')[0]));
     const sWithPct = {};
     Object.keys(stats).forEach(sub => {
       const st = stats[sub];
@@ -1716,12 +1707,80 @@ app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== STUDENT SUMMARY ==========
+// ========== STUDENT SUMMARY — ✅ FIXED (unique days count) ==========
 app.get('/api/student/summary/:rollNo', async (req, res) => {
   try {
-    const summary = await getStudentSummary(req.params.rollNo.trim().toUpperCase());
-    if (!summary) return res.status(404).json({ error: 'Not found!' });
-    res.json(summary);
+    const cr = req.params.rollNo.trim().toUpperCase();
+    const user = await User.findOne({ rollNo: cr });
+    if (!user) return res.status(404).json({ error: 'Not found!' });
+    const branch = user.branch || 'CSE';
+    const tt = getTimetableForBranch(branch);
+    const allRecords = await Attendance.find({ rollNo: cr }).lean();
+    const holidays = await Holiday.find({}).lean();
+    const holidaySet = new Set(holidays.map(h => (h.date || '').toString().split('T')[0]));
+    const today = new Date();
+    const todayStr = getISTDateString(today);
+    const semesterStart = new Date('2026-07-15T00:00:00+05:30');
+    let cur = new Date(semesterStart);
+    let totalConducted = 0;
+    const acadDays = new Set();
+    const stats = {};
+    const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const dayAcad = {};
+    for (let d = 0; d < 7; d++) {
+      const dayName = dayNameMap[d];
+      const subs = tt[dayName] || [];
+      const acad = subs.filter(e => !e.subject.includes("LIB") && !e.subject.includes("Library") && !e.subject.includes("Sports"));
+      dayAcad[dayName] = acad.map(e => mapToCanonical(e.subject));
+    }
+    while (cur <= today) {
+      const ds = getISTDateString(cur);
+      if (ds > todayStr) { cur.setDate(cur.getDate() + 1); continue; }
+      const dow = cur.getDay();
+      if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) {
+        acadDays.add(ds);
+        const dayName = dayNameMap[dow];
+        const acad = dayAcad[dayName] || [];
+        totalConducted += acad.length;
+        acad.forEach(sub => { if (!stats[sub]) stats[sub] = { total: 0, present: 0 }; stats[sub].total++; });
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+    const presentDaysSet = new Set();
+    const subPresent = {};
+    allRecords.forEach(rec => {
+      const sub = mapToCanonical(rec.subject);
+      if (sub.includes("LIB") || sub.includes("Library") || sub.includes("Sports")) return;
+      if (rec.status === 'Present' || rec.status === 'Duty Leave') {
+        subPresent[sub] = (subPresent[sub] || 0) + 1;
+        // ✅ FIXED: normalize date before adding to Set
+        const dateKey = (rec.date || '').toString().split('T')[0].trim();
+        if (dateKey && /^\d{4}-\d{2}-\d{2}$/.test(dateKey)) presentDaysSet.add(dateKey);
+      }
+    });
+    Object.keys(subPresent).forEach(sub => { if (stats[sub]) stats[sub].present = subPresent[sub]; });
+    let totalAttended = 0;
+    Object.values(subPresent).forEach(v => totalAttended += v);
+    const pct = totalConducted > 0 ? Math.round((totalAttended / totalConducted) * 100) : 0;
+    // ✅ FIXED: unique days count
+    const daysPresent = presentDaysSet.size;
+    const totalWorkingDays = acadDays.size;
+    const sFinal = {};
+    for (let [sub, st] of Object.entries(stats)) {
+      sFinal[sub] = { present: st.present || 0, total: st.total || 0, percentage: st.total > 0 ? Math.round(((st.present || 0) / st.total) * 100) : 0 };
+    }
+    const workingDaysSoFar = await getWorkingDays(semesterStart, today);
+    const totalWorkingDaysSemester = await getWorkingDays(semesterStart, SEMESTER_END);
+    res.json({
+      totalAcademicLectures: totalAttended,
+      totalConductedLectures: totalConducted,
+      attendancePercentage: pct,
+      daysPresent,
+      daysAbsent: Math.max(0, totalWorkingDays - daysPresent),
+      workingDaysSoFar,
+      totalWorkingDaysSemester,
+      subjectStats: sFinal
+    });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -1793,7 +1852,6 @@ app.get('/api/timetable/subjects', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ✅ NEW: Full timetable endpoint with faculty
 app.get('/api/timetable/full/:branch', async (req, res) => {
   try {
     const branch = (req.params.branch || 'CSE').toUpperCase();
@@ -1820,7 +1878,7 @@ app.get('/api/admin/class-attendance-report', async (req, res) => {
     const students = await User.find(q).select('rollNo name branch');
     if (!students.length) return res.json({ students: [], totalLectures: 0 });
     const holidays = await Holiday.find({ date: { $gte: sStr, $lte: eStr } });
-    const holidaySet = new Set(holidays.map(h => h.date.split('T')[0]));
+    const holidaySet = new Set(holidays.map(h => (h.date || '').toString().split('T')[0]));
     const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const result = await Promise.all(students.map(async s => {
       const b = s.branch || 'CSE';
@@ -2016,7 +2074,7 @@ app.get('/api/admin/defaulters/:requesterRollNo', async (req, res) => {
 });
 
 // ============================================================
-//  DATABASE ASSISTANT — INTENT PROMPT (Improved with dates + faculty + requests)
+//  DATABASE ASSISTANT — INTENT PROMPT
 // ============================================================
 const DB_INTENT_PROMPT = `You are a Database Assistant for BM Group ERP (attendance portal). Convert user's natural language into a JSON operation OR a chat reply.
 
@@ -2137,12 +2195,10 @@ async function executeDbAction(intent, userContext) {
     teachersubjects: TeacherSubject, attendancerequests: AttendanceRequest
   };
 
-  // If reply action → return the reply
   if (action === 'reply') {
     return { reply: reply || explanation || 'Noted.', isReply: true };
   }
 
-  // STUDENT — submit request needs location
   if (action === 'db_submit_request_needs_location') {
     if (!isStudent) return { error: 'Only students can submit attendance requests.' };
     return {
@@ -2153,7 +2209,6 @@ async function executeDbAction(intent, userContext) {
     };
   }
 
-  // STUDENT permissions: read own data + submit requests only
   if (isStudent) {
     if (['db_create', 'db_update', 'db_delete'].includes(action)) {
       if (collection !== 'attendancerequests') {
@@ -2170,7 +2225,6 @@ async function executeDbAction(intent, userContext) {
     }
   }
 
-  // FACULTY permissions
   if (isFaculty) {
     if (['users', 'notices', 'holidays', 'passcodes'].includes(collection) && ['db_create', 'db_update', 'db_delete'].includes(action)) {
       return { error: 'Faculty cannot modify this collection.' };
@@ -2406,7 +2460,6 @@ function formatDbResult(result, action) {
   if (result.count !== undefined) return `Count: ${result.count}`;
   if (Array.isArray(result)) {
     if (!result.length) return 'No records found.';
-    // Special handling for requests
     if (result[0] && result[0].lectureType !== undefined) {
       return result.map(r => `• ${r.rollNo} (${r.studentName}) — ${r.date} — ${r.lectureType}${r.subject ? ' - ' + r.subject : ''} — Status: ${r.status}`).join('\n');
     }
@@ -2445,29 +2498,24 @@ app.post('/api/ai/chat', async (req, res) => {
         });
         console.log('🧠 DB Intent:', JSON.stringify(intent).substring(0, 300));
 
-        // Handle location-required student request
         if (intent.action === 'db_submit_request_needs_location') {
-          // If frontend already sent location
           if (location && location.latitude && location.longitude) {
             const locCheck = verifyLocationForRequest(location.latitude, location.longitude);
             if (!locCheck.valid) {
               const replyText = `❌ ${locCheck.message}`;
               return res.json({ reply: replyText, threadId, title: 'Request', aiOk: true, usedDatabase: true, dbError: locCheck.message, locationRejected: true, distance: locCheck.distance });
             }
-            // Location valid → create request
             const requestData = intent.data || {};
             const todayStr = getISTDateString(new Date());
             const reqDate = requestData.date || todayStr;
             const lectureType = requestData.lectureType || 'full_day';
             const subject = requestData.subject ? mapToCanonical(requestData.subject) : null;
 
-            // Date status check
             const ds = await checkDateStatus(reqDate);
             if (ds.isBlocked) {
               return res.json({ reply: `❌ Cannot submit request — ${ds.type === 'WEEKEND' ? ds.dayName + ' is a weekend' : 'Holiday: ' + (ds.holiday || 'College closed')}.`, threadId, aiOk: true, usedDatabase: true });
             }
 
-            // Duplicate check
             const dup = await AttendanceRequest.findOne({ rollNo: cr, date: reqDate, lectureType, status: 'Pending' });
             if (dup) {
               return res.json({ reply: `⚠️ You already have a pending ${lectureType.replace('_',' ')} request for ${reqDate}. Please wait for admin review.`, threadId, aiOk: true, usedDatabase: true, dbResult: dup });
@@ -2496,7 +2544,6 @@ app.post('/api/ai/chat', async (req, res) => {
             }
             return res.json({ reply: replyText, threadId: existingChat?.threadId || threadId, title: existingChat?.title || 'Request', aiOk: true, usedDatabase: true, dbResult: newReq, requestSubmitted: true });
           } else {
-            // No location yet → ask frontend for it
             return res.json({
               reply: `📍 **Location verification required**\n\nPlease share your location so I can verify you are on campus (within ${COLLEGE_RADIUS}m).`,
               threadId, title: 'Request', aiOk: true, usedDatabase: true,
@@ -2507,7 +2554,6 @@ app.post('/api/ai/chat', async (req, res) => {
           }
         }
 
-        // Handle db_review_request — needs explicit request lookup
         if (intent.action === 'db_review_request') {
           const reviewData = intent.data || {};
           const execResult = await executeDbAction(intent, { role: userRole, rollNo: cr, name: userName, branch: userData.branch || 'CSE' });
@@ -2526,9 +2572,7 @@ app.post('/api/ai/chat', async (req, res) => {
           return res.json({ reply: replyText, threadId: existingChat?.threadId || threadId, title: existingChat?.title || 'DB Op', aiOk: true, usedDatabase: true, dbResult: execResult.result, dbError: execResult.error });
         }
 
-        // Handle db_read, db_count, db_aggregate, db_create, db_update, db_delete, db_publish_passcode, db_bulk_review
         if (intent.action !== 'reply' && intent.action !== 'db_submit_request_needs_location') {
-          // Requires confirmation?
           if (intent.requiresConfirmation) {
             return res.json({
               reply: `⚠️ **${intent.explanation || 'Confirm this operation'}**`,
@@ -2553,7 +2597,6 @@ app.post('/api/ai/chat', async (req, res) => {
           return res.json({ reply: replyText, threadId: existingChat?.threadId || threadId, title: existingChat?.title || 'DB Op', aiOk: true, usedContext: useCtx, usedDatabase: true, dbResult: execResult.result, dbError: execResult.error });
         }
 
-        // If AI returned "reply" for a DB-mode message, fall through to normal chat with the reply
         if (intent.reply) {
           if (existingChat) {
             existingChat.messages.push({ role: 'user', content: message });
@@ -2592,6 +2635,7 @@ app.post('/api/ai/chat', async (req, res) => {
           const summary = await getStudentSummary(userData.rollNo);
           if (summary) {
             lines.push(`Attendance: ${summary.attendancePercentage}% (${summary.totalAcademicLectures}/${summary.totalConductedLectures})`);
+            lines.push(`Days Present (unique): ${summary.daysPresent} out of ${summary.workingDaysSoFar} working days`);
             if (needs.attendance && summary.subjectStats) {
               const subLines = Object.entries(summary.subjectStats).map(([sub, st]) => `  • ${sub}: ${st.present}/${st.total} (${st.percentage}%)`);
               lines.push('Subject-wise:');
@@ -2609,7 +2653,6 @@ app.post('/api/ai/chat', async (req, res) => {
         } catch(e) {}
       }
 
-      // ✅ FIXED: Timetable context with BOTH today and tomorrow + faculty
       if (needs.timetable || needs.currentPeriod || needs.faculty) {
         try {
           const branchTT = getTimetableForBranch(userData.branch || 'CSE');
@@ -2621,7 +2664,6 @@ app.post('/api/ai/chat', async (req, res) => {
           const tomorrowSubs = branchTT[tomorrowDay] || [];
           lines.push(`Tomorrow (${tomorrowDay}, ${tomorrowStr}) timetable: ${tomorrowSubs.length ? tomorrowSubs.map(s => `${s.subject} (${s.faculty})`).join(', ') : 'No classes'}`);
 
-          // Include full day schedule with time slots
           const dowToday = now.getDay();
           if (dowToday >= 1 && dowToday <= 5) {
             const slots = branchSchedule[dowToday] || [];
@@ -2688,6 +2730,7 @@ Assisting ${userRole}.${ctxBlock}
 - If Context is empty for the requested info, say "Timetable data available nahi hai, Context ON karke try karo" — DON'T make up.
 - If tomorrow is Saturday/Sunday → say college is closed.
 - Always include faculty name when answering timetable queries.
+- "Days Present" refers to UNIQUE days, not lecture count. Use the value from context.
 - NEVER use markdown tables. Use bullet points.
 
 Role:
@@ -2739,7 +2782,6 @@ Role:
   }
 });
 
-// Confirm pending DB operation
 app.post('/api/ai/chat/confirm-db', async (req, res) => {
   try {
     const { rollNo, operation } = req.body;
@@ -2804,7 +2846,7 @@ app.post('/api/ai/chat-with-file', async (req, res) => {
 });
 
 // ============================================================
-//  AI: Generate PDF Report (kept)
+//  AI: Generate PDF Report
 // ============================================================
 app.post('/api/ai/generate-report-pdf', async (req, res) => {
   try {
@@ -2830,7 +2872,7 @@ app.post('/api/ai/generate-report-pdf', async (req, res) => {
       const records = await Attendance.find({ rollNo: target, date: { $gte: rStart, $lte: rEnd } }).sort({ date: 1 }).lean();
       const subRows = Object.entries(summary.subjectStats).map(([sub, st]) => [sub, `${st.present}/${st.total}`, `${st.percentage}%`]);
       const sections = [
-        { heading: '📊 Overview', bullets: [`Overall: ${summary.attendancePercentage}%`, `Attended: ${summary.totalAcademicLectures}/${summary.totalConductedLectures}`, `Days Present: ${summary.daysPresent}`, `Status: ${summary.attendancePercentage >= 75 ? '✅ Safe' : '⚠️ Below 75%'}`] },
+        { heading: '📊 Overview', bullets: [`Overall: ${summary.attendancePercentage}%`, `Attended: ${summary.totalAcademicLectures}/${summary.totalConductedLectures}`, `Unique Days Present: ${summary.daysPresent}`, `Status: ${summary.attendancePercentage >= 75 ? '✅ Safe' : '⚠️ Below 75%'}`] },
         { heading: '📚 Subject-wise', table: { headers: ['Subject', 'P/T', '%'], rows: subRows } },
         { heading: '📅 Recent', table: { headers: ['Date', 'Subject', 'Status'], rows: records.slice(-30).reverse().map(r => [r.date, mapToCanonical(r.subject), r.status]) } }
       ];
@@ -2870,4 +2912,4 @@ process.on('unhandledRejection', (reason) => console.error('Unhandled:', reason)
 process.on('uncaughtException', (err) => { console.error('Uncaught:', err); process.exit(1); });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Port ${PORT} | AI: ${GEMINI_API_KEYS.length} keys | Primary: ${GEMINI_MODEL} | Features: Context + Database Assistant + Location-Verified Requests + Faculty Timetable`));
+app.listen(PORT, () => console.log(`🚀 Port ${PORT} | AI: ${GEMINI_API_KEYS.length} keys | Primary: ${GEMINI_MODEL} | Features: Context + Database Assistant + Location-Verified Requests + Faculty Timetable | Days Present: UNIQUE days fixed`));
