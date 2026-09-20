@@ -26,7 +26,6 @@ const GEMINI_API_KEYS = [
   process.env.GEMINI_API_KEY_6
 ].filter(k => k && k.trim() && k.trim().length > 5).map(k => k.trim());
 
-// ✅ FIX #1 — Fast primary + 2 strong fallbacks
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
 const GEMINI_FALLBACK_MODELS = ['gemini-3.8-flash', 'gemini-2.5-flash'];
 const GEMINI_GLOBAL_TIMEOUT_MS = parseInt(process.env.GEMINI_GLOBAL_TIMEOUT_MS || '20000', 10);
@@ -453,7 +452,19 @@ attendanceSchema.index({ rollNo: 1, subject: 1, date: 1 }, { unique: true });
 
 const holidaySchema = new mongoose.Schema({ date: { type: String, required: true, unique: true }, reason: { type: String, default: 'Holiday' } }, { timestamps: true });
 const noticeSchema = new mongoose.Schema({ title: String, message: String, date: { type: Date, default: Date.now } });
-const passcodeSchema = new mongoose.Schema({ passcode: { type: String, required: true }, type: { type: String, enum: ['full_day', 'single_lecture'], required: true }, key: { type: String, unique: true, sparse: true }, expiresAt: { type: Date, required: true } }, { timestamps: true });
+
+// Passcode extended with publish support
+const passcodeSchema = new mongoose.Schema({
+  passcode: { type: String, required: true },
+  type: { type: String, enum: ['full_day', 'single_lecture'], required: true },
+  key: { type: String, unique: true, sparse: true },
+  expiresAt: { type: Date, required: true },
+  published: { type: Boolean, default: false },           // 👈 NEW: publicly visible to students
+  publishedAt: { type: Date, default: null },
+  publishedBy: { type: String, default: null },
+  durationMinutes: { type: Number, default: null }         // 👈 FIXED duration publish
+}, { timestamps: true });
+
 const teacherSubjectSchema = new mongoose.Schema({ teacherRollNo: { type: String, required: true }, subject: { type: String, required: true }, assignedBy: { type: String, required: true }, createdAt: { type: Date, default: Date.now } }, { timestamps: true });
 const chatSchema = new mongoose.Schema({
   rollNo: { type: String, required: true },
@@ -472,6 +483,22 @@ const leaveSchema = new mongoose.Schema({
   branch: { type: String, default: 'CSE' }
 }, { timestamps: true });
 
+// 👇 NEW: Student attendance correction requests
+const attendanceRequestSchema = new mongoose.Schema({
+  rollNo: { type: String, required: true },
+  studentName: { type: String, required: true },
+  branch: { type: String, default: 'CSE' },
+  dates: [{ type: String }],                                // YYYY-MM-DD list
+  subjects: [{ type: String }],                             // optional specific subjects
+  reason: { type: String, required: true },
+  requestType: { type: String, enum: ['Attendance Correction', 'Leave', 'Other'], default: 'Attendance Correction' },
+  status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
+  reviewedBy: { type: String, default: null },
+  adminNote: { type: String, default: '' },
+  reviewedDates: [{ type: String }],                        // date-by-date review
+  rejectedDates: [{ type: String }]
+}, { timestamps: true });
+
 const User = mongoose.model('User', userSchema);
 const Attendance = mongoose.model('Attendance', attendanceSchema);
 const Holiday = mongoose.model('Holiday', holidaySchema);
@@ -480,6 +507,8 @@ const Passcode = mongoose.model('Passcode', passcodeSchema);
 const TeacherSubject = mongoose.model('TeacherSubject', teacherSubjectSchema);
 const Chat = mongoose.model('Chat', chatSchema);
 const Leave = mongoose.model('Leave', leaveSchema);
+const AttendanceRequest = mongoose.model('AttendanceRequest', attendanceRequestSchema);
+
 Attendance.createIndexes().catch(err => console.error('Index error:', err));
 
 async function getStudentSummary(rollNo) {
@@ -651,9 +680,7 @@ async function callGemini(args) {
           await new Promise(r => setTimeout(r, 300));
           continue;
         }
-        if (parsed.type === 'OVERLOADED' || parsed.type === 'TIMEOUT') {
-          continue;
-        }
+        if (parsed.type === 'OVERLOADED' || parsed.type === 'TIMEOUT') continue;
         if (parsed.type === 'MODEL_NOT_FOUND' || parsed.type === 'BAD_REQUEST') {
           skipToNextModel = true;
           break;
@@ -724,8 +751,367 @@ function detectContextNeeds(msg) {
     attendance: /attendance|present|absent|bunk|percentage|hazri|upasthiti|kitni|kitne|75|skip/i.test(m),
     timetable: /timetable|schedule|class|period|lecture|kab hai|kya hai class|today'?s|kal|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday/i.test(m),
     holiday: /holiday|chutti|closed|band hai|avkash|tyohar/i.test(m),
-    currentPeriod: /current|abhi|now|chalu|active|right now/i.test(m)
+    currentPeriod: /current|abhi|now|chalu|active|right now/i.test(m),
+    passcode: /passcode|password|otp|code/i.test(m),
+    requests: /request|leave|correction|approval/i.test(m)
   };
+}
+
+// ============================================================
+//  DATABASE ASSISTANT — Intent Detection Prompt
+// ============================================================
+const DB_OPERATION_PROMPT = `You are a Database Assistant for BM Group ERP (attendance portal). Your job: convert user's natural language request into a JSON database operation OR a general reply.
+
+## User Context (will be injected):
+- Role: student/faculty/admin
+- RollNo, Name, Branch
+
+## Available Collections (MongoDB):
+1. **users** — { rollNo, name, role, branch, email, phone, semester }
+2. **attendances** — { rollNo, studentName, subject, date (YYYY-MM-DD), status (Present/Absent/Duty Leave), branch }
+3. **holidays** — { date (YYYY-MM-DD), reason }
+4. **notices** — { title, message, date }
+5. **leaves** — { rollNo, studentName, fromDate, toDate, reason, leaveType, status }
+6. **passcodes** — { passcode, type (full_day/single_lecture), expiresAt, published }
+7. **teachersubjects** — { teacherRollNo, subject, assignedBy }
+8. **attendancerequests** — { rollNo, studentName, dates[], subjects[], reason, status }
+
+## Response format (STRICT JSON only, NO markdown, NO code fence):
+{
+  "action": "reply" | "db_read" | "db_count" | "db_aggregate" | "db_create" | "db_update" | "db_delete" | "db_publish_passcode" | "db_create_request" | "db_review_request",
+  "collection": "users" | "attendances" | "holidays" | "notices" | "leaves" | "passcodes" | "teachersubjects" | "attendancerequests" | null,
+  "filter": { ...MongoDB filter... } | null,
+  "update": { ...fields... } | null,
+  "data": { ...new doc... } | null,
+  "limit": number | null,
+  "sort": { "field": 1|-1 } | null,
+  "explanation": "Short Hinglish explanation (1-2 lines)",
+  "requiresConfirmation": true|false,
+  "reply": "If action is 'reply', the AI's natural language response here (Hinglish/English mix). Otherwise null."
+}
+
+## Rules:
+1. If user's message is just chat/greeting/notes/study-help → action "reply", put answer in "reply"
+2. If user asks to see/check data → db_read (no confirmation)
+3. If user asks to add/create something → db_create
+4. If user asks to modify/update → db_update (confirm: true)
+5. If user asks to delete/remove → db_delete (confirm: true)
+6. If user asks to count/find how many → db_count (no confirmation)
+7. If user asks "how many days can I bunk" or attendance % → db_aggregate (no confirmation)
+8. If user asks to publish passcode for a duration → db_publish_passcode (admin only)
+9. If student asks to send attendance correction request → db_create_request
+10. If admin/faculty wants to approve/reject request → db_review_request
+11. NEVER let students modify attendances/users/holidays/passcodes directly
+12. Date format strictly YYYY-MM-DD
+13. "meri/my/apni" → use user's own rollNo
+14. Role restrictions enforced separately — you just structure the operation
+15. Return ONLY valid JSON, no explanation outside JSON
+
+## Examples:
+User: "Meri attendance kitni hai?"  Role: student
+→ { "action": "db_aggregate", "collection": "attendances", "filter": { "rollNo": "{USER_ROLL}" }, "explanation": "Aapki attendance calculate kar raha hun", "requiresConfirmation": false, "reply": null }
+
+User: "Kitne students 75% se neeche hai?"  Role: admin
+→ { "action": "db_aggregate", "collection": "attendances", "explanation": "Defaulters count kar raha hun", "requiresConfirmation": false, "reply": null }
+
+User: "Diwali holiday add karo 25 Oct 2026"  Role: admin
+→ { "action": "db_create", "collection": "holidays", "data": { "date": "2026-10-25", "reason": "Diwali" }, "explanation": "Diwali holiday add kar raha hun", "requiresConfirmation": false, "reply": null }
+
+User: "Notice post karo: Exam kal hai"  Role: admin
+→ { "action": "db_create", "collection": "notices", "data": { "title": "Announcement", "message": "Exam kal hai" }, "explanation": "Notice publish kar raha hun", "requiresConfirmation": false, "reply": null }
+
+User: "24CSE48 ki attendance 30 records delete karo"  Role: admin
+→ { "action": "db_delete", "collection": "attendances", "filter": { "rollNo": "24CSE48" }, "limit": 30, "explanation": "24CSE48 ki 30 attendance records delete karunga", "requiresConfirmation": true, "reply": null }
+
+User: "Passcode publish karo next 30 minutes ke liye single lecture"  Role: admin
+→ { "action": "db_publish_passcode", "data": { "type": "single_lecture", "durationMinutes": 30 }, "explanation": "Passcode 30 min ke liye publish kar raha hun", "requiresConfirmation": false, "reply": null }
+
+User: "Main 12 Oct aur 13 Oct present tha, request bhej do"  Role: student
+→ { "action": "db_create_request", "collection": "attendancerequests", "data": { "dates": ["2026-10-12", "2026-10-13"], "reason": "Attendance correction", "requestType": "Attendance Correction" }, "explanation": "Attendance correction request bhej raha hun", "requiresConfirmation": true, "reply": null }
+
+User: "Pending requests dikhao"  Role: admin
+→ { "action": "db_read", "collection": "attendancerequests", "filter": { "status": "Pending" }, "explanation": "Pending requests fetch kar raha hun", "requiresConfirmation": false, "reply": null }
+
+User: "Request 12345 approve kar do"  Role: admin
+→ { "action": "db_review_request", "data": { "requestId": "12345", "action": "Approved" }, "explanation": "Request approve kar raha hun", "requiresConfirmation": false, "reply": null }
+
+User: "Hello"
+→ { "action": "reply", "reply": "Hello! Kaise help kar sakta hun?", "explanation": "Greeting", "requiresConfirmation": false, "collection": null }
+
+User: "BDA notes do"
+→ { "action": "reply", "reply": "## BDA - Big Data Analytics\\n\\n...", "explanation": "Notes de raha hun", "requiresConfirmation": false, "collection": null }
+`;
+
+async function detectIntent(message, userContext) {
+  const ctx = `Role: ${userContext.role}\nRollNo: ${userContext.rollNo}\nName: ${userContext.name}\nBranch: ${userContext.branch}\nToday: ${getISTDateString(new Date())}`;
+  const prompt = `${ctx}\n\nUser message: "${message}"\n\nReturn ONLY valid JSON.`;
+  try {
+    const reply = await callGemini({
+      prompt,
+      systemPrompt: DB_OPERATION_PROMPT,
+      maxTokens: 1500,
+      temperature: 0.3,
+      timeoutMs: 12000,
+      globalTimeoutMs: 30000,
+      maxAttempts: 4
+    });
+    let cleaned = reply.trim();
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
+    }
+    return JSON.parse(cleaned);
+  } catch (err) {
+    console.warn('Intent detection failed:', err.message);
+    return { action: 'reply', reply: null, explanation: 'Could not parse', requiresConfirmation: false };
+  }
+}
+
+// ============================================================
+//  ROLE-BASED DB OPERATION EXECUTOR
+// ============================================================
+async function executeDbAction(intent, userContext) {
+  const { action, collection, filter, update, data, limit, sort } = intent;
+  const isAdmin = userContext.role === 'admin';
+  const isFaculty = userContext.role === 'faculty';
+  const isStudent = userContext.role === 'student';
+
+  const collMap = {
+    users: User, attendances: Attendance, holidays: Holiday,
+    notices: Notice, leaves: Leave, passcodes: Passcode,
+    teachersubjects: TeacherSubject, attendancerequests: AttendanceRequest
+  };
+
+  // ---- Permission Gates ----
+  // Students: read-only on own data, plus can create attendance requests
+  if (isStudent) {
+    if (['db_create', 'db_update', 'db_delete'].includes(action)) {
+      if (collection !== 'attendancerequests') {
+        return { error: 'Students can only read their own data or submit attendance requests. Direct DB modification is not allowed.' };
+      }
+    }
+    if (['db_read', 'db_count', 'db_aggregate'].includes(action)) {
+      // Force own rollNo
+      if (collection === 'attendances' || collection === 'leaves' || collection === 'attendancerequests') {
+        filter = filter || {};
+        filter.rollNo = userContext.rollNo;
+      }
+      if (collection === 'users') {
+        filter = filter || {};
+        filter.rollNo = userContext.rollNo;
+      }
+      // Students can't read passcodes/notices via db (they use public endpoint)
+      if (collection === 'passcodes') return { error: 'Passcodes are accessed via a separate public endpoint.' };
+    }
+  }
+
+  // Faculty: read assigned students; can modify attendance only for assigned subjects; can review requests
+  if (isFaculty) {
+    if (['users', 'notices', 'holidays', 'passcodes'].includes(collection) && action !== 'db_read' && action !== 'db_count') {
+      return { error: 'Faculty cannot modify this collection.' };
+    }
+    if (collection === 'attendances' && ['db_create', 'db_update', 'db_delete'].includes(action)) {
+      const assigned = await TeacherSubject.find({ teacherRollNo: userContext.rollNo }).distinct('subject');
+      if (filter && filter.subject && !assigned.includes(filter.subject)) return { error: 'Only your assigned subjects.' };
+      if (update && update.subject && !assigned.includes(update.subject)) return { error: 'Only your assigned subjects.' };
+      if (data && data.subject && !assigned.includes(data.subject)) return { error: 'Only your assigned subjects.' };
+    }
+    if (collection === 'attendancerequests' && action === 'db_review_request') {
+      // allowed
+    }
+    if (collection === 'attendancerequests' && action !== 'db_read' && action !== 'db_review_request' && action !== 'db_count') {
+      return { error: 'Faculty can only read/review requests.' };
+    }
+  }
+
+  try {
+    const Model = collMap[collection];
+
+    // ---- READ ----
+    if (action === 'db_read') {
+      if (!Model) return { error: 'Unknown collection' };
+      let q = Model.find(filter || {});
+      if (sort) q = q.sort(sort);
+      q = q.limit(Math.min(limit || 20, 100));
+      const docs = await q.lean();
+      const sanitized = docs.map(d => {
+        if (!isAdmin) { delete d.password; delete d.activeSession; delete d.boundDeviceId; }
+        return d;
+      });
+      return { result: sanitized, count: sanitized.length };
+    }
+
+    // ---- COUNT ----
+    if (action === 'db_count') {
+      if (!Model) return { error: 'Unknown collection' };
+      const count = await Model.countDocuments(filter || {});
+      return { result: { count } };
+    }
+
+    // ---- AGGREGATE (attendance % specifically) ----
+    if (action === 'db_aggregate') {
+      if (collection === 'attendances') {
+        if (isAdmin && (!filter || !filter.rollNo)) {
+          // Admin-wide defaulters count
+          const students = await User.find({ role: 'student' }).select('rollNo name branch');
+          const today = getISTDateString(new Date());
+          const startStr = getISTDateString(SEMESTER_START);
+          const defaulters = [];
+          for (const s of students) {
+            const present = await Attendance.countDocuments({ rollNo: s.rollNo, date: { $gte: startStr, $lte: today }, status: { $in: ['Present','Duty Leave'] }, subject: { $nin: [/Sports/i, /LIB/i, /Library/i] } });
+            const total = await Attendance.countDocuments({ rollNo: s.rollNo, date: { $gte: startStr, $lte: today }, subject: { $nin: [/Sports/i, /LIB/i, /Library/i] } });
+            const pct = total > 0 ? Math.round((present/total)*100) : 0;
+            if (total === 0 || pct < 75) defaulters.push({ rollNo: s.rollNo, name: s.name, branch: s.branch, pct, present, total });
+          }
+          defaulters.sort((a,b) => a.pct - b.pct);
+          return { result: { totalDefaulters: defaulters.length, defaulters: defaulters.slice(0, 20) } };
+        }
+        const rollNo = (filter && filter.rollNo) || userContext.rollNo;
+        const summary = await getStudentSummary(rollNo);
+        if (!summary) return { error: 'Student not found' };
+        return { result: { rollNo, attendancePercentage: summary.attendancePercentage, attended: summary.totalAcademicLectures, conducted: summary.totalConductedLectures, subjectStats: summary.subjectStats, workingDaysSoFar: summary.workingDaysSoFar, totalWorkingDaysSemester: summary.totalWorkingDaysSemester } };
+      }
+      return { error: 'Aggregate only supported for attendances' };
+    }
+
+    // ---- CREATE ----
+    if (action === 'db_create') {
+      if (!Model) return { error: 'Unknown collection' };
+      if (collection === 'holidays') {
+        if (!isAdmin) return { error: 'Only admin can add holidays' };
+        if (!data || !data.date) return { error: 'Holiday date missing' };
+        await Holiday.findOneAndUpdate({ date: data.date }, { date: data.date, reason: data.reason || 'Holiday' }, { upsert: true });
+        return { result: { date: data.date, reason: data.reason } };
+      }
+      if (collection === 'notices') {
+        if (!isAdmin) return { error: 'Only admin can post notices' };
+        const n = await new Notice({ title: data.title || 'Announcement', message: data.message, date: new Date() }).save();
+        return { result: n.toObject() };
+      }
+      if (collection === 'attendances') {
+        if (!data || !data.rollNo || !data.subject || !data.date) return { error: 'Missing attendance fields' };
+        const stu = await User.findOne({ rollNo: data.rollNo });
+        if (!stu) return { error: 'Student not found' };
+        try {
+          const rec = await new Attendance({
+            rollNo: data.rollNo, studentName: stu.name, subject: mapToCanonical(data.subject),
+            date: data.date, status: data.status || 'Present',
+            location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG },
+            ipAddress: 'chatbot-create', isVerified: true, branch: stu.branch || 'CSE'
+          }).save();
+          return { result: rec.toObject() };
+        } catch (e) { if (e.code === 11000) return { error: 'Record already exists' }; throw e; }
+      }
+      return { error: 'Create not supported for: ' + collection };
+    }
+
+    // ---- UPDATE ----
+    if (action === 'db_update') {
+      if (!Model) return { error: 'Unknown collection' };
+      if (!update) return { error: 'Update fields missing' };
+      const r = await Model.updateMany(filter || {}, update);
+      return { result: { matched: r.matchedCount, modified: r.modifiedCount } };
+    }
+
+    // ---- DELETE ----
+    if (action === 'db_delete') {
+      if (!Model) return { error: 'Unknown collection' };
+      if (collection === 'users' && !isAdmin) return { error: 'Only admin can delete users' };
+      const r = await Model.deleteMany(filter || {});
+      return { result: { deleted: r.deletedCount } };
+    }
+
+    // ---- PUBLISH PASSCODE ----
+    if (action === 'db_publish_passcode') {
+      if (!isAdmin) return { error: 'Only admin can publish passcode' };
+      const type = data?.type || 'single_lecture';
+      const durationMinutes = parseInt(data?.durationMinutes) || (type === 'full_day' ? 1440 : 5);
+      const now = new Date();
+      const todayStr = getISTDateString(now);
+      const ds = await checkDateStatus(todayStr);
+      if (ds.isBlocked) return { error: 'College closed today — no passcode needed.' };
+
+      let passcode;
+      let expiry = new Date(now.getTime() + durationMinutes * 60 * 1000);
+      let key;
+      if (type === 'single_lecture') {
+        const period = getCurrentPeriod(userContext.branch || 'CSE');
+        if (!period) return { error: 'No active lecture now.' };
+        passcode = Math.floor(1000 + Math.random() * 9000).toString();
+        key = `single_lecture_${todayStr}_${period.start}_pub`;
+      } else {
+        passcode = Math.floor(10000 + Math.random() * 90000).toString();
+        key = `full_day_${todayStr}_pub`;
+      }
+      await Passcode.updateMany({ key }, { $set: { expiresAt: new Date(0) } });
+      const doc = await new Passcode({ passcode, type, key, expiresAt: expiry, published: true, publishedAt: now, publishedBy: userContext.rollNo, durationMinutes }).save();
+      return { result: { passcode, type, expiresAt: expiry, durationMinutes, published: true } };
+    }
+
+    // ---- CREATE ATTENDANCE REQUEST ----
+    if (action === 'db_create_request') {
+      if (!isStudent) return { error: 'Only students can submit attendance requests' };
+      if (!data || !data.dates || !data.dates.length) return { error: 'Dates missing' };
+      const validDates = data.dates.filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d));
+      if (!validDates.length) return { error: 'No valid dates' };
+      const req = await new AttendanceRequest({
+        rollNo: userContext.rollNo,
+        studentName: userContext.name,
+        branch: userContext.branch,
+        dates: validDates,
+        subjects: data.subjects || [],
+        reason: data.reason || 'Attendance correction',
+        requestType: data.requestType || 'Attendance Correction',
+        status: 'Pending'
+      }).save();
+      return { result: { requestId: req._id.toString(), dates: validDates, status: 'Pending' } };
+    }
+
+    // ---- REVIEW REQUEST ----
+    if (action === 'db_review_request') {
+      if (!isAdmin && !isFaculty) return { error: 'Only admin/faculty can review requests' };
+      if (!data || !data.requestId) return { error: 'requestId missing' };
+      const reqDoc = await AttendanceRequest.findById(data.requestId);
+      if (!reqDoc) return { error: 'Request not found' };
+      const decision = data.action === 'Approved' ? 'Approved' : (data.action === 'Rejected' ? 'Rejected' : null);
+      if (!decision) return { error: 'Invalid action' };
+      const reviewDates = data.dates || reqDoc.dates; // date-by-date support
+      if (decision === 'Approved') {
+        const b = reqDoc.branch || 'CSE';
+        const tt = getTimetableForBranch(b);
+        const FDN = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+        let marked = 0;
+        for (const dStr of reviewDates) {
+          const dObj = new Date(dStr + 'T00:00:00');
+          const dayName = FDN[dObj.getDay()];
+          const daySubs = (tt[dayName] || []).map(e => mapToCanonical(e.subject)).filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports'));
+          const subsToMark = reqDoc.subjects && reqDoc.subjects.length ? reqDoc.subjects : daySubs;
+          for (const sub of subsToMark) {
+            const exists = await Attendance.findOne({ rollNo: reqDoc.rollNo, subject: sub, date: dStr });
+            if (!exists) {
+              try {
+                await new Attendance({ rollNo: reqDoc.rollNo, studentName: reqDoc.studentName, subject: sub, date: dStr, status: 'Present', location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG }, ipAddress: 'request-approved', isVerified: true, branch: b }).save();
+                marked++;
+              } catch (e) {}
+            }
+          }
+        }
+        reqDoc.status = 'Approved';
+        reqDoc.reviewedDates = reviewDates;
+      } else {
+        reqDoc.status = 'Rejected';
+        reqDoc.rejectedDates = reviewDates;
+      }
+      reqDoc.reviewedBy = userContext.rollNo;
+      reqDoc.adminNote = data.note || '';
+      await reqDoc.save();
+      return { result: { requestId: reqDoc._id.toString(), status: reqDoc.status, reviewedDates: reviewDates } };
+    }
+
+    return { error: 'Unsupported action: ' + action };
+  } catch (err) {
+    console.error('DB execute error:', err);
+    return { error: 'Execution failed: ' + err.message };
+  }
 }
 
 // ============================================================
@@ -737,11 +1123,8 @@ app.get('/health', (req, res) => res.json({
   ai: GEMINI_API_KEYS.length > 0 ? 'gemini' : 'disabled',
   primaryModel: GEMINI_MODEL,
   fallbackModels: GEMINI_FALLBACK_MODELS,
-  globalTimeoutMs: GEMINI_GLOBAL_TIMEOUT_MS,
-  chatTimeoutMs: 12000,
-  fileUploadTimeoutMs: 90000,
   keysLoaded: GEMINI_API_KEYS.length,
-  features: ['smart-context', 'file-analysis', 'pdf', 'images'],
+  features: ['smart-context', 'database-assistant', 'file-analysis', 'pdf', 'images', 'requests', 'passcode-publish'],
   timestamp: new Date().toISOString()
 }));
 
@@ -809,6 +1192,17 @@ app.post('/api/auth/verify-passcode', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ========== PUBLIC PASSCODE (for students) ==========
+app.get('/api/passcode/public/:type', async (req, res) => {
+  try {
+    const { type } = req.params;
+    if (!['full_day', 'single_lecture'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
+    const doc = await Passcode.findOne({ type, published: true, expiresAt: { $gt: new Date() } }).sort({ publishedAt: -1 });
+    if (!doc) return res.json({ passcode: null, message: 'No published passcode active.' });
+    res.json({ passcode: doc.passcode, type, expiresAt: doc.expiresAt, durationMinutes: doc.durationMinutes, publishedAt: doc.publishedAt });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ========== PROFILE ==========
 app.post('/api/student/profile', async (req, res) => {
   try {
@@ -833,7 +1227,7 @@ app.get('/api/student/profile/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== ADMIN ==========
+// ========== ADMIN (existing) ==========
 app.post('/api/admin/reset-password', async (req, res) => {
   try {
     const { requesterRollNo, targetRollNo, newPassword } = req.body;
@@ -875,6 +1269,7 @@ app.delete('/api/admin/delete-user', async (req, res) => {
     await User.findOneAndDelete({ rollNo: t });
     await Attendance.deleteMany({ rollNo: t });
     await TeacherSubject.deleteMany({ teacherRollNo: t });
+    await AttendanceRequest.deleteMany({ rollNo: t });
     res.json({ message: `Deleted ${t}` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -890,134 +1285,79 @@ app.post('/api/admin/login-as-student', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== FIX ALL ATTENDANCE ==========
-app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
+// ========== ATTENDANCE REQUESTS (Manual endpoints) ==========
+app.post('/api/requests/create', async (req, res) => {
   try {
-    const { requesterRollNo, testRollNo } = req.body;
-    const requester = await User.findOne({ rollNo: requesterRollNo?.trim().toUpperCase() });
-    if (!requester || requester.role !== 'admin') {
-      return res.status(403).json({ error: 'Access Denied: Admin Only!' });
-    }
-    const todayStr = getISTDateString(new Date());
-    const semesterStart = new Date('2026-07-15T00:00:00+05:30');
-    let studentQuery = { role: 'student' };
-    if (testRollNo && testRollNo.trim()) {
-      studentQuery.rollNo = testRollNo.trim().toUpperCase();
-    }
-    const students = await User.find(studentQuery);
-    if (!students.length) {
-      return res.status(404).json({ error: testRollNo ? `Student ${testRollNo} not found!` : 'No students found' });
-    }
-    const allHolidays = await Holiday.find({});
-    const holidaySet = new Set(allHolidays.map(h => h.date.split('T')[0]));
-    let totalRemoved = 0, totalAdded = 0, totalRenamed = 0, totalDedup = 0;
-    const report = [];
-    for (const student of students) {
-      const branch = student.branch || 'CSE';
-      const timetable = getTimetableForBranch(branch);
-      const allRecords = await Attendance.find({ rollNo: student.rollNo }).lean();
-      if (!allRecords.length) {
-        report.push({ rollNo: student.rollNo, name: student.name, branch, removed: 0, added: 0, renamed: 0, dedup: 0 });
-        continue;
-      }
-      let sRemoved = 0, sAdded = 0, sRenamed = 0, sDedup = 0;
-      const removedDetails = [], addedDetails = [];
-      const grouped = {};
-      for (const rec of allRecords) {
-        const canon = mapToCanonical(rec.subject);
-        if (!grouped[rec.date]) grouped[rec.date] = new Map();
-        if (grouped[rec.date].has(canon)) {
-          await Attendance.deleteOne({ _id: rec._id });
-          sDedup++;
-        } else {
-          grouped[rec.date].set(canon, rec);
-          if (rec.subject !== canon) {
-            await Attendance.updateOne({ _id: rec._id }, { $set: { subject: canon } });
-            sRenamed++;
+    const { rollNo, dates, subjects, reason, requestType } = req.body;
+    if (!rollNo || !dates || !dates.length) return res.status(400).json({ error: 'rollNo and dates required' });
+    const user = await User.findOne({ rollNo: rollNo.trim().toUpperCase(), role: 'student' });
+    if (!user) return res.status(404).json({ error: 'Student not found' });
+    const validDates = dates.filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d));
+    if (!validDates.length) return res.status(400).json({ error: 'No valid dates' });
+    const reqDoc = await new AttendanceRequest({
+      rollNo: user.rollNo, studentName: user.name, branch: user.branch || 'CSE',
+      dates: validDates, subjects: subjects || [], reason: reason || 'Attendance correction',
+      requestType: requestType || 'Attendance Correction'
+    }).save();
+    res.status(201).json({ message: 'Request submitted', request: reqDoc });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/requests/my/:rollNo', async (req, res) => {
+  try {
+    const cr = req.params.rollNo.trim().toUpperCase();
+    res.json(await AttendanceRequest.find({ rollNo: cr }).sort({ createdAt: -1 }));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/requests/all/:requesterRollNo', async (req, res) => {
+  try {
+    const rrn = req.params.requesterRollNo.trim().toUpperCase();
+    const req1 = await User.findOne({ rollNo: rrn });
+    if (!req1 || (req1.role !== 'admin' && req1.role !== 'faculty')) return res.status(403).json({ error: 'Admin/Faculty only' });
+    const filter = req1.role === 'faculty' ? { branch: req1.branch || 'CSE' } : {};
+    res.json(await AttendanceRequest.find(filter).sort({ createdAt: -1 }));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/requests/review/:id', async (req, res) => {
+  try {
+    const { requesterRollNo, action, dates, note } = req.body;
+    const req1 = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+    if (!req1 || (req1.role !== 'admin' && req1.role !== 'faculty')) return res.status(403).json({ error: 'Admin/Faculty only' });
+    const reqDoc = await AttendanceRequest.findById(req.params.id);
+    if (!reqDoc) return res.status(404).json({ error: 'Request not found' });
+    const reviewDates = dates && dates.length ? dates : reqDoc.dates;
+    if (action === 'Approved') {
+      const b = reqDoc.branch || 'CSE';
+      const tt = getTimetableForBranch(b);
+      const FDN = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+      let marked = 0;
+      for (const dStr of reviewDates) {
+        const dayName = FDN[new Date(dStr + 'T00:00:00').getDay()];
+        const daySubs = (tt[dayName] || []).map(e => mapToCanonical(e.subject)).filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports'));
+        const subsToMark = reqDoc.subjects.length ? reqDoc.subjects : daySubs;
+        for (const sub of subsToMark) {
+          const exists = await Attendance.findOne({ rollNo: reqDoc.rollNo, subject: sub, date: dStr });
+          if (!exists) {
+            try {
+              await new Attendance({ rollNo: reqDoc.rollNo, studentName: reqDoc.studentName, subject: sub, date: dStr, status: 'Present', location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG }, ipAddress: 'request-approved', isVerified: true, branch: b }).save();
+              marked++;
+            } catch (e) {}
           }
         }
       }
-      let cur = new Date(semesterStart);
-      const endDate = new Date(todayStr + 'T23:59:59Z');
-      while (cur <= endDate) {
-        const dateStr = getISTDateString(cur);
-        const dow = cur.getDay();
-        const isWeekend = (dow === 0 || dow === 6);
-        const isHoliday = holidaySet.has(dateStr);
-        if (!isWeekend && !isHoliday) {
-          const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][dow];
-          const ttSubjects = [...new Set(
-            (timetable[dayName] || [])
-              .map(s => mapToCanonical(s.subject))
-              .filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports'))
-          )];
-          const studentSubjects = grouped[dateStr] || new Map();
-          for (const [sub, rec] of studentSubjects) {
-            if (!ttSubjects.includes(sub)) {
-              await Attendance.deleteOne({ _id: rec._id });
-              studentSubjects.delete(sub);
-              sRemoved++;
-              removedDetails.push(`${dateStr}: ${sub}`);
-            }
-          }
-          const presentCount = ttSubjects.filter(s => studentSubjects.has(s)).length;
-          const totalCount = ttSubjects.length;
-          if (totalCount > 0 && presentCount >= Math.ceil(totalCount / 2) && presentCount < totalCount) {
-            const missing = ttSubjects.filter(s => !studentSubjects.has(s));
-            for (const missSub of missing) {
-              try {
-                await new Attendance({
-                  rollNo: student.rollNo,
-                  studentName: student.name,
-                  subject: missSub,
-                  date: dateStr,
-                  status: 'Present',
-                  location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG },
-                  ipAddress: 'fix-all-auto',
-                  isVerified: true,
-                  branch: branch
-                }).save();
-                sAdded++;
-                addedDetails.push(`${dateStr}: ${missSub}`);
-              } catch (e) {
-                if (e.code !== 11000) throw e;
-              }
-            }
-          }
-        }
-        cur.setDate(cur.getDate() + 1);
-      }
-      totalRemoved += sRemoved;
-      totalAdded += sAdded;
-      totalRenamed += sRenamed;
-      totalDedup += sDedup;
-      report.push({
-        rollNo: student.rollNo,
-        name: student.name,
-        branch,
-        removed: sRemoved,
-        added: sAdded,
-        renamed: sRenamed,
-        dedup: sDedup,
-        removedDetails: removedDetails.slice(0, 30),
-        addedDetails: addedDetails.slice(0, 30)
-      });
+      reqDoc.status = 'Approved';
+      reqDoc.reviewedDates = reviewDates;
+    } else {
+      reqDoc.status = 'Rejected';
+      reqDoc.rejectedDates = reviewDates;
     }
-    console.log(`🛠️ Fix-all: removed=${totalRemoved}, added=${totalAdded}, renamed=${totalRenamed}, dedup=${totalDedup}`);
-    res.json({
-      message: `✅ Scanned ${students.length} students. Removed ${totalRemoved} extras, added ${totalAdded} missing, renamed ${totalRenamed}, dedup ${totalDedup}.`,
-      totalStudents: students.length,
-      removed: totalRemoved,
-      added: totalAdded,
-      renamed: totalRenamed,
-      deduplicated: totalDedup,
-      testMode: !!testRollNo,
-      report
-    });
-  } catch (err) {
-    console.error('Fix all attendance error:', err);
-    res.status(500).json({ error: err.message });
-  }
+    reqDoc.reviewedBy = req1.rollNo;
+    reqDoc.adminNote = note || '';
+    await reqDoc.save();
+    res.json({ message: `Request ${action.toLowerCase()}`, request: reqDoc });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ========== TEACHER SUBJECTS ==========
@@ -1101,7 +1441,7 @@ app.post('/api/teacher/mark-attendance', async (req, res) => {
 // ========== PASSCODE ==========
 app.post('/api/admin/generate-passcode', async (req, res) => {
   try {
-    const { requesterRollNo, type, force } = req.body;
+    const { requesterRollNo, type, force, publish, durationMinutes } = req.body;
     const req1 = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
     if (!req1) return res.status(403).json({ error: 'User not found!' });
     if (req1.role === 'admin') { /* ok */ }
@@ -1110,15 +1450,7 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
     if (!type || !['full_day', 'single_lecture'].includes(type)) return res.status(400).json({ error: 'Invalid type.' });
     const todayStr = getISTDateString(new Date());
     const dateStatus = await checkDateStatus(todayStr);
-    if (dateStatus.isBlocked) {
-      return res.status(400).json({
-        error: dateStatus.type === 'WEEKEND'
-          ? `📅 ${dateStatus.dayName}: College closed. Passcode not needed.`
-          : `🎉 ${dateStatus.holiday || 'Holiday'}: College closed. Passcode not needed.`,
-        blocked: true,
-        type: dateStatus.type
-      });
-    }
+    if (dateStatus.isBlocked) return res.status(400).json({ error: dateStatus.type === 'WEEKEND' ? `📅 ${dateStatus.dayName}: College closed.` : `🎉 ${dateStatus.holiday || 'Holiday'}: College closed.`, blocked: true });
     if (type === 'single_lecture') {
       const branch = req1.branch || 'CSE';
       const period = getCurrentPeriod(branch);
@@ -1126,33 +1458,25 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
       const now = new Date();
       const ds = getISTDateString(now);
       const key = `single_lecture_${ds}_${period.start}`;
-      if (force) {
-        await Passcode.deleteMany({ key, type: 'single_lecture' });
-      } else {
-        let doc = await Passcode.findOne({ key, type: 'single_lecture' });
-        if (doc && doc.expiresAt > new Date()) return res.json({ message: 'Existing', passcode: doc.passcode, type, expiresAt: doc.expiresAt });
-      }
+      if (force) { await Passcode.deleteMany({ key, type: 'single_lecture' }); }
+      else { let doc = await Passcode.findOne({ key, type: 'single_lecture' }); if (doc && doc.expiresAt > new Date()) return res.json({ message: 'Existing', passcode: doc.passcode, type, expiresAt: doc.expiresAt }); }
       const passcode = Math.floor(1000 + Math.random() * 9000).toString();
       const expiry = new Date(now.getTime() + 5 * 60 * 1000);
-      await new Passcode({ passcode, type, key, expiresAt: expiry }).save();
+      await new Passcode({ passcode, type, key, expiresAt: expiry, published: !!publish, publishedAt: publish ? now : null, publishedBy: publish ? req1.rollNo : null, durationMinutes: publish ? (parseInt(durationMinutes) || 5) : null }).save();
       await Passcode.deleteMany({ type: 'single_lecture', expiresAt: { $lt: new Date() } });
-      return res.json({ message: force ? 'Changed' : 'Generated', passcode, type, expiresAt: expiry, changed: !!force });
+      return res.json({ message: force ? 'Changed' : 'Generated', passcode, type, expiresAt: expiry, changed: !!force, published: !!publish });
     }
     if (type === 'full_day') {
       const now = new Date();
       const ds = getISTDateString(now);
       const key = `full_day_${ds}`;
-      if (force) {
-        await Passcode.deleteMany({ key, type: 'full_day' });
-      } else {
-        let doc = await Passcode.findOne({ key, type: 'full_day' });
-        if (doc && doc.expiresAt > new Date()) return res.json({ message: 'Existing', passcode: doc.passcode, type, expiresAt: doc.expiresAt });
-      }
+      if (force) { await Passcode.deleteMany({ key, type: 'full_day' }); }
+      else { let doc = await Passcode.findOne({ key, type: 'full_day' }); if (doc && doc.expiresAt > new Date()) return res.json({ message: 'Existing', passcode: doc.passcode, type, expiresAt: doc.expiresAt }); }
       const passcode = Math.floor(10000 + Math.random() * 90000).toString();
       const expiry = new Date(now); expiry.setHours(23, 59, 59, 999);
-      await new Passcode({ passcode, type, key, expiresAt: expiry }).save();
+      await new Passcode({ passcode, type, key, expiresAt: expiry, published: !!publish, publishedAt: publish ? now : null, publishedBy: publish ? req1.rollNo : null, durationMinutes: publish ? (parseInt(durationMinutes) || 1440) : null }).save();
       await Passcode.deleteMany({ type: 'full_day', expiresAt: { $lt: new Date() } });
-      return res.json({ message: force ? 'Changed' : 'Generated', passcode, type, expiresAt: expiry, changed: !!force });
+      return res.json({ message: force ? 'Changed' : 'Generated', passcode, type, expiresAt: expiry, changed: !!force, published: !!publish });
     }
     res.status(400).json({ error: 'Invalid type' });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -1193,7 +1517,8 @@ app.post('/api/attendance/mark-lecture', async (req, res) => {
     const ns = mapToCanonical(subject), nc = mapToCanonical(period.subject);
     if (ns !== nc) return res.status(400).json({ error: 'Subject mismatch.' });
     const key = `single_lecture_${todayDate}_${period.start}`;
-    const doc = await Passcode.findOne({ key, type: 'single_lecture', passcode, expiresAt: { $gt: new Date() } });
+    const key2 = `single_lecture_${todayDate}_${period.start}_pub`;
+    const doc = await Passcode.findOne({ $or: [{ key }, { key: key2, published: true }], type: 'single_lecture', passcode, expiresAt: { $gt: new Date() } });
     if (!doc) return res.status(400).json({ error: 'Invalid/expired passcode.' });
     const lc = checkLocation(latitude, longitude);
     if (!lc.isInside) { await incrementFailedAttempts(cr); return res.status(400).json({ error: `Outside (${lc.distance}m)` }); }
@@ -1244,30 +1569,6 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     if (marked === 0 && skipped > 0) return res.status(400).json({ error: `All ${skipped} already marked today.` });
     if (marked === 0) return res.status(400).json({ error: 'No academic subjects today.' });
     res.status(201).json({ message: `✅ Marked ${marked} new (${skipped} already).` });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-app.post('/api/attendance/mark', async (req, res) => {
-  try {
-    const { rollNo, name, subject, latitude, longitude } = req.body;
-    const todayDate = getISTDateString(new Date());
-    const ds = await checkDateStatus(todayDate);
-    if (ds.isBlocked) return res.status(400).json({ error: ds.message });
-    const cr = rollNo.trim().toUpperCase();
-    const bc = await checkStudentBlocked(cr);
-    if (bc.blocked) return res.status(403).json({ error: bc.message });
-    const lc = checkLocation(latitude, longitude);
-    if (!lc.isInside) { await incrementFailedAttempts(cr); return res.status(400).json({ error: `Outside (${lc.distance}m)` }); }
-    const user = await User.findOne({ rollNo: cr });
-    if (!user) return res.status(404).json({ error: 'Not found!' });
-    const subj = mapToCanonical(subject);
-    const isLab = subj.includes("LAB") || subj.includes("Lab");
-    const today = await Attendance.find({ rollNo: cr, subject: subj, date: todayDate });
-    if (isLab && today.length >= 1) return res.status(400).json({ error: `Already marked (lab).` });
-    user.failedAttempts = 0; user.blockUntil = null;
-    await new Attendance({ rollNo: cr, studentName: name, subject: subj, date: todayDate, status: 'Present', location: { latitude, longitude }, ipAddress: req.ip, isVerified: true, branch: user.branch || 'CSE' }).save();
-    user.lastAttendanceTime = new Date(); user.lastAttendanceLocation = { latitude, longitude };
-    await user.save();
-    res.status(201).json({ message: `✅ Marked for ${subject}!` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -1559,65 +1860,9 @@ app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
 // ========== STUDENT SUMMARY ==========
 app.get('/api/student/summary/:rollNo', async (req, res) => {
   try {
-    const cr = req.params.rollNo.trim().toUpperCase();
-    const user = await User.findOne({ rollNo: cr });
-    if (!user) return res.status(404).json({ error: 'Not found!' });
-    const branch = user.branch || 'CSE';
-    const tt = getTimetableForBranch(branch);
-    const allRecords = await Attendance.find({ rollNo: cr }).lean();
-    const holidays = await Holiday.find({}).lean();
-    const holidaySet = new Set(holidays.map(h => h.date.split('T')[0]));
-    const today = new Date();
-    const todayStr = getISTDateString(today);
-    const semesterStart = new Date('2026-07-15T00:00:00+05:30');
-    let cur = new Date(semesterStart);
-    let totalConducted = 0;
-    const acadDays = new Set();
-    const stats = {};
-    const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    const dayAcad = {};
-    for (let d = 0; d < 7; d++) {
-      const dayName = dayNameMap[d];
-      const subs = tt[dayName] || [];
-      const acad = subs.filter(e => !e.subject.includes("LIB") && !e.subject.includes("Library") && !e.subject.includes("Sports"));
-      dayAcad[dayName] = acad.map(e => mapToCanonical(e.subject));
-    }
-    while (cur <= today) {
-      const ds = getISTDateString(cur);
-      if (ds > todayStr) { cur.setDate(cur.getDate() + 1); continue; }
-      const dow = cur.getDay();
-      if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) {
-        acadDays.add(ds);
-        const dayName = dayNameMap[dow];
-        const acad = dayAcad[dayName] || [];
-        totalConducted += acad.length;
-        acad.forEach(sub => { if (!stats[sub]) stats[sub] = { total: 0, present: 0 }; stats[sub].total++; });
-      }
-      cur.setDate(cur.getDate() + 1);
-    }
-    const presentDaysSet = new Set();
-    const subPresent = {};
-    allRecords.forEach(rec => {
-      const sub = mapToCanonical(rec.subject);
-      if (sub.includes("LIB") || sub.includes("Library") || sub.includes("Sports")) return;
-      if (rec.status === 'Present' || rec.status === 'Duty Leave') {
-        subPresent[sub] = (subPresent[sub] || 0) + 1;
-        presentDaysSet.add(rec.date);
-      }
-    });
-    Object.keys(subPresent).forEach(sub => { if (stats[sub]) stats[sub].present = subPresent[sub]; });
-    let totalAttended = 0;
-    Object.values(subPresent).forEach(v => totalAttended += v);
-    const pct = totalConducted > 0 ? Math.round((totalAttended / totalConducted) * 100) : 0;
-    const daysPresent = presentDaysSet.size;
-    const totalWorkingDays = acadDays.size;
-    const sFinal = {};
-    for (let [sub, st] of Object.entries(stats)) {
-      sFinal[sub] = { present: st.present || 0, total: st.total || 0, percentage: st.total > 0 ? Math.round(((st.present || 0) / st.total) * 100) : 0 };
-    }
-    const workingDaysSoFar = await getWorkingDays(semesterStart, today);
-    const totalWorkingDaysSemester = await getWorkingDays(semesterStart, SEMESTER_END);
-    res.json({ totalAcademicLectures: totalAttended, totalConductedLectures: totalConducted, attendancePercentage: pct, daysPresent, daysAbsent: totalWorkingDays - daysPresent, workingDaysSoFar, totalWorkingDaysSemester, subjectStats: sFinal });
+    const summary = await getStudentSummary(req.params.rollNo.trim().toUpperCase());
+    if (!summary) return res.status(404).json({ error: 'Not found!' });
+    res.json(summary);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -1732,129 +1977,6 @@ app.get('/api/admin/class-attendance-report', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== BULK CSE ==========
-app.post('/api/admin/bulk-register-and-update-attendance', async (req, res) => {
-  try {
-    const req1 = await User.findOne({ rollNo: req.body.requesterRollNo?.trim().toUpperCase() || '' });
-    if (!req1 || req1.role !== 'admin') return res.status(403).json({ error: 'Admin only!' });
-    const data = [
-      { rollNo: '24CSE01', name: 'AAKASH RAJ CHAUHAN', present: 35 },{ rollNo: '24CSE03', name: 'ABHISHEK VERMA', present: 0 },
-      { rollNo: '24CSE04', name: 'ANKIT KUMAR', present: 0 },{ rollNo: '24CSE06', name: 'ANSHIKA', present: 44 },
-      { rollNo: '24CSE08', name: 'ANUJ TIWARI', present: 0 },{ rollNo: '24CSE09', name: 'ASHISH KUMAR', present: 47 },
-      { rollNo: '24CSE11', name: 'B DEVIKA', present: 0 },{ rollNo: '24CSE14', name: 'GAUTAM', present: 35 },
-      { rollNo: '24CSE15', name: 'HARSH RAJ', present: 11 },{ rollNo: '24CSE16', name: 'HIMANSHI', present: 38 },
-      { rollNo: '24CSE18', name: 'HITESH YADAV', present: 0 },{ rollNo: '24CSE19', name: 'ISHANT KUMAR', present: 44 },
-      { rollNo: '24CSE20', name: 'JATIN', present: 0 },{ rollNo: '24CSE21', name: 'JATIN YADAV', present: 0 },
-      { rollNo: '24CSE22', name: 'JITIN YADAV', present: 0 },{ rollNo: '24CSE23', name: 'KAUSHAL KUMAR', present: 18 },
-      { rollNo: '24CSE24', name: 'KRISH BHARDWAJ', present: 1 },{ rollNo: '24CSE25', name: 'MANISH', present: 0 },
-      { rollNo: '24CSE27', name: 'MANMOHAN KUMAR', present: 0 },{ rollNo: '24CSE28', name: 'MANOJ', present: 5 },
-      { rollNo: '24CSE29', name: 'MAYANK', present: 0 },{ rollNo: '24CSE30', name: 'MD SAMIR ALAM', present: 0 },
-      { rollNo: '24CSE31', name: 'MUDIT BEDI', present: 8 },{ rollNo: '24CSE33', name: 'NEHA SHUKLA', present: 39 },
-      { rollNo: '24CSE35', name: 'PRASHANT', present: 0 },{ rollNo: '24CSE36', name: 'PREETI', present: 39 },
-      { rollNo: '24CSE37', name: 'PURAV RAO', present: 1 },{ rollNo: '24CSE38', name: 'RACHIT SINGH', present: 0 },
-      { rollNo: '24CSE39', name: 'RAHUL', present: 0 },{ rollNo: '24CSE40', name: 'RISHAV RAJ', present: 0 },
-      { rollNo: '24CSE41', name: 'RITU KUMARI', present: 18 },{ rollNo: '24CSE42', name: 'ROHIT SHRESTA', present: 43 },
-      { rollNo: '24CSE43', name: 'RUPESH KUMAR', present: 0 },{ rollNo: '24CSE44', name: 'SAHIL', present: 0 },
-      { rollNo: '24CSE45', name: 'SAIESH', present: 0 },{ rollNo: '24CSE46', name: 'SAKSHI KUMARI', present: 21 },
-      { rollNo: '24CSE47', name: 'SOURABH RAJPUT', present: 0 },{ rollNo: '24CSE48', name: 'SUMIT SHARMA', present: 12 },
-      { rollNo: '24CSE49', name: 'TUSHAR KUMAR', present: 44 },{ rollNo: '24CSE51', name: 'VIDHI BHARGAV', present: 22 },
-      { rollNo: '24CSE52', name: 'VINAY', present: 32 }
-    ];
-    const sD = new Date('2026-07-15T00:00:00+05:30');
-    const eD = new Date('2026-07-30T23:59:59+05:30');
-    const sStr = getISTDateString(sD), eStr = getISTDateString(eD);
-    let reg = 0, added = 0;
-    for (const item of data) {
-      let user = await User.findOne({ rollNo: item.rollNo });
-      if (user) { user.name = item.name; user.branch = 'CSE'; user.password = await bcrypt.hash('123456', 10); await user.save(); }
-      else {
-        const nu = new User({ name: item.name, rollNo: item.rollNo, password: await bcrypt.hash('123456', 10), role: 'student', branch: 'CSE', boundDeviceId: null });
-        await nu.save(); user = nu; reg++;
-      }
-      await Attendance.deleteMany({ rollNo: item.rollNo, date: { $gte: sStr, $lte: eStr } });
-      if (item.present === 0) continue;
-      let days = [];
-      let cur = new Date(sD);
-      while (cur <= eD) {
-        const ds = getISTDateString(cur);
-        const dow = cur.getDay();
-        const isHol = await Holiday.findOne({ date: ds });
-        if (dow !== 0 && dow !== 6 && !isHol) {
-          const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][dow];
-          const tt = getTimetableForBranch('CSE');
-          const acad = (tt[dayName] || []).map(s => mapToCanonical(s.subject)).filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports'));
-          days.push({ date: ds, subjects: acad });
-        }
-        cur.setDate(cur.getDate() + 1);
-      }
-      let all = [];
-      for (const d of days) for (const sub of d.subjects) all.push({ date: d.date, subject: sub });
-      const toMark = Math.min(item.present, all.length);
-      for (let i = 0; i < toMark; i++) {
-        const e = all[i];
-        await new Attendance({ rollNo: item.rollNo, studentName: item.name, subject: e.subject, date: e.date, status: 'Present', location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG }, ipAddress: 'bulk-update', isVerified: true, branch: 'CSE' }).save();
-        added++;
-      }
-    }
-    res.json({ message: 'CSE bulk done!', totalRegistered: reg, totalAttendanceAdded: added });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// ========== BULK AIDS ==========
-app.post('/api/admin/bulk-register-and-update-attendance-aids', async (req, res) => {
-  try {
-    const req1 = await User.findOne({ rollNo: req.body.requesterRollNo?.trim().toUpperCase() || '' });
-    if (!req1 || req1.role !== 'admin') return res.status(403).json({ error: 'Admin only!' });
-    const data = [
-      { rollNo: '24AIDS01', name: 'AKASH', present: 1 },{ rollNo: '24AIDS03', name: 'DAVANSH SINGH KARKI', present: 5 },
-      { rollNo: '24AIDS04', name: 'FAIZAN AHMAD', present: 40 },{ rollNo: '24AIDS05', name: 'GOPESH JHA', present: 0 },
-      { rollNo: '24AIDS06', name: 'HEMANT YADAV', present: 0 },{ rollNo: '24AIDS07', name: 'HUSNAIN AHMAD', present: 40 },
-      { rollNo: '24AIDS08', name: 'JANHVI', present: 0 },{ rollNo: '24AIDS09', name: 'JYOTI PUSHPA ROUT', present: 26 },
-      { rollNo: '24AIDS11', name: 'MAHIMA', present: 38 },{ rollNo: '24AIDS12', name: 'MOHAMMAD HAMID KHALIL', present: 0 },
-      { rollNo: '24AIDS13', name: 'PIYUSH KUMAR', present: 0 },{ rollNo: '24AIDS14', name: 'PRINCE KUMAR', present: 0 },
-      { rollNo: '24AIDS16', name: 'SACHIN', present: 0 },{ rollNo: '24AIDS17', name: 'SAHIL PRASAD', present: 5 },
-      { rollNo: '24AIDS19', name: 'VINAY', present: 38 }
-    ];
-    const sD = new Date('2026-07-15T00:00:00+05:30');
-    const eD = new Date('2026-07-30T23:59:59+05:30');
-    const sStr = getISTDateString(sD), eStr = getISTDateString(eD);
-    let reg = 0, added = 0;
-    for (const item of data) {
-      let user = await User.findOne({ rollNo: item.rollNo });
-      if (user) { user.name = item.name; user.branch = 'AIDS'; user.password = await bcrypt.hash('123456', 10); await user.save(); }
-      else {
-        const nu = new User({ name: item.name, rollNo: item.rollNo, password: await bcrypt.hash('123456', 10), role: 'student', branch: 'AIDS', boundDeviceId: null });
-        await nu.save(); user = nu; reg++;
-      }
-      await Attendance.deleteMany({ rollNo: item.rollNo, date: { $gte: sStr, $lte: eStr } });
-      if (item.present === 0) continue;
-      let days = [];
-      let cur = new Date(sD);
-      while (cur <= eD) {
-        const ds = getISTDateString(cur);
-        const dow = cur.getDay();
-        const isHol = await Holiday.findOne({ date: ds });
-        if (dow !== 0 && dow !== 6 && !isHol) {
-          const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][dow];
-          const tt = getTimetableForBranch('AIDS');
-          const acad = (tt[dayName] || []).map(s => mapToCanonical(s.subject)).filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports'));
-          days.push({ date: ds, subjects: acad });
-        }
-        cur.setDate(cur.getDate() + 1);
-      }
-      let all = [];
-      for (const d of days) for (const sub of d.subjects) all.push({ date: d.date, subject: sub });
-      const toMark = Math.min(item.present, all.length);
-      for (let i = 0; i < toMark; i++) {
-        const e = all[i];
-        await new Attendance({ rollNo: item.rollNo, studentName: item.name, subject: e.subject, date: e.date, status: 'Present', location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG }, ipAddress: 'bulk-update', isVerified: true, branch: 'AIDS' }).save();
-        added++;
-      }
-    }
-    res.json({ message: 'AIDS bulk done!', totalRegistered: reg, totalAttendanceAdded: added });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
 // ========== BULK MARK/DELETE ==========
 app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
   try {
@@ -1912,26 +2034,6 @@ app.get('/api/chats/:rollNo', async (req, res) => {
     res.json(await Chat.find({ rollNo: cr }).sort({ updatedAt: -1 }));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
-app.post('/api/chats', async (req, res) => {
-  try {
-    const { rollNo, threadId, title, messages } = req.body;
-    const cr = rollNo.trim().toUpperCase();
-    if (!threadId) {
-      const newTid = `chat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-      const nc = new Chat({ rollNo: cr, threadId: newTid, title: title || 'New Chat', messages: messages || [] });
-      await nc.save();
-      return res.status(201).json(nc);
-    } else {
-      const chat = await Chat.findOne({ threadId, rollNo: cr });
-      if (!chat) return res.status(404).json({ error: 'Chat not found' });
-      if (title) chat.title = title;
-      if (messages) chat.messages = messages;
-      chat.updatedAt = new Date();
-      await chat.save();
-      return res.json(chat);
-    }
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
 app.delete('/api/chats/:threadId', async (req, res) => {
   try {
     const { threadId } = req.params;
@@ -1953,7 +2055,7 @@ app.post('/api/leave/apply', async (req, res) => {
     const user = await User.findOne({ rollNo: cr });
     if (!user) return res.status(404).json({ error: 'Not found!' });
     if (new Date(toDate) < new Date(fromDate)) return res.status(400).json({ error: 'End before start.' });
-    const leave = new Leave({ rollNo: cr, studentName: user.name, fromDate, toDate, reason, leaveType: leaveType || 'Personal', branch: user.branch || 'CSE' });
+    const leave = await new Leave({ rollNo: cr, studentName: user.name, fromDate, toDate, reason, leaveType: leaveType || 'Personal', branch: user.branch || 'CSE' });
     await leave.save();
     res.status(201).json({ message: '✅ Submitted!', leave });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -2002,25 +2104,6 @@ app.post('/api/leave/action/:id', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== TREND ==========
-app.get('/api/student/trend/:rollNo', async (req, res) => {
-  try {
-    const cr = req.params.rollNo.trim().toUpperCase();
-    const months = [6,7,8,9,10,11];
-    const labels = ['Jul','Aug','Sep','Oct','Nov','Dec'];
-    const data = [];
-    for (const m of months) {
-      const start = new Date(2026, m, 1);
-      const end = new Date(2026, m + 1, 0);
-      const sStr = getISTDateString(start), eStr = getISTDateString(end);
-      const recs = await Attendance.find({ rollNo: cr, date: { $gte: sStr, $lte: eStr } });
-      const present = recs.filter(r => r.status === 'Present' || r.status === 'Duty Leave').length;
-      data.push({ month: labels[m-6], present, total: recs.length });
-    }
-    res.json(data);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
 // ========== DEFAULTERS ==========
 app.get('/api/admin/defaulters/:requesterRollNo', async (req, res) => {
   try {
@@ -2044,51 +2127,27 @@ app.get('/api/admin/defaulters/:requesterRollNo', async (req, res) => {
 });
 
 // ============================================================
-//  AI: Chat — with SMART CONTEXT (only when useContext=true)
+//  UNIFIED CHATBOT — Smart Context + Database Assistant
 // ============================================================
-function buildRoleSystemPrompt({ role, userName, contextStr, greeting, emoji }) {
-  const base = greeting ? `${greeting}, ${userName} ${emoji}!` : '';
-  const ctxBlock = contextStr ? `\nContext:\n${contextStr}` : '';
-  if (role === 'admin') {
-    return `You are "BM Bot Admin Assistant" for BM Group ERP.
-${base} Assisting ADMIN.${ctxBlock}
-Role:
-- Provide admin-level insights (stats, defaulters, class trends).
-- Suggest admin actions.
-- Draft notices & warnings professionally.
-- Be professional, data-driven.
-- Respond in user's language (Hindi/English).
-- NEVER use markdown tables. Use bullet points for comparison.`;
-  }
-  if (role === 'faculty') {
-    return `You are "BM Bot Faculty Assistant" for BM Group.
-${base} Assisting FACULTY.${ctxBlock}
-Role:
-- Help with assigned subjects, students, class averages.
-- Suggest teaching material.
-- Be supportive, concise.
-- Respond in user's language (Hindi/English).
-- NEVER use markdown tables. Use bullet points.`;
-  }
-  return `You are "BM Bot" for BM Group of Institutions attendance portal.
-${base} Assisting STUDENT.${ctxBlock}
-Role:
-- Answer questions on attendance, timetable, holidays, notes, coding, general help.
-- If attendance context is provided, use it to answer.
-- If user asks "kitne bunk kar sakta hun" — calculate using 75% rule (only if attendance data available).
-- If asked for notes — provide with headings, bullets, examples.
-- Warn politely if attendance below 75%.
-- Be friendly, encouraging, use emojis.
-- Respond in user's language (Hindi/English).
-- NEVER use markdown tables. Use bullet points for any comparison.`;
+function buildShortWelcome(role, userName) {
+  if (role === 'admin') return `Namaste ${userName}! 👋 Admin panel ready. Context aur Database toggle kar sakte ho detailed features ke liye.`;
+  if (role === 'faculty') return `Namaste ${userName}! 👋 Faculty mode ready. Context on karo students ke details ke liye, Database on karo attendance mark karne ke liye.`;
+  return `Namaste ${userName}! 👋 Kya help chahiye? Attendance, timetable, notes ya kuch aur — bas pucho!`;
+}
+
+function buildDetailedWelcome(role, userName) {
+  if (role === 'admin') return `Namaste ${userName} 👋\n\nMain aapka **Admin Assistant** hun. Aap ye sab kar sakte ho:\n• 📊 Attendance reports aur defaulters\n• 📢 Notice publish karna\n• 🎉 Holiday declare karna\n• 🔐 Passcode generate/publish karna\n• 📋 Student requests review karna\n• 👥 User management\n\n**Database toggle ON** karke seedha bol sakte ho: "Diwali holiday add karo 25 Oct", "Notice post karo" etc.`;
+  if (role === 'faculty') return `Namaste ${userName} 👋\n\nMain aapka **Faculty Assistant** hun:\n• 📚 Aapke assigned subjects ke students\n• ✅ Attendance mark karna (passcode ke sath)\n• 🔐 Lecture passcode generate karna\n• 📊 Class average aur reports\n• 📋 Student requests review karna\n\n**Database toggle ON** karke direct commands de sakte ho.`;
+  return `Namaste ${userName} 👋\n\nMain aapka **BM Bot** hun. Aap ye kar sakte ho:\n• 📊 Apni attendance check karna\n• 🗓️ Timetable dekhna\n• 🎉 Holidays jaanna\n• 📝 Notes/study material\n• 💻 Coding help\n• 📩 Attendance correction request bhejna\n\n**Context ON** → aapka personal data use hoga\n**Database ON** → attendance request bhej sakte ho`;
 }
 
 app.post('/api/ai/chat', async (req, res) => {
   try {
-    const { message, rollNo, role, name, branch, threadId, skipGreeting, useContext } = req.body;
+    const { message, rollNo, role, name, branch, threadId, skipGreeting, useContext, useDatabase } = req.body;
     if (!message) return res.status(400).json({ error: 'Message is required.' });
     const cr = rollNo?.trim().toUpperCase() || 'guest';
     const useCtx = useContext === true;
+    const useDb = useDatabase === true;
 
     let userData = null, existingChat = null;
     if (cr !== 'guest') {
@@ -2098,6 +2157,91 @@ app.post('/api/ai/chat', async (req, res) => {
       }
     }
 
+    const userRole = userData?.role || role || 'student';
+    const userName = userData?.name || name || 'Guest';
+
+    // ===== DATABASE MODE =====
+    if (useDb && userData) {
+      try {
+        const intent = await detectIntent(message, {
+          role: userRole, rollNo: cr, name: userName, branch: userData.branch || 'CSE'
+        });
+        console.log('🧠 Intent:', JSON.stringify(intent).substring(0, 300));
+
+        // If it's a pure reply intent, fall through to normal AI chat
+        if (intent.action !== 'reply') {
+          // Execute DB action (with role checks)
+          if (intent.requiresConfirmation) {
+            // Send to frontend for confirmation
+            // We still store chat
+            if (cr !== 'guest') {
+              const autoTitle = message.substring(0, 50) || 'DB op';
+              if (existingChat) {
+                existingChat.messages.push({ role: 'user', content: message });
+                existingChat.messages.push({ role: 'assistant', content: `[Pending confirmation] ${intent.explanation}` });
+                existingChat.updatedAt = new Date();
+                await existingChat.save();
+                return res.json({ reply: `⚠️ ${intent.explanation}\n\nConfirm karo:`, threadId: existingChat.threadId, title: existingChat.title, aiOk: true, usedContext: useCtx, usedDatabase: true, dbOp: intent, requiresConfirmation: true });
+              } else {
+                const nt = new Chat({ rollNo: cr, threadId: `chat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`, title: autoTitle, messages: [{ role: 'user', content: message }, { role: 'assistant', content: `[Pending] ${intent.explanation}` }] });
+                await nt.save();
+                return res.json({ reply: `⚠️ ${intent.explanation}\n\nConfirm karo:`, threadId: nt.threadId, title: autoTitle, aiOk: true, usedContext: useCtx, usedDatabase: true, dbOp: intent, requiresConfirmation: true });
+              }
+            }
+            return res.json({ reply: `⚠️ ${intent.explanation}\n\nConfirm karo:`, threadId: threadId, title: 'New Chat', aiOk: true, usedContext: useCtx, usedDatabase: true, dbOp: intent, requiresConfirmation: true });
+          }
+
+          // Execute immediately
+          const execResult = await executeDbAction(intent, {
+            role: userRole, rollNo: cr, name: userName, branch: userData.branch || 'CSE'
+          });
+
+          let replyText = execResult.error
+            ? `❌ ${execResult.error}`
+            : `✅ ${intent.explanation}\n\n${formatResult(execResult.result)}`;
+
+          // Save chat
+          if (cr !== 'guest') {
+            const autoTitle = message.substring(0, 50) || 'DB op';
+            if (existingChat) {
+              existingChat.messages.push({ role: 'user', content: message });
+              existingChat.messages.push({ role: 'assistant', content: replyText });
+              existingChat.updatedAt = new Date();
+              await existingChat.save();
+              return res.json({ reply: replyText, threadId: existingChat.threadId, title: existingChat.title, aiOk: true, usedContext: useCtx, usedDatabase: true, dbResult: execResult.result, dbError: execResult.error });
+            } else {
+              const nt = new Chat({ rollNo: cr, threadId: `chat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`, title: autoTitle, messages: [{ role: 'user', content: message }, { role: 'assistant', content: replyText }] });
+              await nt.save();
+              return res.json({ reply: replyText, threadId: nt.threadId, title: autoTitle, aiOk: true, usedContext: useCtx, usedDatabase: true, dbResult: execResult.result, dbError: execResult.error });
+            }
+          }
+          return res.json({ reply: replyText, threadId: threadId, title: 'New Chat', aiOk: true, usedContext: useCtx, usedDatabase: true, dbResult: execResult.result, dbError: execResult.error });
+        }
+        // else fall through to normal chat using intent.reply as hint
+        if (intent.reply) {
+          // Reply provided by intent detection
+          if (cr !== 'guest') {
+            const autoTitle = message.substring(0, 50) || 'Chat';
+            if (existingChat) {
+              existingChat.messages.push({ role: 'user', content: message });
+              existingChat.messages.push({ role: 'assistant', content: intent.reply });
+              existingChat.updatedAt = new Date();
+              await existingChat.save();
+              return res.json({ reply: intent.reply, threadId: existingChat.threadId, title: existingChat.title, aiOk: true, usedContext: useCtx, usedDatabase: true });
+            } else {
+              const nt = new Chat({ rollNo: cr, threadId: `chat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`, title: autoTitle, messages: [{ role: 'user', content: message }, { role: 'assistant', content: intent.reply }] });
+              await nt.save();
+              return res.json({ reply: intent.reply, threadId: nt.threadId, title: autoTitle, aiOk: true, usedContext: useCtx, usedDatabase: true });
+            }
+          }
+          return res.json({ reply: intent.reply, threadId: threadId, title: 'Chat', aiOk: true, usedContext: useCtx, usedDatabase: true });
+        }
+      } catch (err) {
+        console.warn('DB mode error, falling back to normal chat:', err.message);
+      }
+    }
+
+    // ===== NORMAL CHAT MODE =====
     // ✅ SMART CONTEXT — only if user explicitly enabled useContext
     let contextStr = '';
     if (useCtx && userData) {
@@ -2141,6 +2285,14 @@ app.post('/api/ai/chat', async (req, res) => {
         } catch(e) {}
       }
 
+      if (needs.passcode) {
+        try {
+          const now = new Date();
+          const activePubs = await Passcode.find({ published: true, expiresAt: { $gt: now } });
+          if (activePubs.length) lines.push(`Active public passcodes: ${activePubs.map(p => `${p.type}=${p.passcode}`).join(', ')}`);
+        } catch(e) {}
+      }
+
       contextStr = lines.join('\n');
     }
 
@@ -2152,10 +2304,36 @@ app.post('/api/ai/chat', async (req, res) => {
       else if (hour < 17) { greeting = 'Good afternoon'; emoji = '🌤️'; }
       else { greeting = 'Good evening'; emoji = '🌙'; }
     }
-    const userName = userData?.name || name || 'Guest';
-    const userRole = userData?.role || role || 'student';
 
-    const systemPrompt = buildRoleSystemPrompt({ role: userRole, userName, contextStr, greeting, emoji });
+    // Build system prompt based on context
+    let systemPrompt;
+    if (!useCtx) {
+      // Short, no personal context
+      systemPrompt = `You are "BM Bot" for BM Group of Institutions attendance portal.
+${greeting ? greeting + ', ' + userName + ' ' + emoji + '!' : ''}
+Assisting ${userRole}.
+Role:
+- Answer questions on general topics, attendance help, timetable info, holidays, notes, coding.
+- Keep responses FRIENDLY and CONCISE unless asked for detailed notes.
+- If user asks for their personal attendance/timetable/holidays — politely suggest they turn ON "Context" toggle.
+- Use Hinglish/English as user does.
+- NEVER use markdown tables. Use bullet points.`;
+    } else {
+      // Detailed with context
+      const ctxBlock = contextStr ? `\nContext:\n${contextStr}` : '';
+      systemPrompt = `You are "BM Bot" for BM Group of Institutions attendance portal.
+${greeting ? greeting + ', ' + userName + ' ' + emoji + '!' : ''}
+Assisting ${userRole}.${ctxBlock}
+Role:
+- Answer questions on attendance, timetable, holidays, notes, coding, general help.
+- Use the provided context when relevant.
+- If user asks "kitne bunk kar sakta hun" — calculate using 75% rule.
+- If asked for notes — provide with headings, bullets, examples.
+- Warn politely if attendance below 75%.
+- Be friendly, encouraging, use emojis.
+- Use Hinglish/English as user does.
+- NEVER use markdown tables. Use bullet points for comparison.`;
+    }
 
     let reply = '';
     let aiOk = false;
@@ -2164,7 +2342,7 @@ app.post('/api/ai/chat', async (req, res) => {
         prompt: message,
         systemPrompt,
         history: existingChat?.messages,
-        maxTokens: 1500,
+        maxTokens: useCtx ? 1500 : 800,
         temperature: 0.7,
         timeoutMs: 12000,
         globalTimeoutMs: 45000,
@@ -2195,10 +2373,52 @@ app.post('/api/ai/chat', async (req, res) => {
       newThreadId = threadId || null;
     }
 
-    res.json({ reply, threadId: newThreadId, title: newTitle, aiOk, usedContext: useCtx });
+    res.json({ reply, threadId: newThreadId, title: newTitle, aiOk, usedContext: useCtx, usedDatabase: useDb });
   } catch (err) {
     console.error('❌ Chat error:', err);
     res.status(500).json({ error: 'Internal error: ' + err.message });
+  }
+});
+
+function formatResult(result) {
+  if (!result) return 'Done.';
+  if (typeof result === 'object') {
+    if (result.count !== undefined) return `Count: ${result.count}`;
+    if (result.deleted !== undefined) return `Deleted: ${result.deleted}`;
+    if (result.modified !== undefined) return `Modified: ${result.modified}`;
+    if (result.passcode) return `Passcode: **${result.passcode}**\nType: ${result.type}\nExpires: ${new Date(result.expiresAt).toLocaleString('en-IN')}\nPublished: ${result.published ? 'Yes ✅' : 'No'}`;
+    if (result.attendancePercentage !== undefined) {
+      const weak = Object.entries(result.subjectStats || {}).filter(([_, s]) => s.percentage < 75);
+      let txt = `Overall: **${result.attendancePercentage}%** (${result.attended}/${result.conducted})`;
+      if (weak.length) txt += `\n\n⚠️ Low subjects:\n${weak.map(([s, st]) => `• ${s}: ${st.percentage}%`).join('\n')}`;
+      return txt;
+    }
+    if (result.requestId) return `Request ID: ${result.requestId}\nDates: ${result.dates.join(', ')}\nStatus: ${result.status}`;
+    if (Array.isArray(result)) {
+      if (!result.length) return 'No records found.';
+      return `${result.length} record(s):\n${result.slice(0, 5).map(r => JSON.stringify(r)).join('\n')}${result.length > 5 ? '\n...' : ''}`;
+    }
+  }
+  return JSON.stringify(result);
+}
+
+// Confirm pending DB operation
+app.post('/api/ai/chat/confirm-db', async (req, res) => {
+  try {
+    const { rollNo, operation } = req.body;
+    if (!rollNo || !operation) return res.status(400).json({ error: 'rollNo and operation required' });
+    const userData = await User.findOne({ rollNo: rollNo.trim().toUpperCase() });
+    if (!userData) return res.status(404).json({ error: 'User not found' });
+    const execResult = await executeDbAction(operation, {
+      role: userData.role, rollNo: userData.rollNo, name: userData.name, branch: userData.branch || 'CSE'
+    });
+    const replyText = execResult.error
+      ? `❌ ${execResult.error}`
+      : `✅ ${operation.explanation || 'Done'}\n\n${formatResult(execResult.result)}`;
+    res.json({ reply: replyText, aiOk: true, dbResult: execResult.result, dbError: execResult.error });
+  } catch (err) {
+    console.error('❌ Confirm DB error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -2213,9 +2433,7 @@ app.post('/api/ai/chat-with-file', async (req, res) => {
 
     const allowed = ['application/pdf','text/plain','image/jpeg','image/jpg','image/png','image/webp','image/gif'];
     const isAllowed = allowed.some(t => mimeType === t || mimeType.includes(t));
-    if (!isAllowed) {
-      return res.status(400).json({ error: `Unsupported file type: ${mimeType}. Allowed: PDF, TXT, JPEG, PNG, WEBP, GIF.` });
-    }
+    if (!isAllowed) return res.status(400).json({ error: `Unsupported file type: ${mimeType}.` });
 
     const cr = rollNo?.trim().toUpperCase() || 'guest';
     let userData = null;
@@ -2234,7 +2452,6 @@ Task:
 - If image — describe contents, extract text if any, answer user's question about it.
 - If PDF/text — extract, summarize, explain.
 - If code file — explain the code, fix bugs, improve.
-- If notes — provide structured summary with headings and bullets.
 - Use markdown formatting: headings, bullets, bold.
 - NEVER use markdown tables. Use bullet points instead.
 - Respond in user's language (Hindi/English).`;
@@ -2243,19 +2460,12 @@ Task:
     let aiOk = false;
     try {
       reply = await callGemini({
-        prompt: userPrompt,
-        systemPrompt,
-        fileBase64,
-        mimeType,
-        maxTokens: 3000,
-        temperature: 0.4,
-        timeoutMs: 20000,
-        globalTimeoutMs: 90000,
-        maxAttempts: 12
+        prompt: userPrompt, systemPrompt, fileBase64, mimeType,
+        maxTokens: 3000, temperature: 0.4,
+        timeoutMs: 20000, globalTimeoutMs: 90000, maxAttempts: 12
       });
       aiOk = true;
     } catch (err) {
-      console.warn('⚠️ File/Image AI failed:', err.message, '| type:', err.type);
       reply = err.message;
     }
 
@@ -2284,7 +2494,7 @@ Task:
 });
 
 // ============================================================
-//  AI: Generate PDF Report
+//  AI: Generate PDF Report (kept from before)
 // ============================================================
 app.post('/api/ai/generate-report-pdf', async (req, res) => {
   try {
@@ -2315,13 +2525,12 @@ app.post('/api/ai/generate-report-pdf', async (req, res) => {
           `Overall Attendance: ${summary.attendancePercentage}%`,
           `Lectures Attended: ${summary.totalAcademicLectures} / ${summary.totalConductedLectures}`,
           `Days Present: ${summary.daysPresent}`,
-          `Working Days So Far: ${summary.workingDaysSoFar} / ${summary.totalWorkingDaysSemester}`,
           `Status: ${summary.attendancePercentage >= 75 ? '✅ Safe' : '⚠️ Below 75%'}`
         ]},
         { heading: '📚 Subject-wise', table: { headers: ['Subject', 'Present/Total', 'Percentage'], rows: subRows } },
         { heading: '📅 Recent 30 Records', table: { headers: ['Date', 'Subject', 'Status'], rows: records.slice(-30).reverse().map(r => [r.date, mapToCanonical(r.subject), r.status]) } }
       ];
-      pdfBuffer = await generatePDFBuffer({ title: 'Student Attendance Report', subtitle: `${targetUser.name} (${target}) • ${targetUser.branch || 'CSE'} • ${rStart} to ${rEnd} (up to today)`, sections });
+      pdfBuffer = await generatePDFBuffer({ title: 'Student Attendance Report', subtitle: `${targetUser.name} (${target}) • ${targetUser.branch || 'CSE'}`, sections });
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename=attendance_${target}_${rStart}.pdf`);
       return res.send(pdfBuffer);
@@ -2344,390 +2553,14 @@ app.post('/api/ai/generate-report-pdf', async (req, res) => {
         { heading: `⚠️ Defaulters Below ${threshold}%`, text: `Total: ${defaulters.length} out of ${students.length}` },
         { heading: '📋 List', table: { headers: ['Roll No', 'Name', 'Branch', 'Present/Total', '%'], rows: defaulters.map(d => [d.rollNo, d.name, d.branch, `${d.present}/${d.total}`, `${d.pct}%`]) } }
       ];
-      pdfBuffer = await generatePDFBuffer({ title: 'Defaulter Watchlist', subtitle: `Threshold: ${threshold}% • Branch: ${branch || 'ALL'}`, sections });
+      pdfBuffer = await generatePDFBuffer({ title: 'Defaulter Watchlist', subtitle: `Threshold: ${threshold}%`, sections });
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename=defaulters_${threshold}pct.pdf`);
       return res.send(pdfBuffer);
     }
 
-    if (reportType === 'class-report') {
-      const start = startDate ? new Date(startDate) : new Date(SEMESTER_START);
-      let end = endDate ? new Date(endDate) : new Date(SEMESTER_END);
-      const today = new Date();
-      if (end > today) end = today;
-      const startStr = getISTDateString(start), endStr = getISTDateString(end);
-      let q = { role: 'student' };
-      if (branch && branch !== 'ALL' && branch !== 'undefined') q.branch = branch.toUpperCase();
-      const students = await User.find(q).select('rollNo name branch');
-      const holidays = await Holiday.find({ date: { $gte: startStr, $lte: endStr } });
-      const holidaySet = new Set(holidays.map(h => h.date.split('T')[0]));
-      const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-      const rows = [];
-      let sumPct = 0;
-      for (const s of students) {
-        const b = s.branch || 'CSE';
-        const tt = getTimetableForBranch(b);
-        let totalCond = 0;
-        let cur = new Date(start);
-        while (cur <= end) {
-          const ds = getISTDateString(cur);
-          const dow = cur.getDay();
-          if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) {
-            (tt[dayNameMap[dow]] || []).forEach(e => { const sub = mapToCanonical(e.subject); if (!sub.includes('Sports') && !sub.includes('LIB') && !sub.includes('Library')) totalCond++; });
-          }
-          cur.setDate(cur.getDate() + 1);
-        }
-        const pc = await Attendance.countDocuments({ rollNo: s.rollNo, date: { $gte: startStr, $lte: endStr }, status: { $in: ['Present', 'Duty Leave'] }, subject: { $nin: [/Sports/i, /LIB/i, /Library/i] } });
-        const pct = totalCond > 0 ? Math.round((pc / totalCond) * 100) : 0;
-        sumPct += pct;
-        rows.push([s.rollNo, s.name, b, `${pc}/${totalCond}`, `${pct}%`]);
-      }
-      rows.sort((a,b) => a[0].localeCompare(b[0], undefined, { numeric: true }));
-      const avg = rows.length > 0 ? Math.round(sumPct / rows.length) : 0;
-      const sections = [
-        { heading: '📊 Summary', bullets: [`Branch: ${branch || 'ALL'}`, `Period: ${startStr} to ${endStr}`, `Total Students: ${rows.length}`, `Average: ${avg}%`] },
-        { heading: '📋 Student-wise', table: { headers: ['Roll No', 'Name', 'Branch', 'Present/Total', '%'], rows } }
-      ];
-      pdfBuffer = await generatePDFBuffer({ title: 'Class Attendance Report', subtitle: `Branch: ${branch || 'ALL'} • ${startStr} to ${endStr}`, sections });
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename=class_report_${branch || 'ALL'}_${startStr}.pdf`);
-      return res.send(pdfBuffer);
-    }
     res.status(400).json({ error: 'Unknown reportType.' });
   } catch (err) { console.error('❌ PDF report error:', err); res.status(500).json({ error: err.message }); }
-});
-
-// ============================================================
-//  AI: Notes PDF
-// ============================================================
-app.post('/api/ai/generate-notes-pdf', async (req, res) => {
-  try {
-    const { topic, subject, rollNo, level = 'B.Tech 5th Semester', includeMCQ = false } = req.body;
-    if (!topic) return res.status(400).json({ error: 'topic required' });
-    const cr = rollNo?.trim().toUpperCase();
-    let userName = 'Student';
-    if (cr) { const u = await User.findOne({ rollNo: cr }); if (u) userName = u.name; }
-    if (GEMINI_API_KEYS.length === 0) return res.status(503).json({ error: 'AI not configured.' });
-
-    const prompt = `Generate comprehensive study notes on "${topic}"${subject ? ` (Subject: ${subject})` : ''} for ${level}.
-Requirements:
-- Start with short Intro (2-3 lines)
-- Main content with clear sub-headings and bullet points
-- Include key definitions, important concepts, formulas (if any)
-- Include 2-3 real-world examples
-${includeMCQ ? '- Include 5 MCQs with 4 options each and mark correct answer' : ''}
-- End with "Quick Revision" of 5-6 bullets
-Format: plain text, use ## for headings, • for bullets. NO ** asterisks. NO markdown tables.`;
-
-    let notesText;
-    try {
-      notesText = await callGemini({
-        prompt,
-        systemPrompt: 'You are an expert teacher creating structured study notes. Use ## for headings, • for bullets. Avoid asterisks. Avoid tables.',
-        maxTokens: 3500,
-        temperature: 0.5,
-        timeoutMs: 30000,
-        globalTimeoutMs: 60000,
-        maxAttempts: 6
-      });
-    } catch (err) {
-      console.warn('⚠️ Notes AI failed:', err.message);
-      return res.status(503).json({ error: err.message });
-    }
-
-    const lines = notesText.split('\n');
-    const sections = [];
-    let current = null;
-    for (const line of lines) {
-      const t = line.trim();
-      if (!t) continue;
-      if (t.startsWith('## ') || t.startsWith('# ')) {
-        if (current) sections.push(current);
-        current = { heading: t.replace(/^#+\s*/, ''), bullets: [] };
-      } else if (t.startsWith('• ') || t.startsWith('- ') || t.startsWith('* ')) {
-        if (!current) current = { heading: 'Notes', bullets: [] };
-        current.bullets.push(t.replace(/^[•\-*]\s*/, ''));
-      } else if (/^\d+\.\s/.test(t)) {
-        if (!current) current = { heading: 'Notes', bullets: [] };
-        current.bullets.push(t);
-      } else {
-        if (!current) current = { heading: 'Introduction', text: t };
-        else if (current.bullets && current.bullets.length === 0 && !current.text) current.text = t;
-        else { if (!current.bullets) current.bullets = []; current.bullets.push(t); }
-      }
-    }
-    if (current) sections.push(current);
-
-    const pdfBuffer = await generatePDFBuffer({
-      title: 'Study Notes',
-      subtitle: `${topic}${subject ? ` • ${subject}` : ''} • For ${userName}`,
-      sections,
-      footer: `Generated by BM Bot • ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}`
-    });
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=notes_${topic.replace(/\s+/g, '_').substring(0, 30)}.pdf`);
-    res.send(pdfBuffer);
-  } catch (err) { console.error('❌ Notes PDF error:', err); res.status(500).json({ error: err.message }); }
-});
-
-// ============================================================
-//  AI: Predict Attendance
-// ============================================================
-app.post('/api/ai/predict-attendance', async (req, res) => {
-  try {
-    const { rollNo, targetPercentage = 75, plannedBunks = 0, plannedAttends = 0 } = req.body;
-    const cr = rollNo?.trim().toUpperCase();
-    if (!cr) return res.status(400).json({ error: 'rollNo required' });
-    const user = await User.findOne({ rollNo: cr });
-    if (!user) return res.status(404).json({ error: 'Not found!' });
-    const summary = await getStudentSummary(cr);
-    if (!summary) return res.status(500).json({ error: 'Could not compute' });
-    const attended = summary.totalAcademicLectures;
-    const conducted = summary.totalConductedLectures;
-    const currentPct = summary.attendancePercentage;
-    const target = parseFloat(targetPercentage);
-    const maxBunks = Math.floor((attended * 100 / target) - conducted);
-    const requiredAttends = currentPct >= target ? 0 : Math.ceil(((target / 100) * conducted - attended) / (1 - target / 100));
-    let simPct = currentPct;
-    let sA = attended, sC = conducted;
-    if (plannedAttends > 0) { sA += plannedAttends; sC += plannedAttends; }
-    if (plannedBunks > 0) sC += plannedBunks;
-    simPct = sC > 0 ? Math.round((sA / sC) * 100) : 0;
-
-    let aiMessage = '';
-    if (GEMINI_API_KEYS.length > 0) {
-      try {
-        aiMessage = await callGemini({
-          prompt: `Student ${user.name} (${cr}) has ${currentPct}% attendance (${attended}/${conducted}). Min required: ${target}%. Give short encouraging Hinglish response (2-3 lines): current situation, max ${maxBunks} bunks OR ${requiredAttends} attends needed, motivational tip. No asterisks.`,
-          systemPrompt: 'You are BM Bot, friendly student assistant at BM Group. Respond in Hinglish, short.',
-          maxTokens: 300,
-          temperature: 0.7,
-          timeoutMs: 12000,
-          globalTimeoutMs: 25000,
-          maxAttempts: 6
-        });
-      } catch (err) { console.warn('Predict AI msg failed:', err.message); }
-    }
-    if (!aiMessage) {
-      aiMessage = currentPct >= target
-        ? `Bhai, tu safe hai! Abhi tu ${maxBunks} lectures bunk kar sakta hai ${target}% pe rehne ke liye. 💪`
-        : `Bhai, tu ${target}% se neeche hai. Next ${requiredAttends} lectures consecutively attend kar. 📚`;
-    }
-    res.json({ currentPercentage: currentPct, attended, conducted, targetPercentage: target, maxBunksAllowed: maxBunks > 0 ? maxBunks : 0, requiredConsecutiveAttends: requiredAttends, simulated: { plannedAttends, plannedBunks, resultingPercentage: simPct }, aiMessage });
-  } catch (err) { console.error('❌ Predict error:', err); res.status(500).json({ error: err.message }); }
-});
-
-// ============================================================
-//  AI: Admin Insights
-// ============================================================
-app.post('/api/ai/admin-insights', async (req, res) => {
-  try {
-    const { requesterRollNo } = req.body;
-    const req1 = await User.findOne({ rollNo: requesterRollNo?.trim().toUpperCase() });
-    if (!req1 || req1.role !== 'admin') return res.status(403).json({ error: 'Admin only!' });
-    const totalStudents = await User.countDocuments({ role: 'student' });
-    const totalFaculty = await User.countDocuments({ role: 'faculty' });
-    const totalAttendance = await Attendance.countDocuments();
-    const totalPresent = await Attendance.countDocuments({ status: 'Present' });
-    const overallPct = totalAttendance > 0 ? Math.round((totalPresent / totalAttendance) * 100) : 0;
-    const today = getISTDateString(new Date());
-    const todayPresent = await Attendance.distinct('rollNo', { date: today, status: 'Present' });
-    const students = await User.find({ role: 'student' }).select('rollNo name branch');
-    const startStr = getISTDateString(SEMESTER_START);
-    const defaulters = [];
-    for (const s of students) {
-      const present = await Attendance.countDocuments({ rollNo: s.rollNo, date: { $gte: startStr, $lte: today }, status: { $in: ['Present','Duty Leave'] }, subject: { $nin: [/Sports/i, /LIB/i, /Library/i] } });
-      const total = await Attendance.countDocuments({ rollNo: s.rollNo, date: { $gte: startStr, $lte: today }, subject: { $nin: [/Sports/i, /LIB/i, /Library/i] } });
-      const pct = total > 0 ? Math.round((present/total)*100) : 0;
-      if (pct < 75) defaulters.push({ rollNo: s.rollNo, name: s.name, pct, present, total });
-    }
-    defaulters.sort((a,b) => a.pct - b.pct);
-    const subAgg = await Attendance.aggregate([
-      { $match: { subject: { $nin: [/Sports/i, /LIB/i, /Library/i] } } },
-      { $group: { _id: '$subject', total: { $sum: 1 }, present: { $sum: { $cond: [{ $in: ['$status', ['Present', 'Duty Leave']] }, 1, 0] } } } },
-      { $sort: { present: 1 } }
-    ]);
-    const contextStr = `Dashboard:\n- Total students: ${totalStudents}\n- Total faculty: ${totalFaculty}\n- Total records: ${totalAttendance}\n- Overall %: ${overallPct}%\n- Today present: ${todayPresent.length}\n- Defaulters (<75%): ${defaulters.length}\n- Top 10 defaulters: ${defaulters.slice(0, 10).map(d => `${d.rollNo}(${d.name}): ${d.pct}%`).join(', ')}\n- Subject-wise (lowest 5): ${subAgg.slice(0, 5).map(s => `${mapToCanonical(s._id)}: ${Math.round((s.present/s.total)*100)}%`).join(', ')}`;
-
-    let insights = '';
-    if (GEMINI_API_KEYS.length > 0) {
-      try {
-        insights = await callGemini({
-          prompt: `Analyze this admin dashboard data. Structure:\n1. Overview (2 lines)\n2. Key Concerns (top 3)\n3. Recommended Actions (3-4 bullets)\n4. Positive Highlights\nUse ## for headings, • for bullets. No ** asterisks. No tables.\n\n${contextStr}`,
-          systemPrompt: 'You are BM Bot Admin Assistant. Provide data-driven insights. Concise, actionable.',
-          maxTokens: 1200,
-          temperature: 0.5,
-          timeoutMs: 25000,
-          globalTimeoutMs: 60000,
-          maxAttempts: 6
-        });
-      } catch (err) { console.warn('AI insights failed:', err.message); insights = '⚠️ ' + err.message; }
-    }
-    if (!insights) {
-      insights = `## Overview\nTotal ${totalStudents} students, ${overallPct}% overall. ${defaulters.length} defaulters.\n\n## Key Concerns\n• ${defaulters.length} below 75%\n• Today: ${todayPresent.length}/${totalStudents} present\n\n## Recommended Actions\n• Send warnings\n• Review subjects`;
-    }
-    res.json({ stats: { totalStudents, totalFaculty, totalAttendance, overallPct, todayPresentCount: todayPresent.length, defaulterCount: defaulters.length }, topDefaulters: defaulters.slice(0, 10), subjectAggregate: subAgg.map(s => ({ subject: mapToCanonical(s._id), total: s.total, present: s.present, pct: Math.round((s.present/s.total)*100) })), insights });
-  } catch (err) { console.error('❌ Admin insights error:', err); res.status(500).json({ error: err.message }); }
-});
-
-// ============================================================
-//  AI: Subject Analysis
-// ============================================================
-app.post('/api/ai/subject-analysis', async (req, res) => {
-  try {
-    const { rollNo } = req.body;
-    const cr = rollNo?.trim().toUpperCase();
-    if (!cr) return res.status(400).json({ error: 'rollNo required' });
-    const user = await User.findOne({ rollNo: cr });
-    if (!user) return res.status(404).json({ error: 'Not found!' });
-    const summary = await getStudentSummary(cr);
-    if (!summary) return res.status(500).json({ error: 'Could not compute' });
-    const subjects = Object.entries(summary.subjectStats || {}).map(([sub, st]) => ({ subject: sub, ...st }));
-    subjects.sort((a, b) => a.percentage - b.percentage);
-    const weak = subjects.filter(s => s.percentage < 75);
-    const strong = subjects.filter(s => s.percentage >= 75);
-
-    let aiAnalysis = '';
-    if (GEMINI_API_KEYS.length > 0 && subjects.length > 0) {
-      try {
-        aiAnalysis = await callGemini({
-          prompt: `Student ${user.name} (${cr}) attendance:\n${subjects.map(s => `• ${s.subject}: ${s.present}/${s.total} (${s.percentage}%)`).join('\n')}\n\nProvide:\n1. Weak subjects (<75%) with specific advice\n2. Strong subjects — positive reinforcement\n3. Overall strategy (2-3 bullets)\nUse ## headings, • bullets. No tables. Hinglish, encouraging.`,
-          systemPrompt: 'You are BM Bot, friendly student mentor. Personalized advice in Hinglish.',
-          maxTokens: 1000,
-          temperature: 0.6,
-          timeoutMs: 25000,
-          globalTimeoutMs: 60000,
-          maxAttempts: 6
-        });
-      } catch (err) { console.warn('Subject analysis AI failed:', err.message); }
-    }
-    if (!aiAnalysis) {
-      aiAnalysis = `## Overall\nAttendance: ${summary.attendancePercentage}%\n\n## Weak (<75%)\n${weak.length > 0 ? weak.map(s => `• ${s.subject}: ${s.percentage}%`).join('\n') : '• None!'}\n\n## Strong (>=75%)\n${strong.map(s => `• ${s.subject}: ${s.percentage}%`).join('\n')}`;
-    }
-    res.json({ overall: summary.attendancePercentage, subjects, weakSubjects: weak, strongSubjects: strong, analysis: aiAnalysis });
-  } catch (err) { console.error('❌ Subject analysis error:', err); res.status(500).json({ error: err.message }); }
-});
-
-// ============================================================
-//  AI: Smart Alerts
-// ============================================================
-app.post('/api/ai/smart-alerts', async (req, res) => {
-  try {
-    const { requesterRollNo, threshold = 75, limit = 20 } = req.body;
-    const req1 = await User.findOne({ rollNo: requesterRollNo?.trim().toUpperCase() });
-    if (!req1 || req1.role !== 'admin') return res.status(403).json({ error: 'Admin only!' });
-    const students = await User.find({ role: 'student' }).select('rollNo name branch');
-    const today = getISTDateString(new Date());
-    const startStr = getISTDateString(SEMESTER_START);
-    const defaulters = [];
-    for (const s of students) {
-      const present = await Attendance.countDocuments({ rollNo: s.rollNo, date: { $gte: startStr, $lte: today }, status: { $in: ['Present','Duty Leave'] }, subject: { $nin: [/Sports/i, /LIB/i, /Library/i] } });
-      const total = await Attendance.countDocuments({ rollNo: s.rollNo, date: { $gte: startStr, $lte: today }, subject: { $nin: [/Sports/i, /LIB/i, /Library/i] } });
-      const pct = total > 0 ? Math.round((present/total)*100) : 0;
-      if (pct < threshold) defaulters.push({ rollNo: s.rollNo, name: s.name, branch: s.branch, pct, present, total });
-    }
-    defaulters.sort((a,b) => a.pct - b.pct);
-    const top = defaulters.slice(0, limit);
-    const alerts = [];
-    for (const d of top) {
-      let message = '';
-      if (GEMINI_API_KEYS.length > 0) {
-        try {
-          message = await callGemini({
-            prompt: `Write short polite warning (2-3 lines, Hinglish) for parent/student:\nStudent: ${d.name} (${d.rollNo}, ${d.branch})\nAttendance: ${d.pct}% (${d.present}/${d.total})\nRequired: ${threshold}%\nNo asterisks.`,
-            systemPrompt: 'You are BM Bot writing official warning notices for BM Group.',
-            maxTokens: 200,
-            temperature: 0.6,
-            timeoutMs: 12000,
-            globalTimeoutMs: 25000,
-            maxAttempts: 6
-          });
-        } catch (err) { message = ''; }
-      }
-      if (!message) message = `Dear ${d.name}, your attendance is ${d.pct}% which is below the required ${threshold}%. Please attend classes regularly. - BM Group`;
-      alerts.push({ ...d, message });
-    }
-    res.json({ threshold, totalDefaulters: defaulters.length, alertsSent: alerts.length, alerts });
-  } catch (err) { console.error('❌ Smart alerts error:', err); res.status(500).json({ error: err.message }); }
-});
-
-// ============================================================
-//  AI: Study Material
-// ============================================================
-app.post('/api/ai/study-material', async (req, res) => {
-  try {
-    const { topic, subject, type = 'notes' } = req.body;
-    if (!topic) return res.status(400).json({ error: 'topic required' });
-    if (GEMINI_API_KEYS.length === 0) return res.status(503).json({ error: 'AI not configured.' });
-    const typeMap = { notes: 'detailed study notes with headings and bullets', mcq: '10 MCQs with 4 options each', summary: 'concise summary', important: 'important topics for exam', examples: 'real-world examples' };
-    const styleGuide = typeMap[type] || typeMap.notes;
-    let reply;
-    try {
-      reply = await callGemini({
-        prompt: `Generate ${styleGuide} on: "${topic}"${subject ? ` (Subject: ${subject})` : ''}.\nUse ## for headings, • for bullets. No tables.`,
-        systemPrompt: 'Expert teacher for B.Tech students at BM Group.',
-        maxTokens: 2500,
-        temperature: 0.5,
-        timeoutMs: 25000,
-        globalTimeoutMs: 60000,
-        maxAttempts: 6
-      });
-    } catch (err) { return res.status(503).json({ error: err.message }); }
-    res.json({ topic, subject, type, content: reply });
-  } catch (err) { console.error('❌ Study material error:', err); res.status(500).json({ error: err.message }); }
-});
-
-// ============================================================
-//  RESTORE FROM CSV
-// ============================================================
-app.post('/api/admin/restore-from-csv', async (req, res) => {
-  try {
-    const { requesterRollNo, csvData } = req.body;
-    if (!requesterRollNo || !csvData) return res.status(400).json({ error: 'requesterRollNo and csvData required' });
-    const req1 = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
-    if (!req1 || req1.role !== 'admin') return res.status(403).json({ error: 'Admin only!' });
-    const rows = [];
-    const stream = Readable.from(csvData);
-    await new Promise((resolve, reject) => { stream.pipe(csv()).on('data', r => rows.push(r)).on('end', resolve).on('error', reject); });
-    if (!rows.length) return res.status(400).json({ error: 'No data' });
-    let headers = null;
-    for (const row of rows) { const k = Object.keys(row); if (k.some(x => /roll/i.test(x) && /no/i.test(x)) || k.some(x => /date/i.test(x))) { headers = k; break; } }
-    if (!headers) headers = Object.keys(rows[0]);
-    const rIdx = headers.findIndex(h => /roll/i.test(h) && /no/i.test(h));
-    const nIdx = headers.findIndex(h => /name/i.test(h) || /student/i.test(h));
-    const sIdx = headers.findIndex(h => /subject/i.test(h));
-    const dIdx = headers.findIndex(h => /date/i.test(h));
-    const stIdx = headers.findIndex(h => /status/i.test(h));
-    if (rIdx === -1 || dIdx === -1 || sIdx === -1) return res.status(400).json({ error: 'CSV must have Roll No, Date, Subject columns' });
-    const dataRows = [];
-    for (const row of rows) {
-      const roll = row[headers[rIdx]]?.trim(), date = row[headers[dIdx]]?.trim(), subject = row[headers[sIdx]]?.trim();
-      const status = row[headers[stIdx]]?.trim() || 'Present';
-      const name = nIdx !== -1 ? row[headers[nIdx]]?.trim() : '';
-      if (!roll || !date || !subject) continue;
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
-      if (subject.toLowerCase().includes('total') || subject.toLowerCase().includes('student')) continue;
-      dataRows.push({ roll, date, subject, status, name });
-    }
-    if (!dataRows.length) return res.status(400).json({ error: 'No valid records' });
-    await Attendance.deleteMany({});
-    const toInsert = dataRows.map(r => ({
-      rollNo: r.roll, studentName: r.name || 'Unknown',
-      subject: mapToCanonical(r.subject), date: r.date,
-      status: r.status === 'Duty Leave' ? 'Duty Leave' : 'Present',
-      location: { latitude: COLLEGE_LAT, longitude: COLLEGE_LNG },
-      ipAddress: 'restore-from-csv', isVerified: true,
-      branch: /AIDS/i.test(r.roll) ? 'AIDS' : 'CSE'
-    }));
-    const chunkSize = 500;
-    let inserted = 0;
-    for (let i = 0; i < toInsert.length; i += chunkSize) {
-      const chunk = toInsert.slice(i, i + chunkSize);
-      await Attendance.insertMany(chunk, { ordered: false });
-      inserted += chunk.length;
-    }
-    res.json({ message: `Restored ${inserted} records.`, totalRecords: inserted, studentsAffected: [...new Set(toInsert.map(r => r.rollNo))].length });
-  } catch (err) { console.error('Restore error:', err); res.status(500).json({ error: err.message }); }
 });
 
 // ---------- Global Handlers ----------
@@ -2735,4 +2568,4 @@ process.on('unhandledRejection', (reason) => console.error('Unhandled:', reason)
 process.on('uncaughtException', (err) => { console.error('Uncaught:', err); process.exit(1); });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Port ${PORT} | AI: ${GEMINI_API_KEYS.length} keys | Primary: ${GEMINI_MODEL} | Fallbacks: ${GEMINI_FALLBACK_MODELS.join(', ')} | Chat timeout: 12s × 6 attempts (45s global) | File: 20s × 12 attempts (90s global)`));
+app.listen(PORT, () => console.log(`🚀 Port ${PORT} | AI: ${GEMINI_API_KEYS.length} keys | Primary: ${GEMINI_MODEL} | Features: Context + Database Assistant + Requests + Passcode Publish`));
