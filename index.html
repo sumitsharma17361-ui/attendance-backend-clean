@@ -11,7 +11,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 /* ============================================================
-   RESET + TAP HIGHLIGHT FIX (universal)
+   RESET + TAP HIGHLIGHT FIX
    ============================================================ */
 *,*::before,*::after{
   box-sizing:border-box;margin:0;padding:0;
@@ -84,6 +84,19 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
 .auth-link:active,.menu-trigger-btn:active{
   transform:scale(.96);
   transition:transform .09s var(--ease-out);
+}
+
+/* ============================================================
+   SCROLL ANIMATION
+   ============================================================ */
+.animate-on-scroll {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1), transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.animate-on-scroll.visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 /* ============================================================
@@ -599,7 +612,7 @@ tbody tr:last-child td{border-bottom:none;}
 .section-title{font-size:11px;font-weight:700;color:var(--slate-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;}
 
 /* ============================================================
-   MODALS — smoother
+   MODALS
    ============================================================ */
 .modal-backdrop{
   position:fixed;inset:0;background:rgba(15,23,42,.55);
@@ -640,7 +653,7 @@ tbody tr:last-child td{border-bottom:none;}
 }
 
 /* ============================================================
-   DRAWER — RIGHT SIDE (Backdrop tap only, no X)
+   DRAWER
    ============================================================ */
 .student-menu-backdrop{
   position:fixed;inset:0;background:rgba(15,23,42,.5);
@@ -1335,7 +1348,7 @@ tbody tr:last-child td{border-bottom:none;}
   <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
 </button>
 
-<!-- DRAWER RIGHT (no X — backdrop tap only) -->
+<!-- DRAWER -->
 <div class="student-menu-backdrop" id="studentMenuBackdrop"></div>
 <div class="student-menu-drawer" id="studentMenuDrawer">
   <div class="student-menu-header">
@@ -1518,7 +1531,7 @@ tbody tr:last-child td{border-bottom:none;}
               <select id="reqLectureType">
                 <option value="full_day">Full Day</option>
                 <option value="single_lecture">Single Lecture</option>
-                <option value="double_lecture">Double Lecture</option>
+                <!-- Double Lecture removed -->
               </select>
             </div>
             <div class="form-group" id="reqSubjectGroup" style="display:none;">
@@ -2238,6 +2251,7 @@ let reqBulkDates = [];
 let currentPasscodeData = null;
 let pendingLocationRequest = null;
 let clockIntervalId = null, dashboardIntervalId = null, periodIntervalId = null, passcodeIntervalId = null;
+let passcodeCountdownInterval = null;
 
 function $(id){return document.getElementById(id);}
 function toast(msg, type='info'){
@@ -2270,7 +2284,7 @@ function getFileTypeLabel(mimeType, fileName) {
   return 'file';
 }
 
-// ============ MENU (no X button) ============
+// ============ MENU ============
 function openStudentMenu(){
   const drawer = $('studentMenuDrawer'); const backdrop = $('studentMenuBackdrop');
   if (!drawer || !backdrop) return;
@@ -2379,27 +2393,26 @@ async function loadApprovedBanner(){
     const approvedFP = reqs.find(x => x.status === 'Approved' && x.type === 'forgot_password');
     const approvedDR = reqs.find(x => x.status === 'Approved' && x.type === 'device_reset');
     const pending = reqs.find(x => x.status === 'Pending');
+    // ✅ Remove Device Reset Approved banner – only show Forgot Password approved or Pending
+    if (approvedDR && !approvedFP && !pending) { banner.classList.remove('show'); return; }
     let cls = '', icon = '', head = '', text = '', actions = '';
     if (approvedFP) {
       cls = 'forgot'; icon = '✅';
       head = 'Forgot Password Approved';
       text = 'Aapka password reset request approve ho gaya hai. Ab "Set New Password" se naya password banao.';
       actions = '<button class="btn btn-success btn-sm" onclick="openSetNewPassword();document.getElementById(\'snpRoll\').value=currentUser.rollNo;">Set New Password →</button>';
-    } else if (approvedDR) {
-      cls = 'device'; icon = '✅';
-      head = 'Device Reset Approved';
-      text = 'Aapka device reset ho gaya hai. Ab naye phone se login kar sakte ho.';
-      actions = '<button class="btn btn-warning btn-sm" onclick="logout()">Logout & Re-login</button>';
     } else if (pending) {
       cls = 'pending'; icon = '⏳';
       const typeName = pending.type === 'forgot_password' ? 'Forgot Password' : 'Device Reset';
       head = 'Request Pending';
       text = `Aapka ${typeName} request admin ke paas pending hai. Approval ka wait karo.`;
+    } else {
+      banner.classList.remove('show'); return;
     }
     banner.className = `approved-banner ${cls} show`;
     banner.innerHTML = `
       <div class="ab-head">
-        <svg viewBox="0 0 24 24">${cls === 'forgot' || cls === 'device' ? '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>' : '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'}</svg>
+        <svg viewBox="0 0 24 24">${cls === 'forgot' ? '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>' : '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'}</svg>
         ${icon} ${head}
       </div>
       <div class="ab-text">${text}</div>
@@ -2430,7 +2443,30 @@ async function loadLivePasscodes(){
       else metaText = `⌛ Expired at ${exp.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`;
     }
     updatePasscodeBoxes(active, { typeLabel, metaText, isExpired });
+    // Start real-time countdown
+    startPasscodeCountdown();
   } catch(e) { currentPasscodeData = null; updatePasscodeBoxes(null, null); }
+}
+function startPasscodeCountdown() {
+  if (passcodeCountdownInterval) clearInterval(passcodeCountdownInterval);
+  passcodeCountdownInterval = setInterval(() => {
+    if (!currentPasscodeData || !currentPasscodeData.expiresAt) return;
+    const exp = new Date(currentPasscodeData.expiresAt);
+    const now = new Date();
+    const remainMs = exp - now;
+    if (remainMs <= 0) {
+      // expired – refresh the box
+      loadLivePasscodes();
+      clearInterval(passcodeCountdownInterval);
+      return;
+    }
+    const m = Math.floor(remainMs / 60000);
+    const s = Math.floor((remainMs % 60000) / 1000);
+    const metaText = `⏱ Expires in ${m}m ${s}s (${exp.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })})`;
+    document.querySelectorAll('.plb-meta').forEach(el => {
+      if (el.style.display !== 'none') el.textContent = metaText;
+    });
+  }, 1000);
 }
 function updatePasscodeBoxes(active, meta){
   document.querySelectorAll('.passcode-live-box').forEach(box => {
@@ -2450,6 +2486,7 @@ function updatePasscodeBoxes(active, meta){
       if (emptyEl) { emptyEl.style.display = 'block'; emptyEl.textContent = isMenu ? 'No passcode published yet.' : 'No passcode has been published by admin yet. Please wait.'; }
       if (copyEl) copyEl.style.display = 'none';
       if (metaEl) { metaEl.style.display = 'none'; metaEl.textContent = '—'; }
+      if (passcodeCountdownInterval) { clearInterval(passcodeCountdownInterval); passcodeCountdownInterval = null; }
     } else {
       box.classList.remove('inactive');
       box.classList.toggle('expired', !!meta.isExpired);
@@ -2480,6 +2517,33 @@ function fallbackCopyPass(code){
 function scrollToTop(){ window.scrollTo({ top: 0, behavior: 'smooth' }); }
 function handleScrollFab(){ const f = $('scrollTopFab'); if (!f) return; if (window.scrollY > 300) f.classList.add('show'); else f.classList.remove('show'); }
 window.addEventListener('scroll', handleScrollFab, { passive: true });
+
+// ============ SMOOTH SCROLL ANIMATIONS ============
+function initScrollAnimations() {
+  const targets = document.querySelectorAll('.stat, .card, .working-days-cta, .chart-wrap, .advisor, .passcode-card, .collapsible-card, .attendance-actions-card, .approved-banner, .welcome, .portal-grid .portal, .subject-summary-line');
+  targets.forEach(el => el.classList.add('animate-on-scroll'));
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+  document.querySelectorAll('.animate-on-scroll').forEach(el => observer.observe(el));
+}
+// Re-run after dynamic content loads
+function observeNewContent() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+  document.querySelectorAll('.animate-on-scroll:not(.visible)').forEach(el => observer.observe(el));
+}
 
 // ============ AUTH ============
 function toggleAuthMode(){
@@ -2652,6 +2716,8 @@ function loadDashboard(){
   if (clockIntervalId) clearInterval(clockIntervalId);
   clockIntervalId = setInterval(updateClock, 1000);
   fetchNotices(); fetchChatHistory();
+  // initialise scroll animations after DOM is ready
+  setTimeout(initScrollAnimations, 100);
 }
 function updateClock(){ const n = new Date(); if ($('currentTime')) $('currentTime').textContent = n.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}); if ($('currentDate')) $('currentDate').textContent = n.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'}); }
 async function fetchNotices(){ try { const res = await fetch(`${API}/api/notices`); const data = await res.json(); if (data && data.length) { if ($('noticeText')) $('noticeText').textContent = data[data.length-1].message || 'No new notices'; const nb = $('noticeBanner'); if (nb) nb.style.display = 'flex'; } } catch(e){} }
@@ -2663,6 +2729,7 @@ function switchTab(id){
   else if (id === 'tab-mark' && currentUser && currentUser.role === 'student' && !['request','timetable','calendar','subjects','workingdays','reports','logs','portals'].includes(activeStudentMenuKey)) {
     activeStudentMenuKey = 'home'; populateStudentMenu();
   }
+  observeNewContent();
 }
 function showAdmin(id){
   document.querySelectorAll('.subnav-item').forEach(b => b.classList.toggle('active', b.getAttribute('onclick').includes(id)));
@@ -2678,6 +2745,7 @@ function showAdmin(id){
   if (id === 'a-passcode') loadPasscodes();
   if (id === 'a-tools') initTools();
   if (id === 'a-leave') loadLeaveRequests();
+  observeNewContent();
 }
 async function loadAccountRequests(){
   const el = $('accountRequestsList'); if (!el) return;
@@ -2705,6 +2773,7 @@ async function loadAccountRequests(){
       </div>`;
     }).join('');
   } catch(e){ el.innerHTML = '<div class="empty">Network error</div>'; }
+  observeNewContent();
 }
 async function reviewAccountRequest(id, action){
   const note = prompt(`Note for ${action} (optional):`) || '';
@@ -2736,7 +2805,7 @@ function getBrowserLocation(){
 async function submitAttendanceRequest(){
   const date = $('reqDate').value, lt = $('reqLectureType').value, sub = $('reqSubject').value, reason = $('reqReason').value.trim();
   if (!date) return toast('Select a date','error');
-  if ((lt === 'single_lecture' || lt === 'double_lecture') && !sub) return toast('Select subject','error');
+  if ((lt === 'single_lecture') && !sub) return toast('Select subject','error');
   showDL('Submitting…');
   try {
     const res = await fetch(`${API}/api/requests/submit`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: currentUser.rollNo, date, lectureType: lt, subject: sub || null, reason: reason || 'Attendance request' }) });
@@ -2776,6 +2845,7 @@ async function loadMyRequests(){
       </div>`;
     }).join('');
   } catch(e) { el.innerHTML = '<div class="empty" style="padding:14px 0;">Failed to load</div>'; }
+  observeNewContent();
 }
 async function loadAdminRequests(){
   const status = $('reqFilterStatus')?.value || 'Pending';
@@ -2802,6 +2872,7 @@ async function loadAdminRequests(){
       </div>`;
     }).join('');
   } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
+  observeNewContent();
 }
 async function approveRequest(id){
   const note = prompt('Approval note (optional):') || '';
@@ -2874,6 +2945,7 @@ async function fetchHistory(){
     else tb.innerHTML = data.slice(0,80).map(r => `<tr><td><b>${fmtDatePretty(r.date)}</b></td><td>${r.subject}</td><td><span class="badge ${r.status === 'Present' ? 'badge-success' : r.status === 'Duty Leave' ? 'badge-warning' : 'badge-danger'}">${r.status}</span></td></tr>`).join('');
     await loadStats(); renderAttendanceCalendar();
   } catch(e){ if ($('historyBody')) $('historyBody').innerHTML = '<tr><td colspan="3" class="empty">Network error</td></tr>'; }
+  observeNewContent();
 }
 async function loadStats(){
   try {
@@ -2894,6 +2966,7 @@ async function loadStats(){
       else { const need = Math.max(0, Math.ceil(0.75*t - a)); adv.innerHTML = `Low attendance (<b style="color:var(--rose-700);">${p}%</b>). Need <b>${need}</b> more lectures.`; }
     } else if (adv) adv.textContent = 'No data yet.';
   } catch(e){}
+  observeNewContent();
 }
 async function loadSubjectBreakdown(){
   if (!currentUser || currentUser.role !== 'student') return;
@@ -2911,6 +2984,7 @@ async function loadSubjectBreakdown(){
     if (!e.length) { l.innerHTML = '<span class="text-xs text-muted">No data</span>'; return; }
     l.innerHTML = e.map(([s, st]) => { let cc = 'bad'; if (st.percentage > 80) cc = 'good'; else if (st.percentage >= 75) cc = 'warn'; return `<span class="chip ${cc}"><span class="chip-name">${s.substring(0,18)}</span><span class="chip-pct">${st.percentage}%</span><span class="chip-count">(${st.present}/${st.total})</span></span>`; }).join('');
   } catch(e) { l.innerHTML = '<span class="text-xs text-muted">Failed</span>'; }
+  observeNewContent();
 }
 function onCalendarModeChange(){ const m = $('calendarViewMode').value; if ($('calendarSelectedMonthWrap')) $('calendarSelectedMonthWrap').style.display = m === 'SELECTED_MONTH' ? 'block' : 'none'; renderAttendanceCalendar(); }
 function renderAttendanceCalendar(){
@@ -2944,6 +3018,7 @@ function renderAttendanceCalendar(){
     html += `<div class="wd-month" style="margin-bottom:16px;"><div class="wd-month-title"><span>${MONTH_NAMES[mo]} ${y}</span></div><div class="wd-grid">${headCells}${cells}</div></div>`;
   });
   w.innerHTML = html || '<div class="empty">No data</div>';
+  observeNewContent();
 }
 let trendView = 'monthly';
 function setTrendView(v){ trendView = v; $('btnMonthly')?.classList.toggle('active', v === 'monthly'); $('btnDaily')?.classList.toggle('active', v === 'daily'); if ($('trendMonth')) $('trendMonth').style.display = v === 'daily' ? 'inline-block' : 'none'; updateTrend(); }
@@ -3084,7 +3159,7 @@ async function fetchUsers(){ try { const res = await fetch(`${API}/api/admin/all
 async function viewStudentRecords(r){ try { const res = await fetch(`${API}/api/attendance/student/${r}/${currentUser.rollNo}`); const data = await res.json(); if (!res.ok) return toast(data.error || 'Failed','error'); const g = {}; data.forEach(x => { if (!g[x.date]) g[x.date] = []; g[x.date].push(x); }); const dates = Object.keys(g).sort((a,b)=>b.localeCompare(a)); let html = `<div class="modal-backdrop open" id="viewRecordsModal"><div class="modal wide"><div class="modal-header"><div><h3>Attendance – ${r}</h3><p class="text-xs text-muted" style="margin-top:4px;">${data.length} records</p></div><button type="button" class="modal-close" onclick="document.getElementById('viewRecordsModal').remove()">✕</button></div><div class="modal-body">`; dates.forEach(d => { html += `<div style="margin-bottom:16px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><b>${fmtDatePretty(d)}</b><button class="btn btn-danger btn-xs" onclick="deleteAllDate('${r}','${d}')">Delete All</button></div>`; g[d].forEach(x => { html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--slate-50);border-radius:8px;margin:4px 0;font-size:12px;"><div>${x.subject} <span class="badge badge-success">${x.status}</span></div><button class="btn btn-danger btn-xs" onclick="deleteRecord('${x._id}')">Del</button></div>`; }); html += `</div>`; }); html += `</div></div></div>`; const div = document.createElement('div'); div.innerHTML = html; document.body.appendChild(div.firstElementChild); } catch(e){ toast('Failed','error'); } }
 async function deleteRecord(id){ if (!confirm('Delete?')) return; try { const res = await fetch(`${API}/api/attendance/delete/${id}/${currentUser.rollNo}`, {method:'DELETE'}); if (res.ok) { toast('Deleted','success'); const m = $('viewRecordsModal'); if (m) m.remove(); loadAllAttendance(); } } catch(e){} }
 async function deleteAllDate(r, d){ if (!confirm('Delete all for this date?')) return; try { const res = await fetch(`${API}/api/attendance/delete-day/${r}/${d}/${currentUser.rollNo}`, {method:'DELETE'}); if (res.ok) { toast('Deleted','success'); const m = $('viewRecordsModal'); if (m) m.remove(); loadAllAttendance(); } } catch(e){} }
-async function loadAllAttendance(){ try { const res = await fetch(`${API}/api/attendance/all/${currentUser.rollNo}`); const data = await res.json(); const fr = ($('filterRoll').value||'').toUpperCase(); const fd = $('filterDate').value; let filtered = data; if (fr) filtered = filtered.filter(r => r.rollNo.includes(fr)); if (fd) filtered = filtered.filter(r => r.date === fd); const tb = $('allAttendanceBody'); if (!tb) return; if (filtered.length === 0) return tb.innerHTML = '<tr><td colspan="7" class="empty">No records</td></tr>'; window._allRecords = filtered; tb.innerHTML = filtered.slice(0,200).map(r => `<tr><td><input type="checkbox" class="rec-cb" data-id="${r._id}"></td><td>${fmtDatePretty(r.date)}</td><td><b>${r.rollNo}</b></td><td>${r.studentName||''}</td><td>${r.subject}</td><td><span class="badge ${r.status==='Present'?'badge-success':r.status==='Duty Leave'?'badge-warning':'badge-danger'}">${r.status}</span></td><td><button class="btn btn-danger btn-xs" onclick="deleteRecord('${r._id}')">Del</button></td></tr>`).join(''); } catch(e){ if ($('allAttendanceBody')) $('allAttendanceBody').innerHTML = '<tr><td colspan="7" class="empty">Network error</td></tr>'; } }
+async function loadAllAttendance(){ try { const res = await fetch(`${API}/api/attendance/all/${currentUser.rollNo}`); const data = await res.json(); const fr = ($('filterRoll').value||'').toUpperCase(); const fd = $('filterDate').value; let filtered = data; if (fr) filtered = filtered.filter(r => r.rollNo.includes(fr)); if (fd) filtered = filtered.filter(r => r.date === fd); const tb = $('allAttendanceBody'); if (!tb) return; if (filtered.length === 0) return tb.innerHTML = '<tr><td colspan="7" class="empty">No records</td></tr>'; window._allRecords = filtered; tb.innerHTML = filtered.slice(0,200).map(r => `<tr><td><input type="checkbox" class="rec-cb" data-id="${r._id}"></td><td>${fmtDatePretty(r.date)}</td><td><b>${r.rollNo}</b></td><td>${r.studentName||''}</td><td>${r.subject}</td><td><span class="badge ${r.status==='Present'?'badge-success':r.status==='Duty Leave'?'badge-warning':'badge-danger'}">${r.status}</span></td><td><button class="btn btn-danger btn-xs" onclick="deleteRecord('${r._id}')">Del</button></td></tr>`).join(''); } catch(e){ if ($('allAttendanceBody')) $('allAttendanceBody').innerHTML = '<tr><td colspan="7" class="empty">Network error</td></tr>'; } observeNewContent(); }
 function toggleAll(){ document.querySelectorAll('.rec-cb').forEach(cb => cb.checked = $('selectAll').checked); }
 async function deleteSelected(){ const ids = Array.from(document.querySelectorAll('.rec-cb:checked')).map(cb => cb.dataset.id); if (!ids.length) return toast('Select records','error'); if (!confirm(`Delete ${ids.length}?`)) return; let ok = 0; for (const id of ids) { try { const r = await fetch(`${API}/api/attendance/delete/${id}/${currentUser.rollNo}`, {method:'DELETE'}); if (r.ok) ok++; } catch(e){} } toast(`Deleted ${ok}`,'success'); loadAllAttendance(); }
 function exportAllCSV(){ const r = window._allRecords || []; if (!r.length) return toast('No data','error'); let csv = 'Date,Roll,Name,Subject,Status\n'; r.forEach(x => { csv += `"${x.date}","${x.rollNo}","${x.studentName||''}","${x.subject}","${x.status}"\n`; }); download(csv, 'all_attendance.csv'); }
@@ -3111,7 +3186,7 @@ async function bulkMarkPreview(){ const students = Array.from(document.querySele
 async function confirmBulkMark(){ if (!pendingBulkAction || pendingBulkAction.type !== 'mark') return; closeModal('bulkMarkModal'); showDL('Marking…'); try { const res = await fetch(`${API}/api/admin/bulk-mark-attendance`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, studentRollNos: pendingBulkAction.students, dates: selectedBulkDates, subjects: []})}); const d = await res.json(); hideDL(); if (res.ok) toast(d.message || 'Marked','success'); else toast(d.error || 'Failed','error'); } catch(e){ hideDL(); toast('Network error','error'); } pendingBulkAction = null; }
 async function bulkDeletePreview(){ const students = Array.from(document.querySelectorAll('.bulk-stu:checked')).map(cb => ({roll: cb.value, name: cb.dataset.name})); if (!students.length) return toast('Select students','error'); if (!selectedBulkDates.length) return toast('Add dates','error'); let s = `<div style="margin-bottom:14px;padding:14px;background:var(--rose-50);border:1px solid #fecdd3;border-radius:10px;"><div style="font-size:13.5px;font-weight:800;color:var(--rose-700);">Confirm Delete</div></div>`; $('bulkDeleteSummary').innerHTML = s; pendingBulkAction = { type: 'delete', students: students.map(x=>x.roll) }; openModal('bulkDeleteModal'); }
 async function confirmBulkDelete(){ if (!pendingBulkAction || pendingBulkAction.type !== 'delete') return; closeModal('bulkDeleteModal'); showDL('Deleting…'); try { const res = await fetch(`${API}/api/admin/bulk-delete-attendance`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, studentRollNos: pendingBulkAction.students, dates: selectedBulkDates})}); const d = await res.json(); hideDL(); if (res.ok) toast(d.message || 'Deleted','success'); else toast(d.error || 'Failed','error'); } catch(e){ hideDL(); toast('Network error','error'); } pendingBulkAction = null; }
-async function loadHolidays(){ try { const data = await ensureHolidays(); selectedHolidayDates.clear(); if ($('holidayList')) $('holidayList').innerHTML = data.length ? data.map(h => { const d = (h.date||'').split('T')[0]; return `<div class="holiday-row"><label style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;min-width:0;"><input type="checkbox" class="holiday-cb" value="${d}" onchange="toggleHolidaySelect('${d}', this.checked)"> <b>${fmtDatePretty(d)}</b> · ${h.reason}</label><button class="btn btn-danger btn-xs" onclick="deleteHoliday('${d}')">Delete</button></div>`; }).join('') : '<div class="empty">No holidays</div>'; } catch(e){} }
+async function loadHolidays(){ try { const data = await ensureHolidays(); selectedHolidayDates.clear(); if ($('holidayList')) $('holidayList').innerHTML = data.length ? data.map(h => { const d = (h.date||'').split('T')[0]; return `<div class="holiday-row"><label style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;min-width:0;"><input type="checkbox" class="holiday-cb" value="${d}" onchange="toggleHolidaySelect('${d}', this.checked)"> <b>${fmtDatePretty(d)}</b> · ${h.reason}</label><button class="btn btn-danger btn-xs" onclick="deleteHoliday('${d}')">Delete</button></div>`; }).join('') : '<div class="empty">No holidays</div>'; } catch(e){} observeNewContent(); }
 function toggleHolidaySelect(d, c){ if (c) selectedHolidayDates.add(d); else selectedHolidayDates.delete(d); }
 async function deleteSelectedHolidays(){ if (selectedHolidayDates.size === 0) return toast('Select holidays','error'); if (!confirm(`Delete ${selectedHolidayDates.size}?`)) return; showDL('Deleting…'); let ok = 0; for (const d of selectedHolidayDates) { try { const res = await fetch(`${API}/api/admin/holiday/${d}`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})}); if (res.ok) ok++; } catch(e){} } hideDL(); toast(`Deleted ${ok}`,'success'); globalHolidays = []; await ensureHolidays(); loadHolidays(); }
 async function declareHoliday(){ const d = $('holidayDate').value, r = $('holidayReason').value.trim(); if (!d || !r) return toast('Enter date and reason','error'); try { const res = await fetch(`${API}/api/admin/holiday`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, date: d, reason: r})}); const x = await res.json(); if (res.ok) { toast('Declared','success'); $('holidayReason').value = ''; globalHolidays = []; await ensureHolidays(); loadHolidays(); } else toast(x.error,'error'); } catch(e){} }
@@ -3142,14 +3217,14 @@ async function bulkRegCSE(){ if (!confirm('Run CSE bulk?')) return; showDL('Runn
 async function bulkRegAIDS(){ if (!confirm('Run AIDS bulk?')) return; showDL('Running…'); try { const res = await fetch(`${API}/api/admin/bulk-register-and-update-attendance-aids`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})}); const d = await res.json(); hideDL(); if (res.ok) toast(`Registered ${d.totalRegistered}, Added ${d.totalAttendanceAdded}`,'success'); else toast(d.error,'error'); } catch(e){ hideDL(); } }
 async function deleteUser(){ const r = $('deleteRoll').value.trim().toUpperCase(); if (!r) return toast('Enter ID','error'); if (!confirm('Permanently delete?')) return; try { const res = await fetch(`${API}/api/admin/delete-user`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, targetRollNo: r})}); const d = await res.json(); if (res.ok) { toast('Deleted','success'); $('deleteRoll').value = ''; fetchUsers(); } else toast(d.error,'error'); } catch(e){} }
 async function impersonate(){ const r = $('impRollInput').value.trim().toUpperCase(); if (!r) return toast('Enter roll','error'); try { const res = await fetch(`${API}/api/admin/login-as-student`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, targetRollNo: r})}); const d = await res.json(); if (res.ok) { localStorage.setItem('BM_ORIG_TOKEN', localStorage.getItem('token')); localStorage.setItem('BM_ORIG_USER', localStorage.getItem('user')); localStorage.setItem('token', d.token); localStorage.setItem('user', JSON.stringify(d.user)); location.reload(); } else toast(d.error,'error'); } catch(e){} }
-async function loadLeaveRequests(){ try { const data = await fetch(`${API}/api/leave/requests/${currentUser.rollNo}`).then(x=>x.json()); const el = $('leaveRequestsList'); if (!data || !data.length) return el.innerHTML = '<div class="empty">No requests</div>'; el.innerHTML = data.map(l => `<div style="padding:12px 0;border-bottom:1px solid var(--slate-100);"><div style="display:flex;justify-content:space-between;align-items:center;"><b>${l.studentName}</b> <span class="badge ${l.status==='Approved'?'badge-success':l.status==='Rejected'?'badge-danger':'badge-warning'}">${l.status}</span></div><div class="text-xs text-muted" style="margin-top:4px;">${l.rollNo} · ${fmtDatePretty(l.fromDate)} → ${fmtDatePretty(l.toDate)}</div><div class="text-xs mt-1">${l.reason}</div>${l.status === 'Pending' ? `<div class="row mt-1"><button class="btn btn-success btn-xs" onclick="reviewLeave('${l._id}','Approved')">Approve</button><button class="btn btn-danger btn-xs" onclick="reviewLeave('${l._id}','Rejected')">Reject</button></div>` : ''}</div>`).join(''); } catch(e){} }
+async function loadLeaveRequests(){ try { const data = await fetch(`${API}/api/leave/requests/${currentUser.rollNo}`).then(x=>x.json()); const el = $('leaveRequestsList'); if (!data || !data.length) return el.innerHTML = '<div class="empty">No requests</div>'; el.innerHTML = data.map(l => `<div style="padding:12px 0;border-bottom:1px solid var(--slate-100);"><div style="display:flex;justify-content:space-between;align-items:center;"><b>${l.studentName}</b> <span class="badge ${l.status==='Approved'?'badge-success':l.status==='Rejected'?'badge-danger':'badge-warning'}">${l.status}</span></div><div class="text-xs text-muted" style="margin-top:4px;">${l.rollNo} · ${fmtDatePretty(l.fromDate)} → ${fmtDatePretty(l.toDate)}</div><div class="text-xs mt-1">${l.reason}</div>${l.status === 'Pending' ? `<div class="row mt-1"><button class="btn btn-success btn-xs" onclick="reviewLeave('${l._id}','Approved')">Approve</button><button class="btn btn-danger btn-xs" onclick="reviewLeave('${l._id}','Rejected')">Reject</button></div>` : ''}</div>`).join(''); } catch(e){} observeNewContent(); }
 async function reviewLeave(id, action){ const n = prompt(`Note for ${action}:`) || ''; try { const res = await fetch(`${API}/api/leave/action/${id}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, action, adminNote: n})}); if (res.ok) { toast('Done','success'); loadLeaveRequests(); } } catch(e){} }
-async function loadDefaulters(){ const t = $('defThreshold').value || 75; try { const data = await fetch(`${API}/api/admin/defaulters/${currentUser.rollNo}?threshold=${t}`).then(x=>x.json()); const el = $('defaulterList'); if (!data.defaulters || !data.defaulters.length) return el.innerHTML = '<div class="empty">None below threshold</div>'; el.innerHTML = data.defaulters.map(s => `<div style="padding:10px 0;border-bottom:1px solid var(--slate-100);"><b>${s.rollNo}</b> · ${s.name} · ${s.branch} · <span class="badge badge-danger">${s.pct}%</span></div>`).join(''); } catch(e){} }
+async function loadDefaulters(){ const t = $('defThreshold').value || 75; try { const data = await fetch(`${API}/api/admin/defaulters/${currentUser.rollNo}?threshold=${t}`).then(x=>x.json()); const el = $('defaulterList'); if (!data.defaulters || !data.defaulters.length) return el.innerHTML = '<div class="empty">None below threshold</div>'; el.innerHTML = data.defaulters.map(s => `<div style="padding:10px 0;border-bottom:1px solid var(--slate-100);"><b>${s.rollNo}</b> · ${s.name} · ${s.branch} · <span class="badge badge-danger">${s.pct}%</span></div>`).join(''); } catch(e){} observeNewContent(); }
 async function initFaculty(){ await loadFacultySubjects(); await fetchTeacherStudents(); await loadFacultyRecent(); await loadFacultyPasscode(); setInterval(fetchTeacherStudents, 60000); }
 async function loadFacultySubjects(){ try { const subs = await fetch(`${API}/api/teacher/subjects/${currentUser.rollNo}`).then(x=>x.json()); window._facSubs = subs || []; $('facMarkSubject').innerHTML = '<option value="">Select Subject…</option>' + (subs||[]).map(s=>`<option value="${s}">${s}</option>`).join(''); } catch(e){} }
-async function loadFacultyRecent(){ try { const data = await fetch(`${API}/api/attendance/all/${currentUser.rollNo}`).then(x=>x.json()); const tb = $('facRecentBody'); if (!data || !data.length) return tb.innerHTML = '<tr><td colspan="3" class="empty">No records</td></tr>'; tb.innerHTML = data.slice(0,15).map(r => `<tr><td>${fmtDatePretty(r.date)}</td><td>${r.studentName}</td><td>${r.subject}</td></tr>`).join(''); } catch(e){} }
+async function loadFacultyRecent(){ try { const data = await fetch(`${API}/api/attendance/all/${currentUser.rollNo}`).then(x=>x.json()); const tb = $('facRecentBody'); if (!data || !data.length) return tb.innerHTML = '<tr><td colspan="3" class="empty">No records</td></tr>'; tb.innerHTML = data.slice(0,15).map(r => `<tr><td>${fmtDatePretty(r.date)}</td><td>${r.studentName}</td><td>${r.subject}</td></tr>`).join(''); } catch(e){} observeNewContent(); }
 async function loadFacultyPasscode(){ const cache = getPasscodeCache(); const c = cache['single_lecture']; if (c && new Date(c.expiresAt).getTime() > Date.now()) { const p = $('facPasscode'); const d = $('facPasscodeDisplay'); if (p) { p.textContent = c.passcode; p.classList.remove('empty'); } if (d) d.classList.add('valid'); } }
-async function fetchTeacherStudents(){ try { const data = await fetch(`${API}/api/teacher/students/${currentUser.rollNo}`).then(x=>x.json()); const tb = $('facStudentsBody'); if (!data || !data.length) { tb.innerHTML = '<tr><td colspan="3" class="empty">No students</td></tr>'; $('facTotalStudents').textContent = '0'; $('facBulkStudents').innerHTML = '<div class="empty">No students</div>'; return; } window._facStudents = data; $('facMarkStudent').innerHTML = '<option value="">Select Student…</option>' + data.map(s=>`<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`).join(''); const fr = $('facReportStudent'); if (fr) fr.innerHTML = '<option value="">Select Student…</option>' + data.map(s=>`<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`).join(''); $('facTotalStudents').textContent = data.length; tb.innerHTML = data.map(s => `<tr><td><b>${s.rollNo}</b></td><td>${s.name}</td><td><button class="btn btn-outline btn-xs" onclick="viewStudentRecords('${s.rollNo}')">View</button></td></tr>`).join(''); $('facBulkStudents').innerHTML = `<label class="bulk-select-item" style="font-weight:700;border-bottom:1px solid var(--slate-200);margin-bottom:4px;"><input type="checkbox" onchange="document.querySelectorAll('.fac-bulk-stu').forEach(c=>c.checked=this.checked)"> Select All (${data.length})</label>` + data.sort((a,b)=>a.rollNo.localeCompare(b.rollNo,undefined,{numeric:true})).map(s => `<label class="bulk-select-item"><input type="checkbox" class="fac-bulk-stu" value="${s.rollNo}" data-name="${s.name}"> ${s.rollNo} - ${s.name}</label>`).join(''); const today = fmtDate(new Date()); let present = 0, absent = 0, presentNames = []; for (const s of data) { try { const recs = await fetch(`${API}/api/attendance/student/${s.rollNo}/${currentUser.rollNo}`).then(x=>x.json()); const todayRecs = recs.filter(r => r.date === today && (window._facSubs||[]).includes(r.subject)); if (todayRecs.some(r => r.status === 'Present' || r.status === 'Duty Leave')) { present++; presentNames.push(s); } else absent++; } catch(e){} } $('facTodayPresent').textContent = present; $('facTodayAbsent').textContent = absent; try { const avg = await fetch(`${API}/api/teacher/class-average/${currentUser.rollNo}`).then(x=>x.json()); $('facClassAvg').textContent = (avg.average||0) + '%'; } catch(e){} $('facPresentList').innerHTML = presentNames.length ? presentNames.map(s => `<div style="padding:5px 0;font-size:12.5px;"><b>${s.rollNo}</b> · ${s.name}</div>`).join('') : '<div class="text-muted text-sm">No students present yet</div>'; } catch(e){} }
+async function fetchTeacherStudents(){ try { const data = await fetch(`${API}/api/teacher/students/${currentUser.rollNo}`).then(x=>x.json()); const tb = $('facStudentsBody'); if (!data || !data.length) { tb.innerHTML = '<tr><td colspan="3" class="empty">No students</td></tr>'; $('facTotalStudents').textContent = '0'; $('facBulkStudents').innerHTML = '<div class="empty">No students</div>'; return; } window._facStudents = data; $('facMarkStudent').innerHTML = '<option value="">Select Student…</option>' + data.map(s=>`<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`).join(''); const fr = $('facReportStudent'); if (fr) fr.innerHTML = '<option value="">Select Student…</option>' + data.map(s=>`<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`).join(''); $('facTotalStudents').textContent = data.length; tb.innerHTML = data.map(s => `<tr><td><b>${s.rollNo}</b></td><td>${s.name}</td><td><button class="btn btn-outline btn-xs" onclick="viewStudentRecords('${s.rollNo}')">View</button></td></tr>`).join(''); $('facBulkStudents').innerHTML = `<label class="bulk-select-item" style="font-weight:700;border-bottom:1px solid var(--slate-200);margin-bottom:4px;"><input type="checkbox" onchange="document.querySelectorAll('.fac-bulk-stu').forEach(c=>c.checked=this.checked)"> Select All (${data.length})</label>` + data.sort((a,b)=>a.rollNo.localeCompare(b.rollNo,undefined,{numeric:true})).map(s => `<label class="bulk-select-item"><input type="checkbox" class="fac-bulk-stu" value="${s.rollNo}" data-name="${s.name}"> ${s.rollNo} - ${s.name}</label>`).join(''); const today = fmtDate(new Date()); let present = 0, absent = 0, presentNames = []; for (const s of data) { try { const recs = await fetch(`${API}/api/attendance/student/${s.rollNo}/${currentUser.rollNo}`).then(x=>x.json()); const todayRecs = recs.filter(r => r.date === today && (window._facSubs||[]).includes(r.subject)); if (todayRecs.some(r => r.status === 'Present' || r.status === 'Duty Leave')) { present++; presentNames.push(s); } else absent++; } catch(e){} } $('facTodayPresent').textContent = present; $('facTodayAbsent').textContent = absent; try { const avg = await fetch(`${API}/api/teacher/class-average/${currentUser.rollNo}`).then(x=>x.json()); $('facClassAvg').textContent = (avg.average||0) + '%'; } catch(e){} $('facPresentList').innerHTML = presentNames.length ? presentNames.map(s => `<div style="padding:5px 0;font-size:12.5px;"><b>${s.rollNo}</b> · ${s.name}</div>`).join('') : '<div class="text-muted text-sm">No students present yet</div>'; } catch(e){} observeNewContent(); }
 async function genTeacherPass(force){ const today = fmtDate(new Date()); const st = await checkDateStatus(today); if (st.isBlocked) return toast('College closed','error'); if (force && !confirm('Change Lecture Passcode?')) return; try { const res = await fetch(`${API}/api/admin/generate-passcode`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, type:'single_lecture', force: !!force})}); const d = await res.json(); if (res.ok) { setPasscodeCache('single_lecture', d.passcode, d.expiresAt); $('facPasscode').textContent = d.passcode; $('facPasscode').classList.remove('empty'); $('facPasscodeDisplay').classList.add('valid'); toast(force ? 'Changed!' : 'Generated!', 'success'); } else toast(d.error,'error'); } catch(e){} }
 async function facMark(){ const s = $('facMarkStudent').value, sub = $('facMarkSubject').value; if (!s || !sub) return toast('Select student & subject','error'); navigator.geolocation.getCurrentPosition(async (pos) => { const res = await fetch(`${API}/api/teacher/mark-attendance`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo, name: currentUser.name, subject: sub, latitude: pos.coords.latitude, longitude: pos.coords.longitude, studentRollNo: s})}); const d = await res.json(); if (res.ok) { toast('Marked','success'); fetchTeacherStudents(); loadFacultyRecent(); } else toast(d.error,'error'); }, () => toast('GPS required','error')); }
 function facAddBulkDate(){ const d = $('facBulkDate').value; if (!d) return toast('Select date','error'); if (facSelectedBulkDates.includes(d)) return toast('Already added','error'); facSelectedBulkDates.push(d); renderFacBulkDates(); }
@@ -3160,7 +3235,7 @@ async function facBulkDelete(){ const students = Array.from(document.querySelect
 function toggleFacMonth(){ const v = $('facReportRange').value; $('facReportMonth').style.display = v === 'SELECTED_MONTH' ? 'block' : 'none'; $('facCustomRangeRow').style.display = v === 'CUSTOM' ? 'flex' : 'none'; }
 async function facReport(fmt){ const roll = $('facReportStudent').value; if (!roll) return toast('Select student','error'); const range = $('facReportRange').value; showDL('Generating…'); try { const records = await fetch(`${API}/api/attendance/student/${roll}/${currentUser.rollNo}`).then(r=>r.json()); const subs = window._facSubs || []; let filtered = records.filter(r => subs.includes(r.subject)); let startStr, endStr; if (range === 'FULL_SEMESTER') { startStr = '2026-07-15'; endStr = '2026-12-31'; } else if (range === 'CURRENT_MONTH') { const r = getCurrentMonthRangeStrings(); startStr = r.start; endStr = r.end; } else if (range === 'SELECTED_MONTH') { const r = getMonthRangeStrings(parseInt($('facReportMonth').value)); startStr = r.start; endStr = r.end; } else { const s = $('facReportStart').value, e = $('facReportEnd').value; if (!s || !e) { hideDL(); return toast('Pick dates','error'); } startStr = s; endStr = e; } const todayStr = fmtDate(new Date()); if (endStr > todayStr) endStr = todayStr; filtered = filtered.filter(r => r.date >= startStr && r.date <= endStr); if (filtered.length === 0) { hideDL(); return toast('No records in range','error'); } if (fmt === 'pdf') { const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Teacher Report ${roll}</title><style>body{font-family:Arial;padding:30px;color:#0f172a}h1{color:#1d4ed8}h2{color:#2563eb;font-weight:400;border-bottom:2px solid #dbeafe;padding-bottom:6px}table{width:100%;border-collapse:collapse;font-size:12px;margin-top:14px}th{background:#dbeafe;padding:8px;text-align:left;color:#1e40af}td{padding:6px 8px;border-bottom:1px solid #f1f5f9}@media print{@page{margin:10mm}}</style></head><body><h1>BM Group of Institutions</h1><h2>Teacher Report – ${roll}</h2><p style="color:#64748b;font-size:13px;">Teacher: ${currentUser.name} (${currentUser.rollNo})</p><p style="color:#64748b;font-size:13px;">Range: ${startStr} → ${endStr}</p><table><thead><tr><th>Date</th><th>Subject</th><th>Status</th></tr></thead><tbody>${filtered.map(r=>`<tr><td>${fmtDatePretty(r.date)}</td><td>${r.subject}</td><td>${r.status}</td></tr>`).join('')}</tbody></table></body></html>`; const win = window.open('', '_blank'); if (!win) { hideDL(); return toast('Allow popups','error'); } win.document.open(); win.document.write(htmlContent); win.document.close(); hideDL(); setTimeout(() => { try { win.focus(); win.print(); } catch(e){} toast('Use "Save as PDF"','success'); }, 700); } else { let csv = `Teacher Report\nStudent: ${roll}\nTeacher: ${currentUser.name}\nRange: ${startStr} to ${endStr}\n\nDate,Subject,Status\n`; filtered.forEach(r => { csv += `${r.date},${r.subject},${r.status}\n`; }); download(csv, `teacher_report_${roll}.csv`); hideDL(); } } catch(e){ hideDL(); toast('Failed: ' + e.message,'error'); } }
 async function applyLeave(){ const f = $('leaveFrom').value, t = $('leaveTo').value, r = $('leaveReason').value.trim(); if (!f || !t || !r) return toast('All fields required','error'); try { const res = await fetch(`${API}/api/leave/apply`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo, fromDate:f, toDate:t, reason:r, leaveType:$('leaveType').value})}); const d = await res.json(); if (res.ok) { toast('Submitted','success'); $('leaveReason').value = ''; loadMyLeaves(); } else toast(d.error,'error'); } catch(e){} }
-async function loadMyLeaves(){ try { const data = await fetch(`${API}/api/leave/my/${currentUser.rollNo}`).then(x=>x.json()); const el = $('myLeaveList'); el.innerHTML = data.length ? data.map(l => `<div style="padding:10px 0;border-bottom:1px solid var(--slate-100);"><div style="display:flex;justify-content:space-between;"><b>${fmtDatePretty(l.fromDate)} → ${fmtDatePretty(l.toDate)}</b> <span class="badge ${l.status==='Approved'?'badge-success':l.status==='Rejected'?'badge-danger':'badge-warning'}">${l.status}</span></div><div class="text-xs text-muted mt-1">${l.leaveType}: ${l.reason}</div></div>`).join('') : '<div class="empty">No applications</div>'; } catch(e){} }
+async function loadMyLeaves(){ try { const data = await fetch(`${API}/api/leave/my/${currentUser.rollNo}`).then(x=>x.json()); const el = $('myLeaveList'); el.innerHTML = data.length ? data.map(l => `<div style="padding:10px 0;border-bottom:1px solid var(--slate-100);"><div style="display:flex;justify-content:space-between;"><b>${fmtDatePretty(l.fromDate)} → ${fmtDatePretty(l.toDate)}</b> <span class="badge ${l.status==='Approved'?'badge-success':l.status==='Rejected'?'badge-danger':'badge-warning'}">${l.status}</span></div><div class="text-xs text-muted mt-1">${l.leaveType}: ${l.reason}</div></div>`).join('') : '<div class="empty">No applications</div>'; } catch(e){} observeNewContent(); }
 
 // ============ CHAT ============
 function toggleContext(){ useContextMode = !useContextMode; const b = $('ctxToggle'); if (b) { b.classList.toggle('active', useContextMode); const l = b.querySelector('.ctx-label'); if (l) l.textContent = useContextMode ? 'Context On' : 'Context'; } toast(useContextMode ? 'Context ON' : 'Context OFF', useContextMode ? 'success' : 'info'); if ($('chatPanel').classList.contains('open')) { const m = $('chatMsgs'); if (!m.querySelector('.msg')) renderChatWelcome(); } }
@@ -3365,7 +3440,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const adminRepRange = $('adminReportRange');
   if (adminRepRange) adminRepRange.onchange = toggleAdminReportRange;
   const lt = $('reqLectureType');
-  if (lt) lt.onchange = function(){ $('reqSubjectGroup').style.display = (this.value === 'single_lecture' || this.value === 'double_lecture') ? 'block' : 'none'; };
+  if (lt) lt.onchange = function(){ $('reqSubjectGroup').style.display = (this.value === 'single_lecture') ? 'block' : 'none'; };
   if (localStorage.getItem('token')) loadDashboard();
 });
 if (document.readyState !== 'loading') { setTimeout(() => handleScrollFab(), 50); }
