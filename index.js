@@ -28,7 +28,7 @@ const GROQ_API_KEYS = [
 const GROQ_MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
 const GROQ_FALLBACK_MODELS = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.8-27b'];
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_TIMEOUT_MS = 20000; // increased to 20s
+const GROQ_TIMEOUT_MS = 45000; // 45 seconds
 
 const GEMINI_API_KEYS = [
   process.env.GEMINI_API_KEY,
@@ -39,9 +39,10 @@ const GEMINI_API_KEYS = [
   process.env.GEMINI_API_KEY_6
 ].filter(k => k && k.trim() && k.trim().length > 5).map(k => k.trim());
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
-const GEMINI_FALLBACK_MODELS = ['gemini-3.5-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
-const GEMINI_GLOBAL_TIMEOUT_MS = parseInt(process.env.GEMINI_GLOBAL_TIMEOUT_MS || '45000', 10); // overall 45s
+// ✅ UPDATED: Latest Gemini models (3.8 Flash and 3.6 Flash)
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+const GEMINI_FALLBACK_MODELS = ['gemini-3.6-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
+const GEMINI_GLOBAL_TIMEOUT_MS = parseInt(process.env.GEMINI_GLOBAL_TIMEOUT_MS || '90000', 10); // 90s
 
 let groqKeyIndex = 0;
 let geminiKeyIndex = 0;
@@ -70,7 +71,7 @@ const SEMESTER_END = new Date('2026-12-31T23:59:59+05:30');
 
 if (!MONGO_URI) { console.error('❌ MONGO_URI missing'); process.exit(1); }
 console.log(`🔑 Groq keys: ${GROQ_API_KEYS.length} | Gemini keys: ${GEMINI_API_KEYS.length}`);
-console.log(`🤖 Primary AI: Groq (${GROQ_MODEL}) → Fallback after 20s: Gemini (${GEMINI_MODEL})`);
+console.log(`🤖 Primary AI: Groq (${GROQ_MODEL}) → Fallback after 45s: Gemini (${GEMINI_MODEL})`);
 
 function getISTDateString(dateObj) {
   const istDate = new Date(dateObj.getTime() + (5.5 * 60 * 60 * 1000));
@@ -573,7 +574,7 @@ const attendanceRequestSchema = new mongoose.Schema({
   studentName: { type: String, required: true },
   branch: { type: String, default: 'CSE' },
   date: { type: String, required: true },
-  lectureType: { type: String, enum: ['full_day', 'single_lecture'], required: true }, // double_lecture removed
+  lectureType: { type: String, enum: ['full_day', 'single_lecture'], required: true },
   subject: { type: String, default: null },
   subjects: [{ type: String }],
   period: { type: String, default: null },
@@ -703,7 +704,7 @@ async function getBunkAdvisor(rollNo) {
 // ============================================================
 //  AI: GROQ (PRIMARY)
 // ============================================================
-async function callGroqOnce({ prompt, systemPrompt = null, history = null, maxTokens = 1500, temperature = 0.7, timeoutMs = 20000, model = null, apiKey = null }) {
+async function callGroqOnce({ prompt, systemPrompt = null, history = null, maxTokens = 1500, temperature = 0.7, timeoutMs = 45000, model = null, apiKey = null }) {
   const useKey = apiKey || getNextGroqKey();
   if (!useKey) throw new Error('No Groq API key available');
   const useModel = model || GROQ_MODEL;
@@ -785,7 +786,7 @@ function parseGeminiError(err) {
   return { code: 500, type: 'UNKNOWN', friendly: 'AI service encountered an unexpected error. Please try again shortly.' };
 }
 
-async function callGeminiOnce({ prompt, systemPrompt = null, fileBase64 = null, mimeType = null, history = null, maxTokens = 1500, temperature = 0.7, timeoutMs = 30000, model = null, apiKey = null }) {
+async function callGeminiOnce({ prompt, systemPrompt = null, fileBase64 = null, mimeType = null, history = null, maxTokens = 1500, temperature = 0.7, timeoutMs = 45000, model = null, apiKey = null }) {
   const useKey = apiKey || getNextGeminiKey();
   if (!useKey) throw new Error('No Gemini API key available');
   const useModel = model || GEMINI_MODEL;
@@ -823,7 +824,7 @@ async function callGemini(args) {
   const totalKeys = GEMINI_API_KEYS.length;
   if (totalKeys === 0) throw new Error('No Gemini API key available');
   const perCallTimeout = args.globalTimeoutMs || GEMINI_GLOBAL_TIMEOUT_MS;
-  const maxAttempts = args.maxAttempts || 20; // more attempts
+  const maxAttempts = args.maxAttempts || 20;
   const startTime = Date.now();
   let lastError = null;
   let attemptsMade = 0;
@@ -864,11 +865,11 @@ async function callGemini(args) {
 }
 
 // ============================================================
-//  AI: UNIFIED CALLER — Groq → Gemini (45s total)
+//  AI: UNIFIED CALLER — Groq → Gemini (90s total)
 // ============================================================
 async function callAI(args) {
-  const GROQ_TIMEOUT = 20000; // 20s
-  const TOTAL_TIMEOUT = 45000; // 45s
+  const GROQ_TIMEOUT = 45000;
+  const TOTAL_TIMEOUT = 90000;
   const startTime = Date.now();
   let groqError = null;
   if (GROQ_API_KEYS.length > 0) {
@@ -1589,7 +1590,6 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
       const ds = getISTDateString(now);
       const key = `single_lecture_${ds}_${period.start}`;
 
-      // If publishing, try to reuse existing unpublished passcode
       if (publishFlag && !force) {
         const existing = await Passcode.findOne({ key, type: 'single_lecture', enabled: true, published: false, expiresAt: { $gt: new Date() } });
         if (existing) {
@@ -1603,12 +1603,10 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
         }
       }
 
-      // Delete existing for this key to avoid duplicate
       await Passcode.deleteMany({ key, type: 'single_lecture' });
       const passcode = Math.floor(1000 + Math.random() * 9000).toString();
       const expiry = new Date(now.getTime() + durationMin * 60 * 1000);
       const newDoc = await new Passcode({ passcode, type, key, expiresAt: expiry, published: publishFlag, isPublic: pubPublic, enabled: true, publishedAt: publishFlag ? now : null, publishedBy: publishFlag ? req1.rollNo : null, durationMinutes: publishFlag ? durationMin : null }).save();
-      // Clean expired
       await Passcode.deleteMany({ type: 'single_lecture', expiresAt: { $lt: new Date() } });
       return res.json({ message: force ? 'Changed' : (publishFlag ? 'Published' : 'Generated'), passcode: newDoc.passcode, type, expiresAt: newDoc.expiresAt, changed: !!force, published: publishFlag, isPublic: pubPublic, durationMinutes: durationMin });
     }
@@ -2343,7 +2341,7 @@ app.get('/api/admin/defaulters/:requesterRollNo', async (req, res) => {
 });
 
 // ============================================================
-//  DB INTENT PROMPT — English only, no double_lecture
+//  DB INTENT PROMPT — Full A-to-Z Features
 // ============================================================
 const DB_INTENT_PROMPT = `You are the Database Intent Parser for BM Group ERP.
 Translate user's natural language into JSON. NEVER invent data. NEVER write prose.
@@ -2368,6 +2366,8 @@ Translate user's natural language into JSON. NEVER invent data. NEVER write pros
 14. Non-DB chat → action "reply"
 15. NO HALLUCINATION
 16. NEVER use "double_lecture" anywhere.
+17. For destructive actions (delete, update, bulk reject, etc.), set "requiresConfirmation": true.
+18. For general questions, notes, coding help, etc., set "action": "reply" and provide the answer directly.
 Return ONLY valid JSON. No code fence. No extra text.`;
 
 async function detectDbIntent(message, userContext) {
@@ -2529,7 +2529,6 @@ async function executeDbAction(intent, userContext) {
         const period = getCurrentPeriod(userContext.branch || 'CSE');
         if (!period) return { error: 'No active lecture.' };
         key = `single_lecture_${todayStr}_${period.start}`;
-        // Try to reuse existing unpublished
         const existing = await Passcode.findOne({ key, type: 'single_lecture', enabled: true, published: false, expiresAt: { $gt: new Date() } });
         if (existing) {
           existing.published = true;
@@ -2634,7 +2633,7 @@ function formatDbResult(result, action) {
 }
 
 // ============================================================
-//  MAIN CHAT — English only, no steps
+//  MAIN CHAT — Language Mirroring + General Chat Fix
 // ============================================================
 app.post('/api/ai/chat', async (req, res) => {
   try {
@@ -2726,7 +2725,7 @@ app.post('/api/ai/chat', async (req, res) => {
       } catch (err) { console.warn('DB mode error:', err.message); }
     }
 
-    // ===== NORMAL CHAT MODE (English only) =====
+    // ===== NORMAL CHAT MODE (Language Mirroring + General Chat) =====
     let contextStr = '';
     if (useCtx && userData) {
       const lines = [];
@@ -2753,19 +2752,25 @@ app.post('/api/ai/chat', async (req, res) => {
 Role: ${userRole}. User: ${userName}. Branch: ${userBranch}.
 
 ## PERSONALITY:
-- Friendly, but always respond in English.
-- Use simple English.
-- Casual greetings get natural replies.
+- Friendly.
+- IMPORTANT: Respond in the SAME language the user uses.
+  - If user writes in English -> reply in English.
+  - If user writes in Hindi -> reply in Hindi.
+  - If user writes in Hinglish -> reply in Hinglish.
+  - Match the user's script (Devanagari vs Roman).
 - Use minimal emojis.
 
 ${isCasualChat ? `## MODE: CASUAL
 - Just chat naturally.
-- If data is requested, say: "Please turn on Context or Database mode."
+- You CAN provide general knowledge, notes, coding help, and answer general questions.
+- DO NOT ask the user to turn on Context or Database for general questions.
+- If the user specifically asks for personal attendance/timetable data, then tell them to turn on Context or Database.
+- If data is requested and not available, say: "This data is not available. Please try another query."
 ` : `## MODE: DATA
 - Answer using the provided CONTEXT.
 - Today = TODAY. Tomorrow = TOMORROW. Class timing 09:20 AM.
 - Days Present = UNIQUE days.
-- If data is not available, say: "This data is not available. Please contact admin."
+- If data is not available, say: "This data is not available in context. Please try another query."
 - DO NOT say "admin se poocho" in Hinglish. Use English only.
 `}
 ## FORMATTING:
@@ -2814,7 +2819,7 @@ app.post('/api/ai/chat-with-file', async (req, res) => {
     if (cr !== 'guest') userData = await User.findOne({ rollNo: cr });
     const userName = userData?.name || name || 'Guest';
     const userRole = userData?.role || role || 'student';
-    const systemPrompt = `You are "BM Bot". Helping ${userName} (${userRole}). Analyze and summarize in English only. Use markdown. NEVER use tables.`;
+    const systemPrompt = `You are "BM Bot". Helping ${userName} (${userRole}). Analyze and summarize. Respond in the SAME language the user uses. Use markdown. NEVER use tables.`;
     let reply = '', aiOk = false;
     try { reply = await callGemini({ prompt: userPrompt, systemPrompt, fileBase64, mimeType, maxTokens: 3000, temperature: 0.4 }); aiOk = true; }
     catch (err) { reply = err.message; }
