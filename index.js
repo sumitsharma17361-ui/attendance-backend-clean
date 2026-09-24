@@ -39,10 +39,10 @@ const GEMINI_API_KEYS = [
   process.env.GEMINI_API_KEY_6
 ].filter(k => k && k.trim() && k.trim().length > 5).map(k => k.trim());
 
-// ✅ UPDATED: Latest Gemini models (3.8 Flash and 3.6 Flash)
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
-const GEMINI_FALLBACK_MODELS = ['gemini-3.6-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
-const GEMINI_GLOBAL_TIMEOUT_MS = parseInt(process.env.GEMINI_GLOBAL_TIMEOUT_MS || '90000', 10);
+// ✅ UPDATED: Latest working Free Tier Gemini models (Sept 2026)
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3-flash';
+const GEMINI_FALLBACK_MODELS = ['gemini-3.1-flash-lite', 'gemini-2.5-flash'];
+const GEMINI_GLOBAL_TIMEOUT_MS = 60000; // ✅ 60 seconds max limit
 
 let groqKeyIndex = 0;
 let geminiKeyIndex = 0;
@@ -774,7 +774,7 @@ async function callGroq(args) {
 }
 
 // ============================================================
-//  AI: GEMINI (FALLBACK)
+//  AI: GEMINI (FALLBACK) — 60s timeout, all keys tested
 // ============================================================
 function parseGeminiError(err) {
   const msg = err.message || String(err);
@@ -786,7 +786,7 @@ function parseGeminiError(err) {
   return { code: 500, type: 'UNKNOWN', friendly: 'AI service encountered an unexpected error. Please try again shortly.' };
 }
 
-async function callGeminiOnce({ prompt, systemPrompt = null, fileBase64 = null, mimeType = null, history = null, maxTokens = 1500, temperature = 0.7, timeoutMs = 45000, model = null, apiKey = null }) {
+async function callGeminiOnce({ prompt, systemPrompt = null, fileBase64 = null, mimeType = null, history = null, maxTokens = 1500, temperature = 0.7, timeoutMs = 60000, model = null, apiKey = null }) {
   const useKey = apiKey || getNextGeminiKey();
   if (!useKey) throw new Error('No Gemini API key available');
   const useModel = model || GEMINI_MODEL;
@@ -821,47 +821,37 @@ async function callGeminiOnce({ prompt, systemPrompt = null, fileBase64 = null, 
 
 async function callGemini(args) {
   const modelsToTry = [args.model || GEMINI_MODEL, ...GEMINI_FALLBACK_MODELS];
-  const totalKeys = GEMINI_API_KEYS.length;
-  if (totalKeys === 0) throw new Error('No Gemini API key available');
-  const perCallTimeout = args.globalTimeoutMs || GEMINI_GLOBAL_TIMEOUT_MS;
-  const maxAttempts = args.maxAttempts || 20;
+  if (GEMINI_API_KEYS.length === 0) throw new Error('No Gemini API key available');
   const startTime = Date.now();
   let lastError = null;
-  let attemptsMade = 0;
-  let globalTimeoutHit = false;
 
-  for (let mi = 0; mi < modelsToTry.length; mi++) {
-    const model = modelsToTry[mi];
-    const keysPerModel = Math.max(2, Math.ceil(GEMINI_API_KEYS.length / modelsToTry.length));
-    let skipToNextModel = false;
-    for (let attempt = 0; attempt < keysPerModel; attempt++) {
-      if (Date.now() - startTime > perCallTimeout) { globalTimeoutHit = true; break; }
-      if (attemptsMade >= maxAttempts) break;
+  // Loop through all models
+  for (const model of modelsToTry) {
+    // Loop through ALL available keys for this model (4 to 6 keys)
+    for (let i = 0; i < GEMINI_API_KEYS.length; i++) {
+      if (Date.now() - startTime > GEMINI_GLOBAL_TIMEOUT_MS) {
+        throw new Error('AI took too long to respond (exceeded 60s timeout). Please try again later.');
+      }
       const apiKey = getNextGeminiKey();
       if (!apiKey) break;
-      attemptsMade++;
+      
       try {
-        console.log(`🤖 [GEMINI] Trying model=${model} | attempt=${attempt + 1}`);
+        console.log(`🤖 [GEMINI] Trying model=${model} | key_index=${i} | attempt=${i+1}`);
         return await callGeminiOnce({ ...args, model, apiKey });
       } catch (err) {
         lastError = err;
         const parsed = parseGeminiError(err);
         console.warn(`⚠️ [GEMINI ${parsed.code}] ${model} failed: ${err.message.substring(0, 150)}`);
-        if (parsed.type === 'OVERLOADED' || parsed.type === 'TIMEOUT') { skipToNextModel = true; break; }
-        if (parsed.type === 'RATE_LIMIT') { await new Promise(r => setTimeout(r, 500)); continue; }
-        if (parsed.type === 'MODEL_NOT_FOUND' || parsed.type === 'BAD_REQUEST') { skipToNextModel = true; break; }
-        continue;
+        
+        // If model doesn't exist, no need to try other keys, break to next model
+        if (parsed.type === 'MODEL_NOT_FOUND' || parsed.type === 'BAD_REQUEST') {
+          break; 
+        }
+        // For rate limits (429), overloaded (503), or timeouts, try the next API key
       }
     }
-    if (globalTimeoutHit) break;
-    if (attemptsMade >= maxAttempts) break;
   }
-  const parsed = parseGeminiError(lastError);
-  const friendly = globalTimeoutHit ? 'AI took too long to respond. Please try again in about 30 seconds.' : parsed.friendly;
-  const finalErr = new Error(friendly);
-  finalErr.code = parsed.code;
-  finalErr.type = parsed.type;
-  throw finalErr;
+  throw lastError || new Error('All Gemini models and keys failed.');
 }
 
 // ============================================================
@@ -2787,12 +2777,12 @@ ${isCasualChat ? `## MODE: CASUAL
 - You CAN provide general knowledge, notes, coding help, and answer general questions.
 - DO NOT ask the user to turn on Context or Database for general questions.
 - If the user specifically asks for personal attendance/timetable data, then tell them to turn on Context or Database.
-- If data is requested and not available, say: "This data is not available. Please try another query." (in user's language).
+- If data is requested and not available, do NOT use canned replies like "This data is not available in context". Instead, apologize and state specifically what data you don't have (e.g., "I don't see BDA attendance for 24CSE48 in the current context.").
 ` : `## MODE: DATA
 - Answer using the provided CONTEXT.
 - Today = TODAY. Tomorrow = TOMORROW. Class timing 09:20 AM.
 - Days Present = UNIQUE days.
-- If data is not available, say: "This data is not available in context. Please try another query." (in user's language).
+- If data is not available, do NOT use canned replies. State specifically what data you don't have (e.g., "I don't see BDA attendance for 24CSE48 in the current context.").
 - DO NOT say "admin se poocho".
 `}
 ## FORMATTING:
