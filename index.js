@@ -28,7 +28,7 @@ const GROQ_API_KEYS = [
 const GROQ_MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
 const GROQ_FALLBACK_MODELS = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.8-27b'];
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_TIMEOUT_MS = 45000; // 45 seconds
+const GROQ_TIMEOUT_MS = 45000;
 
 const GEMINI_API_KEYS = [
   process.env.GEMINI_API_KEY,
@@ -42,7 +42,7 @@ const GEMINI_API_KEYS = [
 // ✅ UPDATED: Latest Gemini models (3.8 Flash and 3.6 Flash)
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 const GEMINI_FALLBACK_MODELS = ['gemini-3.6-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
-const GEMINI_GLOBAL_TIMEOUT_MS = parseInt(process.env.GEMINI_GLOBAL_TIMEOUT_MS || '90000', 10); // 90s
+const GEMINI_GLOBAL_TIMEOUT_MS = parseInt(process.env.GEMINI_GLOBAL_TIMEOUT_MS || '90000', 10);
 
 let groqKeyIndex = 0;
 let geminiKeyIndex = 0;
@@ -2341,7 +2341,7 @@ app.get('/api/admin/defaulters/:requesterRollNo', async (req, res) => {
 });
 
 // ============================================================
-//  DB INTENT PROMPT — Full A-to-Z Features
+//  DB INTENT PROMPT — Full A-to-Z Features + Strict Language
 // ============================================================
 const DB_INTENT_PROMPT = `You are the Database Intent Parser for BM Group ERP.
 Translate user's natural language into JSON. NEVER invent data. NEVER write prose.
@@ -2368,6 +2368,13 @@ Translate user's natural language into JSON. NEVER invent data. NEVER write pros
 16. NEVER use "double_lecture" anywhere.
 17. For destructive actions (delete, update, bulk reject, etc.), set "requiresConfirmation": true.
 18. For general questions, notes, coding help, etc., set "action": "reply" and provide the answer directly.
+19. For "Meri attendance batao" (student), action "db_aggregate", collection "attendances". 
+20. For "BDA mai meri kitni attendance hai" (student), action "db_aggregate", collection "attendances", filter {subject: "BDA"}.
+21. For "Aaj kitne students present hai" (admin), action "db_count", collection "attendances", filter {date: "TODAY", status: "Present"}.
+22. For "Defaulter list" (admin), action "db_aggregate", collection "attendances".
+23. For "Next holiday kab hai" (any), action "db_read", collection "holidays", sort {date: 1}.
+24. For "Meri pending requests dikhao" (student), action "db_read", collection "attendancerequests", filter {rollNo: "USER_ROLL", status: "Pending"}.
+25. For "20 August ke liye request bhejo" (student), action "db_submit_request", data {date: "2026-08-20", lectureType: "full_day"}.
 Return ONLY valid JSON. No code fence. No extra text.`;
 
 async function detectDbIntent(message, userContext) {
@@ -2482,7 +2489,16 @@ async function executeDbAction(intent, userContext) {
       const sanitized = docs.map(d => { if (!isAdmin) { delete d.password; delete d.activeSession; delete d.boundDeviceId; } return d; });
       return { result: sanitized, count: sanitized.length };
     }
-    if (action === 'db_count') { if (!Model) return { error: 'Unknown collection' }; return { result: { count: await Model.countDocuments(filter || {}) } }; }
+    if (action === 'db_count') { 
+      if (!Model) return { error: 'Unknown collection' }; 
+      // Special handling for "Aaj kitne students present hai" (Admin)
+      if (collection === 'attendances' && filter && filter.date === 'TODAY' && filter.status === 'Present') {
+        const todayStr = getISTDateString(new Date());
+        const count = await Attendance.distinct('rollNo', { date: todayStr, status: 'Present' });
+        return { result: { count: count.length, message: `Aaj **${count.length}** students present hain.` } };
+      }
+      return { result: { count: await Model.countDocuments(filter || {}) } }; 
+    }
     if (action === 'db_top_attendance') { if (!isAdmin) return { error: 'Admin only.' }; const top = await getTopAttendance(parseInt(data?.limit) || 5); return { result: { top } }; }
     if (action === 'db_aggregate' && collection === 'attendances') {
       if (isAdmin && (!filter || !filter.rollNo)) {
@@ -2633,7 +2649,7 @@ function formatDbResult(result, action) {
 }
 
 // ============================================================
-//  MAIN CHAT — Language Mirroring + General Chat Fix
+//  MAIN CHAT — Strict Language Mirroring + General Chat Fix
 // ============================================================
 app.post('/api/ai/chat', async (req, res) => {
   try {
@@ -2712,6 +2728,7 @@ app.post('/api/ai/chat', async (req, res) => {
           let replyText;
           if (execResult.isReply) replyText = execResult.reply;
           else if (execResult.error) replyText = `❌ ${execResult.error}`;
+          else if (execResult.result && execResult.result.message) replyText = execResult.result.message;
           else replyText = `✅ ${intent.explanation || 'Done'}\n\n${formatDbResult(execResult.result, intent.action)}`;
           if (existingChat) { existingChat.messages.push({ role: 'user', content: message }); existingChat.messages.push({ role: 'assistant', content: replyText }); existingChat.updatedAt = new Date(); await existingChat.save(); }
           else if (cr !== 'guest') { const nt = await Chat.create({ rollNo: cr, threadId: `chat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`, title: (message || 'Chat').substring(0, 50), messages: [{ role: 'user', content: message }, { role: 'assistant', content: replyText }] }); return res.json({ reply: replyText, threadId: nt.threadId, aiOk: true, usedDatabase: true }); }
@@ -2725,7 +2742,7 @@ app.post('/api/ai/chat', async (req, res) => {
       } catch (err) { console.warn('DB mode error:', err.message); }
     }
 
-    // ===== NORMAL CHAT MODE (Language Mirroring + General Chat) =====
+    // ===== NORMAL CHAT MODE (Strict Language Mirroring) =====
     let contextStr = '';
     if (useCtx && userData) {
       const lines = [];
@@ -2742,7 +2759,14 @@ app.post('/api/ai/chat', async (req, res) => {
       lines.push(getStrictTimetableResponse(tomorrowStr, userData.branch || 'CSE'));
       if (userData.role === 'student') {
         const summary = await getStudentSummary(userData.rollNo);
-        if (summary) { lines.push(`Attendance: ${summary.attendancePercentage}% (${summary.totalAcademicLectures}/${summary.totalConductedLectures})`); lines.push(`Days Present: ${summary.daysPresent} / ${summary.workingDaysSoFar}`); const advisor = await getBunkAdvisor(userData.rollNo); if (advisor) lines.push(`Bunk Advisor: ${advisor.message}`); }
+        if (summary) { 
+          lines.push(`Attendance: ${summary.attendancePercentage}% (${summary.totalAcademicLectures}/${summary.totalConductedLectures})`); 
+          lines.push(`Days Present: ${summary.daysPresent} / ${summary.workingDaysSoFar}`); 
+          const advisor = await getBunkAdvisor(userData.rollNo); 
+          if (advisor) lines.push(`Bunk Advisor: ${advisor.message}`);
+          const subjStats = Object.entries(summary.subjectStats || {}).map(([s, st]) => `${s}: ${st.percentage}%`).join(', ');
+          lines.push(`Subject-wise: ${subjStats}`);
+        }
       }
       contextStr = lines.join('\n');
     }
@@ -2751,27 +2775,25 @@ app.post('/api/ai/chat', async (req, res) => {
     const systemPrompt = `You are "BM Bot" for BM Group of Institutions.
 Role: ${userRole}. User: ${userName}. Branch: ${userBranch}.
 
-## PERSONALITY:
-- Friendly.
-- IMPORTANT: Respond in the SAME language the user uses.
-  - If user writes in English -> reply in English.
-  - If user writes in Hindi -> reply in Hindi.
-  - If user writes in Hinglish -> reply in Hinglish.
-  - Match the user's script (Devanagari vs Roman).
-- Use minimal emojis.
+## CRITICAL LANGUAGE RULE:
+- You MUST reply in the exact same language and script as the user's input.
+- If user types in Hinglish (Hindi words in English alphabet, e.g., "bhai attendance batao"), reply in Hinglish.
+- If user types in Hindi (Devanagari script, e.g., "भाई अटेंडेंस बताओ"), reply in Hindi.
+- If user types in English, reply in English.
+- DO NOT switch languages. Mirror the user's language perfectly.
 
 ${isCasualChat ? `## MODE: CASUAL
 - Just chat naturally.
 - You CAN provide general knowledge, notes, coding help, and answer general questions.
 - DO NOT ask the user to turn on Context or Database for general questions.
 - If the user specifically asks for personal attendance/timetable data, then tell them to turn on Context or Database.
-- If data is requested and not available, say: "This data is not available. Please try another query."
+- If data is requested and not available, say: "This data is not available. Please try another query." (in user's language).
 ` : `## MODE: DATA
 - Answer using the provided CONTEXT.
 - Today = TODAY. Tomorrow = TOMORROW. Class timing 09:20 AM.
 - Days Present = UNIQUE days.
-- If data is not available, say: "This data is not available in context. Please try another query."
-- DO NOT say "admin se poocho" in Hinglish. Use English only.
+- If data is not available, say: "This data is not available in context. Please try another query." (in user's language).
+- DO NOT say "admin se poocho".
 `}
 ## FORMATTING:
 - Use bullet points (• or -)
