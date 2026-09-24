@@ -11,7 +11,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 /* ============================================================
-   RESET + TAP HIGHLIGHT FIX
+   RESET
    ============================================================ */
 *,*::before,*::after{
   box-sizing:border-box;margin:0;padding:0;
@@ -35,7 +35,7 @@ button{-webkit-user-select:none;user-select:none;}
   --emerald-50:#ecfdf5;--emerald-100:#d1fae5;--emerald-400:#34d399;--emerald-500:#10b981;--emerald-600:#059669;--emerald-700:#047857;
   --amber-50:#fffbeb;--amber-100:#fef3c7;--amber-500:#f59e0b;--amber-600:#d97706;--amber-700:#b45309;
   --rose-50:#fff1f2;--rose-100:#ffe4e6;--rose-500:#f43f5e;--rose-600:#e11d48;--rose-700:#be123c;
-  --purple-50:#faf5ff;--purple-100:#f3e8ff;--purple-500:#a855f7;--purple-600:#7c3aed;--purple-700:#6d28d9;
+  --purple-50:#faf5ff;--purple-100:#f3e8ff;--purple-200:#e9d5ff;--purple-500:#a855f7;--purple-600:#7c3aed;--purple-700:#6d28d9;
   --cyan-500:#06b6d4;--cyan-600:#0891b2;
   --radius:14px;--radius-sm:10px;--radius-lg:20px;--radius-full:9999px;
   --shadow-xs:0 1px 2px rgba(15,23,42,.04);
@@ -69,7 +69,7 @@ body{
 button,.btn,.tab,.subnav-item,.portal,.chip,.icon-btn,.mini-btn,.send-btn,.msg-action-btn,
 .chat-close-btn,.chat-sidebar-toggle,.modal-close,.chat-fab,.working-days-cta,
 .ctx-toggle,.db-toggle,.menu-trigger-btn,.student-menu-item,.auth-link,.holiday-row,
-.bulk-select-item,.collapsible-header,.req-tab{
+.bulk-select-item,.collapsible-header,.req-tab,.wd-cell,.present-row,.branch-label{
   -webkit-tap-highlight-color:transparent;
   touch-action:manipulation;
   transition:transform var(--dur) var(--ease-out),
@@ -87,16 +87,42 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
 }
 
 /* ============================================================
-   SCROLL ANIMATION
+   SCROLL ANIMATIONS
    ============================================================ */
 .animate-on-scroll {
   opacity: 0;
   transform: translateY(24px);
-  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1), transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1), transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .animate-on-scroll.visible {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* ============================================================
+   KEYFRAMES
+   ============================================================ */
+@keyframes appIn{
+  from{opacity:0;transform:translateY(20px) scale(.98);}
+  to{opacity:1;transform:translateY(0) scale(1);}
+}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes slideIn{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+@keyframes slideInRight{from{opacity:0;transform:translateX(-16px);}to{opacity:1;transform:translateX(0);}}
+@keyframes slideInLeft{from{opacity:0;transform:translateX(16px);}to{opacity:1;transform:translateX(0);}}
+@keyframes popIn{from{opacity:0;transform:scale(.92);}to{opacity:1;transform:scale(1);}}
+@keyframes shimmer{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
+@keyframes tabFadeIn{
+  from{opacity:0;transform:translateY(12px);}
+  to{opacity:1;transform:translateY(0);}
+}
+@keyframes rowIn{
+  from{opacity:0;transform:translateX(-8px);}
+  to{opacity:1;transform:translateX(0);}
+}
+@keyframes floatUp{
+  0%,100%{transform:translateY(0);}
+  50%{transform:translateY(-6px);}
 }
 
 /* ============================================================
@@ -112,17 +138,6 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
   animation:appIn .55s var(--ease-out);
   will-change:transform;
 }
-@keyframes appIn{
-  from{opacity:0;transform:translateY(20px) scale(.98);}
-  to{opacity:1;transform:translateY(0) scale(1);}
-}
-@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
-@keyframes slideIn{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
-@keyframes slideInRight{from{opacity:0;transform:translateX(-16px);}to{opacity:1;transform:translateX(0);}}
-@keyframes slideInLeft{from{opacity:0;transform:translateX(16px);}to{opacity:1;transform:translateX(0);}}
-@keyframes popIn{from{opacity:0;transform:scale(.92);}to{opacity:1;transform:scale(1);}}
-@keyframes shimmer{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
-
 @media(min-width:768px){body{padding:40px 24px;}.app{max-width:820px;}}
 @media(min-width:1200px){.app{max-width:980px;}}
 
@@ -198,7 +213,6 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
 .impersonation button{
   background:#dc2626;color:#fff;border:none;border-radius:8px;padding:5px 14px;
   font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;
-  transition:all var(--dur) var(--ease-out);
 }
 .impersonation button:hover{background:#b91c1c;transform:translateY(-1px);box-shadow:0 4px 12px rgba(220,38,38,.3);}
 
@@ -237,7 +251,6 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
   display:inline-flex;align-items:center;gap:4px;padding:4px 11px;
   background:var(--slate-100);border-radius:var(--radius-full);
   font-size:10px;font-weight:700;color:var(--slate-600);
-  transition:all var(--dur) var(--ease-out);
 }
 .pill svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2.5;}
 .pill.role-admin{background:#fef3c7;color:#92400e;}
@@ -253,7 +266,6 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
   background:#fff;border:1px solid var(--slate-200);
   border-radius:var(--radius);padding:16px;position:relative;overflow:hidden;
   animation:slideIn .55s var(--ease-out) backwards;
-  transition:all var(--dur) var(--ease-out);
 }
 .stat::before{
   content:'';position:absolute;inset:0;
@@ -275,7 +287,6 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
   font-size:26px;font-weight:800;letter-spacing:-.03em;
   color:var(--slate-900);line-height:1.1;
   font-variant-numeric:tabular-nums;
-  transition:color var(--dur) var(--ease);
 }
 .stat .stat-value.good{color:var(--emerald-600);}
 .stat .stat-value.bad{color:var(--rose-600);}
@@ -294,7 +305,6 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
   cursor:pointer;font-family:inherit;margin-bottom:20px;
   position:relative;overflow:hidden;
   box-shadow:0 8px 20px rgba(37,99,235,.28);
-  transition:all var(--dur) var(--ease-out);
 }
 .working-days-cta::before{
   content:'';position:absolute;inset:0;
@@ -341,6 +351,11 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
   box-shadow:0 2px 8px rgba(15,23,42,.08),0 1px 2px rgba(15,23,42,.04);
   font-weight:700;
   animation:popIn .28s var(--ease-out);
+}
+
+/* Tab panes fade in */
+#tab-mark, #tab-admin, #tab-faculty, #tab-leave {
+  animation: tabFadeIn 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* ============================================================
@@ -405,7 +420,7 @@ input:focus,select:focus,textarea:focus{
 }
 .password-wrapper{position:relative;}
 .password-wrapper input{padding-right:48px;}
-.eye-icon{position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--slate-400);padding:6px;display:flex;transition:color var(--dur) var(--ease);}
+.eye-icon{position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--slate-400);padding:6px;display:flex;}
 .eye-icon:hover{color:var(--brand-600);}
 .eye-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;}
 
@@ -415,7 +430,6 @@ input:focus,select:focus,textarea:focus{
 .card{
   background:#fff;border:1px solid var(--slate-200);
   border-radius:var(--radius);padding:18px;margin-bottom:16px;
-  transition:all var(--dur) var(--ease-out);
 }
 .card:hover{border-color:var(--slate-300);box-shadow:var(--shadow);}
 .card-title{
@@ -433,7 +447,7 @@ input:focus,select:focus,textarea:focus{
 .auth-sub{text-align:center;color:var(--slate-500);font-size:13px;margin-bottom:26px;}
 .auth-link{
   color:var(--brand-600);cursor:pointer;font-size:12px;font-weight:600;
-  text-align:center;transition:all var(--dur) var(--ease-out);
+  text-align:center;
 }
 .auth-link:hover{color:var(--brand-700);text-decoration:underline;text-underline-offset:3px;}
 .auth-links-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px;}
@@ -443,7 +457,6 @@ input:focus,select:focus,textarea:focus{
   border-radius:11px;line-height:1.25;
   display:flex;align-items:center;justify-content:center;
   min-height:46px;text-align:center;
-  transition:all var(--dur) var(--ease-out);
 }
 .auth-links-grid .auth-link:hover{
   background:linear-gradient(135deg,var(--brand-100),#fff);
@@ -505,7 +518,6 @@ tbody tr:last-child td{border-bottom:none;}
   font-size:11px;font-weight:600;border-radius:11px;
   background:var(--slate-100);color:var(--slate-700);
   border:1px solid var(--slate-200);line-height:1.3;
-  transition:all var(--dur) var(--ease-out);
 }
 .chip:hover{transform:translateY(-1px);box-shadow:var(--shadow-xs);}
 .chip.good{background:var(--emerald-50);color:var(--emerald-700);border-color:#a7f3d0;}
@@ -523,7 +535,6 @@ tbody tr:last-child td{border-bottom:none;}
   border:1px solid var(--brand-200);border-radius:var(--radius);
   padding:14px 18px;display:flex;align-items:center;gap:12px;
   margin-bottom:20px;font-size:12.5px;color:var(--brand-900);
-  transition:all var(--dur) var(--ease-out);
 }
 .advisor:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:var(--brand-300);}
 .advisor svg{width:22px;height:22px;stroke:var(--brand-600);fill:none;stroke-width:2;flex-shrink:0;}
@@ -561,7 +572,7 @@ tbody tr:last-child td{border-bottom:none;}
   background:#fff;border:1px solid var(--slate-200);
   border-radius:var(--radius);padding:16px 10px;text-align:center;
   cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:10px;
-  font-family:inherit;transition:all var(--dur) var(--ease-out);
+  font-family:inherit;
 }
 .portal:hover{
   border-color:var(--brand-400);
@@ -584,7 +595,7 @@ tbody tr:last-child td{border-bottom:none;}
   flex:0 0 auto;padding:8px 15px;font-size:11.5px;font-weight:600;
   color:var(--slate-500);background:transparent;border:none;
   border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;
-  white-space:nowrap;transition:all var(--dur) var(--ease-out);
+  white-space:nowrap;
 }
 .subnav-item:hover{background:var(--slate-100);color:var(--slate-800);}
 .subnav-item.active{
@@ -626,7 +637,7 @@ tbody tr:last-child td{border-bottom:none;}
   background:#fff;border-radius:var(--radius-lg);
   width:100%;max-width:480px;max-height:90vh;overflow-y:auto;
   box-shadow:var(--shadow-lg);margin:auto;
-  animation:modalIn .42s var(--ease-spring);
+  animation:modalIn .45s var(--ease-spring);
 }
 .modal.wide{max-width:680px;}
 @keyframes modalIn{
@@ -737,7 +748,6 @@ tbody tr:last-child td{border-bottom:none;}
   color:#fff;border:none;border-radius:9px;font-size:11px;font-weight:700;
   cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:5px;flex-shrink:0;
   box-shadow:0 4px 12px rgba(5,150,105,.24);
-  transition:all var(--dur) var(--ease-out);
 }
 .passcode-live-box .plb-copy:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(5,150,105,.36);}
 .passcode-live-box .plb-copy svg{width:13px;height:13px;stroke:#fff;fill:none;stroke-width:2;pointer-events:none;}
@@ -878,7 +888,6 @@ tbody tr:last-child td{border-bottom:none;}
   background:linear-gradient(135deg,var(--brand-600),var(--brand-700));color:#fff;
   border:none;border-radius:8px;padding:6px 14px;font-size:10px;font-weight:700;
   cursor:pointer;font-family:inherit;
-  transition:all var(--dur) var(--ease-out);
 }
 .chat-sidebar-head button:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(37,99,235,.28);}
 .chat-sidebar-list{flex:1;overflow-y:auto;padding:8px;}
@@ -887,11 +896,10 @@ tbody tr:last-child td{border-bottom:none;}
   cursor:pointer;border-radius:9px;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis;margin-bottom:3px;
   display:flex;justify-content:space-between;align-items:center;
-  transition:all var(--dur-fast) var(--ease-out);
 }
 .chat-sidebar-item:hover{background:var(--slate-100);}
 .chat-sidebar-item.active{background:linear-gradient(135deg,var(--brand-100),var(--brand-50));color:var(--brand-700);}
-.chat-sidebar-item .del-chat{color:var(--slate-400);font-size:12px;padding:4px 8px;cursor:pointer;transition:color var(--dur-fast) var(--ease);}
+.chat-sidebar-item .del-chat{color:var(--slate-400);font-size:12px;padding:4px 8px;cursor:pointer;}
 .chat-sidebar-item .del-chat:hover{color:var(--rose-600);}
 .chat-main{flex:1;display:flex;flex-direction:column;min-width:0;position:relative;}
 
@@ -981,7 +989,6 @@ tbody tr:last-child td{border-bottom:none;}
   background:#fff;border:1px solid var(--slate-200);color:var(--slate-500);
   border-radius:9px;padding:6px 12px;font-size:10.5px;font-weight:600;
   font-family:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
-  transition:all var(--dur-fast) var(--ease-out);
 }
 .msg-action-btn:hover{
   background:var(--brand-50);border-color:var(--brand-300);color:var(--brand-700);
@@ -998,7 +1005,6 @@ tbody tr:last-child td{border-bottom:none;}
   padding:10px 16px;margin-bottom:10px;max-width:85%;
   cursor:pointer;user-select:none;
   font-size:11.5px;color:#4338ca;overflow:hidden;
-  transition:all var(--dur) var(--ease-out);
 }
 .thought-badge:hover{background:linear-gradient(135deg,#e0e7ff,#c7d2fe);border-color:#a5b4fc;transform:translateY(-1px);}
 .thought-badge .tb-head{display:flex;align-items:center;gap:9px;font-weight:700;line-height:1.3;}
@@ -1025,7 +1031,6 @@ tbody tr:last-child td{border-bottom:none;}
   padding:11px 16px;font-size:12.5px;font-weight:600;color:var(--slate-700);
   background:transparent;border:none;border-radius:9px;cursor:pointer;
   font-family:inherit;text-align:left;
-  transition:all var(--dur-fast) var(--ease-out);
 }
 .dl-menu button:hover{background:var(--brand-50);color:var(--brand-700);transform:translateX(2px);}
 .dl-menu button svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0;pointer-events:none;}
@@ -1092,7 +1097,6 @@ tbody tr:last-child td{border-bottom:none;}
   flex:1;display:flex;align-items:flex-end;gap:8px;
   background:var(--slate-50);border:1.5px solid var(--slate-200);
   border-radius:24px;padding:8px 10px;min-width:0;
-  transition:all var(--dur) var(--ease-out);
 }
 .chat-input-wrap:focus-within{border-color:var(--brand-500);box-shadow:0 0 0 4px var(--brand-100);background:#fff;}
 .chat-input-wrap textarea{
@@ -1112,7 +1116,6 @@ tbody tr:last-child td{border-bottom:none;}
   background:linear-gradient(135deg,var(--brand-600),var(--brand-700));
   color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
   box-shadow:0 4px 14px rgba(37,99,235,.30);
-  transition:all var(--dur) var(--ease-spring);
 }
 .chat-input .send-btn svg{width:19px;height:19px;stroke:#fff;fill:none;stroke-width:2;pointer-events:none;}
 .chat-input .send-btn:hover{transform:scale(1.10) rotate(-6deg);box-shadow:0 8px 24px rgba(37,99,235,.45);}
@@ -1175,7 +1178,6 @@ tbody tr:last-child td{border-bottom:none;}
   display:flex;justify-content:space-between;align-items:center;
   padding:10px 12px;background:var(--slate-50);border-radius:9px;
   margin-bottom:8px;font-size:12px;gap:10px;
-  transition:all var(--dur-fast) var(--ease-out);
 }
 .holiday-row:hover{background:var(--slate-100);}
 .subject-summary-line{
@@ -1198,22 +1200,41 @@ tbody tr:last-child td{border-bottom:none;}
   max-height:220px;overflow-y:auto;border:1px solid var(--slate-200);
   border-radius:10px;padding:10px;background:#fff;
 }
+
+/* ✅ FIX #1: Improved bulk select item with roll + name */
 .bulk-select-item{
-  display:flex;align-items:center;gap:10px;padding:7px 10px;
-  font-size:12px;cursor:pointer;border-radius:8px;
-  transition:background var(--dur-fast) var(--ease);
+  display:flex;align-items:center;gap:10px;padding:9px 12px;
+  font-size:12px;cursor:pointer;border-radius:9px;
+  border:1px solid transparent;margin-bottom:2px;
+  transition:all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.bulk-select-item:hover{background:var(--slate-50);}
+.bulk-select-item:hover{
+  background:var(--brand-50);
+  border-color:var(--brand-200);
+  transform:translateX(3px);
+}
+.bulk-select-item input[type="checkbox"]{
+  width:16px;height:16px;accent-color:var(--brand-600);
+  cursor:pointer;flex-shrink:0;
+}
+.bulk-select-item .bulk-roll{
+  font-weight:800;color:var(--slate-900);
+  font-variant-numeric:tabular-nums;flex-shrink:0;
+}
+.bulk-select-item .bulk-name{
+  color:var(--slate-600);font-weight:500;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  flex:1;min-width:0;
+}
+
 .collapsible-card{
   background:#fff;border:1px solid var(--slate-200);
   border-radius:var(--radius);margin-bottom:18px;overflow:hidden;
-  transition:all var(--dur) var(--ease-out);
 }
 .collapsible-card:hover{border-color:var(--slate-300);}
 .collapsible-header{
   padding:16px 18px;display:flex;justify-content:space-between;align-items:center;
   cursor:pointer;user-select:none;
-  transition:background var(--dur-fast) var(--ease);
 }
 .collapsible-header:hover{background:var(--slate-50);}
 .collapsible-header h3{font-size:12px;font-weight:700;color:var(--slate-500);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:8px;}
@@ -1225,7 +1246,6 @@ tbody tr:last-child td{border-bottom:none;}
   text-align:center;padding:22px;background:#fff;
   border:2px dashed var(--slate-200);border-radius:var(--radius);
   margin-bottom:14px;
-  transition:all var(--dur) var(--ease-out);
 }
 .passcode-display.valid{border-color:#6ee7b7;background:linear-gradient(135deg,#ecfdf5,#fff);border-style:solid;animation:popIn .35s var(--ease-spring);}
 .passcode-value{font-size:42px;font-weight:900;letter-spacing:.28em;color:var(--brand-700);line-height:1.1;font-variant-numeric:tabular-nums;}
@@ -1245,17 +1265,95 @@ tbody tr:last-child td{border-bottom:none;}
   flex:1;padding:10px 12px;text-align:center;font-size:12px;font-weight:700;
   color:var(--slate-500);cursor:pointer;border-radius:9px;
   background:transparent;border:none;font-family:inherit;
-  transition:all var(--dur) var(--ease-out);
 }
 .req-tab:hover:not(.active){color:var(--slate-800);}
 .req-tab.active{background:#fff;color:var(--brand-700);box-shadow:0 2px 8px rgba(15,23,42,.10);}
 
-/* Working days */
+/* ============================================================
+   ✅ FIX #2: PRESENT TODAY BRANCH SEPARATOR
+   ============================================================ */
+.present-list-wrap {
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+.present-list-wrap::-webkit-scrollbar{width:5px;}
+.present-list-wrap::-webkit-scrollbar-thumb{background:var(--slate-300);border-radius:3px;}
+
+.branch-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 8px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--slate-500);
+  text-transform: uppercase;
+  animation: slideInRight 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.branch-label:first-child { margin-top: 4px; }
+.branch-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--slate-200), transparent);
+}
+.branch-label.cse { color: var(--brand-600); }
+.branch-label.aids { color: var(--purple-600); }
+.branch-label.cse::after { background: linear-gradient(90deg, var(--brand-300), transparent); }
+.branch-label.aids::after { background: linear-gradient(90deg, var(--purple-200), transparent); }
+.branch-label .branch-count {
+  font-size: 9.5px;
+  font-weight: 700;
+  background: var(--slate-100);
+  color: var(--slate-600);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  letter-spacing: 0;
+  margin-left: 4px;
+}
+.branch-label.cse .branch-count { background: var(--brand-100); color: var(--brand-700); }
+.branch-label.aids .branch-count { background: var(--purple-100); color: var(--purple-700); }
+
+.present-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  margin-bottom: 3px;
+  animation: rowIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  border: 1px solid transparent;
+}
+.present-row:hover {
+  background: var(--slate-50);
+  border-color: var(--slate-200);
+  transform: translateX(3px);
+}
+.present-row b {
+  color: var(--slate-900);
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+}
+.present-row span {
+  color: var(--slate-600);
+  font-size: 12px;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-left: 10px;
+}
+
+/* ============================================================
+   ✅ FIX #3: CALENDAR ALIGNMENT (uniform boxes)
+   ============================================================ */
 .wd-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;}
 .wd-summary-card{
   background:var(--slate-50);border:1px solid var(--slate-200);
   border-radius:var(--radius-sm);padding:12px 10px;text-align:center;
-  transition:all var(--dur-fast) var(--ease-out);
 }
 .wd-summary-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-xs);}
 .wd-summary-card .v{font-size:22px;font-weight:800;color:var(--slate-900);font-variant-numeric:tabular-nums;}
@@ -1274,24 +1372,55 @@ tbody tr:last-child td{border-bottom:none;}
 .wd-legend-dot.absent{background:#ffe4e6;border:1px solid #fda4af;}
 .wd-legend-dot.holiday{background:#fef3c7;border:1px solid #fcd34d;}
 .wd-legend-dot.weekend{background:#e2e8f0;border:1px solid #cbd5e1;}
+
 .wd-month{margin-bottom:22px;}
-.wd-month-title{font-size:13.5px;font-weight:800;color:var(--slate-900);margin-bottom:10px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;}
-.wd-month-title .wd-month-stats{font-size:10.5px;font-weight:600;color:var(--slate-500);}
-.wd-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
-.wd-day-head{text-align:center;font-size:9.5px;font-weight:700;color:var(--slate-400);text-transform:uppercase;padding-bottom:5px;letter-spacing:.04em;}
-.wd-cell{
-  height:40px;display:flex;align-items:center;justify-content:center;
-  font-size:12px;font-weight:600;border-radius:8px;border:1px solid transparent;
-  transition:transform var(--dur-fast) var(--ease-spring),box-shadow var(--dur-fast) var(--ease);
-  cursor:default;
+.wd-month-title{
+  font-size:13.5px;font-weight:800;color:var(--slate-900);
+  margin-bottom:10px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;
 }
-.wd-cell:not(.empty):hover{transform:scale(1.10);box-shadow:var(--shadow-xs);z-index:1;}
+.wd-month-title .wd-month-stats{font-size:10.5px;font-weight:600;color:var(--slate-500);}
+
+/* ✅ Uniform calendar grid — all boxes same shape & size */
+.wd-grid{
+  display:grid;
+  grid-template-columns:repeat(7, minmax(0, 1fr));
+  gap:6px;
+  width:100%;
+}
+.wd-day-head{
+  text-align:center;font-size:9.5px;font-weight:700;color:var(--slate-400);
+  text-transform:uppercase;padding-bottom:5px;letter-spacing:.04em;
+}
+.wd-cell{
+  aspect-ratio: 1 / 1;
+  min-height: 38px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 10px;
+  border: 1.5px solid transparent;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 0.2s, background-color 0.2s;
+  cursor: default;
+}
+.wd-cell:not(.empty):hover{
+  transform: scale(1.10) translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15,23,42,.14);
+  z-index: 2;
+}
 .wd-cell.working{background:#ecfdf5;color:#047857;border-color:#a7f3d0;}
 .wd-cell.holiday{background:#fef3c7;color:#b45309;border-color:#fcd34d;}
 .wd-cell.weekend{background:#e2e8f0;color:#64748b;border-color:#cbd5e1;}
 .wd-cell.before{background:#f1f5f9;color:#cbd5e1;border-color:#e2e8f0;}
 .wd-cell.future{background:#f8fafc;color:#e2e8f0;border-color:transparent;}
 .wd-cell.empty{background:transparent;border-color:transparent;cursor:default;}
+.wd-cell.empty:hover{transform:none;box-shadow:none;}
 .wd-cell.today{box-shadow:0 0 0 2.5px var(--brand-500);animation:pulse 2s infinite;}
 .wd-cell.present{background:#d1fae5;color:#065f46;border-color:#6ee7b7;font-weight:800;}
 .wd-cell.absent{background:#ffe4e6;color:#9f1239;border-color:#fda4af;font-weight:800;}
@@ -1307,7 +1436,8 @@ tbody tr:last-child td{border-bottom:none;}
   .chat-panel{bottom:90px;right:12px;left:12px;width:auto;height:78vh;max-height:78vh;border-radius:20px;overflow:hidden;}
   .chat-fab{bottom:20px;right:20px;width:54px;height:54px;}
   .chat-sidebar.open{position:absolute;top:0;left:0;height:100%;width:220px;z-index:20;box-shadow:var(--shadow-lg);}
-  .wd-cell{height:36px;font-size:11px;}
+  .wd-cell{min-height:34px;font-size:11.5px;border-radius:8px;}
+  .wd-grid{gap:4px;}
   .chat-msgs{padding:14px 16px;}
   .msg .bubble{font-size:12.5px;padding:11px 15px;max-width:90%;}
   .chat-input{padding:12px 14px;gap:8px;}
@@ -1331,7 +1461,7 @@ tbody tr:last-child td{border-bottom:none;}
 }
 ::-webkit-scrollbar{width:7px;height:7px;}
 ::-webkit-scrollbar-track{background:transparent;}
-::-webkit-scrollbar-thumb{background:var(--slate-300);border-radius:4px;transition:background var(--dur) var(--ease);}
+::-webkit-scrollbar-thumb{background:var(--slate-300);border-radius:4px;}
 ::-webkit-scrollbar-thumb:hover{background:var(--slate-400);}
 </style>
 </head>
@@ -1475,7 +1605,7 @@ tbody tr:last-child td{border-bottom:none;}
           </div>
           <div class="card" style="margin-bottom:0;">
             <div class="card-title"><span>Today's Present Students</span><button class="btn btn-outline btn-xs" onclick="loadDashboardStats()">Refresh</button></div>
-            <div id="adminPresentList" style="max-height:220px;overflow-y:auto;font-size:12px;"><div class="text-muted text-xs">Loading…</div></div>
+            <div id="adminPresentList" class="present-list-wrap"><div class="text-muted text-xs">Loading…</div></div>
           </div>
         </div>
 
@@ -1531,7 +1661,6 @@ tbody tr:last-child td{border-bottom:none;}
               <select id="reqLectureType">
                 <option value="full_day">Full Day</option>
                 <option value="single_lecture">Single Lecture</option>
-                <!-- Double Lecture removed -->
               </select>
             </div>
             <div class="form-group" id="reqSubjectGroup" style="display:none;">
@@ -2284,7 +2413,7 @@ function getFileTypeLabel(mimeType, fileName) {
   return 'file';
 }
 
-// ============ MENU ============
+/* ============ MENU ============ */
 function openStudentMenu(){
   const drawer = $('studentMenuDrawer'); const backdrop = $('studentMenuBackdrop');
   if (!drawer || !backdrop) return;
@@ -2342,7 +2471,7 @@ function navigateStudentMenu(key){
   }, 220);
 }
 
-// ============ ACCOUNT STATUS ============
+/* ============ ACCOUNT STATUS ============ */
 function openCheckStatus(){ openModal('checkStatusModal'); const r = $('csRoll'); if (r) r.value = ''; const res = $('csResult'); if (res) res.innerHTML = ''; }
 async function checkRequestStatus(){
   const roll = sanitizeRoll($('csRoll').value.trim());
@@ -2393,7 +2522,6 @@ async function loadApprovedBanner(){
     const approvedFP = reqs.find(x => x.status === 'Approved' && x.type === 'forgot_password');
     const approvedDR = reqs.find(x => x.status === 'Approved' && x.type === 'device_reset');
     const pending = reqs.find(x => x.status === 'Pending');
-    // ✅ Remove Device Reset Approved banner – only show Forgot Password approved or Pending
     if (approvedDR && !approvedFP && !pending) { banner.classList.remove('show'); return; }
     let cls = '', icon = '', head = '', text = '', actions = '';
     if (approvedFP) {
@@ -2421,7 +2549,7 @@ async function loadApprovedBanner(){
   } catch(e) { banner.classList.remove('show'); }
 }
 
-// ============ PASSCODE ============
+/* ============ PASSCODE ============ */
 async function loadLivePasscodes(){
   try {
     const [fd, sl] = await Promise.all([
@@ -2443,7 +2571,6 @@ async function loadLivePasscodes(){
       else metaText = `⌛ Expired at ${exp.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`;
     }
     updatePasscodeBoxes(active, { typeLabel, metaText, isExpired });
-    // Start real-time countdown
     startPasscodeCountdown();
   } catch(e) { currentPasscodeData = null; updatePasscodeBoxes(null, null); }
 }
@@ -2454,18 +2581,11 @@ function startPasscodeCountdown() {
     const exp = new Date(currentPasscodeData.expiresAt);
     const now = new Date();
     const remainMs = exp - now;
-    if (remainMs <= 0) {
-      // expired – refresh the box
-      loadLivePasscodes();
-      clearInterval(passcodeCountdownInterval);
-      return;
-    }
+    if (remainMs <= 0) { loadLivePasscodes(); clearInterval(passcodeCountdownInterval); return; }
     const m = Math.floor(remainMs / 60000);
     const s = Math.floor((remainMs % 60000) / 1000);
     const metaText = `⏱ Expires in ${m}m ${s}s (${exp.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })})`;
-    document.querySelectorAll('.plb-meta').forEach(el => {
-      if (el.style.display !== 'none') el.textContent = metaText;
-    });
+    document.querySelectorAll('.plb-meta').forEach(el => { if (el.style.display !== 'none') el.textContent = metaText; });
   }, 1000);
 }
 function updatePasscodeBoxes(active, meta){
@@ -2513,39 +2633,32 @@ function fallbackCopyPass(code){
   document.body.removeChild(ta);
 }
 
-// ============ SCROLL ============
+/* ============ SCROLL ============ */
 function scrollToTop(){ window.scrollTo({ top: 0, behavior: 'smooth' }); }
 function handleScrollFab(){ const f = $('scrollTopFab'); if (!f) return; if (window.scrollY > 300) f.classList.add('show'); else f.classList.remove('show'); }
 window.addEventListener('scroll', handleScrollFab, { passive: true });
 
-// ============ SMOOTH SCROLL ANIMATIONS ============
+/* ============ SCROLL ANIMATIONS ============ */
 function initScrollAnimations() {
   const targets = document.querySelectorAll('.stat, .card, .working-days-cta, .chart-wrap, .advisor, .passcode-card, .collapsible-card, .attendance-actions-card, .approved-banner, .welcome, .portal-grid .portal, .subject-summary-line');
-  targets.forEach(el => el.classList.add('animate-on-scroll'));
+  targets.forEach(el => { if (!el.classList.contains('animate-on-scroll')) el.classList.add('animate-on-scroll'); });
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('visible');
-        observer.unobserve(entry.target);
-      }
+      if (entry.isIntersecting) { entry.target.classList.add('visible'); observer.unobserve(entry.target); }
     });
-  }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
-  document.querySelectorAll('.animate-on-scroll').forEach(el => observer.observe(el));
+  }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+  document.querySelectorAll('.animate-on-scroll:not(.visible)').forEach(el => observer.observe(el));
 }
-// Re-run after dynamic content loads
 function observeNewContent() {
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('visible');
-        observer.unobserve(entry.target);
-      }
+      if (entry.isIntersecting) { entry.target.classList.add('visible'); observer.unobserve(entry.target); }
     });
-  }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+  }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
   document.querySelectorAll('.animate-on-scroll:not(.visible)').forEach(el => observer.observe(el));
 }
 
-// ============ AUTH ============
+/* ============ AUTH ============ */
 function toggleAuthMode(){
   isRegistering = !isRegistering;
   $('regNameGroup').style.display = isRegistering ? 'block' : 'none';
@@ -2594,7 +2707,7 @@ function switchBack(){
   location.reload();
 }
 
-// ============ ACCOUNT ACTIONS ============
+/* ============ ACCOUNT ACTIONS ============ */
 function openForgotPassword(){ openModal('forgotPassModal'); }
 function openSetNewPassword(){ openModal('setNewPassModal'); }
 function openDeviceReset(){ openModal('deviceResetModal'); }
@@ -2648,7 +2761,7 @@ async function submitChangePassword(){
   } catch(e){ toast('Network error','error'); }
 }
 
-// ============ DASHBOARD ============
+/* ============ DASHBOARD ============ */
 function loadDashboard(){
   const userStr = localStorage.getItem('user'); if (!userStr) return;
   currentUser = JSON.parse(userStr);
@@ -2716,7 +2829,6 @@ function loadDashboard(){
   if (clockIntervalId) clearInterval(clockIntervalId);
   clockIntervalId = setInterval(updateClock, 1000);
   fetchNotices(); fetchChatHistory();
-  // initialise scroll animations after DOM is ready
   setTimeout(initScrollAnimations, 100);
 }
 function updateClock(){ const n = new Date(); if ($('currentTime')) $('currentTime').textContent = n.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}); if ($('currentDate')) $('currentDate').textContent = n.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'}); }
@@ -2724,7 +2836,7 @@ async function fetchNotices(){ try { const res = await fetch(`${API}/api/notices
 function switchTab(id){
   document.querySelectorAll('#mainTabs .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === id));
   ['tab-mark','tab-admin','tab-faculty','tab-leave'].forEach(t => { const el = $(t); if (el) el.style.display = 'none'; });
-  const el = $(id); if (el) { el.style.display = 'block'; el.style.animation = 'fadeIn .35s var(--ease-out)'; }
+  const el = $(id); if (el) { el.style.display = 'block'; el.style.animation = 'tabFadeIn .45s cubic-bezier(.22,1,.36,1)'; }
   if (id === 'tab-leave') { activeStudentMenuKey = 'leave'; populateStudentMenu(); }
   else if (id === 'tab-mark' && currentUser && currentUser.role === 'student' && !['request','timetable','calendar','subjects','workingdays','reports','logs','portals'].includes(activeStudentMenuKey)) {
     activeStudentMenuKey = 'home'; populateStudentMenu();
@@ -2734,7 +2846,7 @@ function switchTab(id){
 function showAdmin(id){
   document.querySelectorAll('.subnav-item').forEach(b => b.classList.toggle('active', b.getAttribute('onclick').includes(id)));
   ['a-directory','a-attendance','a-requests','a-account','a-reports','a-entry','a-holiday','a-passcode','a-tools','a-leave','a-defaulters'].forEach(x => { const el = $(x); if (el) el.style.display = 'none'; });
-  const el = $(id); if (el) { el.style.display = 'block'; el.style.animation = 'fadeIn .35s var(--ease-out)'; }
+  const el = $(id); if (el) { el.style.display = 'block'; el.style.animation = 'tabFadeIn .4s cubic-bezier(.22,1,.36,1)'; }
   if (id === 'a-directory') fetchUsers();
   if (id === 'a-attendance') loadAllAttendance();
   if (id === 'a-requests') loadAdminRequests();
@@ -2835,7 +2947,7 @@ async function loadMyRequests(){
     if (!Array.isArray(data) || data.length === 0) return el.innerHTML = '<div class="empty" style="padding:14px 0;">No requests yet</div>';
     el.innerHTML = data.slice(0, 10).map(r => {
       const c = r.status === 'Approved' ? 'badge-success' : r.status === 'Rejected' ? 'badge-danger' : r.status === 'Partially Approved' ? 'badge-info' : 'badge-warning';
-      const tl = r.lectureType === 'full_day' ? 'Full Day' : r.lectureType === 'double_lecture' ? 'Double Lecture' : 'Single Lecture';
+      const tl = r.lectureType === 'full_day' ? 'Full Day' : 'Single Lecture';
       return `<div style="padding:10px 0;border-bottom:1px solid var(--slate-100);font-size:12px;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
           <div style="min-width:0;"><div style="font-weight:700;">${fmtDatePretty(r.date)} · ${tl}</div>${r.subject ? `<div style="font-size:10.5px;color:var(--slate-500);margin-top:2px;">${escapeHtml(r.subject)}</div>` : ''}</div>
@@ -2860,7 +2972,7 @@ async function loadAdminRequests(){
     if (!reqs.length) return el.innerHTML = '<div class="empty">No requests</div>';
     el.innerHTML = reqs.map(r => {
       const sc = r.status === 'Approved' ? 'badge-success' : r.status === 'Rejected' ? 'badge-danger' : r.status === 'Partially Approved' ? 'badge-info' : 'badge-warning';
-      const ll = r.lectureType === 'full_day' ? '📅 Full Day' : r.lectureType === 'double_lecture' ? '📚 Double Lecture' : '📖 Single Lecture';
+      const ll = r.lectureType === 'full_day' ? '📅 Full Day' : '📖 Single Lecture';
       return `<div style="padding:14px;border:1px solid var(--slate-200);border-radius:11px;margin-bottom:10px;background:#fff;animation:slideIn .35s var(--ease-out);">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
           <div style="min-width:0;flex:1;"><div style="font-weight:800;font-size:13px;">${escapeHtml(r.studentName)} <span class="badge badge-neutral">${escapeHtml(r.rollNo)}</span></div><div style="font-size:11px;color:var(--slate-500);margin-top:3px;">${escapeHtml(r.branch)} · ${fmtDatePretty(r.date)}</div></div>
@@ -2887,7 +2999,54 @@ async function bulkApproveAllRequests(){
   try { const res = await fetch(`${API}/api/requests/all/${currentUser.rollNo}?status=Pending`); const data = await res.json(); const ids = (data.requests || []).map(r => r._id); if (!ids.length) return toast('None pending','info'); const bR = await fetch(`${API}/api/requests/bulk-review`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, requestIds: ids, action: 'Approved', note: 'Bulk' }) }); const d = await bR.json(); if (bR.ok) { toast(d.message || 'Bulk approved','success'); loadAdminRequests(); } else toast(d.error,'error'); } catch(e){ toast('Network error','error'); }
 }
 function toggleSubjectBreakdown(){ subjectBreakdownOpen = !subjectBreakdownOpen; const b = $('subjectBreakdownBody'), a = $('subjectBreakdownArrow'), i = $('subjectBreakdownHeaderInfo'); if (subjectBreakdownOpen) { b?.classList.add('open'); if (a) a.style.transform = 'rotate(180deg)'; if (i) i.textContent = 'Tap to hide'; loadSubjectBreakdown(); } else { b?.classList.remove('open'); if (a) a.style.transform = 'rotate(0deg)'; if (i) i.textContent = 'Tap to view'; } }
-async function loadDashboardStats(){ try { const res = await fetch(`${API}/api/admin/dashboard-stats/${currentUser.rollNo}`); const d = await res.json(); if (res.ok) { if ($('liveTotalStudents')) $('liveTotalStudents').textContent = d.totalStudents || 0; if ($('liveTodayPresent')) $('liveTodayPresent').textContent = d.todayPresent || 0; if ($('liveTodayAbsent')) $('liveTodayAbsent').textContent = d.todayAbsent || 0; if ($('liveOverallPct')) $('liveOverallPct').textContent = (d.overallPct || 0) + '%'; if ($('adminWorkingDaysSoFar')) $('adminWorkingDaysSoFar').textContent = d.workingDaysSoFar || 0; if ($('adminTotalWorkingDays')) $('adminTotalWorkingDays').textContent = d.totalWorkingDaysSemester || 0; const pl = $('adminPresentList'); if (pl && d.todayPresentStudents && d.todayPresentStudents.length > 0) { pl.innerHTML = d.todayPresentStudents.sort((a,b)=>a.rollNo.localeCompare(b.rollNo)).map(s => `<div style="display:flex;justify-content:space-between;padding:5px 0;"><b>${s.rollNo}</b><span class="text-muted">${s.name}</span></div>`).join(''); } else if (pl) pl.innerHTML = '<div class="text-muted text-xs">No students present yet.</div>'; } } catch(e){} }
+
+/* ✅ FIX #2: Dashboard stats with CSE/AIDS separator */
+async function loadDashboardStats(){
+  try {
+    const res = await fetch(`${API}/api/admin/dashboard-stats/${currentUser.rollNo}`);
+    const d = await res.json();
+    if (!res.ok) return;
+    if ($('liveTotalStudents')) $('liveTotalStudents').textContent = d.totalStudents || 0;
+    if ($('liveTodayPresent')) $('liveTodayPresent').textContent = d.todayPresent || 0;
+    if ($('liveTodayAbsent')) $('liveTodayAbsent').textContent = d.todayAbsent || 0;
+    if ($('liveOverallPct')) $('liveOverallPct').textContent = (d.overallPct || 0) + '%';
+    if ($('adminWorkingDaysSoFar')) $('adminWorkingDaysSoFar').textContent = d.workingDaysSoFar || 0;
+    if ($('adminTotalWorkingDays')) $('adminTotalWorkingDays').textContent = d.totalWorkingDaysSemester || 0;
+
+    const pl = $('adminPresentList');
+    if (pl) {
+      const list = (d.todayPresentStudents || []).slice().sort((a,b) => a.rollNo.localeCompare(b.rollNo, undefined, {numeric: true}));
+      if (list.length === 0) {
+        pl.innerHTML = '<div class="text-muted text-xs" style="padding:8px 0;">No students present yet.</div>';
+      } else {
+        const cse = list.filter(s => s.rollNo.startsWith('24CSE'));
+        const aids = list.filter(s => s.rollNo.startsWith('24AIDS'));
+        const others = list.filter(s => !s.rollNo.startsWith('24CSE') && !s.rollNo.startsWith('24AIDS'));
+
+        let html = '';
+        let delay = 0;
+        const renderRows = (arr) => arr.map((s, i) => {
+          const row = `<div class="present-row" style="animation-delay:${(delay++) * 0.03}s;"><b>${escapeHtml(s.rollNo)}</b><span>${escapeHtml(s.name)}</span></div>`;
+          return row;
+        }).join('');
+
+        if (cse.length) {
+          html += `<div class="branch-label cse">CSE <span class="branch-count">${cse.length}</span></div>`;
+          html += renderRows(cse);
+        }
+        if (aids.length) {
+          html += `<div class="branch-label aids">AIDS <span class="branch-count">${aids.length}</span></div>`;
+          html += renderRows(aids);
+        }
+        if (others.length) {
+          html += `<div class="branch-label">Other <span class="branch-count">${others.length}</span></div>`;
+          html += renderRows(others);
+        }
+        pl.innerHTML = html;
+      }
+    }
+  } catch(e){}
+}
 async function openWorkingDays(){ openModal('wdModal'); $('wdCalendar').innerHTML = '<div class="empty">Loading calendar…</div>'; try { renderWorkingDays(await ensureHolidays() || []); } catch(e){ $('wdCalendar').innerHTML = '<div class="empty">Failed to load.</div>'; } }
 function renderWorkingDays(holidays){
   const hMap = {}; (holidays || []).forEach(h => { const k = (h.date||'').split('T')[0]; if (k) hMap[k] = h.reason || 'Holiday'; });
@@ -2987,6 +3146,8 @@ async function loadSubjectBreakdown(){
   observeNewContent();
 }
 function onCalendarModeChange(){ const m = $('calendarViewMode').value; if ($('calendarSelectedMonthWrap')) $('calendarSelectedMonthWrap').style.display = m === 'SELECTED_MONTH' ? 'block' : 'none'; renderAttendanceCalendar(); }
+
+/* ✅ FIX #3: Attendance Calendar with uniform boxes */
 function renderAttendanceCalendar(){
   const w = $('calendarDisplay'); if (!w) return;
   const m = $('calendarViewMode').value;
@@ -3050,7 +3211,7 @@ async function updateTrend(){
       }
     }
     if (trendChart) trendChart.destroy();
-    trendChart = new Chart(c, { type: 'line', data: { labels, datasets: [{ label: 'Attendance %', data: pctData, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.08)', borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#2563eb', pointBorderColor: '#fff', pointBorderWidth: 2, tension: 0.25, fill: true, spanGaps: false }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min:0, max:100, grid:{color:'#f1f5f9'}, ticks:{font:{size:10},color:'#94a3b8',callback:v=>v+'%'} }, x: { grid:{display:false}, ticks:{font:{size:9},color:'#94a3b8'} } } } });
+    trendChart = new Chart(c, { type: 'line', data: { labels, datasets: [{ label: 'Attendance %', data: pctData, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.08)', borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#2563eb', pointBorderColor: '#fff', pointBorderWidth: 2, tension: 0.25, fill: true, spanGaps: false }] }, options: { responsive: true, maintainAspectRatio: false, animation: { duration: 800, easing: 'easeOutQuart' }, plugins: { legend: { display: false } }, scales: { y: { min:0, max:100, grid:{color:'#f1f5f9'}, ticks:{font:{size:10},color:'#94a3b8',callback:v=>v+'%'} }, x: { grid:{display:false}, ticks:{font:{size:9},color:'#94a3b8'} } } } });
   } catch(e){}
 }
 async function updatePeriod(){
@@ -3178,13 +3339,36 @@ function selectAllSubjects(v){ document.querySelectorAll('.sub-cb').forEach(cb =
 async function validateBranch(){ const r = ($('manualRoll').value||'').toUpperCase(); if (!r) return; try { const p = await fetch(`${API}/api/student/profile/${r}`).then(x=>x.json()); if (p.branch && p.branch !== currentManualBranch) toast(`Warning: Student in ${p.branch}`,'error'); } catch(e){} }
 async function markManual(){ const r = ($('manualRoll').value||'').trim().toUpperCase(); if (!r) return toast('Enter roll no','error'); const d = $('manualDate').value; const subs = Array.from(document.querySelectorAll('.sub-cb:checked')).map(cb => cb.value); if (!subs.length) return toast('Select subjects','error'); try { const res = await fetch(`${API}/api/admin/manual-attendance-bulk`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, studentRollNo: r, date: d, subjects: subs, status: $('manualStatus').value})}); const x = await res.json(); if (res.ok) { toast(x.message||'Marked','success'); selectAllSubjects(false); } else toast(x.error||'Failed','error'); } catch(e){ toast('Network error','error'); } }
 function markAllForDay(){ selectAllSubjects(true); markManual(); }
-async function loadBulkStudents(){ const b = $('bulkBranch').value; try { const data = await fetch(`${API}/api/admin/all-users/${currentUser.rollNo}`).then(x=>x.json()); const students = data.filter(u => u.role === 'student' && (u.branch === b || u.rollNo.startsWith(b === 'CSE' ? '24CSE' : '24AIDS'))); if ($('bulkStudents')) $('bulkStudents').innerHTML = `<label class="bulk-select-item" style="font-weight:700;border-bottom:1px solid var(--slate-200);margin-bottom:4px;"><input type="checkbox" onchange="document.querySelectorAll('.bulk-stu').forEach(c=>c.checked=this.checked)"> Select All (${students.length})</label>` + students.sort((a,b)=>a.rollNo.localeCompare(b.rollNo,undefined,{numeric:true})).map(s => `<label class="bulk-select-item"><input type="checkbox" class="bulk-stu" value="${s.rollNo}" data-name="${s.name}"> ${s.rollNo} - ${s.name}</label>`).join(''); } catch(e){} }
+
+/* ✅ FIX #1: Bulk student list — show Roll + Name properly */
+async function loadBulkStudents(){
+  const b = $('bulkBranch').value;
+  try {
+    const data = await fetch(`${API}/api/admin/all-users/${currentUser.rollNo}`).then(x=>x.json());
+    const students = data.filter(u => u.role === 'student' && (u.branch === b || u.rollNo.startsWith(b === 'CSE' ? '24CSE' : '24AIDS')));
+    if ($('bulkStudents')) {
+      const sorted = students.sort((a,b) => a.rollNo.localeCompare(b.rollNo, undefined, {numeric: true}));
+      $('bulkStudents').innerHTML =
+        `<label class="bulk-select-item" style="font-weight:700;border-bottom:1px solid var(--slate-200);margin-bottom:6px;padding-bottom:8px;">
+          <input type="checkbox" onchange="document.querySelectorAll('.bulk-stu').forEach(c=>c.checked=this.checked)">
+          <span class="bulk-name" style="font-weight:700;color:var(--slate-900);">Select All (${sorted.length})</span>
+        </label>` +
+        sorted.map(s =>
+          `<label class="bulk-select-item">
+            <input type="checkbox" class="bulk-stu" value="${escapeHtml(s.rollNo)}" data-name="${escapeHtml(s.name)}">
+            <span class="bulk-roll">${escapeHtml(s.rollNo)}</span>
+            <span class="bulk-name">${escapeHtml(s.name)}</span>
+          </label>`
+        ).join('');
+    }
+  } catch(e){ console.error('loadBulkStudents error:', e); }
+}
 function addBulkDate(){ const d = $('bulkDate').value; if (!d) return toast('Select date','error'); if (selectedBulkDates.includes(d)) return toast('Already added','error'); selectedBulkDates.push(d); renderBulkDates(); }
 function renderBulkDates(){ if ($('bulkDates')) $('bulkDates').innerHTML = selectedBulkDates.map(d => `<span class="chip">${fmtDatePretty(d)} <span onclick="removeBulkDate('${d}')" style="cursor:pointer;color:var(--rose-600);font-weight:800;">×</span></span>`).join(''); }
 function removeBulkDate(d){ selectedBulkDates = selectedBulkDates.filter(x=>x!==d); renderBulkDates(); }
-async function bulkMarkPreview(){ const students = Array.from(document.querySelectorAll('.bulk-stu:checked')).map(cb => ({roll: cb.value, name: cb.dataset.name})); if (!students.length) return toast('Select students','error'); if (!selectedBulkDates.length) return toast('Add dates','error'); let s = `<div style="margin-bottom:14px;padding:14px;background:var(--brand-50);border:1px solid var(--brand-200);border-radius:10px;"><div style="font-size:13.5px;font-weight:800;color:var(--brand-900);">Summary</div><div style="font-size:12.5px;color:var(--brand-700);margin-top:5px;"><b>${students.length}</b> students × <b>${selectedBulkDates.length}</b> dates</div></div>`; $('bulkMarkSummary').innerHTML = s; pendingBulkAction = { type: 'mark', students: students.map(x=>x.roll) }; openModal('bulkMarkModal'); }
+async function bulkMarkPreview(){ const students = Array.from(document.querySelectorAll('.bulk-stu:checked')).map(cb => ({roll: cb.value, name: cb.dataset.name})); if (!students.length) return toast('Select students','error'); if (!selectedBulkDates.length) return toast('Add dates','error'); let s = `<div style="margin-bottom:14px;padding:14px;background:var(--brand-50);border:1px solid var(--brand-200);border-radius:10px;"><div style="font-size:13.5px;font-weight:800;color:var(--brand-900);">Summary</div><div style="font-size:12.5px;color:var(--brand-700);margin-top:5px;"><b>${students.length}</b> students × <b>${selectedBulkDates.length}</b> dates</div></div>`; s += `<div style="max-height:200px;overflow-y:auto;border:1px solid var(--slate-200);border-radius:10px;padding:8px;">`; students.forEach(st => { s += `<div class="present-row" style="padding:6px 10px;"><b>${escapeHtml(st.roll)}</b><span>${escapeHtml(st.name)}</span></div>`; }); s += `</div>`; $('bulkMarkSummary').innerHTML = s; pendingBulkAction = { type: 'mark', students: students.map(x=>x.roll) }; openModal('bulkMarkModal'); }
 async function confirmBulkMark(){ if (!pendingBulkAction || pendingBulkAction.type !== 'mark') return; closeModal('bulkMarkModal'); showDL('Marking…'); try { const res = await fetch(`${API}/api/admin/bulk-mark-attendance`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, studentRollNos: pendingBulkAction.students, dates: selectedBulkDates, subjects: []})}); const d = await res.json(); hideDL(); if (res.ok) toast(d.message || 'Marked','success'); else toast(d.error || 'Failed','error'); } catch(e){ hideDL(); toast('Network error','error'); } pendingBulkAction = null; }
-async function bulkDeletePreview(){ const students = Array.from(document.querySelectorAll('.bulk-stu:checked')).map(cb => ({roll: cb.value, name: cb.dataset.name})); if (!students.length) return toast('Select students','error'); if (!selectedBulkDates.length) return toast('Add dates','error'); let s = `<div style="margin-bottom:14px;padding:14px;background:var(--rose-50);border:1px solid #fecdd3;border-radius:10px;"><div style="font-size:13.5px;font-weight:800;color:var(--rose-700);">Confirm Delete</div></div>`; $('bulkDeleteSummary').innerHTML = s; pendingBulkAction = { type: 'delete', students: students.map(x=>x.roll) }; openModal('bulkDeleteModal'); }
+async function bulkDeletePreview(){ const students = Array.from(document.querySelectorAll('.bulk-stu:checked')).map(cb => ({roll: cb.value, name: cb.dataset.name})); if (!students.length) return toast('Select students','error'); if (!selectedBulkDates.length) return toast('Add dates','error'); let s = `<div style="margin-bottom:14px;padding:14px;background:var(--rose-50);border:1px solid #fecdd3;border-radius:10px;"><div style="font-size:13.5px;font-weight:800;color:var(--rose-700);">Confirm Delete</div><div style="font-size:12.5px;color:var(--rose-700);margin-top:5px;"><b>${students.length}</b> students × <b>${selectedBulkDates.length}</b> dates</div></div>`; $('bulkDeleteSummary').innerHTML = s; pendingBulkAction = { type: 'delete', students: students.map(x=>x.roll) }; openModal('bulkDeleteModal'); }
 async function confirmBulkDelete(){ if (!pendingBulkAction || pendingBulkAction.type !== 'delete') return; closeModal('bulkDeleteModal'); showDL('Deleting…'); try { const res = await fetch(`${API}/api/admin/bulk-delete-attendance`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, studentRollNos: pendingBulkAction.students, dates: selectedBulkDates})}); const d = await res.json(); hideDL(); if (res.ok) toast(d.message || 'Deleted','success'); else toast(d.error || 'Failed','error'); } catch(e){ hideDL(); toast('Network error','error'); } pendingBulkAction = null; }
 async function loadHolidays(){ try { const data = await ensureHolidays(); selectedHolidayDates.clear(); if ($('holidayList')) $('holidayList').innerHTML = data.length ? data.map(h => { const d = (h.date||'').split('T')[0]; return `<div class="holiday-row"><label style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;min-width:0;"><input type="checkbox" class="holiday-cb" value="${d}" onchange="toggleHolidaySelect('${d}', this.checked)"> <b>${fmtDatePretty(d)}</b> · ${h.reason}</label><button class="btn btn-danger btn-xs" onclick="deleteHoliday('${d}')">Delete</button></div>`; }).join('') : '<div class="empty">No holidays</div>'; } catch(e){} observeNewContent(); }
 function toggleHolidaySelect(d, c){ if (c) selectedHolidayDates.add(d); else selectedHolidayDates.delete(d); }
@@ -3224,7 +3408,54 @@ async function initFaculty(){ await loadFacultySubjects(); await fetchTeacherStu
 async function loadFacultySubjects(){ try { const subs = await fetch(`${API}/api/teacher/subjects/${currentUser.rollNo}`).then(x=>x.json()); window._facSubs = subs || []; $('facMarkSubject').innerHTML = '<option value="">Select Subject…</option>' + (subs||[]).map(s=>`<option value="${s}">${s}</option>`).join(''); } catch(e){} }
 async function loadFacultyRecent(){ try { const data = await fetch(`${API}/api/attendance/all/${currentUser.rollNo}`).then(x=>x.json()); const tb = $('facRecentBody'); if (!data || !data.length) return tb.innerHTML = '<tr><td colspan="3" class="empty">No records</td></tr>'; tb.innerHTML = data.slice(0,15).map(r => `<tr><td>${fmtDatePretty(r.date)}</td><td>${r.studentName}</td><td>${r.subject}</td></tr>`).join(''); } catch(e){} observeNewContent(); }
 async function loadFacultyPasscode(){ const cache = getPasscodeCache(); const c = cache['single_lecture']; if (c && new Date(c.expiresAt).getTime() > Date.now()) { const p = $('facPasscode'); const d = $('facPasscodeDisplay'); if (p) { p.textContent = c.passcode; p.classList.remove('empty'); } if (d) d.classList.add('valid'); } }
-async function fetchTeacherStudents(){ try { const data = await fetch(`${API}/api/teacher/students/${currentUser.rollNo}`).then(x=>x.json()); const tb = $('facStudentsBody'); if (!data || !data.length) { tb.innerHTML = '<tr><td colspan="3" class="empty">No students</td></tr>'; $('facTotalStudents').textContent = '0'; $('facBulkStudents').innerHTML = '<div class="empty">No students</div>'; return; } window._facStudents = data; $('facMarkStudent').innerHTML = '<option value="">Select Student…</option>' + data.map(s=>`<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`).join(''); const fr = $('facReportStudent'); if (fr) fr.innerHTML = '<option value="">Select Student…</option>' + data.map(s=>`<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`).join(''); $('facTotalStudents').textContent = data.length; tb.innerHTML = data.map(s => `<tr><td><b>${s.rollNo}</b></td><td>${s.name}</td><td><button class="btn btn-outline btn-xs" onclick="viewStudentRecords('${s.rollNo}')">View</button></td></tr>`).join(''); $('facBulkStudents').innerHTML = `<label class="bulk-select-item" style="font-weight:700;border-bottom:1px solid var(--slate-200);margin-bottom:4px;"><input type="checkbox" onchange="document.querySelectorAll('.fac-bulk-stu').forEach(c=>c.checked=this.checked)"> Select All (${data.length})</label>` + data.sort((a,b)=>a.rollNo.localeCompare(b.rollNo,undefined,{numeric:true})).map(s => `<label class="bulk-select-item"><input type="checkbox" class="fac-bulk-stu" value="${s.rollNo}" data-name="${s.name}"> ${s.rollNo} - ${s.name}</label>`).join(''); const today = fmtDate(new Date()); let present = 0, absent = 0, presentNames = []; for (const s of data) { try { const recs = await fetch(`${API}/api/attendance/student/${s.rollNo}/${currentUser.rollNo}`).then(x=>x.json()); const todayRecs = recs.filter(r => r.date === today && (window._facSubs||[]).includes(r.subject)); if (todayRecs.some(r => r.status === 'Present' || r.status === 'Duty Leave')) { present++; presentNames.push(s); } else absent++; } catch(e){} } $('facTodayPresent').textContent = present; $('facTodayAbsent').textContent = absent; try { const avg = await fetch(`${API}/api/teacher/class-average/${currentUser.rollNo}`).then(x=>x.json()); $('facClassAvg').textContent = (avg.average||0) + '%'; } catch(e){} $('facPresentList').innerHTML = presentNames.length ? presentNames.map(s => `<div style="padding:5px 0;font-size:12.5px;"><b>${s.rollNo}</b> · ${s.name}</div>`).join('') : '<div class="text-muted text-sm">No students present yet</div>'; } catch(e){} observeNewContent(); }
+async function fetchTeacherStudents(){
+  try {
+    const data = await fetch(`${API}/api/teacher/students/${currentUser.rollNo}`).then(x=>x.json());
+    const tb = $('facStudentsBody');
+    if (!data || !data.length) {
+      tb.innerHTML = '<tr><td colspan="3" class="empty">No students</td></tr>';
+      $('facTotalStudents').textContent = '0';
+      $('facBulkStudents').innerHTML = '<div class="empty">No students</div>';
+      return;
+    }
+    window._facStudents = data;
+    $('facMarkStudent').innerHTML = '<option value="">Select Student…</option>' + data.map(s=>`<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`).join('');
+    const fr = $('facReportStudent');
+    if (fr) fr.innerHTML = '<option value="">Select Student…</option>' + data.map(s=>`<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`).join('');
+    $('facTotalStudents').textContent = data.length;
+    tb.innerHTML = data.map(s => `<tr><td><b>${s.rollNo}</b></td><td>${s.name}</td><td><button class="btn btn-outline btn-xs" onclick="viewStudentRecords('${s.rollNo}')">View</button></td></tr>`).join('');
+
+    // ✅ Bulk student list with roll + name
+    const sorted = data.sort((a,b) => a.rollNo.localeCompare(b.rollNo, undefined, {numeric: true}));
+    $('facBulkStudents').innerHTML =
+      `<label class="bulk-select-item" style="font-weight:700;border-bottom:1px solid var(--slate-200);margin-bottom:6px;padding-bottom:8px;">
+        <input type="checkbox" onchange="document.querySelectorAll('.fac-bulk-stu').forEach(c=>c.checked=this.checked)">
+        <span class="bulk-name" style="font-weight:700;color:var(--slate-900);">Select All (${sorted.length})</span>
+      </label>` +
+      sorted.map(s =>
+        `<label class="bulk-select-item">
+          <input type="checkbox" class="fac-bulk-stu" value="${escapeHtml(s.rollNo)}" data-name="${escapeHtml(s.name)}">
+          <span class="bulk-roll">${escapeHtml(s.rollNo)}</span>
+          <span class="bulk-name">${escapeHtml(s.name)}</span>
+        </label>`
+      ).join('');
+
+    const today = fmtDate(new Date());
+    let present = 0, absent = 0, presentNames = [];
+    for (const s of data) {
+      try {
+        const recs = await fetch(`${API}/api/attendance/student/${s.rollNo}/${currentUser.rollNo}`).then(x=>x.json());
+        const todayRecs = recs.filter(r => r.date === today && (window._facSubs||[]).includes(r.subject));
+        if (todayRecs.some(r => r.status === 'Present' || r.status === 'Duty Leave')) { present++; presentNames.push(s); } else absent++;
+      } catch(e){}
+    }
+    $('facTodayPresent').textContent = present;
+    $('facTodayAbsent').textContent = absent;
+    try { const avg = await fetch(`${API}/api/teacher/class-average/${currentUser.rollNo}`).then(x=>x.json()); $('facClassAvg').textContent = (avg.average||0) + '%'; } catch(e){}
+    $('facPresentList').innerHTML = presentNames.length ? presentNames.map(s => `<div style="padding:5px 0;font-size:12.5px;"><b>${s.rollNo}</b> · ${s.name}</div>`).join('') : '<div class="text-muted text-sm">No students present yet</div>';
+  } catch(e){}
+  observeNewContent();
+}
 async function genTeacherPass(force){ const today = fmtDate(new Date()); const st = await checkDateStatus(today); if (st.isBlocked) return toast('College closed','error'); if (force && !confirm('Change Lecture Passcode?')) return; try { const res = await fetch(`${API}/api/admin/generate-passcode`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, type:'single_lecture', force: !!force})}); const d = await res.json(); if (res.ok) { setPasscodeCache('single_lecture', d.passcode, d.expiresAt); $('facPasscode').textContent = d.passcode; $('facPasscode').classList.remove('empty'); $('facPasscodeDisplay').classList.add('valid'); toast(force ? 'Changed!' : 'Generated!', 'success'); } else toast(d.error,'error'); } catch(e){} }
 async function facMark(){ const s = $('facMarkStudent').value, sub = $('facMarkSubject').value; if (!s || !sub) return toast('Select student & subject','error'); navigator.geolocation.getCurrentPosition(async (pos) => { const res = await fetch(`${API}/api/teacher/mark-attendance`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo, name: currentUser.name, subject: sub, latitude: pos.coords.latitude, longitude: pos.coords.longitude, studentRollNo: s})}); const d = await res.json(); if (res.ok) { toast('Marked','success'); fetchTeacherStudents(); loadFacultyRecent(); } else toast(d.error,'error'); }, () => toast('GPS required','error')); }
 function facAddBulkDate(){ const d = $('facBulkDate').value; if (!d) return toast('Select date','error'); if (facSelectedBulkDates.includes(d)) return toast('Already added','error'); facSelectedBulkDates.push(d); renderFacBulkDates(); }
@@ -3237,7 +3468,7 @@ async function facReport(fmt){ const roll = $('facReportStudent').value; if (!ro
 async function applyLeave(){ const f = $('leaveFrom').value, t = $('leaveTo').value, r = $('leaveReason').value.trim(); if (!f || !t || !r) return toast('All fields required','error'); try { const res = await fetch(`${API}/api/leave/apply`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo, fromDate:f, toDate:t, reason:r, leaveType:$('leaveType').value})}); const d = await res.json(); if (res.ok) { toast('Submitted','success'); $('leaveReason').value = ''; loadMyLeaves(); } else toast(d.error,'error'); } catch(e){} }
 async function loadMyLeaves(){ try { const data = await fetch(`${API}/api/leave/my/${currentUser.rollNo}`).then(x=>x.json()); const el = $('myLeaveList'); el.innerHTML = data.length ? data.map(l => `<div style="padding:10px 0;border-bottom:1px solid var(--slate-100);"><div style="display:flex;justify-content:space-between;"><b>${fmtDatePretty(l.fromDate)} → ${fmtDatePretty(l.toDate)}</b> <span class="badge ${l.status==='Approved'?'badge-success':l.status==='Rejected'?'badge-danger':'badge-warning'}">${l.status}</span></div><div class="text-xs text-muted mt-1">${l.leaveType}: ${l.reason}</div></div>`).join('') : '<div class="empty">No applications</div>'; } catch(e){} observeNewContent(); }
 
-// ============ CHAT ============
+/* ============ CHAT ============ */
 function toggleContext(){ useContextMode = !useContextMode; const b = $('ctxToggle'); if (b) { b.classList.toggle('active', useContextMode); const l = b.querySelector('.ctx-label'); if (l) l.textContent = useContextMode ? 'Context On' : 'Context'; } toast(useContextMode ? 'Context ON' : 'Context OFF', useContextMode ? 'success' : 'info'); if ($('chatPanel').classList.contains('open')) { const m = $('chatMsgs'); if (!m.querySelector('.msg')) renderChatWelcome(); } }
 function toggleDatabase(){ useDatabaseMode = !useDatabaseMode; const b = $('dbToggle'); if (b) { b.classList.toggle('active', useDatabaseMode); const l = b.querySelector('.db-label'); if (l) l.textContent = useDatabaseMode ? 'Database On' : 'Database'; } toast(useDatabaseMode ? 'Database ON' : 'Database OFF', useDatabaseMode ? 'success' : 'info'); if ($('chatPanel').classList.contains('open')) { const m = $('chatMsgs'); if (!m.querySelector('.msg')) renderChatWelcome(); } }
 function toggleChat(){ const p = $('chatPanel'); if (!p) return; p.classList.toggle('open'); if (p.classList.contains('open')) { chatGreeted = false; fetchChatHistory(); renderChatWelcome(); } else { if (openDownloadMenuId) { const m = document.getElementById(openDownloadMenuId); if (m) m.classList.remove('open'); openDownloadMenuId = null; } const sb = $('chatSidebar'); if (sb) sb.classList.remove('open'); } }
