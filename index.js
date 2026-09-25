@@ -39,11 +39,11 @@ const GEMINI_API_KEYS = [
   process.env.GEMINI_API_KEY_6
 ].filter(k => k && k.trim() && k.trim().length > 5).map(k => k.trim());
 
-// ✅ UPDATED: Latest working Free Tier Gemini models (Sept 2026)
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3-flash';
 const GEMINI_FALLBACK_MODELS = ['gemini-3.1-flash-lite', 'gemini-2.5-flash'];
-const GEMINI_GLOBAL_TIMEOUT_MS = 60000; // ✅ 60 seconds max limit
+const GEMINI_GLOBAL_TIMEOUT_MS = 60000;
 
+const SERVER_START_TIME = Date.now();
 let groqKeyIndex = 0;
 let geminiKeyIndex = 0;
 
@@ -774,7 +774,7 @@ async function callGroq(args) {
 }
 
 // ============================================================
-//  AI: GEMINI (FALLBACK) — 60s timeout, all keys tested
+//  AI: GEMINI (FALLBACK)
 // ============================================================
 function parseGeminiError(err) {
   const msg = err.message || String(err);
@@ -824,17 +824,13 @@ async function callGemini(args) {
   if (GEMINI_API_KEYS.length === 0) throw new Error('No Gemini API key available');
   const startTime = Date.now();
   let lastError = null;
-
-  // Loop through all models
   for (const model of modelsToTry) {
-    // Loop through ALL available keys for this model (4 to 6 keys)
     for (let i = 0; i < GEMINI_API_KEYS.length; i++) {
       if (Date.now() - startTime > GEMINI_GLOBAL_TIMEOUT_MS) {
         throw new Error('AI took too long to respond (exceeded 60s timeout). Please try again later.');
       }
       const apiKey = getNextGeminiKey();
       if (!apiKey) break;
-      
       try {
         console.log(`🤖 [GEMINI] Trying model=${model} | key_index=${i} | attempt=${i+1}`);
         return await callGeminiOnce({ ...args, model, apiKey });
@@ -842,21 +838,13 @@ async function callGemini(args) {
         lastError = err;
         const parsed = parseGeminiError(err);
         console.warn(`⚠️ [GEMINI ${parsed.code}] ${model} failed: ${err.message.substring(0, 150)}`);
-        
-        // If model doesn't exist, no need to try other keys, break to next model
-        if (parsed.type === 'MODEL_NOT_FOUND' || parsed.type === 'BAD_REQUEST') {
-          break; 
-        }
-        // For rate limits (429), overloaded (503), or timeouts, try the next API key
+        if (parsed.type === 'MODEL_NOT_FOUND' || parsed.type === 'BAD_REQUEST') break;
       }
     }
   }
   throw lastError || new Error('All Gemini models and keys failed.');
 }
 
-// ============================================================
-//  AI: UNIFIED CALLER — Groq → Gemini (90s total)
-// ============================================================
 async function callAI(args) {
   const GROQ_TIMEOUT = 45000;
   const TOTAL_TIMEOUT = 90000;
@@ -1182,7 +1170,7 @@ app.post('/api/admin/login-as-student', async (req, res) => {
 });
 
 // ============================================================
-//  ATTENDANCE REQUEST — NO location required (past/after 3 PM)
+//  ATTENDANCE REQUEST
 // ============================================================
 app.post('/api/requests/submit', async (req, res) => {
   try {
@@ -1221,7 +1209,7 @@ app.post('/api/requests/submit', async (req, res) => {
 });
 
 // ============================================================
-//  LIVE MARKING (location + passcode required)
+//  LIVE MARKING
 // ============================================================
 app.post('/api/attendance/mark-live', async (req, res) => {
   try {
@@ -1555,7 +1543,7 @@ app.delete('/api/teacher/bulk-delete-attendance', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== PASSCODE GENERATE (FIXED duplicate key) ==========
+// ========== PASSCODE GENERATE ==========
 app.post('/api/admin/generate-passcode', async (req, res) => {
   try {
     const { requesterRollNo, type, force, publish, durationMinutes, isPublic } = req.body;
@@ -2331,40 +2319,383 @@ app.get('/api/admin/defaulters/:requesterRollNo', async (req, res) => {
 });
 
 // ============================================================
-//  DB INTENT PROMPT — Full A-to-Z Features + Strict Language
+//  ★★★ NEW: ROLE-AWARE HELPER FUNCTIONS ★★★
+// ============================================================
+
+// -------- SYSTEM HEALTH (ADMIN) --------
+async function getSystemHealth() {
+  const uptime = Date.now() - SERVER_START_TIME;
+  const uptimeHrs = (uptime / (1000 * 60 * 60)).toFixed(2);
+  const dbState = ['Disconnected', 'Connected', 'Connecting', 'Disconnecting'][mongoose.connection.readyState] || 'Unknown';
+  let dbPing = 'N/A';
+  try {
+    const pingStart = Date.now();
+    await mongoose.connection.db.admin().ping();
+    dbPing = (Date.now() - pingStart) + 'ms';
+  } catch (e) { dbPing = 'Failed'; }
+
+  const [users, students, faculty, attendances, requests, holidays, chats] = await Promise.all([
+    User.countDocuments().catch(() => 0),
+    User.countDocuments({ role: 'student' }).catch(() => 0),
+    User.countDocuments({ role: 'faculty' }).catch(() => 0),
+    Attendance.countDocuments().catch(() => 0),
+    AttendanceRequest.countDocuments({ status: 'Pending' }).catch(() => 0),
+    Holiday.countDocuments().catch(() => 0),
+    Chat.countDocuments().catch(() => 0)
+  ]);
+
+  return {
+    status: 'HEALTHY',
+    uptime: `${uptimeHrs} hours`,
+    database: { state: dbState, ping: dbPing },
+    ai: {
+      primary: { provider: 'Groq', model: GROQ_MODEL, keysConfigured: GROQ_API_KEYS.length, fallbacks: GROQ_FALLBACK_MODELS },
+      fallback: { provider: 'Gemini', model: GEMINI_MODEL, keysConfigured: GEMINI_API_KEYS.length, fallbacks: GEMINI_FALLBACK_MODELS }
+    },
+    counts: { totalUsers: users, students, faculty, attendances, pendingRequests: requests, holidays, chats }
+  };
+}
+
+// -------- CLASS AVERAGE (FACULTY) --------
+async function getFacultyClassAverage(teacherRollNo, subjectFilter = null) {
+  const teacher = await User.findOne({ rollNo: teacherRollNo.toUpperCase(), role: 'faculty' });
+  if (!teacher) return { error: 'Faculty not found' };
+  let subjects = await TeacherSubject.find({ teacherRollNo: teacherRollNo.toUpperCase() }).distinct('subject');
+  if (subjectFilter) {
+    const canon = mapToCanonical(subjectFilter);
+    subjects = subjects.filter(s => s === canon);
+    if (!subjects.length) return { error: `You don't teach ${subjectFilter}` };
+  }
+  if (!subjects.length) return { error: 'No subjects assigned to you' };
+
+  const records = await Attendance.find({ subject: { $in: subjects }, status: { $in: ['Present', 'Duty Leave'] } });
+  const allRecords = await Attendance.find({ subject: { $in: subjects } });
+  const total = allRecords.length;
+  const present = records.length;
+  const avg = total > 0 ? Math.round((present / total) * 100) : 0;
+
+  const subjWise = {};
+  subjects.forEach(s => { subjWise[s] = { present: 0, total: 0 }; });
+  allRecords.forEach(r => {
+    const s = mapToCanonical(r.subject);
+    if (subjWise[s]) {
+      subjWise[s].total++;
+      if (r.status === 'Present' || r.status === 'Duty Leave') subjWise[s].present++;
+    }
+  });
+  Object.keys(subjWise).forEach(s => {
+    subjWise[s].percentage = subjWise[s].total > 0 ? Math.round((subjWise[s].present / subjWise[s].total) * 100) : 0;
+  });
+
+  // Students count in your classes
+  const studentRolls = await Attendance.find({ subject: { $in: subjects } }).distinct('rollNo');
+
+  return {
+    teacher: teacher.name,
+    teacherRollNo,
+    subjects,
+    totalStudents: studentRolls.length,
+    overallAverage: avg,
+    totalRecords: total,
+    presentRecords: present,
+    subjectWise: subjWise
+  };
+}
+
+// -------- STUDENT LOOKUP (FACULTY/ADMIN) --------
+async function getStudentLookup(targetRollNo, requesterRollNo, requesterRole) {
+  const target = await User.findOne({ rollNo: targetRollNo.toUpperCase(), role: 'student' });
+  if (!target) return { error: `Student ${targetRollNo} not found` };
+
+  const summary = await getStudentSummary(targetRollNo);
+  if (!summary) return { error: 'Could not compute summary' };
+
+  let recentRecords = await Attendance.find({ rollNo: targetRollNo.toUpperCase() }).sort({ date: -1 }).limit(15).lean();
+
+  // Faculty: restrict to their subjects
+  if (requesterRole === 'faculty') {
+    const subs = await TeacherSubject.find({ teacherRollNo: requesterRollNo.toUpperCase() }).distinct('subject');
+    recentRecords = recentRecords.filter(r => subs.includes(mapToCanonical(r.subject)));
+  }
+
+  return {
+    student: { rollNo: target.rollNo, name: target.name, branch: target.branch, semester: target.semester },
+    overall: {
+      percentage: summary.attendancePercentage,
+      attended: summary.totalAcademicLectures,
+      conducted: summary.totalConductedLectures,
+      daysPresent: summary.daysPresent,
+      workingDaysSoFar: summary.workingDaysSoFar
+    },
+    subjectStats: summary.subjectStats,
+    recentRecords: recentRecords.map(r => ({
+      date: r.date,
+      subject: mapToCanonical(r.subject),
+      status: r.status
+    }))
+  };
+}
+
+// -------- NLP BULK MARKING PARSER (FACULTY) --------
+function parseBulkMarkingIntent(message) {
+  // Extract roll number ranges: "10 se 15", "10-15", "10 to 15"
+  // Extract "CSE" or "AIDS"
+  // Extract "present" or "absent"
+  const lower = message.toLowerCase();
+
+  // Detect branch
+  let branch = null;
+  if (/\baids\b/i.test(lower)) branch = 'AIDS';
+  else if (/\bcse\b/i.test(lower)) branch = 'CSE';
+
+  // Detect status
+  let status = 'Present';
+  if (/\babsent\b/i.test(lower)) status = 'Absent';
+  else if (/duty\s*leave/i.test(lower)) status = 'Duty Leave';
+
+  // Detect roll range patterns
+  const rangePatterns = [
+    /(?:roll|roll\s*no|number)?\s*(\d{1,3})\s*(?:se|to|through|-|–)\s*(\d{1,3})/i,
+    /(\d{1,3})\s*[-–]\s*(\d{1,3})/i
+  ];
+  let startNum = null, endNum = null;
+  for (const pat of rangePatterns) {
+    const m = message.match(pat);
+    if (m) { startNum = parseInt(m[1]); endNum = parseInt(m[2]); break; }
+  }
+
+  // Detect single/multiple explicit rolls
+  const explicitRolls = [];
+  const rollRegex = /2[45](CSE|AIDS)\d{2}/gi;
+  let match;
+  while ((match = rollRegex.exec(message)) !== null) {
+    explicitRolls.push(match[0].toUpperCase());
+  }
+
+  // Detect date (today/tomorrow/YYYY-MM-DD)
+  let date = null;
+  const today = getISTDateString(new Date());
+  const tomorrow = getISTDateString(new Date(Date.now() + 24 * 60 * 60 * 1000));
+  const dateMatch = message.match(/(\d{4}-\d{2}-\d{2})/);
+  if (dateMatch) date = dateMatch[1];
+  else if (/\btomorrow|kal\b/i.test(lower)) date = tomorrow;
+  else if (/\btoday|aaj\b/i.test(lower)) date = today;
+
+  // Build final roll list
+  let rolls = [...explicitRolls];
+  if (startNum !== null && endNum !== null && branch) {
+    const prefix = branch === 'CSE' ? '24CSE' : '24AIDS';
+    for (let i = startNum; i <= endNum; i++) {
+      rolls.push(`${prefix}${String(i).padStart(2, '0')}`);
+    }
+  }
+
+  rolls = [...new Set(rolls)];
+
+  return {
+    canParse: rolls.length > 0,
+    rolls,
+    branch: branch || 'CSE',
+    status,
+    date: date || today,
+    confidence: rolls.length > 0 ? 'high' : 'low'
+  };
+}
+
+// -------- PENDING REQUESTS SUMMARY (ADMIN) --------
+async function getPendingRequestsSummary() {
+  const attendancePending = await AttendanceRequest.countDocuments({ status: 'Pending' });
+  const attendanceApproved = await AttendanceRequest.countDocuments({ status: 'Approved' });
+  const attendanceRejected = await AttendanceRequest.countDocuments({ status: 'Rejected' });
+  const accountPending = await AccountRequest.countDocuments({ status: 'Pending' });
+  const accountApproved = await AccountRequest.countDocuments({ status: 'Approved' });
+  const forgotPending = await AccountRequest.countDocuments({ type: 'forgot_password', status: 'Pending' });
+  const devicePending = await AccountRequest.countDocuments({ type: 'device_reset', status: 'Pending' });
+  const leavesPending = await Leave.countDocuments({ status: 'Pending' });
+
+  return {
+    attendance: { pending: attendancePending, approved: attendanceApproved, rejected: attendanceRejected },
+    accountRequests: { pending: accountPending, approved: accountApproved, forgotPassword: forgotPending, deviceReset: devicePending },
+    leaves: { pending: leavesPending }
+  };
+}
+
+// -------- PASSCODE STATUS (ADMIN) --------
+async function getPasscodeSystemStatus() {
+  const total = await Passcode.countDocuments({});
+  const enabledCount = await Passcode.countDocuments({ enabled: true });
+  const activePublic = await Passcode.find({
+    published: true, enabled: true, isPublic: true, expiresAt: { $gt: new Date() }
+  }).select('type passcode expiresAt publishedAt durationMinutes').lean();
+  const todayStr = getISTDateString(new Date());
+  const todayPasscodes = await Passcode.find({
+    expiresAt: { $gt: new Date() }
+  }).select('type passcode expiresAt published enabled').lean();
+  return {
+    systemEnabled: enabledCount > 0 || total === 0,
+    totalPasscodes: total,
+    enabledCount,
+    activePublishedPublic: activePublic.map(p => ({
+      type: p.type,
+      passcode: p.passcode,
+      expiresIn: Math.round((new Date(p.expiresAt).getTime() - Date.now()) / 60000) + ' min',
+      publishedAt: p.publishedAt,
+      durationMinutes: p.durationMinutes
+    })),
+    todayCount: todayPasscodes.length
+  };
+}
+
+// -------- IMPERSONATION (ADMIN) --------
+async function getImpersonationData(targetRollNo) {
+  const target = await User.findOne({ rollNo: targetRollNo.toUpperCase() });
+  if (!target) return { error: `User ${targetRollNo} not found` };
+  if (target.role !== 'student') return { error: `Only students can be impersonated. Target is ${target.role}.` };
+
+  const summary = await getStudentSummary(targetRollNo);
+  const advisor = await getBunkAdvisor(targetRollNo);
+  const recentRecords = await Attendance.find({ rollNo: targetRollNo.toUpperCase() }).sort({ date: -1 }).limit(10).lean();
+  const requests = await AttendanceRequest.find({ rollNo: targetRollNo.toUpperCase() }).sort({ createdAt: -1 }).limit(5).lean();
+
+  return {
+    student: {
+      rollNo: target.rollNo,
+      name: target.name,
+      branch: target.branch,
+      semester: target.semester,
+      deviceBound: !!target.boundDeviceId,
+      lastAttendance: target.lastAttendanceTime
+    },
+    summary: summary ? {
+      percentage: summary.attendancePercentage,
+      attended: summary.totalAcademicLectures,
+      conducted: summary.totalConductedLectures,
+      daysPresent: summary.daysPresent,
+      workingDaysSoFar: summary.workingDaysSoFar,
+      subjectStats: summary.subjectStats
+    } : null,
+    advisor: advisor ? {
+      status: advisor.status,
+      canBunkLectures: advisor.canBunkLectures,
+      lecturesNeeded: advisor.lecturesNeeded,
+      message: advisor.message
+    } : null,
+    recentRecords: recentRecords.map(r => ({ date: r.date, subject: mapToCanonical(r.subject), status: r.status })),
+    recentRequests: requests.map(r => ({ date: r.date, type: r.lectureType, status: r.status }))
+  };
+}
+
+// -------- GEOFENCE & PASSCODE GUIDE (STUDENT) --------
+async function getGeofenceGuide(userContext) {
+  const now = new Date();
+  const todayStr = getISTDateString(now);
+  const istHour = getISTHour(now);
+  const istMin = getISTMinutes(now);
+  const user = await User.findOne({ rollNo: userContext.rollNo });
+  if (!user) return { error: 'User not found' };
+  const branch = user.branch || 'CSE';
+
+  const ds = await checkDateStatus(todayStr);
+  const period = getCurrentPeriod(branch);
+
+  // Active passcodes
+  const activePasscodes = await Passcode.find({
+    enabled: true, expiresAt: { $gt: now }
+  }).select('type passcode expiresAt published isPublic').lean();
+
+  // Today's attendance
+  const todayRecords = await Attendance.find({ rollNo: user.rollNo, date: todayStr });
+
+  // Live public passcodes
+  const publicFD = activePasscodes.find(p => p.type === 'full_day' && p.published && p.isPublic);
+  const publicSL = activePasscodes.find(p => p.type === 'single_lecture' && p.published && p.isPublic);
+
+  return {
+    currentTime: `${String(Math.floor(istMin/60)).padStart(2,'0')}:${String(istMin%60).padStart(2,'0')} IST`,
+    todayStatus: ds.isBlocked ? `${ds.type === 'WEEKEND' ? 'Weekend' : 'Holiday'} — College closed` : 'College open',
+    activePeriod: period ? `${period.start}–${period.end} · ${mapToCanonical(period.subject)} (${period.faculty})` : 'No active lecture now',
+    collegeHours: '09:20 AM – 03:00 PM',
+    attendanceWindow: {
+      liveMarking: istHour < COLLEGE_CLOSE_HOUR ? '✅ Available until 3 PM' : '❌ Closed (after 3 PM)',
+      requestWindow: istHour >= COLLEGE_CLOSE_HOUR ? '✅ Request available (after 3 PM)' : `⏰ Opens after 3 PM (currently ${istHour}:00)`
+    },
+    publishedPasscodes: {
+      fullDay: publicFD ? { passcode: publicFD.passcode, expiresIn: Math.round((new Date(publicFD.expiresAt).getTime() - Date.now()) / 60000) + ' min' } : 'None active',
+      singleLecture: publicSL ? { passcode: publicSL.passcode, expiresIn: Math.round((new Date(publicSL.expiresAt).getTime() - Date.now()) / 60000) + ' min' } : 'None active'
+    },
+    todayMarked: todayRecords.length,
+    todaySubjects: todayRecords.map(r => `${mapToCanonical(r.subject)} — ${r.status}`),
+    geofence: {
+      centerLat: COLLEGE_LAT,
+      centerLng: COLLEGE_LNG,
+      radiusMeters: COLLEGE_RADIUS,
+      instructions: `📍 You must be within ${COLLEGE_RADIUS}m of BM Group campus. If you get "You are X m away" error, move closer to college gate/classroom.`
+    }
+  };
+}
+
+// ============================================================
+//  ★★★ UPDATED: DB INTENT PROMPT (Expanded for new actions) ★★★
 // ============================================================
 const DB_INTENT_PROMPT = `You are the Database Intent Parser for BM Group ERP.
 Translate user's natural language into JSON. NEVER invent data. NEVER write prose.
 ## Today's date is provided in user context. Use it strictly.
 ## Collections: users, attendances, holidays, notices, leaves, passcodes, teachersubjects, attendancerequests
 ## Response JSON format (STRICT):
-{"action":"reply"|"db_read"|"db_count"|"db_aggregate"|"db_top_attendance"|"db_create"|"db_update"|"db_delete"|"db_publish_passcode"|"db_toggle_passcode"|"db_submit_request"|"db_live_mark"|"db_review_request"|"db_bulk_review"|"db_bunk_advisor"|"db_timetable","collection":"...","filter":{...},"update":{...},"data":{...},"limit":number,"sort":{...},"explanation":"...","requiresConfirmation":true|false,"reply":null}
+{"action":"...","collection":"...","filter":{...},"update":{...},"data":{...},"limit":number,"sort":{...},"explanation":"...","requiresConfirmation":true|false,"reply":null}
+
+## SUPPORTED ACTIONS:
+- "reply"                → general chat / non-DB answer (put answer in "reply")
+- "db_read"              → read docs from a collection
+- "db_count"             → count docs
+- "db_aggregate"         → attendance summary / defaulters
+- "db_top_attendance"    → top attendance students (ADMIN)
+- "db_create"            → create doc (holiday, notice, attendance)
+- "db_update"            → update docs
+- "db_delete"            → delete docs (requiresConfirmation)
+- "db_publish_passcode"  → publish a passcode (ADMIN/FACULTY)
+- "db_toggle_passcode"   → enable/disable passcode system (ADMIN)
+- "db_passcode_status"   → check passcode system status (ADMIN)
+- "db_submit_request"    → student attendance request (STUDENT)
+- "db_live_mark"         → live attendance via location + passcode (STUDENT)
+- "db_review_request"    → approve/reject a single request (ADMIN/FACULTY)
+- "db_bulk_review"       → bulk approve/reject (ADMIN)
+- "db_bunk_advisor"      → bunk advisor for student (STUDENT)
+- "db_timetable"         → get formatted timetable for a date
+- "db_system_health"     → server health, AI keys, DB status (ADMIN)
+- "db_class_average"     → faculty's class attendance average (FACULTY)
+- "db_student_lookup"    → lookup a student's full attendance (FACULTY/ADMIN)
+- "db_nlp_bulk_mark"     → bulk mark via natural language (FACULTY)
+- "db_pending_summary"   → pending requests summary (ADMIN)
+- "db_impersonate"       → pull student data as admin (ADMIN)
+- "db_geofence_guide"    → geofence + passcode help for student (STUDENT)
+
 ## CRITICAL RULES:
-1. Students CANNOT directly create attendances. "mark attendance" → db_live_mark (before 3 PM) OR db_submit_request (after 3 PM/past). NO location needed for db_submit_request.
-2. TIMETABLE → action "db_timetable" with data: { date: "YYYY-MM-DD" }
-3. BUNK ADVISOR → action "db_bunk_advisor"
-4. TOP ATTENDANCE → action "db_top_attendance"
-5. DEFAULTERS → action "db_aggregate" on attendances
-6. PASSCODE TOGGLE → action "db_toggle_passcode"
-7. PASSCODE PUBLISH → action "db_publish_passcode"
-8. REQUESTS → action "db_read", collection "attendancerequests", filter {status:"Pending"}
-9. Approve/Reject → action "db_review_request"
-10. Bulk review → action "db_bulk_review"
-11. tomorrow = TOMORROW, today = TODAY, day after tomorrow = day after
-12. Holidays → db_create, holidays
-13. Notices → db_create, notices
-14. Non-DB chat → action "reply"
-15. NO HALLUCINATION
+1. Students CANNOT directly create attendances. Use db_live_mark OR db_submit_request. No location for db_submit_request.
+2. TIMETABLE → "db_timetable" with data: { date: "YYYY-MM-DD" }
+3. BUNK ADVISOR → "db_bunk_advisor"
+4. TOP ATTENDANCE → "db_top_attendance"
+5. DEFAULTERS → "db_aggregate" on attendances
+6. PASSCODE TOGGLE → "db_toggle_passcode" with data { enabled: true/false }
+7. PASSCODE PUBLISH → "db_publish_passcode" with data { type, durationMinutes }
+8. PASSCODE STATUS → "db_passcode_status"
+9. REQUESTS LIST → "db_read" on attendancerequests
+10. Approve/Reject → "db_review_request"
+11. Bulk review → "db_bulk_review"
+12. HOLIDAYS → "db_create" on holidays
+13. NOTICES → "db_create" on notices
+14. Non-DB chat → action "reply" with the answer directly.
+15. NEVER hallucinate.
 16. NEVER use "double_lecture" anywhere.
-17. For destructive actions (delete, update, bulk reject, etc.), set "requiresConfirmation": true.
-18. For general questions, notes, coding help, etc., set "action": "reply" and provide the answer directly.
-19. For "Meri attendance batao" (student), action "db_aggregate", collection "attendances". 
-20. For "BDA mai meri kitni attendance hai" (student), action "db_aggregate", collection "attendances", filter {subject: "BDA"}.
-21. For "Aaj kitne students present hai" (admin), action "db_count", collection "attendances", filter {date: "TODAY", status: "Present"}.
-22. For "Defaulter list" (admin), action "db_aggregate", collection "attendances".
-23. For "Next holiday kab hai" (any), action "db_read", collection "holidays", sort {date: 1}.
-24. For "Meri pending requests dikhao" (student), action "db_read", collection "attendancerequests", filter {rollNo: "USER_ROLL", status: "Pending"}.
-25. For "20 August ke liye request bhejo" (student), action "db_submit_request", data {date: "2026-08-20", lectureType: "full_day"}.
+17. Destructive actions (delete/update/bulk reject) → requiresConfirmation: true.
+18. "System status" / "server health" / "AI keys" (ADMIN) → "db_system_health"
+19. "Class average" / "meri class ki average" (FACULTY) → "db_class_average", data { subject: optional }
+20. "Student 24CSE48 ka data" / "lookup 24CSE48" (FACULTY/ADMIN) → "db_student_lookup", data { rollNo: "24CSE48" }
+21. "Roll 10 se 15 tak present kardo" / bulk marking (FACULTY) → "db_nlp_bulk_mark", data { rawMessage: original }
+22. "Pending requests" / "kitni requests aayi" (ADMIN) → "db_pending_summary"
+23. "Login as 24CSE01" / "24CSE01 ka dashboard lao" (ADMIN) → "db_impersonate", data { rollNo: "24CSE01" }
+24. "Location issue kyu aarhi" / "passcode kaha milega" (STUDENT) → "db_geofence_guide"
+25. "Passcode disable kardo" (ADMIN) → "db_toggle_passcode" data { enabled: false }
 Return ONLY valid JSON. No code fence. No extra text.`;
 
 async function detectDbIntent(message, userContext) {
@@ -2402,6 +2733,9 @@ async function getTopAttendance(limit = 5) {
   return results.slice(0, limit);
 }
 
+// ============================================================
+//  ★★★ UPDATED: EXECUTE DB ACTION (with new handlers) ★★★
+// ============================================================
 async function executeDbAction(intent, userContext) {
   const { action, collection, filter, update, data, limit, sort, explanation, reply } = intent;
   const isAdmin = userContext.role === 'admin';
@@ -2411,6 +2745,107 @@ async function executeDbAction(intent, userContext) {
 
   if (action === 'reply') return { reply: reply || explanation || 'Noted.', isReply: true };
 
+  // ============ NEW: SYSTEM HEALTH ============
+  if (action === 'db_system_health') {
+    if (!isAdmin) return { error: 'Admin only.' };
+    const health = await getSystemHealth();
+    return { result: health, isSystemHealth: true };
+  }
+
+  // ============ NEW: CLASS AVERAGE (FACULTY) ============
+  if (action === 'db_class_average') {
+    if (!isFaculty && !isAdmin) return { error: 'Faculty/Admin only.' };
+    const avgData = await getFacultyClassAverage(userContext.rollNo, data?.subject || null);
+    if (avgData.error) return { error: avgData.error };
+    return { result: avgData, isClassAverage: true };
+  }
+
+  // ============ NEW: STUDENT LOOKUP ============
+  if (action === 'db_student_lookup') {
+    if (!isFaculty && !isAdmin) return { error: 'Faculty/Admin only.' };
+    const targetRoll = data?.rollNo;
+    if (!targetRoll) return { error: 'rollNo required for lookup.' };
+    const lookup = await getStudentLookup(targetRoll, userContext.rollNo, userContext.role);
+    if (lookup.error) return { error: lookup.error };
+    return { result: lookup, isStudentLookup: true };
+  }
+
+  // ============ NEW: NLP BULK MARK ============
+  if (action === 'db_nlp_bulk_mark') {
+    if (!isFaculty) return { error: 'Faculty only.' };
+    const rawMsg = data?.rawMessage || '';
+    const parsed = parseBulkMarkingIntent(rawMsg);
+    if (!parsed.canParse) return { error: 'Could not detect roll numbers. Try: "CSE roll 10 se 15 tak present kardo"', needsClarification: true };
+    // Check date validity
+    const dsCheck = await checkDateStatus(parsed.date);
+    if (dsCheck.isBlocked) return { error: `Date ${parsed.date} is blocked (${dsCheck.type}).` };
+    // Call existing bulk mark logic
+    const subjects = await TeacherSubject.find({ teacherRollNo: userContext.rollNo.toUpperCase() }).distinct('subject');
+    if (!subjects.length) return { error: 'No subjects assigned.' };
+    const students = await User.find({ rollNo: { $in: parsed.rolls }, role: 'student' });
+    if (!students.length) return { error: `No matching students found for rolls: ${parsed.rolls.slice(0, 5).join(', ')}${parsed.rolls.length > 5 ? '...' : ''}` };
+
+    let totalMarked = 0, totalSkipped = 0;
+    const dayName = dsCheck.dayName;
+    for (const s of students) {
+      const b = s.branch || 'CSE';
+      const daySubjects = (getTimetableForBranch(b)[dayName] || []).map(mapToCanonical).filter(x => subjects.includes(x));
+      const uniq = [...new Set(daySubjects.filter(x => !x.includes('LIB') && !x.includes('Sports')))];
+      for (const sub of uniq) {
+        try {
+          const ex = await Attendance.findOne({ rollNo: s.rollNo, subject: sub, date: parsed.date });
+          if (!ex) {
+            await Attendance.create({
+              rollNo: s.rollNo, studentName: s.name, subject: sub, date: parsed.date,
+              status: parsed.status, location: null, ipAddress: 'nlp-bulk-mark', isVerified: false, branch: b
+            });
+            totalMarked++;
+          } else totalSkipped++;
+        } catch (e) { if (e.code === 11000) totalSkipped++; }
+      }
+    }
+    return {
+      result: {
+        date: parsed.date, status: parsed.status, studentsFound: students.length,
+        totalMarked, totalSkipped, rolls: parsed.rolls
+      },
+      isNlpBulkMark: true
+    };
+  }
+
+  // ============ NEW: PENDING REQUESTS SUMMARY ============
+  if (action === 'db_pending_summary') {
+    if (!isAdmin) return { error: 'Admin only.' };
+    const summary = await getPendingRequestsSummary();
+    return { result: summary, isPendingSummary: true };
+  }
+
+  // ============ NEW: IMPERSONATE ============
+  if (action === 'db_impersonate') {
+    if (!isAdmin) return { error: 'Admin only.' };
+    const targetRoll = data?.rollNo;
+    if (!targetRoll) return { error: 'rollNo required.' };
+    const impData = await getImpersonationData(targetRoll);
+    if (impData.error) return { error: impData.error };
+    return { result: impData, isImpersonation: true };
+  }
+
+  // ============ NEW: GEOFENCE GUIDE ============
+  if (action === 'db_geofence_guide') {
+    if (!isStudent) return { error: 'Student only.' };
+    const guide = await getGeofenceGuide(userContext);
+    if (guide.error) return { error: guide.error };
+    return { result: guide, isGeofenceGuide: true };
+  }
+
+  // ============ NEW: PASSCODE STATUS ============
+  if (action === 'db_passcode_status') {
+    if (!isAdmin) return { error: 'Admin only.' };
+    const status = await getPasscodeSystemStatus();
+    return { result: status, isPasscodeStatus: true };
+  }
+
+  // ============ EXISTING HANDLERS ============
   if (action === 'db_timetable') {
     const date = data?.date || getISTDateString(new Date());
     const branch = userContext.branch || 'CSE';
@@ -2479,15 +2914,14 @@ async function executeDbAction(intent, userContext) {
       const sanitized = docs.map(d => { if (!isAdmin) { delete d.password; delete d.activeSession; delete d.boundDeviceId; } return d; });
       return { result: sanitized, count: sanitized.length };
     }
-    if (action === 'db_count') { 
-      if (!Model) return { error: 'Unknown collection' }; 
-      // Special handling for "Aaj kitne students present hai" (Admin)
+    if (action === 'db_count') {
+      if (!Model) return { error: 'Unknown collection' };
       if (collection === 'attendances' && filter && filter.date === 'TODAY' && filter.status === 'Present') {
         const todayStr = getISTDateString(new Date());
         const count = await Attendance.distinct('rollNo', { date: todayStr, status: 'Present' });
         return { result: { count: count.length, message: `Aaj **${count.length}** students present hain.` } };
       }
-      return { result: { count: await Model.countDocuments(filter || {}) } }; 
+      return { result: { count: await Model.countDocuments(filter || {}) } };
     }
     if (action === 'db_top_attendance') { if (!isAdmin) return { error: 'Admin only.' }; const top = await getTopAttendance(parseInt(data?.limit) || 5); return { result: { top } }; }
     if (action === 'db_aggregate' && collection === 'attendances') {
@@ -2523,7 +2957,11 @@ async function executeDbAction(intent, userContext) {
     }
     if (action === 'db_update' && Model && update) { const r = await Model.updateMany(filter || {}, update); return { result: { matched: r.matchedCount, modified: r.modifiedCount } }; }
     if (action === 'db_delete' && Model && isAdmin) { const r = await Model.deleteMany(filter || {}); return { result: { deleted: r.deletedCount } }; }
-    if (action === 'db_toggle_passcode' && isAdmin) { const enabled = data?.enabled === true; await Passcode.updateMany({}, { $set: { enabled } }); return { result: { enabled, message: `Passcode system ${enabled ? 'ENABLED' : 'DISABLED'}.` } }; }
+    if (action === 'db_toggle_passcode' && isAdmin) {
+      const enabled = data?.enabled === true;
+      await Passcode.updateMany({}, { $set: { enabled } });
+      return { result: { enabled, message: `Passcode system ${enabled ? 'ENABLED ✅' : 'DISABLED ⛔'}.` }, isPasscodeToggle: true };
+    }
     if (action === 'db_publish_passcode' && isAdmin) {
       const type = data?.type || 'single_lecture';
       const durationMinutes = parseInt(data?.durationMinutes) || (type === 'full_day' ? 1440 : 30);
@@ -2543,7 +2981,7 @@ async function executeDbAction(intent, userContext) {
           existing.durationMinutes = durationMinutes;
           existing.expiresAt = new Date(now.getTime() + durationMinutes * 60 * 1000);
           await existing.save();
-          return { result: { passcode: existing.passcode, type, expiresAt: existing.expiresAt, durationMinutes, published: true } };
+          return { result: { passcode: existing.passcode, type, expiresAt: existing.expiresAt, durationMinutes, published: true }, isPasscodePublish: true };
         }
         passcode = Math.floor(1000 + Math.random() * 9000).toString();
         expiry = new Date(now.getTime() + durationMinutes * 60 * 1000);
@@ -2557,14 +2995,14 @@ async function executeDbAction(intent, userContext) {
           existing.durationMinutes = durationMinutes;
           existing.expiresAt = new Date(now.getTime() + durationMinutes * 60 * 1000);
           await existing.save();
-          return { result: { passcode: existing.passcode, type, expiresAt: existing.expiresAt, durationMinutes, published: true } };
+          return { result: { passcode: existing.passcode, type, expiresAt: existing.expiresAt, durationMinutes, published: true }, isPasscodePublish: true };
         }
         passcode = Math.floor(10000 + Math.random() * 90000).toString();
         expiry = new Date(now.getTime() + durationMinutes * 60 * 1000);
       }
       await Passcode.deleteMany({ key });
       await new Passcode({ passcode, type, key, expiresAt: expiry, published: true, isPublic: true, enabled: true, publishedAt: now, publishedBy: userContext.rollNo, durationMinutes }).save();
-      return { result: { passcode, type, expiresAt: expiry, durationMinutes, published: true } };
+      return { result: { passcode, type, expiresAt: expiry, durationMinutes, published: true }, isPasscodePublish: true };
     }
     if (action === 'db_review_request' && (isAdmin || isFaculty)) {
       const { rollNo, date, action: reviewAction, note } = data || {};
@@ -2623,11 +3061,85 @@ async function executeDbAction(intent, userContext) {
   } catch (err) { console.error('DB execute error:', err); return { error: 'Execution failed: ' + err.message }; }
 }
 
-function formatDbResult(result, action) {
+// ============================================================
+//  ★★★ UPDATED: FORMAT DB RESULT (with new formatters) ★★★
+// ============================================================
+function formatDbResult(result, action, extra = {}) {
   if (!result) return 'Done.';
-  if (result.passcode) return `Passcode: **${result.passcode}**\nType: ${result.type}\nExpires: ${new Date(result.expiresAt).toLocaleString('en-IN')}`;
+
+  // System Health
+  if (result.status === 'HEALTHY' && result.ai && result.counts) {
+    const ai = result.ai;
+    const c = result.counts;
+    return `🖥️ **System Health Report**\n\n**Status:** ✅ ${result.status}\n**Uptime:** ${result.uptime}\n**DB:** ${result.database.state} (ping ${result.database.ping})\n\n**AI Providers:**\n• Primary: **${ai.primary.provider}** — ${ai.primary.model}\n   → ${ai.primary.keysConfigured} keys, ${ai.primary.fallbacks.length} fallbacks\n• Fallback: **${ai.fallback.provider}** — ${ai.fallback.model}\n   → ${ai.fallback.keysConfigured} keys, ${ai.fallback.fallbacks.length} fallbacks\n\n**Database Counts:**\n• Total Users: ${c.totalUsers}\n• Students: ${c.students}\n• Faculty: ${c.faculty}\n• Attendance Records: ${c.attendances}\n• Pending Requests: ${c.pendingRequests}\n• Holidays: ${c.holidays}\n• Chats: ${c.chats}`;
+  }
+
+  // Class Average
+  if (result.teacherRollNo && result.overallAverage !== undefined) {
+    const subjLines = Object.entries(result.subjectWise || {}).map(([s, st]) => `• ${s}: **${st.percentage}%** (${st.present}/${st.total})`).join('\n');
+    return `👨‍🏫 **Class Average Report**\n\n**Teacher:** ${result.teacher} (${result.teacherRollNo})\n**Students:** ${result.totalStudents}\n**Overall Average:** **${result.overallAverage}%**\n\n**Subject-wise:**\n${subjLines}`;
+  }
+
+  // Student Lookup
+  if (result.student && result.overall) {
+    const s = result.student;
+    const o = result.overall;
+    let txt = `🎓 **Student Lookup: ${s.name}**\n\n• Roll: **${s.rollNo}**\n• Branch: ${s.branch}\n• Overall: **${o.percentage}%** (${o.attended}/${o.conducted})\n• Days Present: ${o.daysPresent}/${o.workingDaysSoFar}`;
+    const weak = Object.entries(result.subjectStats || {}).filter(([_, st]) => st.percentage < 75);
+    if (weak.length) txt += `\n\n⚠️ **Below 75%:**\n${weak.map(([sub, st]) => `• ${sub}: ${st.percentage}%`).join('\n')}`;
+    if (result.recentRecords?.length) {
+      txt += `\n\n**Recent Attendance:**\n${result.recentRecords.slice(0, 5).map(r => `• ${r.date} — ${r.subject} — ${r.status}`).join('\n')}`;
+    }
+    return txt;
+  }
+
+  // NLP Bulk Mark
+  if (result.date && result.totalMarked !== undefined && result.rolls) {
+    return `✅ **Bulk Marking Done**\n\n• Date: ${result.date}\n• Status: ${result.status}\n• Students Found: **${result.studentsFound}**\n• Newly Marked: **${result.totalMarked}**\n• Already Marked/Skipped: ${result.totalSkipped}`;
+  }
+
+  // Pending Summary
+  if (result.attendance && result.accountRequests) {
+    const a = result.attendance;
+    const ac = result.accountRequests;
+    return `📋 **Pending Requests Summary**\n\n**Attendance Requests:**\n• ⏳ Pending: **${a.pending}**\n• ✅ Approved: ${a.approved}\n• ❌ Rejected: ${a.rejected}\n\n**Account Requests:**\n• ⏳ Pending: **${ac.pending}**\n   → Forgot Password: ${ac.forgotPassword}\n   → Device Reset: ${ac.deviceReset}\n• ✅ Approved: ${ac.approved}\n\n**Leave Requests:**\n• ⏳ Pending: **${result.leaves.pending}**`;
+  }
+
+  // Impersonation Data
+  if (result.student && result.summary) {
+    const s = result.student;
+    const sum = result.summary;
+    const adv = result.advisor;
+    let txt = `👤 **Student Data: ${s.name}**\n\n• Roll: **${s.rollNo}**\n• Branch: ${s.branch}\n• Device: ${s.deviceBound ? '🔒 Bound' : '🔓 Not bound'}\n• Overall: **${sum.percentage}%** (${sum.attended}/${sum.conducted})`;
+    if (adv) txt += `\n\n${adv.message}`;
+    return txt;
+  }
+
+  // Geofence Guide
+  if (result.currentTime && result.geofence) {
+    let txt = `📍 **Geofence & Passcode Guide**\n\n**Current Time:** ${result.currentTime}\n**College Status:** ${result.todayStatus}\n**Active Lecture:** ${result.activePeriod}\n**College Hours:** ${result.collegeHours}\n\n**Attendance Windows:**\n• Live Marking: ${result.attendanceWindow.liveMarking}\n• Request (Past/Today): ${result.attendanceWindow.requestWindow}\n\n**Published Passcodes:**\n• Full Day: ${typeof result.publishedPasscodes.fullDay === 'object' ? `${result.publishedPasscodes.fullDay.passcode} (${result.publishedPasscodes.fullDay.expiresIn})` : result.publishedPasscodes.fullDay}\n• Single Lecture: ${typeof result.publishedPasscodes.singleLecture === 'object' ? `${result.publishedPasscodes.singleLecture.passcode} (${result.publishedPasscodes.singleLecture.expiresIn})` : result.publishedPasscodes.singleLecture}\n\n**Today's Marks:** ${result.todayMarked} subject(s)${result.todaySubjects?.length ? `\n${result.todaySubjects.map(s => `  • ${s}`).join('\n')}` : ''}\n\n**Geofence:**\n${result.geofence.instructions}`;
+    return txt;
+  }
+
+  // Passcode System Status
+  if (result.systemEnabled !== undefined && result.totalPasscodes !== undefined) {
+    let txt = `🔐 **Passcode System Status**\n\n• System: **${result.systemEnabled ? '✅ ENABLED' : '⛔ DISABLED'}**\n• Total Passcodes: ${result.totalPasscodes}\n• Enabled: ${result.enabledCount}\n• Today's Active: ${result.todayCount}`;
+    if (result.activePublishedPublic?.length) {
+      txt += `\n\n**Active Public Passcodes:**\n${result.activePublishedPublic.map(p => `• ${p.type.replace('_',' ')}: **${p.passcode}** (${p.expiresIn})`).join('\n')}`;
+    }
+    return txt;
+  }
+
+  // Passcode publish
+  if (result.passcode && result.type && result.expiresAt) return `Passcode: **${result.passcode}**\nType: ${result.type}\nExpires: ${new Date(result.expiresAt).toLocaleString('en-IN')}`;
+
+  // Passcode toggle
   if (result.enabled !== undefined && result.message) return result.message;
+
+  // Top attendance
   if (result.top && Array.isArray(result.top)) { if (!result.top.length) return 'No data.'; return result.top.map((r,i) => `${i+1}. **${r.rollNo}** (${r.name}) — ${r.pct}% (${r.present}/${r.total})`).join('\n'); }
+
+  // Aggregation
   if (result.attendancePercentage !== undefined) { const weak = Object.entries(result.subjectStats || {}).filter(([_, s]) => s.percentage < 75); let txt = `Roll: **${result.rollNo}**\nOverall: **${result.attendancePercentage}%** (${result.attended}/${result.conducted})\nWorking Days: ${result.workingDaysSoFar}/${result.totalWorkingDaysSemester}`; if (weak.length) txt += `\n\n⚠️ Low (<75%):\n${weak.map(([s, st]) => `• ${s}: ${st.percentage}%`).join('\n')}`; return txt; }
   if (result.totalDefaulters !== undefined) { if (!result.totalDefaulters) return '✅ No defaulters!'; return `⚠️ **${result.totalDefaulters} defaulter(s):**\n${result.defaulters.map(d => `• ${d.rollNo} (${d.name}) — ${d.pct}%`).join('\n')}`; }
   if (result.totalReviewed !== undefined) return `Reviewed: ${result.totalReviewed}\nMarked: ${result.totalMarked}`;
@@ -2639,7 +3151,7 @@ function formatDbResult(result, action) {
 }
 
 // ============================================================
-//  MAIN CHAT — Strict Language Mirroring + General Chat Fix
+//  ★★★ MAIN CHAT — Enhanced with all new features ★★★
 // ============================================================
 app.post('/api/ai/chat', async (req, res) => {
   try {
@@ -2732,7 +3244,7 @@ app.post('/api/ai/chat', async (req, res) => {
       } catch (err) { console.warn('DB mode error:', err.message); }
     }
 
-    // ===== NORMAL CHAT MODE (Strict Language Mirroring) =====
+    // ===== NORMAL CHAT MODE =====
     let contextStr = '';
     if (useCtx && userData) {
       const lines = [];
@@ -2749,14 +3261,27 @@ app.post('/api/ai/chat', async (req, res) => {
       lines.push(getStrictTimetableResponse(tomorrowStr, userData.branch || 'CSE'));
       if (userData.role === 'student') {
         const summary = await getStudentSummary(userData.rollNo);
-        if (summary) { 
-          lines.push(`Attendance: ${summary.attendancePercentage}% (${summary.totalAcademicLectures}/${summary.totalConductedLectures})`); 
-          lines.push(`Days Present: ${summary.daysPresent} / ${summary.workingDaysSoFar}`); 
-          const advisor = await getBunkAdvisor(userData.rollNo); 
+        if (summary) {
+          lines.push(`Attendance: ${summary.attendancePercentage}% (${summary.totalAcademicLectures}/${summary.totalConductedLectures})`);
+          lines.push(`Days Present: ${summary.daysPresent} / ${summary.workingDaysSoFar}`);
+          const advisor = await getBunkAdvisor(userData.rollNo);
           if (advisor) lines.push(`Bunk Advisor: ${advisor.message}`);
           const subjStats = Object.entries(summary.subjectStats || {}).map(([s, st]) => `${s}: ${st.percentage}%`).join(', ');
           lines.push(`Subject-wise: ${subjStats}`);
         }
+      } else if (userData.role === 'faculty') {
+        const avgData = await getFacultyClassAverage(userData.rollNo);
+        if (!avgData.error) {
+          lines.push(`Faculty: ${avgData.teacher}`);
+          lines.push(`Subjects: ${avgData.subjects.join(', ')}`);
+          lines.push(`Class Avg: ${avgData.overallAverage}%`);
+          lines.push(`Total Students: ${avgData.totalStudents}`);
+        }
+      } else if (userData.role === 'admin') {
+        const summary = await getPendingRequestsSummary();
+        lines.push(`Pending Attendance Requests: ${summary.attendance.pending}`);
+        lines.push(`Pending Account Requests: ${summary.accountRequests.pending}`);
+        lines.push(`Pending Leaves: ${summary.leaves.pending}`);
       }
       contextStr = lines.join('\n');
     }
@@ -2776,13 +3301,13 @@ ${isCasualChat ? `## MODE: CASUAL
 - Just chat naturally.
 - You CAN provide general knowledge, notes, coding help, and answer general questions.
 - DO NOT ask the user to turn on Context or Database for general questions.
-- If the user specifically asks for personal attendance/timetable data, then tell them to turn on Context or Database.
-- If data is requested and not available, do NOT use canned replies like "This data is not available in context". Instead, apologize and state specifically what data you don't have (e.g., "I don't see BDA attendance for 24CSE48 in the current context.").
+- If user asks about attendance/timetable/requests specifically, tell them to turn on Context or Database.
+- If data is requested but not available, apologize and state specifically what you don't have.
 ` : `## MODE: DATA
 - Answer using the provided CONTEXT.
 - Today = TODAY. Tomorrow = TOMORROW. Class timing 09:20 AM.
 - Days Present = UNIQUE days.
-- If data is not available, do NOT use canned replies. State specifically what data you don't have (e.g., "I don't see BDA attendance for 24CSE48 in the current context.").
+- If data is not available, state specifically what you don't have.
 - DO NOT say "admin se poocho".
 `}
 ## FORMATTING:
@@ -2933,7 +3458,7 @@ app.delete('/api/admin/request/:id/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== FIX ALL ATTENDANCE (legacy) ==========
+// ========== FIX ALL ATTENDANCE ==========
 app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
   try {
     const { requesterRollNo, testRollNo } = req.body;
