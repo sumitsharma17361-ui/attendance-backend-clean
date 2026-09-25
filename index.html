@@ -61,11 +61,10 @@ body{
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
   overflow-x:hidden;
+  position:relative;
+  isolation:isolate;
 }
 
-/* ============================================================
-   GLOBAL SMOOTH INTERACTIONS
-   ============================================================ */
 button,.btn,.tab,.subnav-item,.portal,.chip,.icon-btn,.mini-btn,.send-btn,.msg-action-btn,
 .chat-close-btn,.chat-sidebar-toggle,.modal-close,.chat-fab,.working-days-cta,
 .ctx-toggle,.db-toggle,.menu-trigger-btn,.student-menu-item,.auth-link,.holiday-row,
@@ -86,9 +85,6 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
   transition:transform .09s var(--ease-out);
 }
 
-/* ============================================================
-   SCROLL ANIMATIONS
-   ============================================================ */
 .animate-on-scroll {
   opacity: 0;
   transform: translateY(24px);
@@ -99,51 +95,27 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
   transform: translateY(0);
 }
 
-/* ============================================================
-   KEYFRAMES
-   ============================================================ */
-@keyframes appIn{
-  from{opacity:0;transform:translateY(20px) scale(.98);}
-  to{opacity:1;transform:translateY(0) scale(1);}
-}
+@keyframes appIn{from{opacity:0;transform:translateY(20px) scale(.98);}to{opacity:1;transform:translateY(0) scale(1);}}
 @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
 @keyframes slideIn{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
 @keyframes slideInRight{from{opacity:0;transform:translateX(-16px);}to{opacity:1;transform:translateX(0);}}
 @keyframes slideInLeft{from{opacity:0;transform:translateX(16px);}to{opacity:1;transform:translateX(0);}}
 @keyframes popIn{from{opacity:0;transform:scale(.92);}to{opacity:1;transform:scale(1);}}
 @keyframes shimmer{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
-@keyframes tabFadeIn{
-  from{opacity:0;transform:translateY(12px);}
-  to{opacity:1;transform:translateY(0);}
-}
-@keyframes rowIn{
-  from{opacity:0;transform:translateX(-8px);}
-  to{opacity:1;transform:translateX(0);}
-}
-@keyframes floatUp{
-  0%,100%{transform:translateY(0);}
-  50%{transform:translateY(-6px);}
-}
+@keyframes tabFadeIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+@keyframes rowIn{from{opacity:0;transform:translateX(-8px);}to{opacity:1;transform:translateX(0);}}
+@keyframes floatUp{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
 
-/* ============================================================
-   APP CONTAINER
-   ============================================================ */
 .app{
   width:100%;max-width:680px;margin:0 auto;
-  background:#fff;
-  border-radius:var(--radius-lg);
-  box-shadow:var(--shadow-md);
-  border:1px solid var(--slate-200);
-  overflow:hidden;
-  animation:appIn .55s var(--ease-out);
-  will-change:transform;
+  background:#fff;border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-md);border:1px solid var(--slate-200);
+  overflow:hidden;animation:appIn .55s var(--ease-out);
+  will-change:transform;position:relative;z-index:1;
 }
 @media(min-width:768px){body{padding:40px 24px;}.app{max-width:820px;}}
 @media(min-width:1200px){.app{max-width:980px;}}
 
-/* ============================================================
-   HEADER
-   ============================================================ */
 .app-header{
   display:flex;align-items:center;justify-content:space-between;
   padding:16px 20px;background:#fff;
@@ -189,9 +161,6 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
 }
 .user-avatar:hover{transform:scale(1.08);}
 
-/* ============================================================
-   NOTICE + IMPERSONATION BANNERS
-   ============================================================ */
 .notice-banner{
   display:none;background:linear-gradient(90deg,var(--amber-50),#fef9e7,var(--amber-50));
   background-size:200% 100%;
@@ -216,15 +185,9 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
 }
 .impersonation button:hover{background:#b91c1c;transform:translateY(-1px);box-shadow:0 4px 12px rgba(220,38,38,.3);}
 
-/* ============================================================
-   APP BODY
-   ============================================================ */
 .app-body{padding:22px;}
 @media(max-width:640px){.app-body{padding:16px;}}
 
-/* ============================================================
-   WELCOME
-   ============================================================ */
 .welcome{
   display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
   margin-bottom:22px;flex-wrap:wrap;
@@ -257,9 +220,6 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
 .pill.role-faculty{background:#dbeafe;color:#1e40af;}
 .pill.role-student{background:var(--emerald-50);color:var(--emerald-700);}
 
-/* ============================================================
-   STATS GRID
-   ============================================================ */
 .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px;}
 @media(min-width:640px){.stats-grid.cols-4{grid-template-columns:repeat(4,1fr);}}
 .stat{
@@ -294,9 +254,6 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
 .stat .stat-hint{font-size:10px;color:var(--slate-400);margin-top:2px;font-weight:500;}
 @media(max-width:640px){.stat .stat-value{font-size:22px;}.stat{padding:14px;}}
 
-/* ============================================================
-   WORKING DAYS CTA
-   ============================================================ */
 .working-days-cta{
   background:linear-gradient(135deg,var(--brand-600),var(--brand-900));
   color:#fff;border:none;border-radius:var(--radius);
@@ -330,9 +287,6 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
 .working-days-cta .cta-arrow{font-size:22px;opacity:.85;position:relative;z-index:1;transition:transform var(--dur) var(--ease-out);}
 .working-days-cta:hover .cta-arrow{transform:translateX(4px);}
 
-/* ============================================================
-   TABS
-   ============================================================ */
 .tabs{
   display:flex;gap:4px;background:var(--slate-100);
   border-radius:var(--radius);padding:5px;margin-bottom:18px;
@@ -353,14 +307,10 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
   animation:popIn .28s var(--ease-out);
 }
 
-/* Tab panes fade in */
 #tab-mark, #tab-admin, #tab-faculty, #tab-leave {
   animation: tabFadeIn 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* ============================================================
-   BUTTONS
-   ============================================================ */
 .btn{
   font-family:inherit;font-weight:700;font-size:12.5px;
   border:none;border-radius:var(--radius-sm);
@@ -399,9 +349,6 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
 .btn-xs{padding:5px 10px;font-size:10.5px;border-radius:7px;}
 .btn:disabled{opacity:.55;cursor:not-allowed;transform:none !important;box-shadow:none !important;}
 
-/* ============================================================
-   FORMS
-   ============================================================ */
 .form-group{margin-bottom:16px;}
 .form-label{display:block;font-size:11px;font-weight:700;color:var(--slate-600);margin-bottom:7px;text-transform:uppercase;letter-spacing:.05em;}
 input[type="text"],input[type="password"],input[type="email"],input[type="number"],
@@ -424,9 +371,6 @@ input:focus,select:focus,textarea:focus{
 .eye-icon:hover{color:var(--brand-600);}
 .eye-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;}
 
-/* ============================================================
-   CARDS
-   ============================================================ */
 .card{
   background:#fff;border:1px solid var(--slate-200);
   border-radius:var(--radius);padding:18px;margin-bottom:16px;
@@ -438,9 +382,6 @@ input:focus,select:focus,textarea:focus{
   display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;
 }
 
-/* ============================================================
-   AUTH BOX
-   ============================================================ */
 #auth-box{padding:36px 26px 40px;animation:slideIn .55s var(--ease-out);}
 @media(max-width:640px){#auth-box{padding:28px 20px 32px;}}
 .auth-title{font-size:26px;font-weight:800;letter-spacing:-.03em;color:var(--slate-900);text-align:center;margin-bottom:8px;}
@@ -474,9 +415,6 @@ input:focus,select:focus,textarea:focus{
   box-shadow:0 8px 18px rgba(217,119,6,.20);
 }
 
-/* ============================================================
-   TABLES
-   ============================================================ */
 .table-wrap{
   border:1px solid var(--slate-200);border-radius:var(--radius);
   overflow:auto;max-height:360px;background:#fff;
@@ -493,9 +431,6 @@ tbody tr{transition:background var(--dur-fast) var(--ease);}
 tbody tr:hover{background:var(--brand-50);}
 tbody tr:last-child td{border-bottom:none;}
 
-/* ============================================================
-   BADGES
-   ============================================================ */
 .badge{
   display:inline-flex;align-items:center;gap:4px;padding:4px 10px;
   font-size:10px;font-weight:700;border-radius:var(--radius-full);
@@ -509,9 +444,6 @@ tbody tr:last-child td{border-bottom:none;}
 .badge-neutral{background:var(--slate-100);color:var(--slate-600);}
 .badge-purple{background:var(--purple-50);color:var(--purple-700);}
 
-/* ============================================================
-   CHIPS
-   ============================================================ */
 .chips{display:flex;flex-wrap:wrap;gap:8px;}
 .chip{
   display:inline-flex;align-items:center;gap:6px;padding:9px 14px;
@@ -527,9 +459,6 @@ tbody tr:last-child td{border-bottom:none;}
 .chip .chip-pct{font-weight:800;font-size:11.5px;}
 .chip .chip-count{font-size:10px;opacity:.78;font-weight:500;}
 
-/* ============================================================
-   ADVISOR BOX
-   ============================================================ */
 .advisor{
   background:linear-gradient(135deg,var(--brand-50),#fff);
   border:1px solid var(--brand-200);border-radius:var(--radius);
@@ -539,9 +468,6 @@ tbody tr:last-child td{border-bottom:none;}
 .advisor:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:var(--brand-300);}
 .advisor svg{width:22px;height:22px;stroke:var(--brand-600);fill:none;stroke-width:2;flex-shrink:0;}
 
-/* ============================================================
-   CHART
-   ============================================================ */
 .chart-wrap{
   background:#fff;border:1px solid var(--slate-200);
   border-radius:var(--radius);padding:18px;margin-bottom:16px;
@@ -564,9 +490,6 @@ tbody tr:last-child td{border-bottom:none;}
 .chart-controls select{width:auto;padding:6px 12px;font-size:10.5px;}
 .chart-canvas-wrap{height:280px;position:relative;animation:fadeIn .6s var(--ease-out);}
 
-/* ============================================================
-   PORTAL GRID
-   ============================================================ */
 .portal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
 .portal{
   background:#fff;border:1px solid var(--slate-200);
@@ -584,9 +507,6 @@ tbody tr:last-child td{border-bottom:none;}
 .portal:hover svg{transform:scale(1.12);}
 .portal span{font-size:11px;font-weight:700;color:var(--slate-700);}
 
-/* ============================================================
-   SUBNAV
-   ============================================================ */
 .subnav{
   display:flex;gap:5px;overflow-x:auto;padding-bottom:10px;margin-bottom:16px;
   scrollbar-width:none;border-bottom:1px solid var(--slate-200);
@@ -604,9 +524,6 @@ tbody tr:last-child td{border-bottom:none;}
   box-shadow:0 4px 12px rgba(37,99,235,.24);
 }
 
-/* ============================================================
-   UTILITIES
-   ============================================================ */
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
 .row > *{flex:1;min-width:0;}
 .row.no-flex > *{flex:0 0 auto;}
@@ -622,9 +539,6 @@ tbody tr:last-child td{border-bottom:none;}
 }
 .section-title{font-size:11px;font-weight:700;color:var(--slate-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;}
 
-/* ============================================================
-   MODALS
-   ============================================================ */
 .modal-backdrop{
   position:fixed;inset:0;background:rgba(15,23,42,.55);
   backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
@@ -663,9 +577,6 @@ tbody tr:last-child td{border-bottom:none;}
   display:flex;gap:10px;justify-content:flex-end;
 }
 
-/* ============================================================
-   DRAWER
-   ============================================================ */
 .student-menu-backdrop{
   position:fixed;inset:0;background:rgba(15,23,42,.5);
   backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
@@ -706,7 +617,6 @@ tbody tr:last-child td{border-bottom:none;}
 .student-menu-header .menu-user-name{font-weight:800;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .student-menu-header .menu-user-roll{font-size:10.5px;opacity:.92;margin-top:3px;font-weight:500;}
 
-/* Passcode box */
 .passcode-live-box{
   background:linear-gradient(135deg,#ecfdf5,#f0fdf4);
   border:1.5px solid #6ee7b7;border-radius:12px;
@@ -801,9 +711,6 @@ tbody tr:last-child td{border-bottom:none;}
   background:var(--slate-50);flex-shrink:0;
 }
 
-/* ============================================================
-   APPROVED BANNER
-   ============================================================ */
 .approved-banner{
   display:none;padding:16px 18px;border-radius:var(--radius);
   margin-bottom:18px;border:1.5px solid;
@@ -823,9 +730,6 @@ tbody tr:last-child td{border-bottom:none;}
 .approved-banner .ab-text{font-size:12.5px;color:var(--slate-700);line-height:1.55;margin-bottom:10px;font-weight:500;}
 .approved-banner .ab-actions{display:flex;gap:8px;flex-wrap:wrap;}
 
-/* ============================================================
-   SCROLL TOP FAB
-   ============================================================ */
 .scroll-top-fab{
   position:fixed;bottom:96px;right:26px;width:46px;height:46px;
   border-radius:50%;background:#fff;border:1px solid var(--slate-200);
@@ -836,9 +740,6 @@ tbody tr:last-child td{border-bottom:none;}
 .scroll-top-fab:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);border-color:var(--brand-300);}
 .scroll-top-fab svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.5;pointer-events:none;}
 
-/* ============================================================
-   CHAT FAB + PANEL
-   ============================================================ */
 .chat-fab{
   position:fixed;bottom:24px;right:24px;width:58px;height:58px;
   border-radius:50%;
@@ -997,7 +898,6 @@ tbody tr:last-child td{border-bottom:none;}
 .msg-action-btn.copied{background:var(--emerald-50);border-color:#a7f3d0;color:var(--emerald-700);}
 .msg-action-btn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;pointer-events:none;}
 
-/* Thought badge */
 .thought-badge{
   display:flex;flex-direction:column;
   background:linear-gradient(135deg,#eef2ff,#e0e7ff);
@@ -1017,7 +917,6 @@ tbody tr:last-child td{border-bottom:none;}
 .thought-badge .tb-step{display:block;padding:4px 0 4px 16px;position:relative;}
 .thought-badge .tb-step::before{content:'';position:absolute;left:4px;top:11px;width:5px;height:5px;border-radius:50%;background:#6366f1;}
 
-/* Download menu */
 .dl-menu{
   position:fixed;background:#fff;border:1px solid var(--slate-200);
   border-radius:14px;box-shadow:0 24px 48px rgba(15,23,42,.22);
@@ -1036,7 +935,6 @@ tbody tr:last-child td{border-bottom:none;}
 .dl-menu button svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0;pointer-events:none;}
 .dl-menu .dl-menu-title{font-size:9.5px;font-weight:700;color:var(--slate-400);text-transform:uppercase;letter-spacing:.06em;padding:7px 16px 5px;pointer-events:none;}
 
-/* AI thinking */
 .ai-thinking-bubble{
   background:linear-gradient(135deg,#f0f7ff,#fff) !important;
   border:1px solid #bfdbfe !important;
@@ -1080,7 +978,6 @@ tbody tr:last-child td{border-bottom:none;}
 }
 @keyframes aiProgress{0%{left:-40%;}100%{left:100%;}}
 
-/* Chat welcome */
 .chat-welcome{text-align:center;padding:24px 18px;color:var(--slate-500);font-size:12.5px;line-height:1.9;animation:slideIn .5s var(--ease-out);}
 .chat-welcome .greeting-emoji{
   width:52px;height:52px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;
@@ -1135,9 +1032,6 @@ tbody tr:last-child td{border-bottom:none;}
 }
 .voice-indicator.show{display:inline-flex;animation:popIn .3s var(--ease-spring);}
 
-/* ============================================================
-   TOASTS
-   ============================================================ */
 .toast-wrap{
   position:fixed;top:22px;left:50%;transform:translateX(-50%);
   z-index:99999;width:calc(100% - 32px);max-width:440px;pointer-events:none;
@@ -1169,9 +1063,6 @@ tbody tr:last-child td{border-bottom:none;}
 .spinner{width:18px;height:18px;border:2.5px solid var(--slate-200);border-top-color:var(--brand-600);border-radius:50%;animation:spin .75s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 
-/* ============================================================
-   MISC
-   ============================================================ */
 .faculty-fields{display:none;margin-top:12px;padding:12px;background:var(--slate-50);border-radius:var(--radius-sm);border:1px solid var(--slate-200);animation:slideIn .3s var(--ease-out);}
 .bulk-holiday-textarea{width:100%;font-size:12.5px;padding:12px;font-family:inherit;border:1.5px solid var(--slate-300);border-radius:var(--radius-sm);min-height:120px;resize:vertical;}
 .holiday-row{
@@ -1200,8 +1091,6 @@ tbody tr:last-child td{border-bottom:none;}
   max-height:220px;overflow-y:auto;border:1px solid var(--slate-200);
   border-radius:10px;padding:10px;background:#fff;
 }
-
-/* ✅ FIX #1: Improved bulk select item with roll + name */
 .bulk-select-item{
   display:flex;align-items:center;gap:10px;padding:9px 12px;
   font-size:12px;cursor:pointer;border-radius:9px;
@@ -1269,9 +1158,6 @@ tbody tr:last-child td{border-bottom:none;}
 .req-tab:hover:not(.active){color:var(--slate-800);}
 .req-tab.active{background:#fff;color:var(--brand-700);box-shadow:0 2px 8px rgba(15,23,42,.10);}
 
-/* ============================================================
-   ✅ FIX #2: PRESENT TODAY BRANCH SEPARATOR
-   ============================================================ */
 .present-list-wrap {
   max-height: 280px;
   overflow-y: auto;
@@ -1347,9 +1233,6 @@ tbody tr:last-child td{border-bottom:none;}
   margin-left: 10px;
 }
 
-/* ============================================================
-   ✅ FIX #3: CALENDAR ALIGNMENT (uniform boxes)
-   ============================================================ */
 .wd-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;}
 .wd-summary-card{
   background:var(--slate-50);border:1px solid var(--slate-200);
@@ -1380,7 +1263,6 @@ tbody tr:last-child td{border-bottom:none;}
 }
 .wd-month-title .wd-month-stats{font-size:10.5px;font-weight:600;color:var(--slate-500);}
 
-/* ✅ Uniform calendar grid — all boxes same shape & size */
 .wd-grid{
   display:grid;
   grid-template-columns:repeat(7, minmax(0, 1fr));
@@ -1425,9 +1307,6 @@ tbody tr:last-child td{border-bottom:none;}
 .wd-cell.present{background:#d1fae5;color:#065f46;border-color:#6ee7b7;font-weight:800;}
 .wd-cell.absent{background:#ffe4e6;color:#9f1239;border-color:#fda4af;font-weight:800;}
 
-/* ============================================================
-   RESPONSIVE
-   ============================================================ */
 @media(max-width:640px){
   body{padding:12px;}
   .app-body{padding:16px;}
@@ -1463,9 +1342,233 @@ tbody tr:last-child td{border-bottom:none;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--slate-300);border-radius:4px;}
 ::-webkit-scrollbar-thumb:hover{background:var(--slate-400);}
+
+/* ============================================================
+   ★★★ PREMIUM ENHANCEMENTS v2.1 — DESKTOP ONLY ★★★
+   Mobile pe kuch bhi premium nahi chalega — bilkul original feel.
+   Desktop (≥641px) par saare premium effects milenge.
+   ============================================================ */
+
+/* Accessibility focus rings (mobile + desktop dono pe) */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+a:focus-visible{
+  outline: 2.5px solid var(--brand-500);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* Respect reduced-motion (mobile + desktop dono pe) */
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .bg-blob{ display: none; }
+  body::after{ display: none; }
+}
+
+/* ---------- MOBILE: premium elements off ---------- */
+@media (max-width: 640px){
+  .bg-blobs,
+  .scroll-progress{ display: none !important; }
+  body::after{ content: none !important; display: none !important; }
+}
+
+/* ---------- DESKTOP ONLY (≥641px) — all premium effects ---------- */
+@media (min-width: 641px){
+
+  /* Spring physics easing (modern linear() bounce) */
+  :root{
+    --spring-soft: linear(0, 0.006, 0.025 2.8%, 0.101 6.1%, 0.539 18.9%, 0.721 25.3%, 0.849 31.5%, 0.937 38.1%, 0.968 41.8%, 0.991 45.7%, 1.006 50.1%, 1.015 55%, 1.017 63.1%, 1.007 71.1%, 0.999 84.1%, 1);
+    --spring-pop: linear(0, 0.5 12.5%, 0.95 25%, 1.05 37.5%, 0.99 50%, 1.005 62.5%, 1 75%, 1);
+  }
+
+  /* Ambient background blobs */
+  .bg-blobs{
+    display: block; position: fixed; inset: 0; z-index: 0;
+    overflow: hidden; pointer-events: none;
+  }
+  .bg-blob{
+    position: absolute; border-radius: 50%;
+    filter: blur(90px); opacity: 0.5;
+    animation: blobMorph 24s ease-in-out infinite;
+    will-change: transform, border-radius;
+  }
+  .bg-blob:nth-child(1){
+    width: 460px; height: 460px;
+    background: radial-gradient(circle, #93c5fd 0%, transparent 70%);
+    top: -140px; left: -120px;
+    animation-delay: 0s;
+  }
+  .bg-blob:nth-child(2){
+    width: 420px; height: 420px;
+    background: radial-gradient(circle, #c4b5fd 0%, transparent 70%);
+    bottom: -140px; right: -100px;
+    animation-delay: -8s;
+  }
+  .bg-blob:nth-child(3){
+    width: 340px; height: 340px;
+    background: radial-gradient(circle, #6ee7b7 0%, transparent 70%);
+    top: 42%; right: 6%;
+    animation-delay: -16s;
+  }
+  @keyframes blobMorph{
+    0%,100%{ transform: translate(0,0) scale(1); border-radius: 50%; }
+    25%{ transform: translate(40px,-30px) scale(1.12); border-radius: 42% 58% 63% 37% / 45% 40% 60% 55%; }
+    50%{ transform: translate(-24px,38px) scale(0.94); border-radius: 60% 40% 40% 60% / 55% 60% 40% 45%; }
+    75%{ transform: translate(28px,20px) scale(1.06); border-radius: 38% 62% 55% 45% / 60% 45% 55% 40%; }
+  }
+
+  /* Grain / noise overlay */
+  body::after{
+    content:''; position: fixed; inset: 0;
+    pointer-events: none; z-index: 99998;
+    opacity: .03; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0'/></filter><rect width='240' height='240' filter='url(%23n)'/></svg>");
+  }
+
+  /* Scroll progress bar */
+  .scroll-progress{
+    display: block;
+    position: fixed; top: 0; left: 0; height: 3px; width: 0;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
+    z-index: 99999; border-radius: 0 3px 3px 0;
+    box-shadow: 0 0 14px rgba(59,130,246,.55);
+    transition: width .08s linear;
+    will-change: width;
+  }
+
+  /* Cursor spotlight glow */
+  .spotlight-enabled{ position: relative; overflow: hidden; }
+  .spotlight-enabled::after{
+    content:''; position: absolute; inset: 0;
+    background: radial-gradient(600px circle at var(--mx,50%) var(--my,50%),
+                                rgba(59,130,246,.14), transparent 40%);
+    opacity: 0; pointer-events: none; z-index: 1;
+    transition: opacity .4s var(--ease);
+  }
+  .spotlight-enabled:hover::after{ opacity: 1; }
+  .spotlight-enabled > *{ position: relative; z-index: 2; }
+
+  /* Magnetic button base */
+  .magnetic{ will-change: transform; transition: transform .35s var(--spring-pop); }
+
+  /* Icon micro-animations */
+  .icon-bounce:hover svg{ animation: iconBounce .6s var(--spring-pop); }
+  @keyframes iconBounce{
+    0%,100%{ transform: translateY(0) scale(1); }
+    30%{ transform: translateY(-3px) scale(1.15); }
+    60%{ transform: translateY(1px) scale(.95); }
+  }
+  .icon-pulse:hover svg{ animation: iconPulse .8s ease-in-out infinite; }
+  @keyframes iconPulse{ 0%,100%{ transform: scale(1); } 50%{ transform: scale(1.18); } }
+  .bell-ring:hover svg{ animation: bellRing .9s var(--spring-pop); transform-origin: top center; }
+  @keyframes bellRing{
+    0%,100%{ transform: rotate(0); }
+    15%{ transform: rotate(14deg); }
+    30%{ transform: rotate(-12deg); }
+    45%{ transform: rotate(8deg); }
+    60%{ transform: rotate(-6deg); }
+    75%{ transform: rotate(3deg); }
+  }
+
+  /* Custom tooltips */
+  [data-tip]{ position: relative; }
+  [data-tip]::before,
+  [data-tip]::after{
+    position: absolute; left: 50%; bottom: calc(100% + 8px);
+    opacity: 0; pointer-events: none; z-index: 10001;
+    transition: opacity .2s ease, transform .35s var(--spring-pop);
+    transform: translate(-50%, 6px) scale(.9);
+  }
+  [data-tip]::before{
+    content: attr(data-tip);
+    background: linear-gradient(135deg,#0f172a,#1e293b);
+    color:#fff; padding:7px 12px; font-size:11px; font-weight:600;
+    border-radius:9px; white-space: nowrap;
+    box-shadow: 0 10px 24px rgba(15,23,42,.28);
+    font-family: var(--font); letter-spacing: .02em;
+  }
+  [data-tip]::after{
+    content:''; bottom: calc(100% + 3px);
+    border: 5px solid transparent; border-top-color: #1e293b;
+    transform: translate(-50%, 6px);
+  }
+  [data-tip]:hover::before,
+  [data-tip]:hover::after{
+    opacity: 1; transform: translate(-50%, 0) scale(1);
+  }
+
+  /* Enhanced spring press physics */
+  .btn:not(:disabled):hover{ transition-timing-function: var(--spring-pop); }
+  .tab{ transition: color .3s var(--ease), background .3s var(--ease), box-shadow .3s var(--ease), transform .3s var(--spring-pop); }
+  .tab.active{ transform: scale(1.02); }
+  .subnav-item{ transition: transform .3s var(--spring-pop), background .25s var(--ease), color .25s var(--ease), box-shadow .25s var(--ease); }
+  .subnav-item:hover{ transform: translateY(-2px); }
+  .portal{ transition: transform .45s var(--spring-pop), box-shadow .35s var(--ease), border-color .25s var(--ease), background .3s var(--ease); }
+  .icon-btn{ transition: transform .35s var(--spring-pop), background .25s var(--ease), border-color .25s var(--ease), box-shadow .25s var(--ease), color .2s var(--ease); }
+  .chat-fab{ transition: transform .4s var(--spring-pop), box-shadow .35s var(--ease); }
+
+  /* Modal spring open */
+  .modal{ animation: modalSpring .55s var(--spring-pop); }
+  @keyframes modalSpring{
+    0%{ opacity:0; transform: scale(.85) translateY(30px); }
+    60%{ opacity:1; transform: scale(1.02) translateY(-4px); }
+    100%{ opacity:1; transform: scale(1) translateY(0); }
+  }
+  .chat-panel.open{ animation: chatInSpring .5s var(--spring-pop); }
+  @keyframes chatInSpring{
+    0%{ opacity:0; transform: scale(.85) translateY(30px); }
+    60%{ opacity:1; transform: scale(1.02) translateY(-4px); }
+    100%{ opacity:1; transform: scale(1) translateY(0); }
+  }
+  .student-menu-drawer{ transition: transform .5s var(--spring-pop); }
+
+  /* Staggered list reveal */
+  .stagger-list > *{ animation: slideIn .5s cubic-bezier(.22,1,.36,1) backwards; }
+  .stagger-list > *:nth-child(1){ animation-delay:.02s; }
+  .stagger-list > *:nth-child(2){ animation-delay:.04s; }
+  .stagger-list > *:nth-child(3){ animation-delay:.06s; }
+  .stagger-list > *:nth-child(4){ animation-delay:.08s; }
+  .stagger-list > *:nth-child(5){ animation-delay:.10s; }
+  .stagger-list > *:nth-child(6){ animation-delay:.12s; }
+  .stagger-list > *:nth-child(7){ animation-delay:.14s; }
+  .stagger-list > *:nth-child(8){ animation-delay:.16s; }
+  .stagger-list > *:nth-child(9){ animation-delay:.18s; }
+  .stagger-list > *:nth-child(10){ animation-delay:.20s; }
+  .stagger-list > *:nth-child(n+11){ animation-delay:.22s; }
+
+  /* Stat card 3D tilt (handled by JS, base transition) */
+  .stat{ transition: transform .3s var(--spring-pop), box-shadow .3s var(--ease), border-color .3s var(--ease); }
+
+} /* end @media (min-width: 641px) */
 </style>
 </head>
 <body>
+
+<div class="scroll-progress" id="scrollProgress"></div>
+
+<div class="bg-blobs" aria-hidden="true">
+  <div class="bg-blob"></div>
+  <div class="bg-blob"></div>
+  <div class="bg-blob"></div>
+</div>
+
+<svg width="0" height="0" style="position:absolute;pointer-events:none;" aria-hidden="true">
+  <defs>
+    <filter id="gooey-filter">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/>
+      <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -9" result="goo"/>
+      <feBlend in="SourceGraphic" in2="goo"/>
+    </filter>
+  </defs>
+</svg>
 
 <div class="toast-wrap" id="toastWrap"><div class="toast" id="toast">
   <svg id="toastIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -1478,7 +1581,6 @@ tbody tr:last-child td{border-bottom:none;}
   <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
 </button>
 
-<!-- DRAWER -->
 <div class="student-menu-backdrop" id="studentMenuBackdrop"></div>
 <div class="student-menu-drawer" id="studentMenuDrawer">
   <div class="student-menu-header">
@@ -1518,10 +1620,10 @@ tbody tr:last-child td{border-bottom:none;}
       <div class="brand-text"><h1>BM Group of Institutions</h1><p>B.Tech CSE / AIDS · 5th Semester</p></div>
     </div>
     <div class="header-right">
-      <button class="icon-btn" id="chatBtn" onclick="toggleChat()" title="AI Assistant" style="display:none;">
+      <button class="icon-btn" id="chatBtn" onclick="toggleChat()" title="AI Assistant" data-tip="AI Assistant" style="display:none;">
         <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       </button>
-      <button class="icon-btn" id="logoutBtn" onclick="logout()" title="Logout" style="display:none;">
+      <button class="icon-btn" id="logoutBtn" onclick="logout()" title="Logout" data-tip="Logout" style="display:none;">
         <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
       </button>
       <div class="user-avatar" id="userAvatar" style="display:none;">SS</div>
@@ -2161,7 +2263,6 @@ tbody tr:last-child td{border-bottom:none;}
   </div>
 </div>
 
-<!-- MODALS -->
 <div class="modal-backdrop" id="wdModal">
   <div class="modal wide">
     <div class="modal-header"><div><h3>College Working Days</h3><p id="wdModalSub" class="text-xs text-muted" style="margin-top:4px;">Calendar</p></div>
@@ -2413,7 +2514,6 @@ function getFileTypeLabel(mimeType, fileName) {
   return 'file';
 }
 
-/* ============ MENU ============ */
 function openStudentMenu(){
   const drawer = $('studentMenuDrawer'); const backdrop = $('studentMenuBackdrop');
   if (!drawer || !backdrop) return;
@@ -2471,7 +2571,6 @@ function navigateStudentMenu(key){
   }, 220);
 }
 
-/* ============ ACCOUNT STATUS ============ */
 function openCheckStatus(){ openModal('checkStatusModal'); const r = $('csRoll'); if (r) r.value = ''; const res = $('csResult'); if (res) res.innerHTML = ''; }
 async function checkRequestStatus(){
   const roll = sanitizeRoll($('csRoll').value.trim());
@@ -2549,7 +2648,6 @@ async function loadApprovedBanner(){
   } catch(e) { banner.classList.remove('show'); }
 }
 
-/* ============ PASSCODE ============ */
 async function loadLivePasscodes(){
   try {
     const [fd, sl] = await Promise.all([
@@ -2633,12 +2731,10 @@ function fallbackCopyPass(code){
   document.body.removeChild(ta);
 }
 
-/* ============ SCROLL ============ */
 function scrollToTop(){ window.scrollTo({ top: 0, behavior: 'smooth' }); }
 function handleScrollFab(){ const f = $('scrollTopFab'); if (!f) return; if (window.scrollY > 300) f.classList.add('show'); else f.classList.remove('show'); }
 window.addEventListener('scroll', handleScrollFab, { passive: true });
 
-/* ============ SCROLL ANIMATIONS ============ */
 function initScrollAnimations() {
   const targets = document.querySelectorAll('.stat, .card, .working-days-cta, .chart-wrap, .advisor, .passcode-card, .collapsible-card, .attendance-actions-card, .approved-banner, .welcome, .portal-grid .portal, .subject-summary-line');
   targets.forEach(el => { if (!el.classList.contains('animate-on-scroll')) el.classList.add('animate-on-scroll'); });
@@ -2658,7 +2754,6 @@ function observeNewContent() {
   document.querySelectorAll('.animate-on-scroll:not(.visible)').forEach(el => observer.observe(el));
 }
 
-/* ============ AUTH ============ */
 function toggleAuthMode(){
   isRegistering = !isRegistering;
   $('regNameGroup').style.display = isRegistering ? 'block' : 'none';
@@ -2707,7 +2802,6 @@ function switchBack(){
   location.reload();
 }
 
-/* ============ ACCOUNT ACTIONS ============ */
 function openForgotPassword(){ openModal('forgotPassModal'); }
 function openSetNewPassword(){ openModal('setNewPassModal'); }
 function openDeviceReset(){ openModal('deviceResetModal'); }
@@ -2761,7 +2855,6 @@ async function submitChangePassword(){
   } catch(e){ toast('Network error','error'); }
 }
 
-/* ============ DASHBOARD ============ */
 function loadDashboard(){
   const userStr = localStorage.getItem('user'); if (!userStr) return;
   currentUser = JSON.parse(userStr);
@@ -2830,6 +2923,7 @@ function loadDashboard(){
   clockIntervalId = setInterval(updateClock, 1000);
   fetchNotices(); fetchChatHistory();
   setTimeout(initScrollAnimations, 100);
+  setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 250);
 }
 function updateClock(){ const n = new Date(); if ($('currentTime')) $('currentTime').textContent = n.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}); if ($('currentDate')) $('currentDate').textContent = n.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'}); }
 async function fetchNotices(){ try { const res = await fetch(`${API}/api/notices`); const data = await res.json(); if (data && data.length) { if ($('noticeText')) $('noticeText').textContent = data[data.length-1].message || 'No new notices'; const nb = $('noticeBanner'); if (nb) nb.style.display = 'flex'; } } catch(e){} }
@@ -2842,6 +2936,7 @@ function switchTab(id){
     activeStudentMenuKey = 'home'; populateStudentMenu();
   }
   observeNewContent();
+  setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 60);
 }
 function showAdmin(id){
   document.querySelectorAll('.subnav-item').forEach(b => b.classList.toggle('active', b.getAttribute('onclick').includes(id)));
@@ -2858,6 +2953,7 @@ function showAdmin(id){
   if (id === 'a-tools') initTools();
   if (id === 'a-leave') loadLeaveRequests();
   observeNewContent();
+  setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 60);
 }
 async function loadAccountRequests(){
   const el = $('accountRequestsList'); if (!el) return;
@@ -3000,7 +3096,6 @@ async function bulkApproveAllRequests(){
 }
 function toggleSubjectBreakdown(){ subjectBreakdownOpen = !subjectBreakdownOpen; const b = $('subjectBreakdownBody'), a = $('subjectBreakdownArrow'), i = $('subjectBreakdownHeaderInfo'); if (subjectBreakdownOpen) { b?.classList.add('open'); if (a) a.style.transform = 'rotate(180deg)'; if (i) i.textContent = 'Tap to hide'; loadSubjectBreakdown(); } else { b?.classList.remove('open'); if (a) a.style.transform = 'rotate(0deg)'; if (i) i.textContent = 'Tap to view'; } }
 
-/* ✅ FIX #2: Dashboard stats with CSE/AIDS separator */
 async function loadDashboardStats(){
   try {
     const res = await fetch(`${API}/api/admin/dashboard-stats/${currentUser.rollNo}`);
@@ -3022,26 +3117,11 @@ async function loadDashboardStats(){
         const cse = list.filter(s => s.rollNo.startsWith('24CSE'));
         const aids = list.filter(s => s.rollNo.startsWith('24AIDS'));
         const others = list.filter(s => !s.rollNo.startsWith('24CSE') && !s.rollNo.startsWith('24AIDS'));
-
-        let html = '';
-        let delay = 0;
-        const renderRows = (arr) => arr.map((s, i) => {
-          const row = `<div class="present-row" style="animation-delay:${(delay++) * 0.03}s;"><b>${escapeHtml(s.rollNo)}</b><span>${escapeHtml(s.name)}</span></div>`;
-          return row;
-        }).join('');
-
-        if (cse.length) {
-          html += `<div class="branch-label cse">CSE <span class="branch-count">${cse.length}</span></div>`;
-          html += renderRows(cse);
-        }
-        if (aids.length) {
-          html += `<div class="branch-label aids">AIDS <span class="branch-count">${aids.length}</span></div>`;
-          html += renderRows(aids);
-        }
-        if (others.length) {
-          html += `<div class="branch-label">Other <span class="branch-count">${others.length}</span></div>`;
-          html += renderRows(others);
-        }
+        let html = ''; let delay = 0;
+        const renderRows = (arr) => arr.map((s, i) => { const row = `<div class="present-row" style="animation-delay:${(delay++) * 0.03}s;"><b>${escapeHtml(s.rollNo)}</b><span>${escapeHtml(s.name)}</span></div>`; return row; }).join('');
+        if (cse.length) { html += `<div class="branch-label cse">CSE <span class="branch-count">${cse.length}</span></div>`; html += renderRows(cse); }
+        if (aids.length) { html += `<div class="branch-label aids">AIDS <span class="branch-count">${aids.length}</span></div>`; html += renderRows(aids); }
+        if (others.length) { html += `<div class="branch-label">Other <span class="branch-count">${others.length}</span></div>`; html += renderRows(others); }
         pl.innerHTML = html;
       }
     }
@@ -3147,7 +3227,6 @@ async function loadSubjectBreakdown(){
 }
 function onCalendarModeChange(){ const m = $('calendarViewMode').value; if ($('calendarSelectedMonthWrap')) $('calendarSelectedMonthWrap').style.display = m === 'SELECTED_MONTH' ? 'block' : 'none'; renderAttendanceCalendar(); }
 
-/* ✅ FIX #3: Attendance Calendar with uniform boxes */
 function renderAttendanceCalendar(){
   const w = $('calendarDisplay'); if (!w) return;
   const m = $('calendarViewMode').value;
@@ -3340,7 +3419,6 @@ async function validateBranch(){ const r = ($('manualRoll').value||'').toUpperCa
 async function markManual(){ const r = ($('manualRoll').value||'').trim().toUpperCase(); if (!r) return toast('Enter roll no','error'); const d = $('manualDate').value; const subs = Array.from(document.querySelectorAll('.sub-cb:checked')).map(cb => cb.value); if (!subs.length) return toast('Select subjects','error'); try { const res = await fetch(`${API}/api/admin/manual-attendance-bulk`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, studentRollNo: r, date: d, subjects: subs, status: $('manualStatus').value})}); const x = await res.json(); if (res.ok) { toast(x.message||'Marked','success'); selectAllSubjects(false); } else toast(x.error||'Failed','error'); } catch(e){ toast('Network error','error'); } }
 function markAllForDay(){ selectAllSubjects(true); markManual(); }
 
-/* ✅ FIX #1: Bulk student list — show Roll + Name properly */
 async function loadBulkStudents(){
   const b = $('bulkBranch').value;
   try {
@@ -3424,8 +3502,6 @@ async function fetchTeacherStudents(){
     if (fr) fr.innerHTML = '<option value="">Select Student…</option>' + data.map(s=>`<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`).join('');
     $('facTotalStudents').textContent = data.length;
     tb.innerHTML = data.map(s => `<tr><td><b>${s.rollNo}</b></td><td>${s.name}</td><td><button class="btn btn-outline btn-xs" onclick="viewStudentRecords('${s.rollNo}')">View</button></td></tr>`).join('');
-
-    // ✅ Bulk student list with roll + name
     const sorted = data.sort((a,b) => a.rollNo.localeCompare(b.rollNo, undefined, {numeric: true}));
     $('facBulkStudents').innerHTML =
       `<label class="bulk-select-item" style="font-weight:700;border-bottom:1px solid var(--slate-200);margin-bottom:6px;padding-bottom:8px;">
@@ -3439,7 +3515,6 @@ async function fetchTeacherStudents(){
           <span class="bulk-name">${escapeHtml(s.name)}</span>
         </label>`
       ).join('');
-
     const today = fmtDate(new Date());
     let present = 0, absent = 0, presentNames = [];
     for (const s of data) {
@@ -3468,7 +3543,6 @@ async function facReport(fmt){ const roll = $('facReportStudent').value; if (!ro
 async function applyLeave(){ const f = $('leaveFrom').value, t = $('leaveTo').value, r = $('leaveReason').value.trim(); if (!f || !t || !r) return toast('All fields required','error'); try { const res = await fetch(`${API}/api/leave/apply`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo, fromDate:f, toDate:t, reason:r, leaveType:$('leaveType').value})}); const d = await res.json(); if (res.ok) { toast('Submitted','success'); $('leaveReason').value = ''; loadMyLeaves(); } else toast(d.error,'error'); } catch(e){} }
 async function loadMyLeaves(){ try { const data = await fetch(`${API}/api/leave/my/${currentUser.rollNo}`).then(x=>x.json()); const el = $('myLeaveList'); el.innerHTML = data.length ? data.map(l => `<div style="padding:10px 0;border-bottom:1px solid var(--slate-100);"><div style="display:flex;justify-content:space-between;"><b>${fmtDatePretty(l.fromDate)} → ${fmtDatePretty(l.toDate)}</b> <span class="badge ${l.status==='Approved'?'badge-success':l.status==='Rejected'?'badge-danger':'badge-warning'}">${l.status}</span></div><div class="text-xs text-muted mt-1">${l.leaveType}: ${l.reason}</div></div>`).join('') : '<div class="empty">No applications</div>'; } catch(e){} observeNewContent(); }
 
-/* ============ CHAT ============ */
 function toggleContext(){ useContextMode = !useContextMode; const b = $('ctxToggle'); if (b) { b.classList.toggle('active', useContextMode); const l = b.querySelector('.ctx-label'); if (l) l.textContent = useContextMode ? 'Context On' : 'Context'; } toast(useContextMode ? 'Context ON' : 'Context OFF', useContextMode ? 'success' : 'info'); if ($('chatPanel').classList.contains('open')) { const m = $('chatMsgs'); if (!m.querySelector('.msg')) renderChatWelcome(); } }
 function toggleDatabase(){ useDatabaseMode = !useDatabaseMode; const b = $('dbToggle'); if (b) { b.classList.toggle('active', useDatabaseMode); const l = b.querySelector('.db-label'); if (l) l.textContent = useDatabaseMode ? 'Database On' : 'Database'; } toast(useDatabaseMode ? 'Database ON' : 'Database OFF', useDatabaseMode ? 'success' : 'info'); if ($('chatPanel').classList.contains('open')) { const m = $('chatMsgs'); if (!m.querySelector('.msg')) renderChatWelcome(); } }
 function toggleChat(){ const p = $('chatPanel'); if (!p) return; p.classList.toggle('open'); if (p.classList.contains('open')) { chatGreeted = false; fetchChatHistory(); renderChatWelcome(); } else { if (openDownloadMenuId) { const m = document.getElementById(openDownloadMenuId); if (m) m.classList.remove('open'); openDownloadMenuId = null; } const sb = $('chatSidebar'); if (sb) sb.classList.remove('open'); } }
@@ -3659,6 +3733,151 @@ function getMonthRangeStrings(m){ const mm = String(m+1).padStart(2,'0'); const 
 function getCurrentMonthRangeStrings(){ const n = new Date(); const mm = String(n.getMonth()+1).padStart(2,'0'); const last = new Date(n.getFullYear(), n.getMonth()+1, 0).getDate(); const start = (n.getFullYear() === 2026 && n.getMonth() === 6) ? 15 : 1; return { start: `${n.getFullYear()}-${mm}-${String(start).padStart(2,'0')}`, end: `${n.getFullYear()}-${mm}-${String(last).padStart(2,'0')}` }; }
 function getRangeForSelection(range, month){ let s, e; if (range === 'FULL_SEMESTER') { s = '2026-07-15'; e = '2026-12-31'; } else if (range === 'CURRENT_MONTH') { const r = getCurrentMonthRangeStrings(); s = r.start; e = r.end; } else { const r = getMonthRangeStrings(parseInt(month)); s = r.start; e = r.end; } const today = fmtDate(new Date()); if (e > today) e = today; return { start: s, end: e }; }
 
+/* ============================================================
+   ★★★ PREMIUM ENHANCEMENTS v2.1 — Runtime (DESKTOP ONLY) ★★★
+   Sirf tab chalega jab screen ≥641px ho. Mobile pe kuch nahi hoga.
+   ============================================================ */
+
+function isDesktop(){ return window.innerWidth >= 641; }
+
+// 1. Scroll progress bar
+function initScrollProgress(){
+  if (!isDesktop()) return;
+  const bar = document.getElementById('scrollProgress');
+  if (!bar) return;
+  const update = () => {
+    const h = document.documentElement;
+    const total = h.scrollHeight - h.clientHeight;
+    bar.style.width = total > 0 ? (h.scrollTop / total) * 100 + '%' : '0%';
+  };
+  if (bar._bound) return; bar._bound = true;
+  window.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('resize', update);
+  update();
+}
+
+// 2. Cursor spotlight on cards
+function initSpotlight(){
+  if (!isDesktop()) return;
+  const targets = document.querySelectorAll(
+    '.card, .stat, .chart-wrap, .portal, .passcode-card, .collapsible-card, .advisor, .attendance-actions-card, .working-days-cta, .approved-banner'
+  );
+  targets.forEach(el => {
+    if (el.dataset.spotlight === '1') return;
+    el.dataset.spotlight = '1';
+    el.classList.add('spotlight-enabled');
+    el.addEventListener('mousemove', (e) => {
+      const r = el.getBoundingClientRect();
+      el.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+      el.style.setProperty('--my', (e.clientY - r.top) + 'px');
+    });
+  });
+}
+
+// 3. Magnetic buttons
+function initMagneticButtons(){
+  if (!isDesktop()) return;
+  const btns = document.querySelectorAll('.menu-trigger-btn');
+  btns.forEach(btn => {
+    if (btn.dataset.magInit === '1') return;
+    btn.dataset.magInit = '1';
+    btn.classList.add('magnetic');
+    btn.addEventListener('mousemove', (e) => {
+      const r = btn.getBoundingClientRect();
+      const x = (e.clientX - r.left - r.width / 2) * 0.22;
+      const y = (e.clientY - r.top - r.height / 2) * 0.22;
+      btn.style.transform = `translate(${x}px, ${y}px)`;
+    });
+    btn.addEventListener('mouseleave', () => { btn.style.transform = ''; });
+  });
+}
+
+// 4. Icon micro-animations
+function initIconAnimations(){
+  if (!isDesktop()) return;
+  document.querySelectorAll('.icon-btn').forEach(b => {
+    if (b.dataset.iconAnim === '1') return;
+    b.dataset.iconAnim = '1';
+    b.classList.add('icon-bounce');
+  });
+  const chatBtn = document.getElementById('chatBtn');
+  if (chatBtn && chatBtn.dataset.iconPulse !== '1') { chatBtn.dataset.iconPulse = '1'; chatBtn.classList.add('icon-pulse'); }
+  const notice = document.getElementById('noticeBanner');
+  if (notice && notice.dataset.bellRing !== '1') { notice.dataset.bellRing = '1'; notice.classList.add('bell-ring'); }
+}
+
+// 5. Tooltips (title → data-tip)
+function initTooltips(){
+  if (!isDesktop()) return;
+  document.querySelectorAll('[title]').forEach(el => {
+    const t = el.getAttribute('title');
+    if (!t || el.hasAttribute('data-tip')) return;
+    el.setAttribute('data-tip', t);
+    el.removeAttribute('title');
+  });
+}
+
+// 6. Staggered lists
+function initStaggeredLists(){
+  if (!isDesktop()) return;
+  document.querySelectorAll('.table-wrap tbody, #adminPresentList, #myRequestsList, #adminRequestsList, #accountRequestsList, #studentMenuList, .chips').forEach(el => {
+    if (!el.classList.contains('stagger-list')) el.classList.add('stagger-list');
+  });
+}
+
+// 7. Stat card 3D tilt
+function initStatLift(){
+  if (!isDesktop()) return;
+  document.querySelectorAll('.stat').forEach(s => {
+    if (s.dataset.tilt === '1') return;
+    s.dataset.tilt = '1';
+    s.addEventListener('mousemove', (e) => {
+      const r = s.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width - 0.5;
+      const y = (e.clientY - r.top) / r.height - 0.5;
+      s.style.transform = `translateY(-4px) rotateX(${-y * 4}deg) rotateY(${x * 4}deg)`;
+    });
+    s.addEventListener('mouseleave', () => { s.style.transform = ''; });
+  });
+}
+
+// 8. Toast swipe (desktop pe bhi safe hai — mouse drag se bhi ho jayega)
+function initToastSwipe(){
+  if (!isDesktop()) return;
+  const t = document.getElementById('toast');
+  if (!t || t.dataset.swipe === '1') return;
+  t.dataset.swipe = '1';
+}
+
+// Master runner
+function runPremiumInit(){
+  if (!isDesktop()) return;
+  initScrollProgress();
+  initSpotlight();
+  initMagneticButtons();
+  initIconAnimations();
+  initTooltips();
+  initStaggeredLists();
+  initStatLift();
+  initToastSwipe();
+}
+
+// Debounced re-run on resize
+let _premiumResizeDebounce = null;
+window.addEventListener('resize', () => {
+  if (_premiumResizeDebounce) clearTimeout(_premiumResizeDebounce);
+  _premiumResizeDebounce = setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 200);
+}, { passive: true });
+
+// MutationObserver for dynamically added content (desktop only)
+let _premiumDebounce = null;
+function schedulePremiumReinit(){
+  if (!isDesktop()) return;
+  if (_premiumDebounce) clearTimeout(_premiumDebounce);
+  _premiumDebounce = setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 180);
+}
+const premiumObserver = new MutationObserver(schedulePremiumReinit);
+
 document.addEventListener('click', (e) => {
   if (e.target && e.target.classList && e.target.classList.contains('modal-backdrop') && e.target.classList.contains('open')) e.target.classList.remove('open');
   if (openDownloadMenuId && !e.target.closest('.dl-menu') && !e.target.closest('.download-btn')) { const menu = document.getElementById(openDownloadMenuId); if (menu) menu.classList.remove('open'); openDownloadMenuId = null; }
@@ -3672,9 +3891,12 @@ document.addEventListener('DOMContentLoaded', () => {
   if (adminRepRange) adminRepRange.onchange = toggleAdminReportRange;
   const lt = $('reqLectureType');
   if (lt) lt.onchange = function(){ $('reqSubjectGroup').style.display = (this.value === 'single_lecture') ? 'block' : 'none'; };
+  // Premium init (desktop only)
+  setTimeout(runPremiumInit, 120);
+  premiumObserver.observe(document.body, { childList: true, subtree: true });
   if (localStorage.getItem('token')) loadDashboard();
 });
-if (document.readyState !== 'loading') { setTimeout(() => handleScrollFab(), 50); }
+if (document.readyState !== 'loading') { setTimeout(() => handleScrollFab(), 50); setTimeout(runPremiumInit, 200); }
 </script>
 </body>
 </html>
