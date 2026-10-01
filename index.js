@@ -39,8 +39,9 @@ const GEMINI_API_KEYS = [
   process.env.GEMINI_API_KEY_6
 ].filter(k => k && k.trim() && k.trim().length > 5).map(k => k.trim());
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-const GEMINI_FALLBACK_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.0-flash'];
+// ✅ Sahi models (index-25.js se copy karo)
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3-flash';
+const GEMINI_FALLBACK_MODELS = ['gemini-3.1-flash-lite', 'gemini-2.5-flash'];
 const GEMINI_GLOBAL_TIMEOUT_MS = 60000;
 
 const SERVER_START_TIME = Date.now();
