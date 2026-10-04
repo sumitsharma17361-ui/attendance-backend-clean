@@ -1,4 +1,4 @@
-// ================= index-30.js =================
+// ================= index-32.js =================
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -38,13 +38,23 @@ const GEMINI_API_KEYS = [
   process.env.GEMINI_API_KEY_6
 ].filter(k => k && k.trim() && k.trim().length > 5).map(k => k.trim());
 
+// ★ User's Render env has GEMINI_MODEL=gemini-3-flash
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3-flash';
-const GEMINI_FALLBACK_MODELS = ['gemini-3.1-flash-lite', 'gemini-2.5-flash'];
+const GEMINI_FALLBACK_MODELS = [
+  process.env.GEMINI_MODEL_2 || 'gemini-3.1-flash-lite',
+  process.env.GEMINI_MODEL_3 || 'gemini-2.5-flash',
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-8b',
+  'gemini-2.0-flash-exp'
+].filter(Boolean);
 const GEMINI_GLOBAL_TIMEOUT_MS = 60000;
 
 const SERVER_START_TIME = Date.now();
 let groqKeyIndex = 0;
 let geminiKeyIndex = 0;
+
+// ★ Model auto-discovery cache
+let _geminiModelsCache = { list: [], fetchedAt: 0 };
 
 function _hashThreadId(threadId, salt = '') {
   const s = salt + '|' + (threadId || 'default');
@@ -78,6 +88,46 @@ function getNextGeminiKey(threadId = null, attempt = 0) {
   return GEMINI_API_KEYS[(start + attempt) % GEMINI_API_KEYS.length];
 }
 
+// ★ Auto-discover available Gemini models on API key
+async function discoverGeminiModels(apiKey) {
+  if (!apiKey) return [];
+  if (Date.now() - _geminiModelsCache.fetchedAt < 30 * 60 * 1000 && _geminiModelsCache.list.length) {
+    return _geminiModelsCache.list;
+  }
+  try {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), 8000);
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`, { signal: controller.signal });
+    clearTimeout(t);
+    if (!res.ok) throw new Error(`List ${res.status}`);
+    const data = await res.json();
+    const models = (data.models || [])
+      .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
+      .map(m => m.name.replace(/^models\//, ''))
+      .sort((a, b) => {
+        const score = (n) => {
+          let s = 0;
+          if (n.includes('flash')) s += 10;
+          if (n.includes('3.8')) s += 6;
+          if (n.includes('3.')) s += 4;
+          if (n.includes('2.5')) s += 3;
+          if (n.includes('2.0')) s += 2;
+          if (n.includes('1.5')) s += 1;
+          if (n.includes('pro')) s -= 3;
+          if (n.includes('lite')) s -= 1;
+          return s;
+        };
+        return score(b) - score(a);
+      });
+    _geminiModelsCache = { list: models, fetchedAt: Date.now() };
+    console.log(`🔍 [GEMINI-DISCOVERY] ${models.length} models available. Top: ${models.slice(0, 6).join(', ')}`);
+    return models;
+  } catch (e) {
+    console.warn('⚠️ Model discovery failed:', e.message);
+    return [];
+  }
+}
+
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
 const COLLEGE_LAT = 28.4509370;
@@ -89,6 +139,7 @@ const SEMESTER_END = new Date('2026-12-31T23:59:59+05:30');
 
 if (!MONGO_URI) { console.error('❌ MONGO_URI missing'); process.exit(1); }
 console.log(`🔑 Groq: ${GROQ_API_KEYS.length} | Gemini: ${GEMINI_API_KEYS.length}`);
+console.log(`🤖 Primary: Groq(${GROQ_MODEL}) → Gemini(${GEMINI_MODEL})`);
 
 function getISTDateString(dateObj) {
   const istDate = new Date(dateObj.getTime() + (5.5 * 60 * 60 * 1000));
@@ -167,13 +218,11 @@ function mapToCanonical(subject) {
 }
 
 // ============================================================
-//  ★★★ LANGUAGE DETECTION — STRICT MATCHING ★★★
+//  ★ LANGUAGE DETECTION — STRICT
 // ============================================================
 function detectLanguage(text) {
   if (!text || typeof text !== 'string') return 'english';
-  // Devanagari script check
   if (/[\u0900-\u097F]/.test(text)) return 'hindi';
-  // Hinglish keywords (Latin-script Hindi)
   const hinglishWords = new Set([
     'karo','kar','kro','kr','kya','kyu','kyun','hai','hain','ho','hoga','hogi','hua','hui',
     'mera','meri','mere','mujhe','tumhe','tumhara','tumhari','humko','hum','tum','apna','apni',
@@ -190,7 +239,6 @@ function detectLanguage(text) {
   const words = text.toLowerCase().split(/[\s,.!?;:()\[\]{}"']+/).filter(Boolean);
   const matches = words.filter(w => hinglishWords.has(w)).length;
   if (matches >= 1 && matches / Math.max(words.length, 1) >= 0.12) return 'hinglish';
-  // English fallback
   return 'english';
 }
 
@@ -653,10 +701,9 @@ const registrationRequestSchema = new mongoose.Schema({
 }, { timestamps: true });
 registrationRequestSchema.index({ rollNo: 1, status: 1 });
 
-// ★★★ NEW: Pending Action for sequential flows (passcode → location → mark) ★★★
 const pendingActionSchema = new mongoose.Schema({
   rollNo: { type: String, required: true, index: true },
-  type: { type: String, required: true },       // awaiting_passcode | awaiting_location | awaiting_confirm
+  type: { type: String, required: true },
   data: { type: mongoose.Schema.Types.Mixed, default: {} },
   lang: { type: String, default: 'english' },
   expiresAt: { type: Date, required: true }
@@ -678,7 +725,7 @@ const PendingAction = mongoose.model('PendingAction', pendingActionSchema);
 Attendance.createIndexes().catch(err => console.error('Index error:', err));
 
 // ============================================================
-//  STUDENT SUMMARY
+//  STUDENT SUMMARY (timetable-based)
 // ============================================================
 async function getStudentSummary(rollNo) {
   try {
@@ -743,17 +790,12 @@ async function getStudentSummary(rollNo) {
   } catch (e) { console.error('getStudentSummary error:', e); return null; }
 }
 
-// ★ Bunk advisor — LECTURES (not days)
 async function getBunkAdvisor(rollNo) {
   const summary = await getStudentSummary(rollNo);
   if (!summary) return null;
   const { totalAcademicLectures: attended, totalConductedLectures: total, attendancePercentage: pct } = summary;
   const target = 0.75;
-  // Max lectures you can skip: x such that attended / (total + x) >= 0.75
-  // x = (attended - 0.75*total) / 0.75
   const canBunkLectures = total > 0 ? Math.max(0, Math.floor((attended - target * total) / target)) : 0;
-  // Lectures needed to reach 75%: y such that (attended + y) / (total + y) >= 0.75
-  // y = (0.75*total - attended) / 0.25
   const lecturesNeeded = pct >= 75 ? 0 : Math.max(0, Math.ceil((target * total - attended) / (1 - target)));
   return {
     totalAttended: attended,
@@ -769,9 +811,67 @@ async function getBunkAdvisor(rollNo) {
 }
 
 // ============================================================
-//  AI CALLS (Groq + Gemini)
+//  ★ DYNAMIC THINKING STEPS
 // ============================================================
-async function callGroqOnce({ prompt, systemPrompt = null, history = null, maxTokens = 1500, temperature = 0.7, timeoutMs = 45000, model = null, apiKey = null, threadId = null, attempt = 0 }) {
+function buildThinkingSteps(ctx) {
+  const {
+    userMessage = '',
+    userRole = 'student',
+    fastIntent = null,
+    aiIntent = null,
+    execResult = null,
+    provider = null,
+    latencyMs = 0,
+    flags = {}
+  } = ctx;
+
+  const steps = [];
+  const msg = String(userMessage || '').slice(0, 100);
+
+  steps.push(`📩 Received: "${msg}"`);
+  steps.push(`👤 Role: ${userRole}`);
+
+  if (fastIntent) {
+    steps.push(`⚡ Regex fast-match: action="${fastIntent.action}" (skipped AI call)`);
+  } else if (aiIntent) {
+    steps.push(`🧠 AI parsed intent: action="${aiIntent.action || 'reply'}"`);
+    if (aiIntent.explanation) steps.push(`   ↳ ${aiIntent.explanation}`);
+    if (aiIntent.collection) steps.push(`   ↳ collection: ${aiIntent.collection}`);
+    if (aiIntent.requiresConfirmation) steps.push(`   ↳ ⚠️ Needs user confirmation`);
+  } else {
+    steps.push(`💬 Casual chat mode (no DB intent matched)`);
+  }
+
+  if (execResult) {
+    if (execResult.isReply) steps.push(`✅ Reply composed directly`);
+    else if (execResult.error) steps.push(`❌ Execution failed: ${execResult.error}`);
+    else if (execResult.needsLiveMarking) steps.push(`📍 Live-marking flow started`);
+    else if (execResult.result) {
+      steps.push(`✅ DB operation completed`);
+      const r = execResult.result;
+      if (Array.isArray(r)) steps.push(`   ↳ Returned ${r.length} record(s)`);
+      else if (r.count !== undefined) steps.push(`   ↳ Count: ${r.count}`);
+      else if (r.totalDefaulters !== undefined) steps.push(`   ↳ Found ${r.totalDefaulters} defaulter(s)`);
+      else if (typeof r === 'object') steps.push(`   ↳ Result keys: ${Object.keys(r).slice(0, 5).join(', ')}`);
+    }
+  }
+
+  if (flags.passcodeVerified) steps.push(`🔐 Passcode verified`);
+  if (flags.locationVerified) steps.push(`📍 Location verified (within campus)`);
+  if (flags.attendanceMarked) steps.push(`✅ Attendance marked in DB`);
+  if (flags.languageDetected) steps.push(`🌐 Detected language: ${flags.languageDetected}`);
+  if (flags.roleRestricted) steps.push(`🚫 Role restriction blocked this action`);
+
+  if (provider) steps.push(`🤖 AI provider: ${provider}`);
+  if (latencyMs > 0) steps.push(`⏱ Completed in ${(latencyMs / 1000).toFixed(2)}s`);
+
+  return steps;
+}
+
+// ============================================================
+//  AI CALLS — Groq + Gemini
+// ============================================================
+async function callGroqOnce({ prompt, systemPrompt = null, history = null, maxTokens = 1500, temperature = 0.7, timeoutMs = 45000, model = null, apiKey = null, threadId = null, attempt = 0, forceJson = false }) {
   const useKey = apiKey || getNextGroqKey(threadId, attempt);
   if (!useKey) throw new Error('No Groq API key');
   const useModel = model || GROQ_MODEL;
@@ -785,13 +885,17 @@ async function callGroqOnce({ prompt, systemPrompt = null, history = null, maxTo
     }
   }
   messages.push({ role: 'user', content: prompt });
+
+  const body = { model: useModel, messages, max_tokens: maxTokens, temperature, top_p: 0.95 };
+  if (forceJson) body.response_format = { type: 'json_object' };
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(GROQ_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${useKey}` },
-      body: JSON.stringify({ model: useModel, messages, max_tokens: maxTokens, temperature, top_p: 0.95 }),
+      body: JSON.stringify(body),
       signal: controller.signal
     });
     clearTimeout(timeout);
@@ -812,7 +916,7 @@ async function callGroq(args) {
     const apiKey = getNextGroqKey(args.threadId || null, 0);
     if (!apiKey) break;
     try {
-      console.log(`🚀 [GROQ] thread=${args.threadId || '-'} model=${model}`);
+      console.log(`🚀 [GROQ] thread=${args.threadId || '-'} model=${model}${args.forceJson ? ' (json)' : ''}`);
       return await callGroqOnce({ ...args, model, apiKey, attempt: 0 });
     } catch (err) { lastError = err; console.warn(`⚠️ [GROQ] ${model}: ${err.message.substring(0, 100)}`); }
   }
@@ -862,14 +966,18 @@ async function callGeminiOnce({ prompt, systemPrompt = null, fileBase64 = null, 
   } catch (err) { clearTimeout(timeout); throw err; }
 }
 
+// ★ callGemini with auto-discovery fallback
 async function callGemini(args) {
-  const modelsToTry = [args.model || GEMINI_MODEL, ...GEMINI_FALLBACK_MODELS];
   if (GEMINI_API_KEYS.length === 0) throw new Error('No Gemini API key');
+  const preferred = [args.model || GEMINI_MODEL, ...GEMINI_FALLBACK_MODELS].filter(Boolean);
+
+  // Try preferred models first
   const startTime = Date.now();
   let lastError = null;
-  for (const model of modelsToTry) {
+
+  for (const model of preferred) {
     for (let i = 0; i < GEMINI_API_KEYS.length; i++) {
-      if (Date.now() - startTime > GEMINI_GLOBAL_TIMEOUT_MS) throw new Error('AI took too long (60s).');
+      if (Date.now() - startTime > GEMINI_GLOBAL_TIMEOUT_MS) throw new Error('Gemini timeout');
       const apiKey = getNextGeminiKey(args.threadId || null, i);
       if (!apiKey) break;
       try {
@@ -878,12 +986,29 @@ async function callGemini(args) {
       } catch (err) {
         lastError = err;
         const parsed = parseGeminiError(err);
-        console.warn(`⚠️ [GEMINI ${parsed.code}] ${err.message.substring(0, 100)}`);
-        if (parsed.type === 'MODEL_NOT_FOUND' || parsed.type === 'BAD_REQUEST') break;
+        console.warn(`⚠️ [GEMINI ${parsed.code}] ${model}: ${err.message.substring(0, 100)}`);
+        if (parsed.type === 'MODEL_NOT_FOUND') break;
       }
     }
   }
-  throw lastError || new Error('All Gemini failed.');
+
+  // ★ All preferred failed → discover available models and try
+  console.log(`🔍 [GEMINI] Preferred models failed, auto-discovering...`);
+  const discovered = await discoverGeminiModels(GEMINI_API_KEYS[0]);
+  const remaining = discovered.filter(m => !preferred.includes(m));
+
+  for (const model of remaining.slice(0, 3)) {
+    if (Date.now() - startTime > GEMINI_GLOBAL_TIMEOUT_MS) break;
+    try {
+      console.log(`🤖 [GEMINI-DISCOVERED] Trying model=${model}`);
+      return await callGeminiOnce({ ...args, model, apiKey: GEMINI_API_KEYS[0], attempt: 0 });
+    } catch (err) {
+      lastError = err;
+      console.warn(`⚠️ [GEMINI-DISCOVERED] ${model}: ${err.message.substring(0, 100)}`);
+    }
+  }
+
+  throw lastError || new Error('All Gemini models failed.');
 }
 
 async function callAI(args) {
@@ -955,7 +1080,7 @@ app.get('/health', (req, res) => res.json({
   status: 'ok',
   ai: {
     primary: { provider: 'groq', model: GROQ_MODEL, keys: GROQ_API_KEYS.length },
-    fallback: { provider: 'gemini', model: GEMINI_MODEL, keys: GEMINI_API_KEYS.length }
+    fallback: { provider: 'gemini', model: GEMINI_MODEL, keys: GEMINI_API_KEYS.length, discovered: _geminiModelsCache.list.length }
   },
   timestamp: new Date().toISOString()
 }));
@@ -1381,7 +1506,6 @@ app.get('/api/requests/my/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ★ FIXED: Always returns { requests: [...] } shape
 app.get('/api/requests/all/:requesterRollNo', async (req, res) => {
   try {
     const rrn = req.params.requesterRollNo.trim().toUpperCase();
@@ -2195,7 +2319,7 @@ app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== STUDENT SUMMARY ==========
+// ========== STUDENT SUMMARY ENDPOINT ==========
 app.get('/api/student/summary/:rollNo', async (req, res) => {
   try {
     const cr = req.params.rollNo.trim().toUpperCase();
@@ -2513,26 +2637,80 @@ app.post('/api/admin/clear-leaves', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== DEFAULTERS ==========
+// ============================================================
+//  ★★★ DEFAULTERS — FIXED (uses getStudentSummary, full list)
+// ============================================================
 app.get('/api/admin/defaulters/:requesterRollNo', async (req, res) => {
   try {
     const req1 = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
     if (!req1 || req1.role !== 'admin') return res.status(403).json({ error: 'Admin only!' });
+
     const threshold = parseInt(req.query.threshold) || 75;
-    const students = await User.find({ role: 'student' }).select('rollNo name branch');
-    const today = getISTDateString(new Date());
-    const startStr = getISTDateString(SEMESTER_START);
+    const branchFilter = (req.query.branch || '').toUpperCase();
+
+    let studentQuery = { role: 'student' };
+    if (branchFilter && branchFilter !== 'ALL') studentQuery.branch = branchFilter;
+
+    const students = await User.find(studentQuery).select('rollNo name branch').sort({ rollNo: 1 }).lean();
+
+    console.log(`📊 [DEFAULTERS] Scanning ${students.length} students | threshold=${threshold}% | branch=${branchFilter || 'ALL'}`);
+
     const defaulters = [];
+    const errors = [];
+    const buckets = { zero: 0, low: 0, mid: 0 };
+
     for (const s of students) {
-      const present = await Attendance.countDocuments({ rollNo: s.rollNo, date: { $gte: startStr, $lte: today }, status: { $in: ['Present','Duty Leave'] }, subject: { $nin: [/Sports/i, /LIB/i, /Library/i] } });
-      const total = await Attendance.countDocuments({ rollNo: s.rollNo, date: { $gte: startStr, $lte: today }, subject: { $nin: [/Sports/i, /LIB/i, /Library/i] } });
-      if (total === 0) { defaulters.push({ rollNo: s.rollNo, name: s.name, branch: s.branch, pct: 0, present: 0, total: 0 }); continue; }
-      const pct = Math.round((present/total)*100);
-      if (pct < threshold) defaulters.push({ rollNo: s.rollNo, name: s.name, branch: s.branch, pct, present, total });
+      try {
+        const summary = await getStudentSummary(s.rollNo);
+        if (!summary) {
+          errors.push({ rollNo: s.rollNo, reason: 'no-summary' });
+          continue;
+        }
+
+        const pct = summary.attendancePercentage || 0;
+        const total = summary.totalConductedLectures || 0;
+        const present = summary.totalAcademicLectures || 0;
+
+        // ★ Include only if BELOW threshold
+        if (pct < threshold) {
+          defaulters.push({
+            rollNo: s.rollNo,
+            name: s.name,
+            branch: s.branch,
+            pct,
+            present,
+            total,
+            noData: total === 0
+          });
+
+          if (pct === 0) buckets.zero++;
+          else if (pct < 50) buckets.low++;
+          else buckets.mid++;
+        }
+      } catch (e) {
+        console.error(`  ❌ ${s.rollNo}: ${e.message}`);
+        errors.push({ rollNo: s.rollNo, reason: e.message });
+      }
     }
-    defaulters.sort((a,b) => a.pct - b.pct);
-    res.json({ threshold, defaulters });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+
+    defaulters.sort((a, b) => a.pct - b.pct);
+
+    console.log(`✅ [DEFAULTERS] Found ${defaulters.length} below ${threshold}% (0%: ${buckets.zero}, <50%: ${buckets.low}, 50-${threshold}%: ${buckets.mid})`);
+
+    res.json({
+      threshold,
+      branch: branchFilter || 'ALL',
+      totalStudents: students.length,
+      totalDefaulters: defaulters.length,
+      buckets,
+      scanned: students.length - errors.length,
+      errors: errors.length ? errors : undefined,
+      defaulters
+    });
+  } catch (err) {
+    console.error('Defaulters error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ============================================================
@@ -2554,7 +2732,7 @@ async function getSystemHealth() {
     Chat.countDocuments().catch(() => 0),
     RegistrationRequest.countDocuments({ status: 'Pending' }).catch(() => 0)
   ]);
-  return { status: 'HEALTHY', uptime: `${uptimeHrs} hours`, database: { state: dbState, ping: dbPing }, ai: { primary: { provider: 'Groq', model: GROQ_MODEL, keysConfigured: GROQ_API_KEYS.length }, fallback: { provider: 'Gemini', model: GEMINI_MODEL, keysConfigured: GEMINI_API_KEYS.length } }, counts: { totalUsers: users, students, faculty, attendances, pendingRequests: requests, holidays, chats, pendingRegistrationRequests: regReqs } };
+  return { status: 'HEALTHY', uptime: `${uptimeHrs} hours`, database: { state: dbState, ping: dbPing }, ai: { primary: { provider: 'Groq', model: GROQ_MODEL, keysConfigured: GROQ_API_KEYS.length }, fallback: { provider: 'Gemini', model: GEMINI_MODEL, keysConfigured: GEMINI_API_KEYS.length, discovered: _geminiModelsCache.list.length } }, counts: { totalUsers: users, students, faculty, attendances, pendingRequests: requests, holidays, chats, pendingRegistrationRequests: regReqs } };
 }
 
 async function getFacultyClassAverage(teacherRollNo, subjectFilter = null) {
@@ -2669,115 +2847,208 @@ async function getGeofenceGuide(userContext) {
 }
 
 // ============================================================
-//  ★★★ EXPANDED DB INTENT PROMPT — Full manual features ★★★
+//  ★ FAST REGEX INTENT PARSER (bypass AI for common commands)
 // ============================================================
-const DB_INTENT_PROMPT = `You are the Database Intent Parser for BM Group ERP.
-Translate user's natural language into JSON. NEVER invent data. NEVER write prose.
-## Today's date is provided in user context. Use it strictly.
-## Collections: users, attendances, holidays, notices, leaves, passcodes, teachersubjects, attendancerequests, registrationrequests, accountrequests
-## Response JSON format (STRICT):
+function fastIntentParse(message, role) {
+  if (!message) return null;
+  const t = message.toLowerCase().trim();
+
+  // ========== STUDENT: Mark attendance ==========
+  if (role === 'student') {
+    if (/^(mark|lagao|lag|lagado|lagwa|dikhao|kar).{0,20}(my|meri|aaj|today|abhi).{0,10}(attendance|hazri|haziri|present|upasthiti)/i.test(t) ||
+        /(meri|my|aaj ki|today).{0,15}(attendance|hazri|haziri|present).{0,15}(mark|lagao|lag|kar|lagado)/i.test(t) ||
+        /^mark (my )?attendance$/i.test(t) ||
+        /^attendance mark kar(o|do)?$/i.test(t)) {
+      const isLecture = /(single|ek|one|lecture|period|class)/i.test(t) && !/full|pura|poora/i.test(t);
+      return {
+        action: 'db_live_mark',
+        data: { lectureType: isLecture ? 'single_lecture' : 'full_day' },
+        explanation: 'Starting attendance marking flow',
+        _fast: true
+      };
+    }
+    if (/(meri|my|show|dikhao).{0,20}(attendance|hazri|haziri|percentage|summary)/i.test(t) ||
+        /^(attendance|hazri)( kya hai| kitni hai)?$/i.test(t)) {
+      return { action: 'db_my_attendance', explanation: 'Your attendance summary', _fast: true };
+    }
+    if (/(my|meri|mere|show|dikhao).{0,15}(requests?|aavedan)/i.test(t) ||
+        /^(my requests?|meri requests?)$/i.test(t)) {
+      return { action: 'db_my_requests', explanation: 'Your requests', _fast: true };
+    }
+    if (/(bunk|chhutti\s*le|skip).{0,15}(kitni|how many|sakta|skata)/i.test(t) ||
+        /(kitni|how many).{0,10}bunk/i.test(t)) {
+      return { action: 'db_bunk_advisor', explanation: 'Bunk advisor', _fast: true };
+    }
+  }
+
+  // ========== ADMIN / FACULTY ==========
+  if (role === 'admin' || role === 'faculty') {
+    // Device reset
+    const deviceResetMatch = t.match(/(?:reset|unlock|clear)\s+(?:device\s+)?(?:of\s+|for\s+)?(2[45](?:cse|aids)\d{2})/i) ||
+                             t.match(/(2[45](?:cse|aids)\d{2}).{0,10}(?:ka|ki|device).{0,10}(?:reset|unlock|clear)/i);
+    if (deviceResetMatch) {
+      return { action: 'db_reset_device', data: { rollNo: deviceResetMatch[1].toUpperCase() }, explanation: 'Device reset', _fast: true };
+    }
+    // Password reset
+    const pwdResetMatch = t.match(/(?:reset|change)\s+password\s+(?:of\s+|for\s+)?(2[45](?:cse|aids)\d{2})\s+(?:to\s+)?(\S+)/i);
+    if (pwdResetMatch) {
+      return { action: 'db_reset_password', data: { rollNo: pwdResetMatch[1].toUpperCase(), newPassword: pwdResetMatch[2] }, explanation: 'Password reset', _fast: true };
+    }
+    // Delete user
+    const delMatch = t.match(/(?:delete|remove|hatao)\s+(?:user\s+|account\s+)?(2[45](?:cse|aids)\d{2})/i);
+    if (delMatch) {
+      return { action: 'db_delete_user', data: { rollNo: delMatch[1].toUpperCase() }, explanation: `Delete ${delMatch[1]}`, requiresConfirmation: true, _fast: true };
+    }
+    // Add holiday (English months)
+    const holMatch = message.match(/(?:add\s+holiday|holiday\s+add|declare\s+holiday|chutti|chhutti)\s+(\d{1,2})\s+([a-z]+)(?:\s+(.+))?/i);
+    if (holMatch) {
+      const monthMap = { jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,
+                        january:1,february:2,march:3,april:4,june:6,july:7,august:8,september:9,october:10,november:11,december:12 };
+      const month = monthMap[holMatch[2].toLowerCase()];
+      if (month) {
+        const dateStr = `2026-${String(month).padStart(2,'0')}-${String(holMatch[1]).padStart(2,'0')}`;
+        return { action: 'db_add_holiday', data: { date: dateStr, reason: holMatch[3] || 'Holiday' }, explanation: 'Add holiday', _fast: true };
+      }
+    }
+    // Add holiday (ISO format)
+    const holIso = message.match(/(?:add\s+holiday|holiday\s+add|declare\s+holiday)\s+(\d{4}-\d{2}-\d{2})\s+(.+)?/i);
+    if (holIso) {
+      return { action: 'db_add_holiday', data: { date: holIso[1], reason: holIso[2] || 'Holiday' }, explanation: 'Add holiday', _fast: true };
+    }
+    // Publish passcode
+    const pubMatch = t.match(/publish.{0,20}(full\s*day|full_day|lecture|single).{0,20}(?:for\s+)?(\d+)?/i);
+    if (pubMatch) {
+      const type = /full|fullday/.test(pubMatch[1]) ? 'full_day' : 'single_lecture';
+      const minutes = parseInt(pubMatch[2]) || (type === 'full_day' ? 1440 : 30);
+      return { action: 'db_publish_passcode', data: { type, durationMinutes: minutes }, explanation: 'Publish passcode', _fast: true };
+    }
+    // Generate lecture passcode
+    if (/(generate|banao|create).{0,15}(lecture|single).{0,15}passcode/i.test(t) ||
+        /(lecture|single).{0,10}passcode.{0,10}(generate|banao|create)/i.test(t)) {
+      return { action: 'db_generate_passcode', explanation: 'Generate lecture passcode', _fast: true };
+    }
+    // Defaulters
+    if (/(defaulters?|below\s*75|kam\s*attendance|low\s*attendance|defaulter\s*list)/i.test(t)) {
+      const thresh = t.match(/(\d{2,3})\s*%?/);
+      return { action: 'db_defaulters', data: { threshold: thresh ? parseInt(thresh[1]) : 75 }, explanation: 'Defaulters list', _fast: true };
+    }
+    // Approve/reject all
+    if (/(approve|manzoor|swikar).{0,15}(all|pending|sab)/i.test(t)) {
+      return { action: 'db_bulk_review', data: { decision: 'Approved' }, explanation: 'Approve all pending', _fast: true };
+    }
+    if (/(reject).{0,15}(all|pending|sab)/i.test(t)) {
+      return { action: 'db_bulk_review', data: { decision: 'Rejected' }, explanation: 'Reject all pending', _fast: true };
+    }
+    // List requests
+    if (/(pending|list|show|dikhao).{0,15}requests?/i.test(t)) {
+      return { action: 'db_list_requests', data: { status: 'Pending' }, explanation: 'List requests', _fast: true };
+    }
+    // List registrations
+    if (/(pending|list|show|dikhao).{0,15}registration/i.test(t)) {
+      return { action: 'db_list_registrations', data: { status: 'Pending' }, explanation: 'List registrations', _fast: true };
+    }
+    // Dashboard stats
+    if (/(dashboard|stats|summary|overall)/i.test(t) && t.length < 40) {
+      return { action: 'db_dashboard_stats', explanation: 'Dashboard stats', _fast: true };
+    }
+  }
+
+  // ========== COMMON ==========
+  if (/(timetable|time\s*table|schedule|classes).{0,15}(today|aaj|dikhao|show)?/i.test(t) ||
+      /^(today.?s timetable|aaj ka timetable)/i.test(t)) {
+    return { action: 'db_timetable', explanation: 'Timetable', _fast: true };
+  }
+
+  return null;
+}
+
+// ============================================================
+//  ★ EXPANDED DB INTENT PROMPT
+// ============================================================
+const DB_INTENT_PROMPT = `You are a JSON API. Return ONLY valid JSON. No prose. No markdown.
+Translate user's natural language into a JSON action. NEVER invent data. NEVER write prose.
+## Today's date and role are provided in user context.
+## Response format (STRICT):
 {"action":"...","collection":"...","filter":{...},"update":{...},"data":{...},"limit":number,"sort":{...},"explanation":"...","requiresConfirmation":true|false,"reply":null}
 
-## SUPPORTED ACTIONS (ALL ROLES):
-
+## SUPPORTED ACTIONS:
 ### GENERAL
-- "reply"                → general chat / non-DB answer (put answer in "reply")
-- "db_read"              → read docs from a collection
-- "db_count"             → count docs
-- "db_timetable"         → get formatted timetable for a date (data: { date })
-- "db_system_health"     → server health, AI keys, DB status (ADMIN only)
+- "reply" → casual chat (put answer in "reply")
+- "db_read" / "db_count" → read/count
+- "db_timetable" → timetable (data: { date })
+- "db_system_health" → health (ADMIN)
 
-### STUDENT (role=student)
-- "db_live_mark"         → mark attendance LIVE (data: { lectureType: 'full_day'|'single_lecture' }). Bot will ask passcode → location.
-- "db_submit_request"    → submit attendance request (data: { date, lectureType, subject, reason })
-- "db_my_requests"       → list my recent attendance requests
-- "db_my_attendance"     → get my attendance summary
-- "db_my_leave"          → list my leave applications
-- "db_apply_leave"       → apply for leave (data: { fromDate, toDate, reason, leaveType })
-- "db_bunk_advisor"      → bunk advisor (lecture count)
-- "db_working_days"      → working days + holidays info
-- "db_geofence_guide"    → geofence + active passcode + period help
-- "db_my_report_pdf"     → request PDF (data: { range: 'CURRENT_MONTH'|'SELECTED_MONTH'|'FULL_SEMESTER', month })
+### STUDENT
+- "db_live_mark" → live mark (data: { lectureType })
+- "db_submit_request" → submit request
+- "db_my_requests" / "db_my_attendance" / "db_my_leave" / "db_apply_leave"
+- "db_bunk_advisor" / "db_working_days" / "db_geofence_guide"
 
-### FACULTY (role=faculty)
-- "db_faculty_mark"      → mark single student (data: { rollNo, subject, date })
-- "db_nlp_bulk_mark"     → bulk mark via natural language (data: { rawMessage })
-- "db_faculty_bulk_delete" → bulk delete (data: { studentRollNos: [], dates: [] })
-- "db_generate_passcode" → generate lecture passcode
-- "db_my_students"       → list my students
-- "db_recent_marks"      → my recent marks
-- "db_class_average"     → class average (data: { subject })
-- "db_student_lookup"    → lookup a student (data: { rollNo })
-- "db_review_request"    → review single request (data: { rollNo, date, decision, note })
+### FACULTY
+- "db_faculty_mark" → mark single (data: { rollNo, subject })
+- "db_nlp_bulk_mark" → bulk mark
+- "db_generate_passcode" / "db_my_students" / "db_recent_marks"
+- "db_class_average" / "db_student_lookup"
+- "db_review_request"
 
-### ADMIN (role=admin) — ALL faculty actions PLUS:
-- "db_add_user"          → register new user (data: { name, rollNo, password, role, subject })
-- "db_delete_user"       → delete account (data: { rollNo })
-- "db_reset_password"    → reset password (data: { rollNo, newPassword })
-- "db_reset_device"      → reset device binding (data: { rollNo })
-- "db_update_roll"       → change roll no (data: { oldRoll, newRoll })
-- "db_broadcast_notice"  → publish notice (data: { message })
-- "db_clear_notice"      → clear all notices
-- "db_add_holiday"       → add holiday (data: { date, reason })
-- "db_delete_holiday"    → delete holiday (data: { date })
-- "db_list_holidays"     → list all holidays
-- "db_publish_passcode"  → publish passcode (data: { type, durationMinutes })
-- "db_toggle_passcode"   → enable/disable system (data: { enabled: bool })
-- "db_passcode_status"   → passcode system status
-- "db_list_requests"     → list attendance requests (data: { status: 'Pending'|'Approved'|'Rejected'|'ALL' })
-- "db_review_request"    → review single request
-- "db_bulk_review"       → approve/reject all pending (data: { decision: 'Approved'|'Rejected' })
-- "db_clear_requests"    → delete ALL attendance requests
-- "db_list_registrations"→ list registration requests (data: { status })
-- "db_review_registration" → approve/reject registration (data: { rollNo, decision, note })
-- "db_clear_registrations" → clear all registration requests
-- "db_list_account_requests" → list password/device requests
-- "db_review_account_request" → approve/reject (data: { requestId, decision, note })
-- "db_clear_account_requests" → clear all
-- "db_list_leave"        → list all leave requests
-- "db_review_leave"      → approve/reject leave (data: { leaveId, decision, note })
-- "db_clear_leaves"      → clear all leaves
-- "db_manual_mark"       → manual mark (data: { rollNo, date, subjects: [], status })
-- "db_bulk_mark"         → bulk mark (data: { studentRollNos: [], dates: [], subjects: [] })
-- "db_bulk_delete"       → bulk delete (data: { studentRollNos: [], dates: [] })
-- "db_top_attendance"    → top attendance students (data: { limit })
-- "db_defaulters"        → defaulters list (data: { threshold })
-- "db_impersonate"       → view student data (data: { rollNo })
-- "db_fix_attendance"    → fix all attendance (data: { testRollNo })
-- "db_assign_subject"    → assign subject to teacher (data: { teacherRollNo, subject })
-- "db_remove_subject"    → remove assignment (data: { teacherRollNo, subject })
-- "db_clear_chats"       → clear all my chats
-- "db_dashboard_stats"   → live dashboard stats
-- "db_all_users"         → list all users (data: { role })
+### ADMIN (all of above plus)
+- "db_add_user" / "db_delete_user" / "db_reset_password" / "db_reset_device" / "db_update_roll"
+- "db_broadcast_notice" / "db_clear_notice"
+- "db_add_holiday" / "db_delete_holiday" / "db_list_holidays"
+- "db_publish_passcode" / "db_toggle_passcode" / "db_passcode_status"
+- "db_list_requests" / "db_bulk_review" / "db_clear_requests"
+- "db_list_registrations" / "db_review_registration" / "db_clear_registrations"
+- "db_list_account_requests" / "db_review_account_request" / "db_clear_account_requests"
+- "db_list_leave" / "db_review_leave" / "db_clear_leaves"
+- "db_manual_mark" / "db_bulk_mark" / "db_bulk_delete"
+- "db_top_attendance" / "db_defaulters" / "db_impersonate" / "db_fix_attendance"
+- "db_assign_subject" / "db_remove_subject"
+- "db_clear_chats" / "db_dashboard_stats" / "db_all_users"
 
-## CRITICAL RULES:
-1. Students CANNOT directly create attendances via db_create. Use "db_live_mark" (live with passcode+location) or "db_submit_request" (past/today-after-3PM).
-2. If user says "mark my attendance" / "meri attendance lagao" / "attendance mark karo" → action="db_live_mark", data={lectureType: 'full_day'}
-3. If user says "mark single lecture" / "ek lecture" → action="db_live_mark", data={lectureType: 'single_lecture'}
-4. DEFAULTERS → "db_defaulters"
-5. Non-DB chat → action "reply" with the answer directly.
-6. Destructive actions → requiresConfirmation: true.
-7. Return ONLY valid JSON. No code fence. No extra text.`;
+## CRITICAL:
+1. Students CANNOT create attendances. Use "db_live_mark" or "db_submit_request".
+2. "mark my attendance" → action="db_live_mark", data={lectureType: 'full_day'}
+3. Destructive → requiresConfirmation: true
+4. If you cannot match → action "reply" with answer
+5. Return ONLY JSON, no extra text`;
 
 async function detectDbIntent(message, userContext, threadId = null) {
+  // ★ Fast regex parser first
+  const fastIntent = fastIntentParse(message, userContext.role);
+  if (fastIntent) {
+    console.log(`⚡ [FAST-INTENT] ${fastIntent.action}`);
+    return fastIntent;
+  }
+
   const today = getISTDateString(new Date());
   const tomorrow = getISTDateString(new Date(Date.now() + 24 * 60 * 60 * 1000));
-  const dayAfter = getISTDateString(new Date(Date.now() + 48 * 60 * 60 * 1000));
   const now = new Date();
-  const istHour = getISTHour(now);
   const istMin = getISTMinutes(now);
   const istTimeStr = `${String(Math.floor(istMin/60)).padStart(2,'0')}:${String(istMin%60).padStart(2,'0')}`;
-  const ctx = `Role: ${userContext.role}\nRollNo: ${userContext.rollNo}\nName: ${userContext.name}\nBranch: ${userContext.branch || 'CSE'}\nToday: ${today}\nTomorrow: ${tomorrow}\nDay after: ${dayAfter}\nCurrent IST: ${istTimeStr}\nCollege Hours: 09:20–15:00 IST`;
+  const ctx = `Role: ${userContext.role}\nRollNo: ${userContext.rollNo}\nName: ${userContext.name}\nBranch: ${userContext.branch || 'CSE'}\nToday: ${today}\nTomorrow: ${tomorrow}\nCurrent IST: ${istTimeStr}\nCollege Hours: 09:20–15:00 IST`;
   const prompt = `${ctx}\n\nUser message: "${message}"\n\nReturn ONLY valid JSON.`;
-  try {
-    const reply = await callAI({ prompt, systemPrompt: DB_INTENT_PROMPT, maxTokens: 800, temperature: 0.1, threadId });
-    let cleaned = reply.trim();
-    if (cleaned.startsWith('```')) cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
-    return JSON.parse(cleaned);
-  } catch (err) {
-    console.warn('DB intent parse failed:', err.message);
-    return { action: 'reply', reply: null, explanation: 'Could not parse', requiresConfirmation: false };
+
+  // ★ Retry once if parse fails
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const reply = await callAI({ prompt, systemPrompt: DB_INTENT_PROMPT, maxTokens: 800, temperature: 0.1, threadId, forceJson: true });
+      let cleaned = reply.trim();
+      if (cleaned.startsWith('```')) cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (jsonMatch) cleaned = jsonMatch[0];
+      const parsed = JSON.parse(cleaned);
+      // Validate — reject manual instructions
+      if (parsed.action === 'reply' && parsed.reply && /open|click|dashboard|panel|section/i.test(parsed.reply)) {
+        console.warn(`⚠️ [INTENT] AI returned manual instructions (attempt ${attempt+1})`);
+        if (attempt === 0) continue;
+      }
+      return parsed;
+    } catch (err) {
+      console.warn(`⚠️ [INTENT] Parse failed (attempt ${attempt+1}):`, err.message);
+      if (attempt === 1) return { action: 'reply', reply: null, explanation: 'Could not parse', requiresConfirmation: false };
+    }
   }
+  return { action: 'reply', reply: null };
 }
 
 async function getTopAttendance(limit = 5) {
@@ -2795,14 +3066,14 @@ async function getTopAttendance(limit = 5) {
 }
 
 // ============================================================
-//  ★★★ EXPANDED DB ACTION EXECUTOR ★★★
+//  DB ACTION EXECUTOR
 // ============================================================
 async function executeDbAction(intent, userContext, threadId = null) {
   const { action, collection, filter, update, data, limit, sort, explanation, reply } = intent;
   const isAdmin = userContext.role === 'admin';
   const isFaculty = userContext.role === 'faculty';
   const isStudent = userContext.role === 'student';
-  let f = filter ? { ...filter } : null;   // local copy so we can mutate
+  let f = filter ? { ...filter } : null;
   const collMap = { users: User, attendances: Attendance, holidays: Holiday, notices: Notice, leaves: Leave, passcodes: Passcode, teachersubjects: TeacherSubject, attendancerequests: AttendanceRequest, registrationrequests: RegistrationRequest, accountrequests: AccountRequest };
 
   if (action === 'reply') return { reply: reply || explanation || 'Noted.', isReply: true };
@@ -2865,7 +3136,7 @@ async function executeDbAction(intent, userContext, threadId = null) {
     return { reply: txt, isReply: true };
   }
   if (action === 'db_my_report_pdf') {
-    return { reply: `📄 I can generate your PDF. Tap **Download PDF** on dashboard or say the exact month (e.g., "September PDF").`, isReply: true, showDownload: true };
+    return { reply: `📄 I can generate your PDF. Tap **Download PDF** on dashboard or say the exact month.`, isReply: true, showDownload: true };
   }
 
   // ========== FACULTY ==========
@@ -2938,7 +3209,7 @@ async function executeDbAction(intent, userContext, threadId = null) {
     const key = `single_lecture_${todayStr}_${period.start}`;
     await Passcode.deleteMany({ key });
     await new Passcode({ passcode, type: 'single_lecture', key, expiresAt: expiry, published: true, isPublic: true, enabled: true, publishedAt: now, publishedBy: userContext.rollNo, durationMinutes: 5 }).save();
-    return { reply: `🔐 **Lecture Passcode Generated:**\n\n**${passcode}**\n\n• Valid for 5 min\n• For: ${mapToCanonical(period.subject)} (${period.start}–${period.end})`, isReply: true };
+    return { reply: `🔐 **Lecture Passcode Generated:**\n\n**${passcode}**\n\n• Valid for 5 min\n• For: ${mapToCanonical(period.subject)}`, isReply: true };
   }
   if (action === 'db_my_students') {
     if (!isFaculty) return { error: 'Faculty only.' };
@@ -2959,14 +3230,17 @@ async function executeDbAction(intent, userContext, threadId = null) {
     if (!isFaculty && !isAdmin) return { error: 'Faculty/Admin only.' };
     const avg = await getFacultyClassAverage(userContext.rollNo, data?.subject || null);
     if (avg.error) return { error: avg.error };
-    return { result: avg, isClassAverage: true };
+    const subjLines = Object.entries(avg.subjectWise || {}).map(([s, st]) => `• ${s}: **${st.percentage}%** (${st.present}/${st.total})`).join('\n');
+    return { reply: `👨‍🏫 **Class Average**\n\n**Students:** ${avg.totalStudents}\n**Average:** **${avg.overallAverage}%**\n\n${subjLines}`, isReply: true };
   }
   if (action === 'db_student_lookup') {
     if (!isFaculty && !isAdmin) return { error: 'Faculty/Admin only.' };
     if (!data?.rollNo) return { error: 'rollNo required.' };
     const lookup = await getStudentLookup(data.rollNo, userContext.rollNo, userContext.role);
     if (lookup.error) return { error: lookup.error };
-    return { result: lookup, isStudentLookup: true };
+    const s = lookup.student; const o = lookup.overall;
+    let txt = `🎓 **${s.name}** (${s.rollNo}) — ${s.branch}\n\n• Overall: **${o.attended}/${o.conducted}** (${o.percentage}%)\n• Days: ${o.daysPresent}/${o.workingDaysSoFar}`;
+    return { reply: txt, isReply: true };
   }
   if (action === 'db_review_request') {
     if (!isAdmin && !isFaculty) return { error: 'Admin/Faculty only.' };
@@ -3052,7 +3326,7 @@ async function executeDbAction(intent, userContext, threadId = null) {
   if (action === 'db_broadcast_notice') {
     if (!isAdmin) return { error: 'Admin only.' };
     if (!data?.message) return { error: 'message required.' };
-    const n = await Notice.create({ title: data.title || 'Announcement', message: data.message });
+    await Notice.create({ title: data.title || 'Announcement', message: data.message });
     return { reply: `📢 **Notice Published**\n\n"${data.message}"\n\nAll users will see this.`, isReply: true };
   }
   if (action === 'db_clear_notice') {
@@ -3292,17 +3566,18 @@ async function executeDbAction(intent, userContext, threadId = null) {
   if (action === 'db_defaulters') {
     if (!isAdmin) return { error: 'Admin only.' };
     const threshold = parseInt(data?.threshold) || 75;
-    const students = await User.find({ role: 'student' }).select('rollNo name branch');
-    const today = getISTDateString(new Date());
-    const startStr = getISTDateString(SEMESTER_START);
+    const students = await User.find({ role: 'student' }).select('rollNo name branch').lean();
     const defaulters = [];
+    let scanned = 0;
     for (const s of students) {
-      const present = await Attendance.countDocuments({ rollNo: s.rollNo, date: { $gte: startStr, $lte: today }, status: { $in: ['Present','Duty Leave'] }, subject: { $nin: [/Sports/i, /LIB/i, /Library/i] } });
-      const total = await Attendance.countDocuments({ rollNo: s.rollNo, date: { $gte: startStr, $lte: today }, subject: { $nin: [/Sports/i, /LIB/i, /Library/i] } });
-      const pct = total > 0 ? Math.round((present/total)*100) : 0;
-      if (total === 0 || pct < threshold) defaulters.push({ rollNo: s.rollNo, name: s.name, branch: s.branch, pct, present, total });
+      const summary = await getStudentSummary(s.rollNo);
+      if (!summary) continue;
+      scanned++;
+      if (summary.attendancePercentage < threshold) {
+        defaulters.push({ rollNo: s.rollNo, name: s.name, branch: s.branch, pct: summary.attendancePercentage, present: summary.totalAcademicLectures, total: summary.totalConductedLectures });
+      }
     }
-    defaulters.sort((a,b) => a.pct - b.pct);
+    defaulters.sort((a, b) => a.pct - b.pct);
     if (!defaulters.length) return { reply: `✅ No defaulters below ${threshold}%.`, isReply: true };
     return { reply: `⚠️ **${defaulters.length} Defaulter(s)** (below ${threshold}%)\n\n` + defaulters.slice(0, 30).map(d => `• ${d.rollNo} (${d.name}) — ${d.present}/${d.total} (**${d.pct}%**)`).join('\n'), isReply: true };
   }
@@ -3377,7 +3652,8 @@ async function executeDbAction(intent, userContext, threadId = null) {
   if (action === 'db_system_health') {
     if (!isAdmin) return { error: 'Admin only.' };
     const h = await getSystemHealth();
-    return { result: h, isSystemHealth: true };
+    let txt = `🖥️ **System Health**\n\n**Status:** ✅ ${h.status}\n**Uptime:** ${h.uptime}\n**DB:** ${h.database.state} (ping ${h.database.ping})\n\n**AI:** ${h.ai.primary.provider} (${h.ai.primary.keysConfigured} keys) → ${h.ai.fallback.provider} (${h.ai.fallback.keysConfigured} keys, ${h.ai.fallback.discovered} discovered)\n\n**Counts:**\n• Users: ${h.counts.totalUsers} (S:${h.counts.students} F:${h.counts.faculty})\n• Attendance: ${h.counts.attendances}\n• Pending: ${h.counts.pendingRequests}\n• Reg Reqs: ${h.counts.pendingRegistrationRequests || 0}\n• Holidays: ${h.counts.holidays}`;
+    return { reply: txt, isReply: true };
   }
   if (action === 'db_timetable') {
     const date = data?.date || getISTDateString(new Date());
@@ -3402,7 +3678,6 @@ async function executeDbAction(intent, userContext, threadId = null) {
     return { reply: txt, isReply: true };
   }
 
-  // Generic reads (safe)
   if (action === 'db_read' || action === 'db_count' || action === 'db_aggregate') {
     if (isStudent) {
       if (['attendances','leaves','attendancerequests'].includes(collection)) { f = f || {}; f.rollNo = userContext.rollNo; }
@@ -3427,33 +3702,7 @@ async function executeDbAction(intent, userContext, threadId = null) {
 }
 
 // ============================================================
-//  FORMAT DB RESULT (human-readable)
-// ============================================================
-function formatDbResult(result, action, extra = {}) {
-  if (!result) return 'Done.';
-  if (result.status === 'HEALTHY' && result.ai && result.counts) {
-    const ai = result.ai; const c = result.counts;
-    return `🖥️ **System Health**\n\n**Status:** ✅ ${result.status}\n**Uptime:** ${result.uptime}\n**DB:** ${result.database.state} (ping ${result.database.ping})\n\n**AI:** ${ai.primary.provider} (${ai.primary.keysConfigured} keys) → ${ai.fallback.provider} (${ai.fallback.keysConfigured} keys)\n\n**Counts:**\n• Users: ${c.totalUsers} (S:${c.students} F:${c.faculty})\n• Attendance: ${c.attendances}\n• Pending: ${c.pendingRequests}\n• Reg Reqs: ${c.pendingRegistrationRequests || 0}\n• Holidays: ${c.holidays}`;
-  }
-  if (result.teacherRollNo && result.overallAverage !== undefined) {
-    const subjLines = Object.entries(result.subjectWise || {}).map(([s, st]) => `• ${s}: **${st.percentage}%** (${st.present}/${st.total})`).join('\n');
-    return `👨‍🏫 **Class Average**\n\n**Teacher:** ${result.teacher} (${result.teacherRollNo})\n**Students:** ${result.totalStudents}\n**Average:** **${result.overallAverage}%**\n\n${subjLines}`;
-  }
-  if (result.student && result.overall) {
-    const s = result.student; const o = result.overall;
-    let txt = `🎓 **${s.name}** (${s.rollNo}) — ${s.branch}\n\n• Overall: **${o.attended}/${o.conducted}** (${o.percentage}%)\n• Days: ${o.daysPresent}/${o.workingDaysSoFar}`;
-    const weak = Object.entries(result.subjectStats || {}).filter(([_, st]) => st.percentage < 75);
-    if (weak.length) txt += `\n\n⚠️ **Below 75%:**\n${weak.map(([sub, st]) => `• ${sub}: ${st.present}/${st.total} (${st.percentage}%)`).join('\n')}`;
-    return txt;
-  }
-  if (result.totalDefaulters !== undefined) { if (!result.totalDefaulters) return '✅ No defaulters!'; return `⚠️ **${result.totalDefaulters}** defaulter(s):\n${result.defaulters.slice(0,20).map(d => `• ${d.rollNo} (${d.name}) — ${d.pct}%`).join('\n')}`; }
-  if (result.count !== undefined) return `Count: ${result.count}`;
-  if (Array.isArray(result)) { if (!result.length) return 'No records.'; return `${result.length} record(s).`; }
-  return JSON.stringify(result, null, 2);
-}
-
-// ============================================================
-//  ★★★ SEQUENTIAL FLOW HELPERS ★★★
+//  SEQUENTIAL FLOW HELPERS
 // ============================================================
 async function setPending(rollNo, type, data, lang) {
   await PendingAction.deleteMany({ rollNo });
@@ -3470,7 +3719,6 @@ function detectPasscodeInMessage(msg) {
   return m ? m[1] : null;
 }
 
-// Localized quick replies
 function L(lang, key) {
   const dict = {
     need_passcode_full: { english: 'Please send the **5-digit Full Day Passcode**.', hinglish: 'Kripya **5-digit Full Day Passcode** bhejiye.', hindi: 'कृपया **5-अंकों का Full Day Passcode** भेजें।' },
@@ -3509,15 +3757,22 @@ app.post('/api/ai/chat', async (req, res) => {
     const userBranch = userData?.branch || branch || 'CSE';
     const effectiveThreadId = existingChat?.threadId || threadId || null;
 
-    // ★ Detect language from user message (strict)
+    // ★ Thinking tracker
+    const tStart = Date.now();
+    const thinkingCtx = { userMessage: message, userRole, flags: { languageDetected: null } };
+    const sendJson = (obj) => {
+      obj.thinking = buildThinkingSteps({ ...thinkingCtx, latencyMs: Date.now() - tStart });
+      return res.json(obj);
+    };
+
     const userLang = detectLanguage(message || '');
+    thinkingCtx.flags.languageDetected = userLang;
     console.log(`🌐 [LANG] detected=${userLang} for msg="${(message||'').slice(0,60)}"`);
 
-    // ★★★ SEQUENTIAL FLOW — check pending action FIRST ★★★
+    // ============ SEQUENTIAL FLOW ============
     if (cr !== 'guest' && userRole === 'student') {
       const pending = await getPending(cr);
       if (pending) {
-        // Step 2: awaiting passcode
         if (pending.type === 'awaiting_passcode') {
           const pc = detectPasscodeInMessage(message);
           const ptype = pending.data.passcodeType || 'full_day';
@@ -3525,13 +3780,13 @@ app.post('/api/ai/chat', async (req, res) => {
           if (pc && pc.length === expectedLen) {
             const passDoc = await Passcode.findOne({ passcode: pc, type: ptype, expiresAt: { $gt: new Date() }, enabled: true });
             if (!passDoc) {
-              return res.json({ reply: L(userLang, 'bad_passcode'), threadId: effectiveThreadId, aiOk: true, usedDatabase: true, needsPasscode: true, passcodeType: ptype, awaitingPasscode: true });
+              return sendJson({ reply: L(userLang, 'bad_passcode'), threadId: effectiveThreadId, aiOk: true, usedDatabase: true, needsPasscode: true, passcodeType: ptype, awaitingPasscode: true });
             }
-            // Passcode OK → move to awaiting location
             pending.type = 'awaiting_location';
             pending.data.passcode = pc;
             await pending.save();
-            return res.json({
+            thinkingCtx.flags.passcodeVerified = true;
+            return sendJson({
               reply: L(userLang, 'passcode_ok_ask_location'),
               threadId: effectiveThreadId,
               aiOk: true,
@@ -3542,23 +3797,20 @@ app.post('/api/ai/chat', async (req, res) => {
               passcodeType: ptype
             });
           } else {
-            return res.json({ reply: L(userLang, ptype === 'full_day' ? 'need_passcode_full' : 'need_passcode_lecture'), threadId: effectiveThreadId, aiOk: true, usedDatabase: true, needsPasscode: true, passcodeType: ptype, awaitingPasscode: true });
+            return sendJson({ reply: L(userLang, ptype === 'full_day' ? 'need_passcode_full' : 'need_passcode_lecture'), threadId: effectiveThreadId, aiOk: true, usedDatabase: true, needsPasscode: true, passcodeType: ptype, awaitingPasscode: true });
           }
         }
-        // Step 3: awaiting location
         if (pending.type === 'awaiting_location') {
           if (location && location.latitude && location.longitude) {
             const lc = checkLocation(location.latitude, location.longitude);
             if (!lc.isInside) {
-              return res.json({ reply: `${L(userLang, 'out_of_range')} (${lc.distance}m)`, threadId: effectiveThreadId, aiOk: true, usedDatabase: true, locationRejected: true });
+              return sendJson({ reply: `${L(userLang, 'out_of_range')} (${lc.distance}m)`, threadId: effectiveThreadId, aiOk: true, usedDatabase: true, locationRejected: true });
             }
-            // Verify passcode still valid
             const passDoc = await Passcode.findOne({ passcode: pending.data.passcode, type: pending.data.passcodeType, expiresAt: { $gt: new Date() }, enabled: true });
             if (!passDoc) {
               await clearPending(cr);
-              return res.json({ reply: L(userLang, 'bad_passcode'), threadId: effectiveThreadId, aiOk: true, usedDatabase: true });
+              return sendJson({ reply: L(userLang, 'bad_passcode'), threadId: effectiveThreadId, aiOk: true, usedDatabase: true });
             }
-            // Mark!
             const todayStr = getISTDateString(new Date());
             const lectureType = pending.data.lectureType || 'full_day';
             let replyText = '';
@@ -3569,7 +3821,7 @@ app.post('/api/ai/chat', async (req, res) => {
               const acadSet = new Set();
               (tt[dayName] || []).forEach(e => { const s = mapToCanonical(e.subject); if (!s.includes('LIB') && !s.includes('Sports')) acadSet.add(s); });
               const acad = Array.from(acadSet);
-              if (!acad.length) { await clearPending(cr); return res.json({ reply: 'No academic subjects today.', threadId: effectiveThreadId, aiOk: true, usedDatabase: true }); }
+              if (!acad.length) { await clearPending(cr); return sendJson({ reply: 'No academic subjects today.', threadId: effectiveThreadId, aiOk: true, usedDatabase: true }); }
               let marked = 0, skipped = 0;
               for (const sub of acad) {
                 try { await Attendance.create({ rollNo: cr, studentName: userName, subject: sub, date: todayStr, status: 'Present', location: { latitude: location.latitude, longitude: location.longitude }, ipAddress: req.ip, isVerified: true, branch: userBranch }); marked++; }
@@ -3578,60 +3830,54 @@ app.post('/api/ai/chat', async (req, res) => {
               replyText = skipped > 0 && marked === 0 ? L(userLang, 'already_marked') : `${L(userLang, 'marked_full')}\n\n• Marked: ${marked}\n• Location: ${lc.distance}m`;
             } else {
               const period = getCurrentPeriod(userBranch);
-              if (!period) { await clearPending(cr); return res.json({ reply: L(userLang, 'no_active_lecture'), threadId: effectiveThreadId, aiOk: true, usedDatabase: true }); }
+              if (!period) { await clearPending(cr); return sendJson({ reply: L(userLang, 'no_active_lecture'), threadId: effectiveThreadId, aiOk: true, usedDatabase: true }); }
               const activeSubj = mapToCanonical(period.subject);
               try { await Attendance.create({ rollNo: cr, studentName: userName, subject: activeSubj, date: todayStr, status: 'Present', location: { latitude: location.latitude, longitude: location.longitude }, ipAddress: req.ip, isVerified: true, branch: userBranch }); }
-              catch (e) { if (e.code === 11000) { await clearPending(cr); return res.json({ reply: L(userLang, 'already_marked'), threadId: effectiveThreadId, aiOk: true, usedDatabase: true }); } }
+              catch (e) { if (e.code === 11000) { await clearPending(cr); return sendJson({ reply: L(userLang, 'already_marked'), threadId: effectiveThreadId, aiOk: true, usedDatabase: true }); } }
               replyText = `${L(userLang, 'marked_lecture')}\n\n• ${activeSubj}\n• Location: ${lc.distance}m`;
             }
             await clearPending(cr);
-            // Save chat
+            thinkingCtx.flags.locationVerified = true;
+            thinkingCtx.flags.attendanceMarked = true;
             if (cr !== 'guest') {
               const nt = existingChat || await Chat.create({ rollNo: cr, threadId: `chat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`, title: 'Attendance', messages: [] });
               nt.messages.push({ role: 'user', content: `[marked] ${lectureType}` });
               nt.messages.push({ role: 'assistant', content: replyText });
               nt.updatedAt = new Date();
               await nt.save();
-              return res.json({ reply: replyText, threadId: nt.threadId, aiOk: true, usedDatabase: true, marked: true });
+              return sendJson({ reply: replyText, threadId: nt.threadId, aiOk: true, usedDatabase: true, marked: true });
             }
-            return res.json({ reply: replyText, threadId: effectiveThreadId, aiOk: true, usedDatabase: true, marked: true });
+            return sendJson({ reply: replyText, threadId: effectiveThreadId, aiOk: true, usedDatabase: true, marked: true });
           } else {
-            return res.json({ reply: L(userLang, 'location_needed'), threadId: effectiveThreadId, aiOk: true, usedDatabase: true, needsLocation: true, locationForMark: true, lectureType: pending.data.lectureType || 'full_day' });
+            return sendJson({ reply: L(userLang, 'location_needed'), threadId: effectiveThreadId, aiOk: true, usedDatabase: true, needsLocation: true, locationForMark: true, lectureType: pending.data.lectureType || 'full_day' });
           }
         }
       }
     }
 
-    // If DB mode + user has data → try intent detection
+    // ============ DB INTENT MODE ============
     if (useDb && userData) {
       try {
-        const intent = await detectDbIntent(message || 'mark attendance', { role: userRole, rollNo: cr, name: userName, branch: userBranch }, effectiveThreadId);
+        const fastIntent = fastIntentParse(message, userRole);
+        let intent;
+        if (fastIntent) {
+          intent = fastIntent;
+          thinkingCtx.fastIntent = fastIntent;
+        } else {
+          intent = await detectDbIntent(message || 'mark attendance', { role: userRole, rollNo: cr, name: userName, branch: userBranch }, effectiveThreadId);
+          thinkingCtx.aiIntent = intent;
+        }
         console.log('🧠 Intent:', JSON.stringify(intent).substring(0, 200));
 
-        // LIVE MARK → start sequential flow
+        // Live mark flow
         if (intent.action === 'db_live_mark') {
           const lectureType = intent.data?.lectureType || 'full_day';
-          // If user already provided location+passcode in one go → complete
-          if (location && location.latitude && passcode) {
-            const lc = checkLocation(location.latitude, location.longitude);
-            if (!lc.isInside) return res.json({ reply: `${L(userLang, 'out_of_range')} (${lc.distance}m)`, threadId: effectiveThreadId, aiOk: true, usedDatabase: true, locationRejected: true });
-            const todayStr = getISTDateString(new Date());
-            const ds = await checkDateStatus(todayStr);
-            if (ds.isBlocked) return res.json({ reply: `❌ ${ds.message}`, threadId: effectiveThreadId, aiOk: true, usedDatabase: true });
-            const passDoc = await Passcode.findOne({ passcode: passcode.trim(), type: lectureType, expiresAt: { $gt: new Date() }, enabled: true });
-            if (!passDoc) return res.json({ reply: L(userLang, 'bad_passcode'), threadId: effectiveThreadId, aiOk: true, usedDatabase: true });
-            // Mark now (same logic as above — abstract to function)
-            // (Skip for brevity; use sequential flow via pending)
-          }
-          // Start flow — check if a passcode is published
           const activePasscode = await Passcode.findOne({ type: lectureType, published: true, enabled: true, expiresAt: { $gt: new Date() } }).sort({ publishedAt: -1 });
           if (!activePasscode) {
-            return res.json({ reply: L(userLang, 'no_published_passcode'), threadId: effectiveThreadId, aiOk: true, usedDatabase: true });
+            return sendJson({ reply: L(userLang, 'no_published_passcode'), threadId: effectiveThreadId, aiOk: true, usedDatabase: true });
           }
-          // Save pending action
           await setPending(cr, 'awaiting_passcode', { lectureType, passcodeType: lectureType }, userLang);
-          // Ask for passcode first
-          return res.json({
+          return sendJson({
             reply: L(userLang, lectureType === 'full_day' ? 'need_passcode_full' : 'need_passcode_lecture'),
             threadId: effectiveThreadId,
             aiOk: true,
@@ -3643,15 +3889,15 @@ app.post('/api/ai/chat', async (req, res) => {
         }
 
         if (intent.action !== 'reply') {
-          if (intent.requiresConfirmation) return res.json({ reply: `⚠️ ${intent.explanation || 'Confirm?'}`, threadId: effectiveThreadId, aiOk: true, usedDatabase: true, dbOp: intent, requiresConfirmation: true });
+          if (intent.requiresConfirmation) return sendJson({ reply: `⚠️ ${intent.explanation || 'Confirm?'}`, threadId: effectiveThreadId, aiOk: true, usedDatabase: true, dbOp: intent, requiresConfirmation: true });
           const execResult = await executeDbAction(intent, { role: userRole, rollNo: cr, name: userName, branch: userBranch }, effectiveThreadId);
+          thinkingCtx.execResult = execResult;
           let replyText;
           if (execResult.isReply) replyText = execResult.reply;
           else if (execResult.error) replyText = `❌ ${execResult.error}`;
           else if (execResult.result && execResult.result.message) replyText = execResult.result.message;
-          else replyText = `✅ ${intent.explanation || 'Done'}\n\n${formatDbResult(execResult.result, intent.action)}`;
+          else replyText = `✅ Done`;
 
-          // Save chat
           if (cr !== 'guest') {
             if (existingChat) {
               existingChat.messages.push({ role: 'user', content: message });
@@ -3660,10 +3906,10 @@ app.post('/api/ai/chat', async (req, res) => {
               await existingChat.save();
             } else {
               const nt = await Chat.create({ rollNo: cr, threadId: `chat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`, title: (message || 'Chat').substring(0, 50), messages: [{ role: 'user', content: message }, { role: 'assistant', content: replyText }] });
-              return res.json({ reply: replyText, threadId: nt.threadId, aiOk: true, usedDatabase: true });
+              return sendJson({ reply: replyText, threadId: nt.threadId, aiOk: true, usedDatabase: true });
             }
           }
-          return res.json({ reply: replyText, threadId: existingChat?.threadId, aiOk: true, usedDatabase: true });
+          return sendJson({ reply: replyText, threadId: existingChat?.threadId, aiOk: true, usedDatabase: true });
         }
 
         if (intent.reply) {
@@ -3673,12 +3919,12 @@ app.post('/api/ai/chat', async (req, res) => {
             existingChat.updatedAt = new Date();
             await existingChat.save();
           }
-          return res.json({ reply: intent.reply, threadId: existingChat?.threadId, aiOk: true, usedDatabase: true });
+          return sendJson({ reply: intent.reply, threadId: existingChat?.threadId, aiOk: true, usedDatabase: true });
         }
       } catch (err) { console.warn('DB mode error:', err.message); }
     }
 
-    // ===== NORMAL CHAT MODE (with strict language matching) =====
+    // ============ NORMAL CHAT ============
     let contextStr = '';
     if (useCtx && userData) {
       const lines = [];
@@ -3702,24 +3948,24 @@ app.post('/api/ai/chat', async (req, res) => {
       contextStr = lines.join('\n');
     }
 
-    const isCasualChat = !useCtx && !useDb;
+    const isCasualChat = !useCtx && !useDb && userRole === 'student';
     const langInstruction = languageInstruction(userLang);
 
     const systemPrompt = `You are "BM Bot" for BM Group of Institutions.
-Role: ${userRole}. User: ${userName}. Branch: ${userBranch}.
+
+## ★★★ IDENTITY — DO NOT FORGET ★★★
+You are currently talking to a **${userRole.toUpperCase()}** named **${userName}** (${userBranch}).
+- If role=admin → they are an ADMINISTRATOR. NEVER ask them to "turn on Context/Database" — they already have full DB access.
+- If role=faculty → they are FACULTY. Same rule.
+- If role=student → they are a STUDENT.
 
 ## ★★★ LANGUAGE MATCHING — HIGHEST PRIORITY ★★★
 ${langInstruction}
-
 RULES:
 - NEVER switch language. NEVER use Devanagari for Hinglish users. NEVER use Hindi words for English users.
-- NEVER translate. Mirror the user's script.
-- If the user wrote English words like "read this file" → reply in ENGLISH, not Hindi.
-- If the user wrote "bhai attendance batao" → reply in HINGLISH (e.g. "Bhai, tumhari attendance 76% hai").
-- If the user wrote "मेरी अटेंडेंस बताओ" → reply in HINDI Devanagari.
 - This rule OVERRIDES every other instruction.
 
-${isCasualChat ? '## MODE: CASUAL\nJust chat naturally. For attendance/timetable queries, suggest turning on Context or Database.' : '## MODE: DATA\nAnswer from CONTEXT. Today=TODAY. Attendance is lecture count.'}
+${isCasualChat ? '## MODE: CASUAL\nJust chat naturally. For attendance/timetable queries, suggest turning on Context or Database.' : '## MODE: DATA\nAnswer from CONTEXT.'}
 
 FORMATTING:
 - Bullet points only (• or -)
@@ -3732,6 +3978,7 @@ ${contextStr ? `\n---CONTEXT---\n${contextStr}` : ''}`;
     try {
       const aiResult = await callAI({ prompt: message, systemPrompt, history: existingChat?.messages, maxTokens: 1200, temperature: 0.5, threadId: effectiveThreadId });
       reply = aiResult.reply; provider = aiResult.provider; aiOk = true;
+      thinkingCtx.provider = provider;
       console.log(`✅ [AI] Reply via ${provider}`);
     } catch (err) { reply = err.message; }
 
@@ -3750,7 +3997,7 @@ ${contextStr ? `\n---CONTEXT---\n${contextStr}` : ''}`;
         newThreadId = nt.threadId; newTitle = nt.title;
       }
     }
-    res.json({ reply, threadId: newThreadId, title: newTitle, aiOk, provider });
+    sendJson({ reply, threadId: newThreadId, title: newTitle, aiOk, provider });
   } catch (err) { console.error('❌ Chat error:', err); res.status(500).json({ error: 'Internal error: ' + err.message }); }
 });
 
@@ -3761,7 +4008,7 @@ app.post('/api/ai/chat/confirm-db', async (req, res) => {
     const userData = await User.findOne({ rollNo: rollNo.trim().toUpperCase() });
     if (!userData) return res.status(404).json({ error: 'User not found' });
     const execResult = await executeDbAction(operation, { role: userData.role, rollNo: userData.rollNo, name: userData.name, branch: userData.branch || 'CSE' });
-    const replyText = execResult.isReply ? execResult.reply : (execResult.error ? `❌ ${execResult.error}` : `✅ Done\n\n${formatDbResult(execResult.result, operation.action)}`);
+    const replyText = execResult.isReply ? execResult.reply : (execResult.error ? `❌ ${execResult.error}` : `✅ Done`);
     res.json({ reply: replyText, aiOk: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -3779,10 +4026,8 @@ app.post('/api/ai/chat-with-file', async (req, res) => {
     const userLang = detectLanguage(userPrompt);
 
     const systemPrompt = `You are "BM Bot" helping ${userName} (${userRole}).
-
 ## LANGUAGE RULE — ${languageInstruction(userLang)}
-
-Analyze and summarize the file. Use markdown bullets. NEVER use markdown tables.`;
+Analyze and summarize. Use markdown bullets. NEVER use markdown tables.`;
 
     let reply = '', aiOk = false;
     try { reply = await callGemini({ prompt: userPrompt, systemPrompt, fileBase64, mimeType, maxTokens: 3000, temperature: 0.4, threadId }); aiOk = true; }
@@ -3840,15 +4085,14 @@ app.post('/api/ai/generate-report-pdf', async (req, res) => {
     }
     if (reportType === 'admin-defaulters') {
       const threshold = parseInt(req.body.threshold) || 75;
-      const students = await User.find({ role: 'student' }).select('rollNo name branch');
-      const today = getISTDateString(new Date());
-      const startStr = getISTDateString(SEMESTER_START);
+      const students = await User.find({ role: 'student' }).select('rollNo name branch').lean();
       const defaulters = [];
       for (const s of students) {
-        const present = await Attendance.countDocuments({ rollNo: s.rollNo, date: { $gte: startStr, $lte: today }, status: { $in: ['Present','Duty Leave'] }, subject: { $nin: [/Sports/i, /LIB/i, /Library/i] } });
-        const total = await Attendance.countDocuments({ rollNo: s.rollNo, date: { $gte: startStr, $lte: today }, subject: { $nin: [/Sports/i, /LIB/i, /Library/i] } });
-        const pct = total > 0 ? Math.round((present/total)*100) : 0;
-        if (total === 0 || pct < threshold) defaulters.push({ rollNo: s.rollNo, name: s.name, branch: s.branch, pct, present, total });
+        const summary = await getStudentSummary(s.rollNo);
+        if (!summary) continue;
+        if (summary.attendancePercentage < threshold) {
+          defaulters.push({ rollNo: s.rollNo, name: s.name, branch: s.branch, pct: summary.attendancePercentage, present: summary.totalAcademicLectures, total: summary.totalConductedLectures });
+        }
       }
       defaulters.sort((a,b) => a.pct - b.pct);
       const sections = [
