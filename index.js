@@ -27,7 +27,6 @@ const GROQ_API_KEYS = [
 const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 const GROQ_FALLBACK_MODELS = ['llama-3.1-8b-instant', 'openai/gpt-oss-20b'];
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_TIMEOUT_MS = 45000;
 
 const GEMINI_API_KEYS = [
   process.env.GEMINI_API_KEY,
@@ -38,7 +37,6 @@ const GEMINI_API_KEYS = [
   process.env.GEMINI_API_KEY_6
 ].filter(k => k && k.trim() && k.trim().length > 5).map(k => k.trim());
 
-// ★ User's Render env has GEMINI_MODEL=gemini-3-flash
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3-flash';
 const GEMINI_FALLBACK_MODELS = [
   process.env.GEMINI_MODEL_2 || 'gemini-3.1-flash-lite',
@@ -53,7 +51,6 @@ const SERVER_START_TIME = Date.now();
 let groqKeyIndex = 0;
 let geminiKeyIndex = 0;
 
-// ★ Model auto-discovery cache
 let _geminiModelsCache = { list: [], fetchedAt: 0 };
 
 function _hashThreadId(threadId, salt = '') {
@@ -88,7 +85,6 @@ function getNextGeminiKey(threadId = null, attempt = 0) {
   return GEMINI_API_KEYS[(start + attempt) % GEMINI_API_KEYS.length];
 }
 
-// ★ Auto-discover available Gemini models on API key
 async function discoverGeminiModels(apiKey) {
   if (!apiKey) return [];
   if (Date.now() - _geminiModelsCache.fetchedAt < 30 * 60 * 1000 && _geminiModelsCache.list.length) {
@@ -217,9 +213,6 @@ function mapToCanonical(subject) {
   return normalized;
 }
 
-// ============================================================
-//  ★ LANGUAGE DETECTION — STRICT
-// ============================================================
 function detectLanguage(text) {
   if (!text || typeof text !== 'string') return 'english';
   if (/[\u0900-\u097F]/.test(text)) return 'hindi';
@@ -244,7 +237,7 @@ function detectLanguage(text) {
 
 function languageInstruction(lang) {
   if (lang === 'hindi') return 'User wrote in HINDI (Devanagari). Reply ONLY in HINDI (Devanagari script). Do NOT use English or Latin script.';
-  if (lang === 'hinglish') return 'User wrote in HINGLISH (Roman/Latin-script Hindi). Reply ONLY in HINGLISH (Latin letters, Hindi words — e.g. "Bhai, tumhari attendance 76% hai"). Do NOT switch to Devanagari or pure English.';
+  if (lang === 'hinglish') return 'User wrote in HINGLISH (Roman/Latin-script Hindi). Reply ONLY in HINGLISH (Latin letters, Hindi words). Do NOT switch to Devanagari or pure English.';
   return 'User wrote in ENGLISH. Reply ONLY in ENGLISH (Latin script). Do NOT use Hindi words.';
 }
 
@@ -725,7 +718,7 @@ const PendingAction = mongoose.model('PendingAction', pendingActionSchema);
 Attendance.createIndexes().catch(err => console.error('Index error:', err));
 
 // ============================================================
-//  STUDENT SUMMARY (timetable-based)
+//  STUDENT SUMMARY
 // ============================================================
 async function getStudentSummary(rollNo) {
   try {
@@ -811,65 +804,37 @@ async function getBunkAdvisor(rollNo) {
 }
 
 // ============================================================
-//  ★ DYNAMIC THINKING STEPS
+//  THINKING STEPS
 // ============================================================
 function buildThinkingSteps(ctx) {
-  const {
-    userMessage = '',
-    userRole = 'student',
-    fastIntent = null,
-    aiIntent = null,
-    execResult = null,
-    provider = null,
-    latencyMs = 0,
-    flags = {}
-  } = ctx;
-
+  const { userMessage = '', userRole = 'student', fastIntent = null, aiIntent = null, execResult = null, provider = null, latencyMs = 0, flags = {} } = ctx;
   const steps = [];
   const msg = String(userMessage || '').slice(0, 100);
-
   steps.push(`📩 Received: "${msg}"`);
   steps.push(`👤 Role: ${userRole}`);
-
-  if (fastIntent) {
-    steps.push(`⚡ Regex fast-match: action="${fastIntent.action}" (skipped AI call)`);
-  } else if (aiIntent) {
+  if (fastIntent) steps.push(`⚡ Regex fast-match: action="${fastIntent.action}"`);
+  else if (aiIntent) {
     steps.push(`🧠 AI parsed intent: action="${aiIntent.action || 'reply'}"`);
     if (aiIntent.explanation) steps.push(`   ↳ ${aiIntent.explanation}`);
-    if (aiIntent.collection) steps.push(`   ↳ collection: ${aiIntent.collection}`);
-    if (aiIntent.requiresConfirmation) steps.push(`   ↳ ⚠️ Needs user confirmation`);
-  } else {
-    steps.push(`💬 Casual chat mode (no DB intent matched)`);
-  }
-
+    if (aiIntent.requiresConfirmation) steps.push(`   ↳ ⚠️ Needs confirmation`);
+  } else steps.push(`💬 Casual chat mode`);
   if (execResult) {
     if (execResult.isReply) steps.push(`✅ Reply composed directly`);
     else if (execResult.error) steps.push(`❌ Execution failed: ${execResult.error}`);
     else if (execResult.needsLiveMarking) steps.push(`📍 Live-marking flow started`);
-    else if (execResult.result) {
-      steps.push(`✅ DB operation completed`);
-      const r = execResult.result;
-      if (Array.isArray(r)) steps.push(`   ↳ Returned ${r.length} record(s)`);
-      else if (r.count !== undefined) steps.push(`   ↳ Count: ${r.count}`);
-      else if (r.totalDefaulters !== undefined) steps.push(`   ↳ Found ${r.totalDefaulters} defaulter(s)`);
-      else if (typeof r === 'object') steps.push(`   ↳ Result keys: ${Object.keys(r).slice(0, 5).join(', ')}`);
-    }
+    else if (execResult.result) steps.push(`✅ DB operation completed`);
   }
-
   if (flags.passcodeVerified) steps.push(`🔐 Passcode verified`);
   if (flags.locationVerified) steps.push(`📍 Location verified (within campus)`);
   if (flags.attendanceMarked) steps.push(`✅ Attendance marked in DB`);
   if (flags.languageDetected) steps.push(`🌐 Detected language: ${flags.languageDetected}`);
-  if (flags.roleRestricted) steps.push(`🚫 Role restriction blocked this action`);
-
   if (provider) steps.push(`🤖 AI provider: ${provider}`);
   if (latencyMs > 0) steps.push(`⏱ Completed in ${(latencyMs / 1000).toFixed(2)}s`);
-
   return steps;
 }
 
 // ============================================================
-//  AI CALLS — Groq + Gemini
+//  AI CALLS
 // ============================================================
 async function callGroqOnce({ prompt, systemPrompt = null, history = null, maxTokens = 1500, temperature = 0.7, timeoutMs = 45000, model = null, apiKey = null, threadId = null, attempt = 0, forceJson = false }) {
   const useKey = apiKey || getNextGroqKey(threadId, attempt);
@@ -925,9 +890,9 @@ async function callGroq(args) {
 
 function parseGeminiError(err) {
   const msg = err.message || String(err);
-  if (msg.includes('429') || msg.toLowerCase().includes('quota') || msg.toLowerCase().includes('rate')) return { code: 429, type: 'RATE_LIMIT' };
-  if (msg.includes('503') || msg.toLowerCase().includes('high demand') || msg.toLowerCase().includes('unavailable')) return { code: 503, type: 'OVERLOADED' };
-  if (msg.includes('504') || msg.toLowerCase().includes('deadline') || msg.toLowerCase().includes('aborted')) return { code: 504, type: 'TIMEOUT' };
+  if (msg.includes('429') || msg.toLowerCase().includes('quota')) return { code: 429, type: 'RATE_LIMIT' };
+  if (msg.includes('503') || msg.toLowerCase().includes('high demand')) return { code: 503, type: 'OVERLOADED' };
+  if (msg.includes('504') || msg.toLowerCase().includes('deadline')) return { code: 504, type: 'TIMEOUT' };
   if (msg.includes('404') || msg.toLowerCase().includes('not found')) return { code: 404, type: 'MODEL_NOT_FOUND' };
   if (msg.includes('400') || msg.toLowerCase().includes('invalid')) return { code: 400, type: 'BAD_REQUEST' };
   return { code: 500, type: 'UNKNOWN' };
@@ -966,14 +931,11 @@ async function callGeminiOnce({ prompt, systemPrompt = null, fileBase64 = null, 
   } catch (err) { clearTimeout(timeout); throw err; }
 }
 
-// ★ callGemini with auto-discovery fallback
 async function callGemini(args) {
   if (GEMINI_API_KEYS.length === 0) throw new Error('No Gemini API key');
   const preferred = [args.model || GEMINI_MODEL, ...GEMINI_FALLBACK_MODELS].filter(Boolean);
-
   const startTime = Date.now();
   let lastError = null;
-
   for (const model of preferred) {
     for (let i = 0; i < GEMINI_API_KEYS.length; i++) {
       if (Date.now() - startTime > GEMINI_GLOBAL_TIMEOUT_MS) throw new Error('Gemini timeout');
@@ -990,22 +952,14 @@ async function callGemini(args) {
       }
     }
   }
-
-  console.log(`🔍 [GEMINI] Preferred models failed, auto-discovering...`);
+  console.log(`🔍 [GEMINI] Auto-discovering...`);
   const discovered = await discoverGeminiModels(GEMINI_API_KEYS[0]);
   const remaining = discovered.filter(m => !preferred.includes(m));
-
   for (const model of remaining.slice(0, 3)) {
     if (Date.now() - startTime > GEMINI_GLOBAL_TIMEOUT_MS) break;
-    try {
-      console.log(`🤖 [GEMINI-DISCOVERED] Trying model=${model}`);
-      return await callGeminiOnce({ ...args, model, apiKey: GEMINI_API_KEYS[0], attempt: 0 });
-    } catch (err) {
-      lastError = err;
-      console.warn(`⚠️ [GEMINI-DISCOVERED] ${model}: ${err.message.substring(0, 100)}`);
-    }
+    try { return await callGeminiOnce({ ...args, model, apiKey: GEMINI_API_KEYS[0], attempt: 0 }); }
+    catch (err) { lastError = err; }
   }
-
   throw lastError || new Error('All Gemini models failed.');
 }
 
@@ -1016,16 +970,13 @@ async function callAI(args) {
   if (GROQ_API_KEYS.length > 0) {
     try {
       const reply = await callGroq({ ...args, timeoutMs: Math.min(45000, TOTAL_TIMEOUT - (Date.now() - startTime)) });
-      console.log(`✅ [GROQ] Success`);
       return { reply, provider: 'groq', model: GROQ_MODEL };
-    } catch (err) { groqError = err; console.warn(`⚠️ [GROQ] Fallback: ${err.message.substring(0, 100)}`); }
+    } catch (err) { groqError = err; }
   }
   const remainingTime = TOTAL_TIMEOUT - (Date.now() - startTime);
   if (remainingTime <= 0) throw new Error('AI too slow.');
-  console.log(`🔄 [FALLBACK] Gemini`);
   try {
     const reply = await callGemini({ ...args, globalTimeoutMs: remainingTime });
-    console.log(`✅ [GEMINI] Success`);
     return { reply, provider: 'gemini', model: GEMINI_MODEL };
   } catch (geminiError) {
     throw new Error(`Both AI providers failed. Groq: ${groqError?.message.substring(0,80)} | Gemini: ${geminiError.message.substring(0,80)}`);
@@ -1071,7 +1022,7 @@ function generatePDFBuffer({ title, subtitle, sections = [], footer = null }) {
 }
 
 // ============================================================
-//  ROUTES — Basic
+//  ROUTES
 // ============================================================
 app.get('/', (req, res) => res.send('BM Group ERP Active!'));
 app.get('/health', (req, res) => res.json({
@@ -1325,6 +1276,15 @@ app.post('/api/admin/clear-account-requests', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ★ NEW: Clear pending actions manually (for debugging stuck flows)
+app.post('/api/admin/clear-pending/:rollNo', async (req, res) => {
+  try {
+    const cr = (req.params.rollNo || '').trim().toUpperCase();
+    const result = await PendingAction.deleteMany({ rollNo: cr });
+    res.json({ message: `Cleared ${result.deletedCount} pending action(s) for ${cr}.` });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ========== PROFILE ==========
 app.post('/api/student/profile', async (req, res) => {
   try {
@@ -1407,9 +1367,7 @@ app.post('/api/admin/login-as-student', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ============================================================
-//  ATTENDANCE REQUEST
-// ============================================================
+// ========== ATTENDANCE REQUEST ==========
 app.post('/api/requests/submit', async (req, res) => {
   try {
     const { rollNo, date, lectureType, subject, subjects, period, reason } = req.body;
@@ -1446,9 +1404,7 @@ app.post('/api/requests/submit', async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
 });
 
-// ============================================================
-//  LIVE MARKING
-// ============================================================
+// ========== LIVE MARKING ==========
 app.post('/api/attendance/mark-live', async (req, res) => {
   try {
     const { rollNo, latitude, longitude, passcode, type } = req.body;
@@ -2057,7 +2013,6 @@ app.get('/api/student/trend/:rollNo', async (req, res) => {
           const dt = new Date(y, m, day);
           const ds = getISTDateString(dt);
           if (ds > todayStr) continue;
-          // ★ FIX: skip days before semester start (July 1-14)
           if (dt < SEMESTER_START) continue;
           const dow = dt.getDay();
           if (dow === 0 || dow === 6) continue;
@@ -2204,9 +2159,7 @@ app.delete('/api/attendance/delete-day/:rollNo/:date/:requesterRollNo', async (r
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ============================================================
-//  ★★★ MONTHLY SUMMARY — FIXED (July skips 1-14) ★★★
-// ============================================================
+// ========== MONTHLY SUMMARY — FIXED ==========
 app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
   try {
     const cr = req.params.rollNo.trim().toUpperCase();
@@ -2223,12 +2176,9 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
     const endD = new Date(2026, m + 1, 0);
     const startStr = getISTDateString(startD);
     const endStr = getISTDateString(endD);
-
-    // ★ FIX #1: Semester start cutoff (15 Jul 2026)
-    const semesterStartStr = getISTDateString(SEMESTER_START); // "2026-07-15"
+    const semesterStartStr = getISTDateString(SEMESTER_START);
     const effectiveStartStr = startStr < semesterStartStr ? semesterStartStr : startStr;
 
-    // ★ FIX #2: Only fetch records from effective start date
     const records = await Attendance.find({
       rollNo: cr,
       date: { $gte: effectiveStartStr, $lte: endStr }
@@ -2243,29 +2193,22 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
     );
     const todayStr = getISTDateString(new Date());
 
-    // ---- Pass 1: build subject set + conducted count ----
     let cur = new Date(startD);
     while (cur <= endD) {
       const ds = getISTDateString(cur);
       if (ds > todayStr) { cur.setDate(cur.getDate() + 1); continue; }
-      // ★ FIX #3a: skip days before semester start
       if (ds < semesterStartStr) { cur.setDate(cur.getDate() + 1); continue; }
-
       const dow = cur.getDay();
       if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) {
         const dayName = dayNameMap[dow];
         (tt[dayName] || []).forEach(e => {
           const sub = mapToCanonical(e.subject);
-          if (!sub.includes('Sports') && !sub.includes('LIB')) {
-            subSet.add(sub);
-            totalConducted++;
-          }
+          if (!sub.includes('Sports') && !sub.includes('LIB')) { subSet.add(sub); totalConducted++; }
         });
       }
       cur.setDate(cur.getDate() + 1);
     }
 
-    // ---- Pass 2: per-subject total ----
     const stats = {};
     subSet.forEach(sub => { stats[sub] = { total: 0, present: 0 }; });
 
@@ -2273,9 +2216,7 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
     while (cur <= endD) {
       const ds = getISTDateString(cur);
       if (ds > todayStr) { cur.setDate(cur.getDate() + 1); continue; }
-      // ★ FIX #3b: skip days before semester start
       if (ds < semesterStartStr) { cur.setDate(cur.getDate() + 1); continue; }
-
       const dow = cur.getDay();
       if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) {
         const dayName = dayNameMap[dow];
@@ -2287,42 +2228,22 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
       cur.setDate(cur.getDate() + 1);
     }
 
-    // ---- Present counts from records ----
     records.forEach(rec => {
       const sub = mapToCanonical(rec.subject);
-      if (stats[sub] && (rec.status === 'Present' || rec.status === 'Duty Leave')) {
-        stats[sub].present++;
-      }
+      if (stats[sub] && (rec.status === 'Present' || rec.status === 'Duty Leave')) stats[sub].present++;
     });
 
     let totalAttended = 0;
     Object.values(stats).forEach(st => totalAttended += st.present);
-
     const pct = totalConducted > 0 ? Math.round((totalAttended / totalConducted) * 100) : 0;
-
-    const presentDays = new Set(
-      records
-        .filter(r => r.status === 'Present' || r.status === 'Duty Leave')
-        .map(r => (r.date || '').toString().split('T')[0])
-    );
-
+    const presentDays = new Set(records.filter(r => r.status === 'Present' || r.status === 'Duty Leave').map(r => (r.date || '').toString().split('T')[0]));
     const sWithPct = {};
     Object.keys(stats).forEach(sub => {
       const st = stats[sub];
-      sWithPct[sub] = {
-        total: st.total,
-        present: st.present,
-        percentage: st.total > 0 ? Math.round((st.present / st.total) * 100) : 0
-      };
+      sWithPct[sub] = { total: st.total, present: st.present, percentage: st.total > 0 ? Math.round((st.present / st.total) * 100) : 0 };
     });
 
-    res.json({
-      totalConducted,
-      totalAttended,
-      attendancePercentage: pct,
-      daysPresent: presentDays.size,
-      subjectStats: sWithPct
-    });
+    res.json({ totalConducted, totalAttended, attendancePercentage: pct, daysPresent: presentDays.size, subjectStats: sWithPct });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -2385,7 +2306,7 @@ app.get('/api/attendance/all/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== STUDENT SUMMARY ENDPOINT ==========
+// ========== STUDENT SUMMARY ==========
 app.get('/api/student/summary/:rollNo', async (req, res) => {
   try {
     const cr = req.params.rollNo.trim().toUpperCase();
@@ -2703,83 +2624,42 @@ app.post('/api/admin/clear-leaves', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ============================================================
-//  ★★★ DEFAULTERS — FIXED (uses getStudentSummary, full list)
-// ============================================================
+// ========== DEFAULTERS ==========
 app.get('/api/admin/defaulters/:requesterRollNo', async (req, res) => {
   try {
     const req1 = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
     if (!req1 || req1.role !== 'admin') return res.status(403).json({ error: 'Admin only!' });
-
     const threshold = parseInt(req.query.threshold) || 75;
     const branchFilter = (req.query.branch || '').toUpperCase();
-
     let studentQuery = { role: 'student' };
     if (branchFilter && branchFilter !== 'ALL') studentQuery.branch = branchFilter;
-
     const students = await User.find(studentQuery).select('rollNo name branch').sort({ rollNo: 1 }).lean();
-
-    console.log(`📊 [DEFAULTERS] Scanning ${students.length} students | threshold=${threshold}% | branch=${branchFilter || 'ALL'}`);
-
+    console.log(`📊 [DEFAULTERS] Scanning ${students.length} students | threshold=${threshold}%`);
     const defaulters = [];
     const errors = [];
     const buckets = { zero: 0, low: 0, mid: 0 };
-
     for (const s of students) {
       try {
         const summary = await getStudentSummary(s.rollNo);
-        if (!summary) {
-          errors.push({ rollNo: s.rollNo, reason: 'no-summary' });
-          continue;
-        }
-
+        if (!summary) { errors.push({ rollNo: s.rollNo, reason: 'no-summary' }); continue; }
         const pct = summary.attendancePercentage || 0;
         const total = summary.totalConductedLectures || 0;
         const present = summary.totalAcademicLectures || 0;
-
         if (pct < threshold) {
-          defaulters.push({
-            rollNo: s.rollNo,
-            name: s.name,
-            branch: s.branch,
-            pct,
-            present,
-            total,
-            noData: total === 0
-          });
-
+          defaulters.push({ rollNo: s.rollNo, name: s.name, branch: s.branch, pct, present, total, noData: total === 0 });
           if (pct === 0) buckets.zero++;
           else if (pct < 50) buckets.low++;
           else buckets.mid++;
         }
-      } catch (e) {
-        console.error(`  ❌ ${s.rollNo}: ${e.message}`);
-        errors.push({ rollNo: s.rollNo, reason: e.message });
-      }
+      } catch (e) { errors.push({ rollNo: s.rollNo, reason: e.message }); }
     }
-
     defaulters.sort((a, b) => a.pct - b.pct);
-
-    console.log(`✅ [DEFAULTERS] Found ${defaulters.length} below ${threshold}% (0%: ${buckets.zero}, <50%: ${buckets.low}, 50-${threshold}%: ${buckets.mid})`);
-
-    res.json({
-      threshold,
-      branch: branchFilter || 'ALL',
-      totalStudents: students.length,
-      totalDefaulters: defaulters.length,
-      buckets,
-      scanned: students.length - errors.length,
-      errors: errors.length ? errors : undefined,
-      defaulters
-    });
-  } catch (err) {
-    console.error('Defaulters error:', err);
-    res.status(500).json({ error: err.message });
-  }
+    res.json({ threshold, branch: branchFilter || 'ALL', totalStudents: students.length, totalDefaulters: defaulters.length, buckets, scanned: students.length - errors.length, errors: errors.length ? errors : undefined, defaulters });
+  } catch (err) { console.error('Defaulters error:', err); res.status(500).json({ error: err.message }); }
 });
 
 // ============================================================
-//  HELPERS (Role-aware)
+//  HELPERS
 // ============================================================
 async function getSystemHealth() {
   const uptime = Date.now() - SERVER_START_TIME;
@@ -2912,25 +2792,19 @@ async function getGeofenceGuide(userContext) {
 }
 
 // ============================================================
-//  ★ FAST REGEX INTENT PARSER (bypass AI for common commands)
+//  FAST REGEX INTENT PARSER
 // ============================================================
 function fastIntentParse(message, role) {
   if (!message) return null;
   const t = message.toLowerCase().trim();
 
-  // ========== STUDENT: Mark attendance ==========
   if (role === 'student') {
     if (/^(mark|lagao|lag|lagado|lagwa|dikhao|kar).{0,20}(my|meri|aaj|today|abhi).{0,10}(attendance|hazri|haziri|present|upasthiti)/i.test(t) ||
         /(meri|my|aaj ki|today).{0,15}(attendance|hazri|haziri|present).{0,15}(mark|lagao|lag|kar|lagado)/i.test(t) ||
         /^mark (my )?attendance$/i.test(t) ||
         /^attendance mark kar(o|do)?$/i.test(t)) {
       const isLecture = /(single|ek|one|lecture|period|class)/i.test(t) && !/full|pura|poora/i.test(t);
-      return {
-        action: 'db_live_mark',
-        data: { lectureType: isLecture ? 'single_lecture' : 'full_day' },
-        explanation: 'Starting attendance marking flow',
-        _fast: true
-      };
+      return { action: 'db_live_mark', data: { lectureType: isLecture ? 'single_lecture' : 'full_day' }, explanation: 'Starting attendance marking flow', _fast: true };
     }
     if (/(meri|my|show|dikhao).{0,20}(attendance|hazri|haziri|percentage|summary)/i.test(t) ||
         /^(attendance|hazri)( kya hai| kitni hai)?$/i.test(t)) {
@@ -2946,21 +2820,14 @@ function fastIntentParse(message, role) {
     }
   }
 
-  // ========== ADMIN / FACULTY ==========
   if (role === 'admin' || role === 'faculty') {
     const deviceResetMatch = t.match(/(?:reset|unlock|clear)\s+(?:device\s+)?(?:of\s+|for\s+)?(2[45](?:cse|aids)\d{2})/i) ||
                              t.match(/(2[45](?:cse|aids)\d{2}).{0,10}(?:ka|ki|device).{0,10}(?:reset|unlock|clear)/i);
-    if (deviceResetMatch) {
-      return { action: 'db_reset_device', data: { rollNo: deviceResetMatch[1].toUpperCase() }, explanation: 'Device reset', _fast: true };
-    }
+    if (deviceResetMatch) return { action: 'db_reset_device', data: { rollNo: deviceResetMatch[1].toUpperCase() }, explanation: 'Device reset', _fast: true };
     const pwdResetMatch = t.match(/(?:reset|change)\s+password\s+(?:of\s+|for\s+)?(2[45](?:cse|aids)\d{2})\s+(?:to\s+)?(\S+)/i);
-    if (pwdResetMatch) {
-      return { action: 'db_reset_password', data: { rollNo: pwdResetMatch[1].toUpperCase(), newPassword: pwdResetMatch[2] }, explanation: 'Password reset', _fast: true };
-    }
+    if (pwdResetMatch) return { action: 'db_reset_password', data: { rollNo: pwdResetMatch[1].toUpperCase(), newPassword: pwdResetMatch[2] }, explanation: 'Password reset', _fast: true };
     const delMatch = t.match(/(?:delete|remove|hatao)\s+(?:user\s+|account\s+)?(2[45](?:cse|aids)\d{2})/i);
-    if (delMatch) {
-      return { action: 'db_delete_user', data: { rollNo: delMatch[1].toUpperCase() }, explanation: `Delete ${delMatch[1]}`, requiresConfirmation: true, _fast: true };
-    }
+    if (delMatch) return { action: 'db_delete_user', data: { rollNo: delMatch[1].toUpperCase() }, explanation: `Delete ${delMatch[1]}`, requiresConfirmation: true, _fast: true };
     const holMatch = message.match(/(?:add\s+holiday|holiday\s+add|declare\s+holiday|chutti|chhutti)\s+(\d{1,2})\s+([a-z]+)(?:\s+(.+))?/i);
     if (holMatch) {
       const monthMap = { jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,
@@ -2972,9 +2839,7 @@ function fastIntentParse(message, role) {
       }
     }
     const holIso = message.match(/(?:add\s+holiday|holiday\s+add|declare\s+holiday)\s+(\d{4}-\d{2}-\d{2})\s+(.+)?/i);
-    if (holIso) {
-      return { action: 'db_add_holiday', data: { date: holIso[1], reason: holIso[2] || 'Holiday' }, explanation: 'Add holiday', _fast: true };
-    }
+    if (holIso) return { action: 'db_add_holiday', data: { date: holIso[1], reason: holIso[2] || 'Holiday' }, explanation: 'Add holiday', _fast: true };
     const pubMatch = t.match(/publish.{0,20}(full\s*day|full_day|lecture|single).{0,20}(?:for\s+)?(\d+)?/i);
     if (pubMatch) {
       const type = /full|fullday/.test(pubMatch[1]) ? 'full_day' : 'single_lecture';
@@ -2989,24 +2854,13 @@ function fastIntentParse(message, role) {
       const thresh = t.match(/(\d{2,3})\s*%?/);
       return { action: 'db_defaulters', data: { threshold: thresh ? parseInt(thresh[1]) : 75 }, explanation: 'Defaulters list', _fast: true };
     }
-    if (/(approve|manzoor|swikar).{0,15}(all|pending|sab)/i.test(t)) {
-      return { action: 'db_bulk_review', data: { decision: 'Approved' }, explanation: 'Approve all pending', _fast: true };
-    }
-    if (/(reject).{0,15}(all|pending|sab)/i.test(t)) {
-      return { action: 'db_bulk_review', data: { decision: 'Rejected' }, explanation: 'Reject all pending', _fast: true };
-    }
-    if (/(pending|list|show|dikhao).{0,15}requests?/i.test(t)) {
-      return { action: 'db_list_requests', data: { status: 'Pending' }, explanation: 'List requests', _fast: true };
-    }
-    if (/(pending|list|show|dikhao).{0,15}registration/i.test(t)) {
-      return { action: 'db_list_registrations', data: { status: 'Pending' }, explanation: 'List registrations', _fast: true };
-    }
-    if (/(dashboard|stats|summary|overall)/i.test(t) && t.length < 40) {
-      return { action: 'db_dashboard_stats', explanation: 'Dashboard stats', _fast: true };
-    }
+    if (/(approve|manzoor|swikar).{0,15}(all|pending|sab)/i.test(t)) return { action: 'db_bulk_review', data: { decision: 'Approved' }, explanation: 'Approve all pending', _fast: true };
+    if (/(reject).{0,15}(all|pending|sab)/i.test(t)) return { action: 'db_bulk_review', data: { decision: 'Rejected' }, explanation: 'Reject all pending', _fast: true };
+    if (/(pending|list|show|dikhao).{0,15}requests?/i.test(t)) return { action: 'db_list_requests', data: { status: 'Pending' }, explanation: 'List requests', _fast: true };
+    if (/(pending|list|show|dikhao).{0,15}registration/i.test(t)) return { action: 'db_list_registrations', data: { status: 'Pending' }, explanation: 'List registrations', _fast: true };
+    if (/(dashboard|stats|summary|overall)/i.test(t) && t.length < 40) return { action: 'db_dashboard_stats', explanation: 'Dashboard stats', _fast: true };
   }
 
-  // ========== COMMON ==========
   if (/(timetable|time\s*table|schedule|classes).{0,15}(today|aaj|dikhao|show)?/i.test(t) ||
       /^(today.?s timetable|aaj ka timetable)/i.test(t)) {
     return { action: 'db_timetable', explanation: 'Timetable', _fast: true };
@@ -3016,62 +2870,46 @@ function fastIntentParse(message, role) {
 }
 
 // ============================================================
-//  ★ EXPANDED DB INTENT PROMPT
+//  DB INTENT PROMPT
 // ============================================================
 const DB_INTENT_PROMPT = `You are a JSON API. Return ONLY valid JSON. No prose. No markdown.
 Translate user's natural language into a JSON action. NEVER invent data. NEVER write prose.
-## Today's date and role are provided in user context.
 ## Response format (STRICT):
 {"action":"...","collection":"...","filter":{...},"update":{...},"data":{...},"limit":number,"sort":{...},"explanation":"...","requiresConfirmation":true|false,"reply":null}
-
 ## SUPPORTED ACTIONS:
 ### GENERAL
 - "reply" → casual chat (put answer in "reply")
 - "db_read" / "db_count" → read/count
-- "db_timetable" → timetable (data: { date })
+- "db_timetable" → timetable
 - "db_system_health" → health (ADMIN)
-
 ### STUDENT
 - "db_live_mark" → live mark (data: { lectureType })
-- "db_submit_request" → submit request
-- "db_my_requests" / "db_my_attendance" / "db_my_leave" / "db_apply_leave"
+- "db_submit_request" / "db_my_requests" / "db_my_attendance" / "db_my_leave" / "db_apply_leave"
 - "db_bunk_advisor" / "db_working_days" / "db_geofence_guide"
-
 ### FACULTY
-- "db_faculty_mark" → mark single (data: { rollNo, subject })
-- "db_nlp_bulk_mark" → bulk mark
-- "db_generate_passcode" / "db_my_students" / "db_recent_marks"
-- "db_class_average" / "db_student_lookup"
-- "db_review_request"
-
-### ADMIN (all of above plus)
+- "db_faculty_mark" / "db_nlp_bulk_mark" / "db_generate_passcode" / "db_my_students"
+- "db_recent_marks" / "db_class_average" / "db_student_lookup" / "db_review_request"
+### ADMIN
 - "db_add_user" / "db_delete_user" / "db_reset_password" / "db_reset_device" / "db_update_roll"
-- "db_broadcast_notice" / "db_clear_notice"
-- "db_add_holiday" / "db_delete_holiday" / "db_list_holidays"
+- "db_broadcast_notice" / "db_clear_notice" / "db_add_holiday" / "db_delete_holiday"
 - "db_publish_passcode" / "db_toggle_passcode" / "db_passcode_status"
 - "db_list_requests" / "db_bulk_review" / "db_clear_requests"
 - "db_list_registrations" / "db_review_registration" / "db_clear_registrations"
 - "db_list_account_requests" / "db_review_account_request" / "db_clear_account_requests"
 - "db_list_leave" / "db_review_leave" / "db_clear_leaves"
-- "db_manual_mark" / "db_bulk_mark" / "db_bulk_delete"
-- "db_top_attendance" / "db_defaulters" / "db_impersonate" / "db_fix_attendance"
-- "db_assign_subject" / "db_remove_subject"
-- "db_clear_chats" / "db_dashboard_stats" / "db_all_users"
-
+- "db_manual_mark" / "db_bulk_mark" / "db_bulk_delete" / "db_top_attendance"
+- "db_defaulters" / "db_impersonate" / "db_fix_attendance"
+- "db_assign_subject" / "db_remove_subject" / "db_clear_chats" / "db_dashboard_stats" / "db_all_users"
 ## CRITICAL:
 1. Students CANNOT create attendances. Use "db_live_mark" or "db_submit_request".
 2. "mark my attendance" → action="db_live_mark", data={lectureType: 'full_day'}
 3. Destructive → requiresConfirmation: true
-4. If you cannot match → action "reply" with answer
+4. If you cannot match → action "reply"
 5. Return ONLY JSON, no extra text`;
 
 async function detectDbIntent(message, userContext, threadId = null) {
   const fastIntent = fastIntentParse(message, userContext.role);
-  if (fastIntent) {
-    console.log(`⚡ [FAST-INTENT] ${fastIntent.action}`);
-    return fastIntent;
-  }
-
+  if (fastIntent) { console.log(`⚡ [FAST-INTENT] ${fastIntent.action}`); return fastIntent; }
   const today = getISTDateString(new Date());
   const tomorrow = getISTDateString(new Date(Date.now() + 24 * 60 * 60 * 1000));
   const now = new Date();
@@ -3079,7 +2917,6 @@ async function detectDbIntent(message, userContext, threadId = null) {
   const istTimeStr = `${String(Math.floor(istMin/60)).padStart(2,'0')}:${String(istMin%60).padStart(2,'0')}`;
   const ctx = `Role: ${userContext.role}\nRollNo: ${userContext.rollNo}\nName: ${userContext.name}\nBranch: ${userContext.branch || 'CSE'}\nToday: ${today}\nTomorrow: ${tomorrow}\nCurrent IST: ${istTimeStr}\nCollege Hours: 09:20–15:00 IST`;
   const prompt = `${ctx}\n\nUser message: "${message}"\n\nReturn ONLY valid JSON.`;
-
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const reply = await callAI({ prompt, systemPrompt: DB_INTENT_PROMPT, maxTokens: 800, temperature: 0.1, threadId, forceJson: true });
@@ -3089,12 +2926,10 @@ async function detectDbIntent(message, userContext, threadId = null) {
       if (jsonMatch) cleaned = jsonMatch[0];
       const parsed = JSON.parse(cleaned);
       if (parsed.action === 'reply' && parsed.reply && /open|click|dashboard|panel|section/i.test(parsed.reply)) {
-        console.warn(`⚠️ [INTENT] AI returned manual instructions (attempt ${attempt+1})`);
         if (attempt === 0) continue;
       }
       return parsed;
     } catch (err) {
-      console.warn(`⚠️ [INTENT] Parse failed (attempt ${attempt+1}):`, err.message);
       if (attempt === 1) return { action: 'reply', reply: null, explanation: 'Could not parse', requiresConfirmation: false };
     }
   }
@@ -3128,7 +2963,6 @@ async function executeDbAction(intent, userContext, threadId = null) {
 
   if (action === 'reply') return { reply: reply || explanation || 'Noted.', isReply: true };
 
-  // ========== STUDENT ==========
   if (action === 'db_live_mark') {
     if (!isStudent) return { error: 'Only students can mark attendance.' };
     return { needsLiveMarking: true, data: data || {}, message: 'Share location and passcode.' };
@@ -3189,7 +3023,6 @@ async function executeDbAction(intent, userContext, threadId = null) {
     return { reply: `📄 I can generate your PDF. Tap **Download PDF** on dashboard or say the exact month.`, isReply: true, showDownload: true };
   }
 
-  // ========== FACULTY ==========
   if (action === 'db_faculty_mark') {
     if (!isFaculty && !isAdmin) return { error: 'Faculty/Admin only.' };
     const d = data || {};
@@ -3320,7 +3153,6 @@ async function executeDbAction(intent, userContext, threadId = null) {
     return { reply: `✅ Approved ${d.rollNo} (${d.date}). Marked **${marked}** lecture(s).`, isReply: true };
   }
 
-  // ========== ADMIN ==========
   if (action === 'db_add_user') {
     if (!isAdmin) return { error: 'Admin only.' };
     const d = data || {};
@@ -3788,7 +3620,7 @@ function L(lang, key) {
 }
 
 // ============================================================
-//  MAIN CHAT
+//  ★★★ MAIN CHAT — FIXED (escape hatch + clear on location fail)
 // ============================================================
 app.post('/api/ai/chat', async (req, res) => {
   try {
@@ -3818,42 +3650,75 @@ app.post('/api/ai/chat', async (req, res) => {
     thinkingCtx.flags.languageDetected = userLang;
     console.log(`🌐 [LANG] detected=${userLang} for msg="${(message||'').slice(0,60)}"`);
 
-    // ============ SEQUENTIAL FLOW ============
+    // ============ SEQUENTIAL FLOW WITH ESCAPE HATCH ============
     if (cr !== 'guest' && userRole === 'student') {
       const pending = await getPending(cr);
       if (pending) {
+        const msgLower = (message || '').toLowerCase().trim();
+        const pcCandidate = detectPasscodeInMessage(message || '');
+        const hasLocation = !!(location && location.latitude && location.longitude);
+
+        // ★ Escape keywords: greeting / cancel / casual
+        const isCancelOrGreeting = /^(hi+|hello+|hey+|namaste|yo|sup|thank|thanks|thx|ok|okay|good morning|good evening|good night|bye|goodbye|see you|no problem|k|hmm+|achha|theek|cancel|exit|stop|quit|abort|chhodo|chhod|band karo|rehne do|nevermind|never mind|forget it|nvm|no thanks|nahi chahiye|mat karo|bhool jao|nahi|🙏|🙌|👍)/i.test(msgLower);
+
+        // Is the current message a valid expected input for the flow?
+        let isExpected = false;
         if (pending.type === 'awaiting_passcode') {
-          const pc = detectPasscodeInMessage(message);
-          const ptype = pending.data.passcodeType || 'full_day';
-          const expectedLen = ptype === 'full_day' ? 5 : 4;
-          if (pc && pc.length === expectedLen) {
-            const passDoc = await Passcode.findOne({ passcode: pc, type: ptype, expiresAt: { $gt: new Date() }, enabled: true });
-            if (!passDoc) {
-              return sendJson({ reply: L(userLang, 'bad_passcode'), threadId: effectiveThreadId, aiOk: true, usedDatabase: true, needsPasscode: true, passcodeType: ptype, awaitingPasscode: true });
-            }
-            pending.type = 'awaiting_location';
-            pending.data.passcode = pc;
-            await pending.save();
-            thinkingCtx.flags.passcodeVerified = true;
-            return sendJson({
-              reply: L(userLang, 'passcode_ok_ask_location'),
-              threadId: effectiveThreadId,
-              aiOk: true,
-              usedDatabase: true,
-              needsLocation: true,
-              locationForMark: true,
-              lectureType: pending.data.lectureType || 'full_day',
-              passcodeType: ptype
-            });
-          } else {
-            return sendJson({ reply: L(userLang, ptype === 'full_day' ? 'need_passcode_full' : 'need_passcode_lecture'), threadId: effectiveThreadId, aiOk: true, usedDatabase: true, needsPasscode: true, passcodeType: ptype, awaitingPasscode: true });
-          }
+          isExpected = !!(pcCandidate && pcCandidate.length >= 4 && pcCandidate.length <= 5);
+        } else if (pending.type === 'awaiting_location') {
+          isExpected = hasLocation;
         }
-        if (pending.type === 'awaiting_location') {
-          if (location && location.latitude && location.longitude) {
+
+        // Escape if: greeting/cancel OR (user typed some text but not expected input)
+        const shouldEscape = isCancelOrGreeting || (!isExpected && !hasLocation);
+
+        if (shouldEscape) {
+          await clearPending(cr);
+          console.log(`🚪 [PENDING-CLEAR] Cleared ${pending.type} for ${cr} (msg="${msgLower.slice(0,40)}")`);
+          // Fall through → normal handling below
+        } else {
+          // ============ ACTIVE FLOW: awaiting passcode ============
+          if (pending.type === 'awaiting_passcode') {
+            const ptype = pending.data.passcodeType || 'full_day';
+            const expectedLen = ptype === 'full_day' ? 5 : 4;
+            if (pcCandidate && pcCandidate.length === expectedLen) {
+              const passDoc = await Passcode.findOne({ passcode: pcCandidate, type: ptype, expiresAt: { $gt: new Date() }, enabled: true });
+              if (!passDoc) {
+                return sendJson({ reply: L(userLang, 'bad_passcode'), threadId: effectiveThreadId, aiOk: true, usedDatabase: true, needsPasscode: true, passcodeType: ptype, awaitingPasscode: true });
+              }
+              pending.type = 'awaiting_location';
+              pending.data.passcode = pcCandidate;
+              await pending.save();
+              thinkingCtx.flags.passcodeVerified = true;
+              return sendJson({
+                reply: L(userLang, 'passcode_ok_ask_location'),
+                threadId: effectiveThreadId,
+                aiOk: true,
+                usedDatabase: true,
+                needsLocation: true,
+                locationForMark: true,
+                lectureType: pending.data.lectureType || 'full_day',
+                passcodeType: ptype
+              });
+            } else {
+              return sendJson({ reply: L(userLang, ptype === 'full_day' ? 'need_passcode_full' : 'need_passcode_lecture'), threadId: effectiveThreadId, aiOk: true, usedDatabase: true, needsPasscode: true, passcodeType: ptype, awaitingPasscode: true });
+            }
+          }
+
+          // ============ ACTIVE FLOW: awaiting location ============
+          if (pending.type === 'awaiting_location') {
             const lc = checkLocation(location.latitude, location.longitude);
             if (!lc.isInside) {
-              return sendJson({ reply: `${L(userLang, 'out_of_range')} (${lc.distance}m)`, threadId: effectiveThreadId, aiOk: true, usedDatabase: true, locationRejected: true });
+              // ★ FIX: Clear pending immediately on out-of-range so user is not stuck
+              await clearPending(cr);
+              console.log(`📍 [LOCATION-REJECTED] ${cr} was ${lc.distance}m away. Pending cleared.`);
+              return sendJson({
+                reply: `❌ **Out of range** (${lc.distance}m away).\n\nYou must be within 100m of BM Group campus to mark attendance.\n\n• Move closer to college\n• Then say **"mark my attendance"** again`,
+                threadId: effectiveThreadId,
+                aiOk: true,
+                usedDatabase: true,
+                locationRejected: true
+              });
             }
             const passDoc = await Passcode.findOne({ passcode: pending.data.passcode, type: pending.data.passcodeType, expiresAt: { $gt: new Date() }, enabled: true });
             if (!passDoc) {
@@ -3897,8 +3762,6 @@ app.post('/api/ai/chat', async (req, res) => {
               return sendJson({ reply: replyText, threadId: nt.threadId, aiOk: true, usedDatabase: true, marked: true });
             }
             return sendJson({ reply: replyText, threadId: effectiveThreadId, aiOk: true, usedDatabase: true, marked: true });
-          } else {
-            return sendJson({ reply: L(userLang, 'location_needed'), threadId: effectiveThreadId, aiOk: true, usedDatabase: true, needsLocation: true, locationForMark: true, lectureType: pending.data.lectureType || 'full_day' });
           }
         }
       }
@@ -4098,7 +3961,6 @@ Analyze and summarize. Use markdown bullets. NEVER use markdown tables.`;
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== AI: PDF REPORT ==========
 app.post('/api/ai/generate-report-pdf', async (req, res) => {
   try {
     const { rollNo, reportType = 'student-attendance', targetRollNo, startDate, endDate } = req.body;
@@ -4156,7 +4018,6 @@ app.post('/api/ai/generate-report-pdf', async (req, res) => {
   } catch (err) { console.error('❌ PDF error:', err); res.status(500).json({ error: err.message }); }
 });
 
-// ========== ADMIN REQUESTS SUMMARY ==========
 app.get('/api/admin/requests-summary/:requesterRollNo', async (req, res) => {
   try {
     const req1 = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
@@ -4185,7 +4046,6 @@ app.delete('/api/admin/request/:id/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== FIX ALL ATTENDANCE ==========
 app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
   try {
     const { requesterRollNo, testRollNo } = req.body;
