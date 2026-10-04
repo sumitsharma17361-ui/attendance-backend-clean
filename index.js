@@ -971,7 +971,6 @@ async function callGemini(args) {
   if (GEMINI_API_KEYS.length === 0) throw new Error('No Gemini API key');
   const preferred = [args.model || GEMINI_MODEL, ...GEMINI_FALLBACK_MODELS].filter(Boolean);
 
-  // Try preferred models first
   const startTime = Date.now();
   let lastError = null;
 
@@ -992,7 +991,6 @@ async function callGemini(args) {
     }
   }
 
-  // ★ All preferred failed → discover available models and try
   console.log(`🔍 [GEMINI] Preferred models failed, auto-discovering...`);
   const discovered = await discoverGeminiModels(GEMINI_API_KEYS[0]);
   const remaining = discovered.filter(m => !preferred.includes(m));
@@ -2059,6 +2057,8 @@ app.get('/api/student/trend/:rollNo', async (req, res) => {
           const dt = new Date(y, m, day);
           const ds = getISTDateString(dt);
           if (ds > todayStr) continue;
+          // ★ FIX: skip days before semester start (July 1-14)
+          if (dt < SEMESTER_START) continue;
           const dow = dt.getDay();
           if (dow === 0 || dow === 6) continue;
           if (holidaySet.has(ds)) continue;
@@ -2204,7 +2204,9 @@ app.delete('/api/attendance/delete-day/:rollNo/:date/:requesterRollNo', async (r
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== MONTHLY SUMMARY ==========
+// ============================================================
+//  ★★★ MONTHLY SUMMARY — FIXED (July skips 1-14) ★★★
+// ============================================================
 app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
   try {
     const cr = req.params.rollNo.trim().toUpperCase();
@@ -2216,47 +2218,111 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'Not found' });
     const branch = user.branch || 'CSE';
     const tt = getTimetableForBranch(branch);
+
     const startD = new Date(2026, m, 1);
     const endD = new Date(2026, m + 1, 0);
-    const startStr = getISTDateString(startD), endStr = getISTDateString(endD);
-    const records = await Attendance.find({ rollNo: cr, date: { $gte: startStr, $lte: endStr } }).lean();
+    const startStr = getISTDateString(startD);
+    const endStr = getISTDateString(endD);
+
+    // ★ FIX #1: Semester start cutoff (15 Jul 2026)
+    const semesterStartStr = getISTDateString(SEMESTER_START); // "2026-07-15"
+    const effectiveStartStr = startStr < semesterStartStr ? semesterStartStr : startStr;
+
+    // ★ FIX #2: Only fetch records from effective start date
+    const records = await Attendance.find({
+      rollNo: cr,
+      date: { $gte: effectiveStartStr, $lte: endStr }
+    }).lean();
+
     const subSet = new Set();
     let totalConducted = 0;
     const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    const holidaySet = new Set((await Holiday.find({ date: { $gte: startStr, $lte: endStr } })).map(h => (h.date || '').toString().split('T')[0]));
+    const holidaySet = new Set(
+      (await Holiday.find({ date: { $gte: startStr, $lte: endStr } }))
+        .map(h => (h.date || '').toString().split('T')[0])
+    );
     const todayStr = getISTDateString(new Date());
+
+    // ---- Pass 1: build subject set + conducted count ----
     let cur = new Date(startD);
     while (cur <= endD) {
       const ds = getISTDateString(cur);
       if (ds > todayStr) { cur.setDate(cur.getDate() + 1); continue; }
+      // ★ FIX #3a: skip days before semester start
+      if (ds < semesterStartStr) { cur.setDate(cur.getDate() + 1); continue; }
+
       const dow = cur.getDay();
       if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) {
         const dayName = dayNameMap[dow];
-        (tt[dayName] || []).forEach(e => { const sub = mapToCanonical(e.subject); if (!sub.includes('Sports') && !sub.includes('LIB')) { subSet.add(sub); totalConducted++; } });
+        (tt[dayName] || []).forEach(e => {
+          const sub = mapToCanonical(e.subject);
+          if (!sub.includes('Sports') && !sub.includes('LIB')) {
+            subSet.add(sub);
+            totalConducted++;
+          }
+        });
       }
       cur.setDate(cur.getDate() + 1);
     }
+
+    // ---- Pass 2: per-subject total ----
     const stats = {};
     subSet.forEach(sub => { stats[sub] = { total: 0, present: 0 }; });
+
     cur = new Date(startD);
     while (cur <= endD) {
       const ds = getISTDateString(cur);
       if (ds > todayStr) { cur.setDate(cur.getDate() + 1); continue; }
+      // ★ FIX #3b: skip days before semester start
+      if (ds < semesterStartStr) { cur.setDate(cur.getDate() + 1); continue; }
+
       const dow = cur.getDay();
       if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) {
         const dayName = dayNameMap[dow];
-        (tt[dayName] || []).forEach(e => { const sub = mapToCanonical(e.subject); if (stats[sub]) stats[sub].total++; });
+        (tt[dayName] || []).forEach(e => {
+          const sub = mapToCanonical(e.subject);
+          if (stats[sub]) stats[sub].total++;
+        });
       }
       cur.setDate(cur.getDate() + 1);
     }
-    records.forEach(rec => { const sub = mapToCanonical(rec.subject); if (stats[sub] && (rec.status === 'Present' || rec.status === 'Duty Leave')) stats[sub].present++; });
+
+    // ---- Present counts from records ----
+    records.forEach(rec => {
+      const sub = mapToCanonical(rec.subject);
+      if (stats[sub] && (rec.status === 'Present' || rec.status === 'Duty Leave')) {
+        stats[sub].present++;
+      }
+    });
+
     let totalAttended = 0;
     Object.values(stats).forEach(st => totalAttended += st.present);
+
     const pct = totalConducted > 0 ? Math.round((totalAttended / totalConducted) * 100) : 0;
-    const presentDays = new Set(records.filter(r => r.status === 'Present' || r.status === 'Duty Leave').map(r => (r.date || '').toString().split('T')[0]));
+
+    const presentDays = new Set(
+      records
+        .filter(r => r.status === 'Present' || r.status === 'Duty Leave')
+        .map(r => (r.date || '').toString().split('T')[0])
+    );
+
     const sWithPct = {};
-    Object.keys(stats).forEach(sub => { const st = stats[sub]; sWithPct[sub] = { total: st.total, present: st.present, percentage: st.total > 0 ? Math.round((st.present / st.total) * 100) : 0 }; });
-    res.json({ totalConducted, totalAttended, attendancePercentage: pct, daysPresent: presentDays.size, subjectStats: sWithPct });
+    Object.keys(stats).forEach(sub => {
+      const st = stats[sub];
+      sWithPct[sub] = {
+        total: st.total,
+        present: st.present,
+        percentage: st.total > 0 ? Math.round((st.present / st.total) * 100) : 0
+      };
+    });
+
+    res.json({
+      totalConducted,
+      totalAttended,
+      attendancePercentage: pct,
+      daysPresent: presentDays.size,
+      subjectStats: sWithPct
+    });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -2671,7 +2737,6 @@ app.get('/api/admin/defaulters/:requesterRollNo', async (req, res) => {
         const total = summary.totalConductedLectures || 0;
         const present = summary.totalAcademicLectures || 0;
 
-        // ★ Include only if BELOW threshold
         if (pct < threshold) {
           defaulters.push({
             rollNo: s.rollNo,
@@ -2883,23 +2948,19 @@ function fastIntentParse(message, role) {
 
   // ========== ADMIN / FACULTY ==========
   if (role === 'admin' || role === 'faculty') {
-    // Device reset
     const deviceResetMatch = t.match(/(?:reset|unlock|clear)\s+(?:device\s+)?(?:of\s+|for\s+)?(2[45](?:cse|aids)\d{2})/i) ||
                              t.match(/(2[45](?:cse|aids)\d{2}).{0,10}(?:ka|ki|device).{0,10}(?:reset|unlock|clear)/i);
     if (deviceResetMatch) {
       return { action: 'db_reset_device', data: { rollNo: deviceResetMatch[1].toUpperCase() }, explanation: 'Device reset', _fast: true };
     }
-    // Password reset
     const pwdResetMatch = t.match(/(?:reset|change)\s+password\s+(?:of\s+|for\s+)?(2[45](?:cse|aids)\d{2})\s+(?:to\s+)?(\S+)/i);
     if (pwdResetMatch) {
       return { action: 'db_reset_password', data: { rollNo: pwdResetMatch[1].toUpperCase(), newPassword: pwdResetMatch[2] }, explanation: 'Password reset', _fast: true };
     }
-    // Delete user
     const delMatch = t.match(/(?:delete|remove|hatao)\s+(?:user\s+|account\s+)?(2[45](?:cse|aids)\d{2})/i);
     if (delMatch) {
       return { action: 'db_delete_user', data: { rollNo: delMatch[1].toUpperCase() }, explanation: `Delete ${delMatch[1]}`, requiresConfirmation: true, _fast: true };
     }
-    // Add holiday (English months)
     const holMatch = message.match(/(?:add\s+holiday|holiday\s+add|declare\s+holiday|chutti|chhutti)\s+(\d{1,2})\s+([a-z]+)(?:\s+(.+))?/i);
     if (holMatch) {
       const monthMap = { jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,
@@ -2910,44 +2971,36 @@ function fastIntentParse(message, role) {
         return { action: 'db_add_holiday', data: { date: dateStr, reason: holMatch[3] || 'Holiday' }, explanation: 'Add holiday', _fast: true };
       }
     }
-    // Add holiday (ISO format)
     const holIso = message.match(/(?:add\s+holiday|holiday\s+add|declare\s+holiday)\s+(\d{4}-\d{2}-\d{2})\s+(.+)?/i);
     if (holIso) {
       return { action: 'db_add_holiday', data: { date: holIso[1], reason: holIso[2] || 'Holiday' }, explanation: 'Add holiday', _fast: true };
     }
-    // Publish passcode
     const pubMatch = t.match(/publish.{0,20}(full\s*day|full_day|lecture|single).{0,20}(?:for\s+)?(\d+)?/i);
     if (pubMatch) {
       const type = /full|fullday/.test(pubMatch[1]) ? 'full_day' : 'single_lecture';
       const minutes = parseInt(pubMatch[2]) || (type === 'full_day' ? 1440 : 30);
       return { action: 'db_publish_passcode', data: { type, durationMinutes: minutes }, explanation: 'Publish passcode', _fast: true };
     }
-    // Generate lecture passcode
     if (/(generate|banao|create).{0,15}(lecture|single).{0,15}passcode/i.test(t) ||
         /(lecture|single).{0,10}passcode.{0,10}(generate|banao|create)/i.test(t)) {
       return { action: 'db_generate_passcode', explanation: 'Generate lecture passcode', _fast: true };
     }
-    // Defaulters
     if (/(defaulters?|below\s*75|kam\s*attendance|low\s*attendance|defaulter\s*list)/i.test(t)) {
       const thresh = t.match(/(\d{2,3})\s*%?/);
       return { action: 'db_defaulters', data: { threshold: thresh ? parseInt(thresh[1]) : 75 }, explanation: 'Defaulters list', _fast: true };
     }
-    // Approve/reject all
     if (/(approve|manzoor|swikar).{0,15}(all|pending|sab)/i.test(t)) {
       return { action: 'db_bulk_review', data: { decision: 'Approved' }, explanation: 'Approve all pending', _fast: true };
     }
     if (/(reject).{0,15}(all|pending|sab)/i.test(t)) {
       return { action: 'db_bulk_review', data: { decision: 'Rejected' }, explanation: 'Reject all pending', _fast: true };
     }
-    // List requests
     if (/(pending|list|show|dikhao).{0,15}requests?/i.test(t)) {
       return { action: 'db_list_requests', data: { status: 'Pending' }, explanation: 'List requests', _fast: true };
     }
-    // List registrations
     if (/(pending|list|show|dikhao).{0,15}registration/i.test(t)) {
       return { action: 'db_list_registrations', data: { status: 'Pending' }, explanation: 'List registrations', _fast: true };
     }
-    // Dashboard stats
     if (/(dashboard|stats|summary|overall)/i.test(t) && t.length < 40) {
       return { action: 'db_dashboard_stats', explanation: 'Dashboard stats', _fast: true };
     }
@@ -3013,7 +3066,6 @@ Translate user's natural language into a JSON action. NEVER invent data. NEVER w
 5. Return ONLY JSON, no extra text`;
 
 async function detectDbIntent(message, userContext, threadId = null) {
-  // ★ Fast regex parser first
   const fastIntent = fastIntentParse(message, userContext.role);
   if (fastIntent) {
     console.log(`⚡ [FAST-INTENT] ${fastIntent.action}`);
@@ -3028,7 +3080,6 @@ async function detectDbIntent(message, userContext, threadId = null) {
   const ctx = `Role: ${userContext.role}\nRollNo: ${userContext.rollNo}\nName: ${userContext.name}\nBranch: ${userContext.branch || 'CSE'}\nToday: ${today}\nTomorrow: ${tomorrow}\nCurrent IST: ${istTimeStr}\nCollege Hours: 09:20–15:00 IST`;
   const prompt = `${ctx}\n\nUser message: "${message}"\n\nReturn ONLY valid JSON.`;
 
-  // ★ Retry once if parse fails
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const reply = await callAI({ prompt, systemPrompt: DB_INTENT_PROMPT, maxTokens: 800, temperature: 0.1, threadId, forceJson: true });
@@ -3037,7 +3088,6 @@ async function detectDbIntent(message, userContext, threadId = null) {
       const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
       if (jsonMatch) cleaned = jsonMatch[0];
       const parsed = JSON.parse(cleaned);
-      // Validate — reject manual instructions
       if (parsed.action === 'reply' && parsed.reply && /open|click|dashboard|panel|section/i.test(parsed.reply)) {
         console.warn(`⚠️ [INTENT] AI returned manual instructions (attempt ${attempt+1})`);
         if (attempt === 0) continue;
@@ -3757,7 +3807,6 @@ app.post('/api/ai/chat', async (req, res) => {
     const userBranch = userData?.branch || branch || 'CSE';
     const effectiveThreadId = existingChat?.threadId || threadId || null;
 
-    // ★ Thinking tracker
     const tStart = Date.now();
     const thinkingCtx = { userMessage: message, userRole, flags: { languageDetected: null } };
     const sendJson = (obj) => {
@@ -3869,7 +3918,6 @@ app.post('/api/ai/chat', async (req, res) => {
         }
         console.log('🧠 Intent:', JSON.stringify(intent).substring(0, 200));
 
-        // Live mark flow
         if (intent.action === 'db_live_mark') {
           const lectureType = intent.data?.lectureType || 'full_day';
           const activePasscode = await Passcode.findOne({ type: lectureType, published: true, enabled: true, expiresAt: { $gt: new Date() } }).sort({ publishedAt: -1 });
