@@ -3,7 +3,7 @@ importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
 firebase.initializeApp({
-  apiKey: "AIzaSyBBD3V20eKCo8S9Smi6LY--kLJj-pBVXYQ",
+  apiKey: "AIzaSyBBD3V20eKCo8S9Smi6LY--klDj-pBVXYQ",
   authDomain: "bm-attedance.firebaseapp.com",
   projectId: "bm-attedance",
   storageBucket: "bm-attedance.firebasestorage.app",
