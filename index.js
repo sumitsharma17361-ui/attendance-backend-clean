@@ -1,4 +1,4 @@
-// ================= index-32.js =================
+// ================= index.js (with FCM) =================
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const { z } = require('zod');
 const PDFDocument = require('pdfkit');
+const admin = require('firebase-admin');
 process.env.TZ = 'Asia/Kolkata';
 console.log(`🕐 Server Timezone: ${process.env.TZ}`);
 
@@ -14,6 +15,149 @@ const app = express();
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '50mb' }));
 app.use(cors());
+
+// ============================================================
+//  FCM INIT
+// ============================================================
+let fcmReady = false;
+try {
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY
+    ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
+    : null;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+
+  if (projectId && privateKey && clientEmail) {
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        credential: admin.credential.cert({ projectId, privateKey, clientEmail })
+      });
+    }
+    fcmReady = true;
+    console.log('🔥 Firebase Admin initialized — push notifications READY');
+  } else {
+    console.warn('⚠️ FCM env vars missing — push notifications DISABLED');
+    console.warn(`   projectId=${!!projectId} | privateKey=${!!privateKey} | clientEmail=${!!clientEmail}`);
+  }
+} catch (e) {
+  console.error('❌ Firebase Admin init failed:', e.message);
+  fcmReady = false;
+}
+
+async function sendPushNotification(fcmToken, title, body, data = {}) {
+  if (!fcmReady || !fcmToken) return { ok: false, reason: !fcmReady ? 'not-ready' : 'no-token' };
+  try {
+    const message = {
+      token: fcmToken,
+      notification: { title, body },
+      data: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])),
+      webpush: {
+        notification: {
+          title, body,
+          icon: '/icon-192.png',
+          badge: '/icon-192.png',
+          vibrate: [200, 100, 200]
+        },
+        fcmOptions: { link: '/' }
+      }
+    };
+    const resp = await admin.messaging().send(message);
+    return { ok: true, messageId: resp };
+  } catch (e) {
+    if (e.code === 'messaging/registration-token-not-registered' ||
+        e.code === 'messaging/invalid-registration-token') {
+      return { ok: false, reason: 'invalid-token', code: e.code };
+    }
+    console.warn('⚠️ FCM send failed:', e.message);
+    return { ok: false, reason: e.message };
+  }
+}
+
+async function sendPushToMany(tokens, title, body, data = {}) {
+  if (!fcmReady || !tokens || !tokens.length) return { ok: false, sent: 0, failed: 0 };
+  const valid = tokens.filter(t => t && typeof t === 'string' && t.length > 20);
+  if (!valid.length) return { ok: false, sent: 0, failed: 0 };
+  try {
+    const message = {
+      tokens: valid,
+      notification: { title, body },
+      data: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])),
+      webpush: {
+        notification: {
+          title, body,
+          icon: '/icon-192.png',
+          badge: '/icon-192.png',
+          vibrate: [200, 100, 200]
+        },
+        fcmOptions: { link: '/' }
+      }
+    };
+    const resp = await admin.messaging().sendEachForMulticast(message);
+    console.log(`📤 [FCM-BULK] "${title}" → sent=${resp.successCount} failed=${resp.failureCount}`);
+    // Cleanup invalid tokens
+    const invalidTokens = [];
+    resp.responses.forEach((r, i) => {
+      if (!r.success) {
+        const code = r.error?.code || '';
+        if (code.includes('registration-token-not-registered') || code.includes('invalid-registration-token')) {
+          invalidTokens.push(valid[i]);
+        }
+      }
+    });
+    if (invalidTokens.length) {
+      try {
+        await User.updateMany(
+          { fcmToken: { $in: invalidTokens } },
+          { $set: { fcmToken: null } }
+        );
+        console.log(`🧹 [FCM] Cleaned ${invalidTokens.length} invalid token(s)`);
+      } catch (e) {}
+    }
+    return { ok: true, sent: resp.successCount, failed: resp.failureCount };
+  } catch (e) {
+    console.warn('⚠️ FCM bulk send failed:', e.message);
+    return { ok: false, sent: 0, failed: valid.length, reason: e.message };
+  }
+}
+
+async function sendPushToAllStudents(title, body, data = {}) {
+  if (!fcmReady) return { ok: false, sent: 0, failed: 0, reason: 'fcm-not-ready' };
+  try {
+    const students = await User.find({ role: 'student', fcmToken: { $ne: null } })
+      .select('fcmToken').lean();
+    const tokens = students.map(s => s.fcmToken).filter(Boolean);
+    if (!tokens.length) return { ok: false, sent: 0, failed: 0, reason: 'no-tokens' };
+    return await sendPushToMany(tokens, title, body, data);
+  } catch (e) {
+    console.warn('⚠️ FCM all-students failed:', e.message);
+    return { ok: false, sent: 0, failed: 0, reason: e.message };
+  }
+}
+
+async function sendPushToRole(role, title, body, data = {}) {
+  if (!fcmReady) return { ok: false, sent: 0, failed: 0, reason: 'fcm-not-ready' };
+  try {
+    const users = await User.find({ role, fcmToken: { $ne: null } })
+      .select('fcmToken').lean();
+    const tokens = users.map(u => u.fcmToken).filter(Boolean);
+    if (!tokens.length) return { ok: false, sent: 0, failed: 0, reason: 'no-tokens' };
+    return await sendPushToMany(tokens, title, body, data);
+  } catch (e) {
+    console.warn('⚠️ FCM role push failed:', e.message);
+    return { ok: false, sent: 0, failed: 0, reason: e.message };
+  }
+}
+
+async function sendPushToRollNo(rollNo, title, body, data = {}) {
+  if (!fcmReady || !rollNo) return { ok: false };
+  try {
+    const u = await User.findOne({ rollNo: rollNo.toUpperCase() }).select('fcmToken').lean();
+    if (!u || !u.fcmToken) return { ok: false, reason: 'no-token' };
+    return await sendPushNotification(u.fcmToken, title, body, data);
+  } catch (e) {
+    return { ok: false, reason: e.message };
+  }
+}
 
 // ============================================================
 //  AI PROVIDER CONFIG
@@ -593,7 +737,8 @@ const userSchema = new mongoose.Schema({
   semester: { type: String, default: '5th' },
   branch: { type: String, default: 'CSE' },
   activeSession: { type: String, default: null },
-  facultySubject: { type: String, default: null }
+  facultySubject: { type: String, default: null },
+  fcmToken: { type: String, default: null }
 }, { timestamps: true });
 
 const attendanceSchema = new mongoose.Schema({
@@ -1031,8 +1176,59 @@ app.get('/health', (req, res) => res.json({
     primary: { provider: 'groq', model: GROQ_MODEL, keys: GROQ_API_KEYS.length },
     fallback: { provider: 'gemini', model: GEMINI_MODEL, keys: GEMINI_API_KEYS.length, discovered: _geminiModelsCache.list.length }
   },
+  fcm: { ready: fcmReady, projectId: process.env.FIREBASE_PROJECT_ID || null },
   timestamp: new Date().toISOString()
 }));
+
+app.get('/api/health/push', async (req, res) => {
+  try {
+    let tokenCount = 0;
+    try { tokenCount = await User.countDocuments({ fcmToken: { $ne: null } }); } catch (e) {}
+    res.json({
+      fcmReady,
+      projectId: process.env.FIREBASE_PROJECT_ID || null,
+      hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
+      hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
+      usersWithTokens: tokenCount
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ========== FCM TOKEN MANAGEMENT ==========
+app.post('/api/user/save-fcm-token', async (req, res) => {
+  try {
+    const { rollNo, fcmToken } = req.body || {};
+    if (!rollNo || !fcmToken) return res.status(400).json({ error: 'rollNo and fcmToken required' });
+    const cr = rollNo.trim().toUpperCase();
+    const user = await User.findOne({ rollNo: cr });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    user.fcmToken = fcmToken;
+    await user.save();
+    console.log(`📱 [FCM-SAVE] ${cr} token saved (${fcmToken.substring(0, 20)}...)`);
+    res.json({ message: 'FCM token saved', fcmReady });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/user/remove-fcm-token', async (req, res) => {
+  try {
+    const { rollNo } = req.body || {};
+    if (!rollNo) return res.status(400).json({ error: 'rollNo required' });
+    const cr = rollNo.trim().toUpperCase();
+    await User.updateOne({ rollNo: cr }, { $set: { fcmToken: null } });
+    res.json({ message: 'FCM token removed' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/user/test-push', async (req, res) => {
+  try {
+    const { rollNo } = req.body || {};
+    if (!rollNo) return res.status(400).json({ error: 'rollNo required' });
+    if (!fcmReady) return res.status(503).json({ error: 'FCM not ready — check env vars' });
+    const cr = rollNo.trim().toUpperCase();
+    const result = await sendPushToRollNo(cr, '🧪 Test Notification', 'This is a test push from BM Group ERP!', { type: 'test' });
+    res.json({ message: 'Test sent', result });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 // ========== AUTH ==========
 app.post('/api/auth/register', async (req, res) => {
@@ -1074,6 +1270,8 @@ app.post('/api/auth/register-request', async (req, res) => {
     const hashed = await bcrypt.hash(password, 10);
     const branch = cleanRoll.includes('AIDS') ? 'AIDS' : 'CSE';
     const newReq = await RegistrationRequest.create({ name: name.trim(), rollNo: cleanRoll, password: hashed, deviceId: deviceId || null, branch });
+    // Notify admins
+    sendPushToRole('admin', '📝 New Registration Request', `${newReq.name} (${newReq.rollNo}) — ${newReq.branch}`, { type: 'registration', rollNo: newReq.rollNo }).catch(() => {});
     res.status(201).json({ message: '✅ Request submitted. Wait for admin approval.', request: { _id: newReq._id, name: newReq.name, rollNo: newReq.rollNo, branch: newReq.branch, status: newReq.status, createdAt: newReq.createdAt } });
   } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
 });
@@ -1090,8 +1288,8 @@ app.get('/api/auth/register-request/check/:rollNo', async (req, res) => {
 app.get('/api/admin/registration-requests/:requesterRollNo', async (req, res) => {
   try {
     const rn = (req.params.requesterRollNo || '').trim().toUpperCase();
-    const admin = await User.findOne({ rollNo: rn });
-    if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    const adminUser = await User.findOne({ rollNo: rn });
+    if (!adminUser || adminUser.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
     const status = req.query.status || 'Pending';
     const filter = status === 'ALL' ? {} : { status };
     const requests = await RegistrationRequest.find(filter).sort({ createdAt: -1 }).limit(200);
@@ -1102,13 +1300,13 @@ app.get('/api/admin/registration-requests/:requesterRollNo', async (req, res) =>
 app.post('/api/admin/registration-requests/review/:id', async (req, res) => {
   try {
     const { requesterRollNo, action, note } = req.body || {};
-    const admin = await User.findOne({ rollNo: (requesterRollNo || '').trim().toUpperCase() });
-    if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    const adminUser = await User.findOne({ rollNo: (requesterRollNo || '').trim().toUpperCase() });
+    if (!adminUser || adminUser.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
     if (!['Approved', 'Rejected'].includes(action)) return res.status(400).json({ error: 'Invalid action' });
     const r = await RegistrationRequest.findById(req.params.id);
     if (!r) return res.status(404).json({ error: 'Request not found' });
     if (r.status !== 'Pending') return res.status(400).json({ error: `Already ${r.status}` });
-    r.status = action; r.reviewedBy = admin.rollNo; r.adminNote = note || '';
+    r.status = action; r.reviewedBy = adminUser.rollNo; r.adminNote = note || '';
     if (action === 'Approved') {
       const dup = await User.findOne({ rollNo: r.rollNo });
       if (dup) { r.status = 'Rejected'; r.adminNote = (r.adminNote ? r.adminNote + ' · ' : '') + 'User exists'; await r.save(); return res.status(400).json({ error: 'User exists.' }); }
@@ -1116,6 +1314,7 @@ app.post('/api/admin/registration-requests/review/:id', async (req, res) => {
       r.approvedUserRollNo = newUser.rollNo;
     }
     await r.save();
+    // Notify the student (only if they have an FCM token — likely not since they can't login yet, so skip)
     res.json({ message: `Registration ${action}`, request: { _id: r._id, status: r.status, rollNo: r.rollNo, approvedUserRollNo: r.approvedUserRollNo } });
   } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
 });
@@ -1123,8 +1322,8 @@ app.post('/api/admin/registration-requests/review/:id', async (req, res) => {
 app.post('/api/admin/clear-registrations', async (req, res) => {
   try {
     const { requesterRollNo } = req.body;
-    const admin = await User.findOne({ rollNo: (requesterRollNo || '').trim().toUpperCase() });
-    if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    const adminUser = await User.findOne({ rollNo: (requesterRollNo || '').trim().toUpperCase() });
+    if (!adminUser || adminUser.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
     const r = await RegistrationRequest.deleteMany({});
     res.json({ message: `Deleted ${r.deletedCount} registration request(s).` });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -1185,6 +1384,7 @@ app.post('/api/auth/forgot-password-request', async (req, res) => {
     const existing = await AccountRequest.findOne({ rollNo: cr, type: 'forgot_password', status: 'Pending' });
     if (existing) return res.status(400).json({ error: 'Already pending request' });
     await AccountRequest.create({ rollNo: cr, type: 'forgot_password', reason: reason || 'Forgot password' });
+    sendPushToRole('admin', '🔑 Password Reset Request', `${cr} requested password reset.`, { type: 'account_request', rollNo: cr }).catch(() => {});
     res.status(201).json({ message: 'Request submitted' });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -1199,6 +1399,7 @@ app.post('/api/auth/device-reset-request', async (req, res) => {
     const existing = await AccountRequest.findOne({ rollNo: cr, type: 'device_reset', status: 'Pending' });
     if (existing) return res.status(400).json({ error: 'Already pending' });
     await AccountRequest.create({ rollNo: cr, type: 'device_reset', reason: reason || 'Device reset' });
+    sendPushToRole('admin', '📱 Device Reset Request', `${cr} requested device reset.`, { type: 'account_request', rollNo: cr }).catch(() => {});
     res.status(201).json({ message: 'Request submitted' });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -1244,8 +1445,8 @@ app.get('/api/auth/account-requests/check/:rollNo', async (req, res) => {
 
 app.get('/api/admin/account-requests/:adminRollNo', async (req, res) => {
   try {
-    const admin = await User.findOne({ rollNo: req.params.adminRollNo.trim().toUpperCase() });
-    if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    const adminUser = await User.findOne({ rollNo: req.params.adminRollNo.trim().toUpperCase() });
+    if (!adminUser || adminUser.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
     const requests = await AccountRequest.find({}).sort({ createdAt: -1 }).limit(100);
     res.json({ requests });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -1254,14 +1455,21 @@ app.get('/api/admin/account-requests/:adminRollNo', async (req, res) => {
 app.post('/api/admin/account-requests/review/:id', async (req, res) => {
   try {
     const { requesterRollNo, action, note } = req.body;
-    const admin = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
-    if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    const adminUser = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+    if (!adminUser || adminUser.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
     if (!['Approved', 'Rejected'].includes(action)) return res.status(400).json({ error: 'Invalid action' });
     const r = await AccountRequest.findById(req.params.id);
     if (!r) return res.status(404).json({ error: 'Not found' });
-    r.status = action; r.reviewedBy = admin.rollNo; r.adminNote = note || '';
+    r.status = action; r.reviewedBy = adminUser.rollNo; r.adminNote = note || '';
     await r.save();
     if (action === 'Approved' && r.type === 'device_reset') await User.updateOne({ rollNo: r.rollNo }, { $set: { boundDeviceId: null } });
+    // Notify student
+    if (action === 'Approved') {
+      const msg = r.type === 'forgot_password' ? 'Your password reset request was approved. Set new password now.' : 'Your device reset request was approved. Try logging in again.';
+      sendPushToRollNo(r.rollNo, '✅ Request Approved', msg, { type: 'account_approved' }).catch(() => {});
+    } else {
+      sendPushToRollNo(r.rollNo, '❌ Request Rejected', `Your ${r.type.replace('_',' ')} request was rejected.${note ? ' Note: ' + note : ''}`, { type: 'account_rejected' }).catch(() => {});
+    }
     res.json({ message: `Request ${action}` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -1269,14 +1477,13 @@ app.post('/api/admin/account-requests/review/:id', async (req, res) => {
 app.post('/api/admin/clear-account-requests', async (req, res) => {
   try {
     const { requesterRollNo } = req.body;
-    const admin = await User.findOne({ rollNo: (requesterRollNo || '').trim().toUpperCase() });
-    if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    const adminUser = await User.findOne({ rollNo: (requesterRollNo || '').trim().toUpperCase() });
+    if (!adminUser || adminUser.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
     const r = await AccountRequest.deleteMany({});
     res.json({ message: `Deleted ${r.deletedCount} account request(s).` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ★ NEW: Clear pending actions manually (for debugging stuck flows)
 app.post('/api/admin/clear-pending/:rollNo', async (req, res) => {
   try {
     const cr = (req.params.rollNo || '').trim().toUpperCase();
@@ -1318,6 +1525,7 @@ app.post('/api/admin/reset-password', async (req, res) => {
     const hashed = await bcrypt.hash(newPassword || '123456', 10);
     const updated = await User.findOneAndUpdate({ rollNo: targetRollNo.trim().toUpperCase() }, { password: hashed });
     if (!updated) return res.status(404).json({ error: 'User not found!' });
+    sendPushToRollNo(targetRollNo, '🔑 Password Reset', 'Your password was reset by admin.', { type: 'password_reset' }).catch(() => {});
     res.json({ message: `Reset done for ${targetRollNo}` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -1329,6 +1537,7 @@ app.post('/api/admin/reset-device', async (req, res) => {
     const user = await User.findOne({ rollNo: targetRollNo.trim().toUpperCase() });
     if (!user) return res.status(404).json({ error: 'Not found!' });
     user.boundDeviceId = null; await user.save();
+    sendPushToRollNo(targetRollNo, '📱 Device Reset', 'Your device binding was reset. You can login from a new phone.', { type: 'device_reset' }).catch(() => {});
     res.json({ message: `Reset for ${targetRollNo}` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -1400,6 +1609,7 @@ app.post('/api/requests/submit', async (req, res) => {
       isPastDate: isPast, status: 'Pending'
     });
     await newReq.save();
+    sendPushToRole('admin', '📩 New Attendance Request', `${user.name} (${cr}) requested ${lectureType.replace('_',' ')} for ${date}`, { type: 'attendance_request', rollNo: cr }).catch(() => {});
     res.status(201).json({ message: `✅ Request submitted.`, request: newReq });
   } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
 });
@@ -1517,11 +1727,13 @@ app.post('/api/requests/review/:id', async (req, res) => {
       request.reviewedBy = req1.rollNo; request.adminNote = note || '';
       request.reviewHistory.push({ action: 'Approved', by: req1.rollNo, at: new Date(), note: note || '', reviewedSubjects: markedSubjects });
       await request.save();
+      sendPushToRollNo(request.rollNo, '✅ Attendance Request Approved', `${request.date} — ${markedCount} lecture(s) marked.`, { type: 'request_approved' }).catch(() => {});
       res.json({ message: `✅ Approved. ${markedCount} marked.`, request, markedCount, markedSubjects, totalRequested: subjectsToMark.length });
     } else {
       request.status = 'Rejected'; request.reviewedBy = req1.rollNo; request.adminNote = note || '';
       request.reviewHistory.push({ action: 'Rejected', by: req1.rollNo, at: new Date(), note: note || '' });
       await request.save();
+      sendPushToRollNo(request.rollNo, '❌ Attendance Request Rejected', `${request.date}${note ? ' — ' + note : ''}`, { type: 'request_rejected' }).catch(() => {});
       res.json({ message: `❌ Rejected.`, request });
     }
   } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
@@ -1544,6 +1756,7 @@ app.post('/api/requests/bulk-review', async (req, res) => {
           request.status = 'Rejected'; request.reviewedBy = req1.rollNo; request.adminNote = note || '';
           request.reviewHistory.push({ action: 'Rejected', by: req1.rollNo, at: new Date(), note: note || '' });
           await request.save();
+          sendPushToRollNo(request.rollNo, '❌ Request Rejected', `${request.date}`, { type: 'request_rejected' }).catch(() => {});
           results.push({ id, status: 'Rejected' });
         } else {
           const b = request.branch || 'CSE';
@@ -1559,6 +1772,7 @@ app.post('/api/requests/bulk-review', async (req, res) => {
           request.reviewHistory.push({ action: 'Approved', by: req1.rollNo, at: new Date(), note: note || '', reviewedSubjects: subjectsToMark });
           await request.save();
           totalMarked += marked;
+          sendPushToRollNo(request.rollNo, '✅ Request Approved', `${request.date} — ${marked} lecture(s) marked.`, { type: 'request_approved' }).catch(() => {});
           results.push({ id, status: 'Approved', marked });
         }
       } catch (e) { results.push({ id, error: e.message }); }
@@ -1570,8 +1784,8 @@ app.post('/api/requests/bulk-review', async (req, res) => {
 app.post('/api/admin/clear-requests', async (req, res) => {
   try {
     const { requesterRollNo } = req.body;
-    const admin = await User.findOne({ rollNo: (requesterRollNo || '').trim().toUpperCase() });
-    if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    const adminUser = await User.findOne({ rollNo: (requesterRollNo || '').trim().toUpperCase() });
+    if (!adminUser || adminUser.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
     const r = await AttendanceRequest.deleteMany({});
     res.json({ message: `Deleted ${r.deletedCount} attendance request(s).` });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -1760,6 +1974,8 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
           existing.published = true; existing.publishedAt = now; existing.publishedBy = req1.rollNo;
           existing.durationMinutes = durationMin; existing.expiresAt = new Date(now.getTime() + durationMin * 60 * 1000);
           await existing.save();
+          // Push notification
+          sendPushToAllStudents('🔐 Lecture Passcode Published', `Passcode: ${existing.passcode} — valid ${durationMin} min`, { type: 'passcode', passcodeType: 'single_lecture' }).catch(() => {});
           return res.json({ message: 'Published', passcode: existing.passcode, type, expiresAt: existing.expiresAt, published: true, isPublic: pubPublic, durationMinutes: durationMin });
         }
       }
@@ -1768,6 +1984,9 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
       const expiry = new Date(now.getTime() + durationMin * 60 * 1000);
       const newDoc = await new Passcode({ passcode, type, key, expiresAt: expiry, published: publishFlag, isPublic: pubPublic, enabled: true, publishedAt: publishFlag ? now : null, publishedBy: publishFlag ? req1.rollNo : null, durationMinutes: publishFlag ? durationMin : null }).save();
       await Passcode.deleteMany({ type: 'single_lecture', expiresAt: { $lt: new Date() } });
+      if (publishFlag) {
+        sendPushToAllStudents('🔐 Lecture Passcode Published', `Passcode: ${newDoc.passcode} — valid ${durationMin} min`, { type: 'passcode', passcodeType: 'single_lecture' }).catch(() => {});
+      }
       return res.json({ message: force ? 'Changed' : (publishFlag ? 'Published' : 'Generated'), passcode: newDoc.passcode, type, expiresAt: newDoc.expiresAt, changed: !!force, published: publishFlag, isPublic: pubPublic, durationMinutes: durationMin });
     }
     if (type === 'full_day') {
@@ -1779,6 +1998,7 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
           existing.published = true; existing.publishedAt = now; existing.publishedBy = req1.rollNo;
           existing.durationMinutes = durationMin; existing.expiresAt = new Date(now.getTime() + durationMin * 60 * 1000);
           await existing.save();
+          sendPushToAllStudents('📅 Full Day Passcode Published', `Passcode: ${existing.passcode} — valid ${durationMin} min`, { type: 'passcode', passcodeType: 'full_day' }).catch(() => {});
           return res.json({ message: 'Published', passcode: existing.passcode, type, expiresAt: existing.expiresAt, published: true, isPublic: pubPublic, durationMinutes: durationMin });
         }
       }
@@ -1787,6 +2007,9 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
       const expiry = publishFlag ? new Date(now.getTime() + durationMin * 60 * 1000) : (() => { const e = new Date(now); e.setHours(23, 59, 59, 999); return e; })();
       const newDoc = await new Passcode({ passcode, type, key, expiresAt: expiry, published: publishFlag, isPublic: pubPublic, enabled: true, publishedAt: publishFlag ? now : null, publishedBy: publishFlag ? req1.rollNo : null, durationMinutes: publishFlag ? durationMin : null }).save();
       await Passcode.deleteMany({ type: 'full_day', expiresAt: { $lt: new Date() } });
+      if (publishFlag) {
+        sendPushToAllStudents('📅 Full Day Passcode Published', `Passcode: ${newDoc.passcode} — valid ${durationMin} min`, { type: 'passcode', passcodeType: 'full_day' }).catch(() => {});
+      }
       return res.json({ message: force ? 'Changed' : (publishFlag ? 'Published' : 'Generated'), passcode: newDoc.passcode, type, expiresAt: newDoc.expiresAt, changed: !!force, published: publishFlag, isPublic: pubPublic, durationMinutes: durationMin });
     }
     res.status(400).json({ error: 'Invalid type' });
@@ -1897,6 +2120,8 @@ app.post('/api/admin/notice', async (req, res) => {
     if (!req1 || req1.role !== 'admin') return res.status(403).json({ error: 'Admin only!' });
     if (!message || message.trim() === "") { await Notice.deleteMany({}); return res.json({ message: 'Cleared!' }); }
     const nn = await new Notice({ title: title || 'Announcement', message }).save();
+    // Push to all students
+    sendPushToAllStudents(`📢 ${title || 'Announcement'}`, message, { type: 'notice' }).catch(() => {});
     res.status(201).json({ message: 'Published!', notice: nn });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -2568,6 +2793,7 @@ app.post('/api/leave/apply', async (req, res) => {
     if (new Date(toDate) < new Date(fromDate)) return res.status(400).json({ error: 'End before start.' });
     const leave = await new Leave({ rollNo: cr, studentName: user.name, fromDate, toDate, reason, leaveType: leaveType || 'Personal', branch: user.branch || 'CSE' });
     await leave.save();
+    sendPushToRole('admin', '📋 New Leave Request', `${user.name} (${cr}) — ${fromDate} to ${toDate}`, { type: 'leave' }).catch(() => {});
     res.status(201).json({ message: '✅ Submitted!', leave });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -2611,14 +2837,15 @@ app.post('/api/leave/action/:id', async (req, res) => {
         cur.setDate(cur.getDate() + 1);
       }
     }
+    sendPushToRollNo(leave.rollNo, action === 'Approved' ? '✅ Leave Approved' : '❌ Leave Rejected', `${leave.fromDate} → ${leave.toDate}${adminNote ? ' — ' + adminNote : ''}`, { type: 'leave_review' }).catch(() => {});
     res.json({ message: `✅ Leave ${action.toLowerCase()} for ${leave.studentName}` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 app.post('/api/admin/clear-leaves', async (req, res) => {
   try {
     const { requesterRollNo } = req.body;
-    const admin = await User.findOne({ rollNo: (requesterRollNo || '').trim().toUpperCase() });
-    if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    const adminUser = await User.findOne({ rollNo: (requesterRollNo || '').trim().toUpperCase() });
+    if (!adminUser || adminUser.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
     const r = await Leave.deleteMany({});
     res.json({ message: `Deleted ${r.deletedCount} leave request(s).` });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -2677,7 +2904,7 @@ async function getSystemHealth() {
     Chat.countDocuments().catch(() => 0),
     RegistrationRequest.countDocuments({ status: 'Pending' }).catch(() => 0)
   ]);
-  return { status: 'HEALTHY', uptime: `${uptimeHrs} hours`, database: { state: dbState, ping: dbPing }, ai: { primary: { provider: 'Groq', model: GROQ_MODEL, keysConfigured: GROQ_API_KEYS.length }, fallback: { provider: 'Gemini', model: GEMINI_MODEL, keysConfigured: GEMINI_API_KEYS.length, discovered: _geminiModelsCache.list.length } }, counts: { totalUsers: users, students, faculty, attendances, pendingRequests: requests, holidays, chats, pendingRegistrationRequests: regReqs } };
+  return { status: 'HEALTHY', uptime: `${uptimeHrs} hours`, database: { state: dbState, ping: dbPing }, ai: { primary: { provider: 'Groq', model: GROQ_MODEL, keysConfigured: GROQ_API_KEYS.length }, fallback: { provider: 'Gemini', model: GEMINI_MODEL, keysConfigured: GEMINI_API_KEYS.length, discovered: _geminiModelsCache.list.length } }, fcm: { ready: fcmReady }, counts: { totalUsers: users, students, faculty, attendances, pendingRequests: requests, holidays, chats, pendingRegistrationRequests: regReqs } };
 }
 
 async function getFacultyClassAverage(teacherRollNo, subjectFilter = null) {
@@ -2980,6 +3207,7 @@ async function executeDbAction(intent, userContext, threadId = null) {
     const dup = await AttendanceRequest.findOne({ rollNo: userContext.rollNo, date: reqDate, lectureType, status: 'Pending' });
     if (dup) return { error: 'Already pending.' };
     await AttendanceRequest.create({ rollNo: userContext.rollNo, studentName: userContext.name, branch: userContext.branch, date: reqDate, lectureType, subject: rd.subject ? mapToCanonical(rd.subject) : null, reason: rd.reason || 'From chat', location: null, distanceFromCollege: null, locationVerified: false, isPastDate: reqDate < todayStr, status: 'Pending' });
+    sendPushToRole('admin', '📩 New Attendance Request', `${userContext.name} (${userContext.rollNo}) — ${reqDate}`, { type: 'attendance_request' }).catch(() => {});
     return { reply: `✅ **Request submitted!**\n\n• Date: ${reqDate}\n• Type: ${lectureType.replace('_',' ')}\n• Status: Pending admin review`, isReply: true, requestSubmitted: true };
   }
   if (action === 'db_my_requests') {
@@ -3092,6 +3320,7 @@ async function executeDbAction(intent, userContext, threadId = null) {
     const key = `single_lecture_${todayStr}_${period.start}`;
     await Passcode.deleteMany({ key });
     await new Passcode({ passcode, type: 'single_lecture', key, expiresAt: expiry, published: true, isPublic: true, enabled: true, publishedAt: now, publishedBy: userContext.rollNo, durationMinutes: 5 }).save();
+    sendPushToAllStudents('🔐 Lecture Passcode Published', `Passcode: ${passcode} — valid 5 min`, { type: 'passcode' }).catch(() => {});
     return { reply: `🔐 **Lecture Passcode Generated:**\n\n**${passcode}**\n\n• Valid for 5 min\n• For: ${mapToCanonical(period.subject)}`, isReply: true };
   }
   if (action === 'db_my_students') {
@@ -3150,6 +3379,7 @@ async function executeDbAction(intent, userContext, threadId = null) {
     reqDoc.status = 'Approved'; reqDoc.reviewedBy = userContext.rollNo; reqDoc.adminNote = d.note || '';
     reqDoc.reviewHistory.push({ action: 'Approved', by: userContext.rollNo, at: new Date(), note: d.note || '', reviewedSubjects: subs });
     await reqDoc.save();
+    sendPushToRollNo(reqDoc.rollNo, '✅ Request Approved', `${reqDoc.date} — ${marked} marked.`, { type: 'request_approved' }).catch(() => {});
     return { reply: `✅ Approved ${d.rollNo} (${d.date}). Marked **${marked}** lecture(s).`, isReply: true };
   }
 
@@ -3209,6 +3439,7 @@ async function executeDbAction(intent, userContext, threadId = null) {
     if (!isAdmin) return { error: 'Admin only.' };
     if (!data?.message) return { error: 'message required.' };
     await Notice.create({ title: data.title || 'Announcement', message: data.message });
+    sendPushToAllStudents(`📢 ${data.title || 'Announcement'}`, data.message, { type: 'notice' }).catch(() => {});
     return { reply: `📢 **Notice Published**\n\n"${data.message}"\n\nAll users will see this.`, isReply: true };
   }
   if (action === 'db_clear_notice') {
@@ -3263,6 +3494,7 @@ async function executeDbAction(intent, userContext, threadId = null) {
     }
     await Passcode.deleteMany({ key });
     await Passcode.create({ passcode, type, key, expiresAt: expiry, published: true, isPublic: true, enabled: true, publishedAt: now, publishedBy: userContext.rollNo, durationMinutes });
+    sendPushToAllStudents(`🔐 ${type === 'full_day' ? 'Full Day' : 'Lecture'} Passcode Published`, `Passcode: ${passcode} — valid ${durationMinutes} min`, { type: 'passcode' }).catch(() => {});
     return { reply: `📢 **Passcode Published!**\n\nType: **${type.replace('_',' ')}**\nPasscode: **${passcode}**\nValid: **${durationMinutes} min**\n\nStudents will now see this passcode.`, isReply: true };
   }
   if (action === 'db_toggle_passcode') {
@@ -3300,6 +3532,7 @@ async function executeDbAction(intent, userContext, threadId = null) {
         r.status = 'Rejected'; r.reviewedBy = userContext.rollNo;
         r.reviewHistory.push({ action: 'Rejected', by: userContext.rollNo, at: new Date() });
         await r.save();
+        sendPushToRollNo(r.rollNo, '❌ Request Rejected', r.date, { type: 'request_rejected' }).catch(() => {});
       } else {
         const b = r.branch || 'CSE';
         const schedule = getScheduleForDate(r.date, b);
@@ -3312,6 +3545,7 @@ async function executeDbAction(intent, userContext, threadId = null) {
         r.reviewHistory.push({ action: 'Approved', by: userContext.rollNo, at: new Date(), reviewedSubjects: subs });
         await r.save();
         totalMarked += mk;
+        sendPushToRollNo(r.rollNo, '✅ Request Approved', `${r.date} — ${mk} marked.`, { type: 'request_approved' }).catch(() => {});
       }
     }
     return { reply: decision === 'Rejected' ? `❌ Rejected **${processed}** request(s).` : `✅ Approved **${processed}** request(s). Marked **${totalMarked}** lecture(s).`, isReply: true };
@@ -3534,7 +3768,7 @@ async function executeDbAction(intent, userContext, threadId = null) {
   if (action === 'db_system_health') {
     if (!isAdmin) return { error: 'Admin only.' };
     const h = await getSystemHealth();
-    let txt = `🖥️ **System Health**\n\n**Status:** ✅ ${h.status}\n**Uptime:** ${h.uptime}\n**DB:** ${h.database.state} (ping ${h.database.ping})\n\n**AI:** ${h.ai.primary.provider} (${h.ai.primary.keysConfigured} keys) → ${h.ai.fallback.provider} (${h.ai.fallback.keysConfigured} keys, ${h.ai.fallback.discovered} discovered)\n\n**Counts:**\n• Users: ${h.counts.totalUsers} (S:${h.counts.students} F:${h.counts.faculty})\n• Attendance: ${h.counts.attendances}\n• Pending: ${h.counts.pendingRequests}\n• Reg Reqs: ${h.counts.pendingRegistrationRequests || 0}\n• Holidays: ${h.counts.holidays}`;
+    let txt = `🖥️ **System Health**\n\n**Status:** ✅ ${h.status}\n**Uptime:** ${h.uptime}\n**DB:** ${h.database.state} (ping ${h.database.ping})\n**FCM:** ${h.fcm.ready ? '✅ Ready' : '⚠️ Not configured'}\n\n**AI:** ${h.ai.primary.provider} (${h.ai.primary.keysConfigured} keys) → ${h.ai.fallback.provider} (${h.ai.fallback.keysConfigured} keys, ${h.ai.fallback.discovered} discovered)\n\n**Counts:**\n• Users: ${h.counts.totalUsers} (S:${h.counts.students} F:${h.counts.faculty})\n• Attendance: ${h.counts.attendances}\n• Pending: ${h.counts.pendingRequests}\n• Reg Reqs: ${h.counts.pendingRegistrationRequests || 0}\n• Holidays: ${h.counts.holidays}`;
     return { reply: txt, isReply: true };
   }
   if (action === 'db_timetable') {
@@ -3658,10 +3892,8 @@ app.post('/api/ai/chat', async (req, res) => {
         const pcCandidate = detectPasscodeInMessage(message || '');
         const hasLocation = !!(location && location.latitude && location.longitude);
 
-        // ★ Escape keywords: greeting / cancel / casual
         const isCancelOrGreeting = /^(hi+|hello+|hey+|namaste|yo|sup|thank|thanks|thx|ok|okay|good morning|good evening|good night|bye|goodbye|see you|no problem|k|hmm+|achha|theek|cancel|exit|stop|quit|abort|chhodo|chhod|band karo|rehne do|nevermind|never mind|forget it|nvm|no thanks|nahi chahiye|mat karo|bhool jao|nahi|🙏|🙌|👍)/i.test(msgLower);
 
-        // Is the current message a valid expected input for the flow?
         let isExpected = false;
         if (pending.type === 'awaiting_passcode') {
           isExpected = !!(pcCandidate && pcCandidate.length >= 4 && pcCandidate.length <= 5);
@@ -3669,15 +3901,12 @@ app.post('/api/ai/chat', async (req, res) => {
           isExpected = hasLocation;
         }
 
-        // Escape if: greeting/cancel OR (user typed some text but not expected input)
         const shouldEscape = isCancelOrGreeting || (!isExpected && !hasLocation);
 
         if (shouldEscape) {
           await clearPending(cr);
           console.log(`🚪 [PENDING-CLEAR] Cleared ${pending.type} for ${cr} (msg="${msgLower.slice(0,40)}")`);
-          // Fall through → normal handling below
         } else {
-          // ============ ACTIVE FLOW: awaiting passcode ============
           if (pending.type === 'awaiting_passcode') {
             const ptype = pending.data.passcodeType || 'full_day';
             const expectedLen = ptype === 'full_day' ? 5 : 4;
@@ -3705,11 +3934,9 @@ app.post('/api/ai/chat', async (req, res) => {
             }
           }
 
-          // ============ ACTIVE FLOW: awaiting location ============
           if (pending.type === 'awaiting_location') {
             const lc = checkLocation(location.latitude, location.longitude);
             if (!lc.isInside) {
-              // ★ FIX: Clear pending immediately on out-of-range so user is not stuck
               await clearPending(cr);
               console.log(`📍 [LOCATION-REJECTED] ${cr} was ${lc.distance}m away. Pending cleared.`);
               return sendJson({
@@ -4075,9 +4302,50 @@ app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ============================================================
+//  DAILY 2:45 PM ATTENDANCE REMINDER CRON
+// ============================================================
+let _lastReminderDate = null;
+function scheduleAttendanceReminder() {
+  setInterval(async () => {
+    try {
+      if (!fcmReady) return;
+      const now = new Date();
+      const istHour = getISTHour(now);
+      const istMin = getISTMinutes(now);
+      const todayStr = getISTDateString(now);
+      const day = now.getDay();
+      // Skip Sat/Sun
+      if (day === 0 || day === 6) return;
+      // Check if it's 2:45 PM IST (hour=14, min=45)
+      if (istHour !== 14 || istMin !== 45) return;
+      if (_lastReminderDate === todayStr) return;
+      // Check holiday
+      const hol = await Holiday.findOne({ date: todayStr });
+      if (hol) return;
+      _lastReminderDate = todayStr;
+      console.log(`⏰ [CRON] Sending 2:45 PM attendance reminder for ${todayStr}`);
+      const result = await sendPushToAllStudents(
+        '⏰ Attendance Reminder',
+        'Live attendance window closes at 3 PM. Mark your attendance now!',
+        { type: 'attendance_reminder', date: todayStr }
+      );
+      console.log(`📤 [CRON] Reminder sent: ${JSON.stringify(result)}`);
+    } catch (e) {
+      console.warn('⚠️ [CRON] Reminder error:', e.message);
+    }
+  }, 60 * 1000); // every minute
+  console.log('⏰ [CRON] Attendance reminder scheduled (checks every minute for 2:45 PM IST)');
+}
+scheduleAttendanceReminder();
+
 // ---------- Global Handlers ----------
 process.on('unhandledRejection', (reason) => console.error('Unhandled:', reason));
 process.on('uncaughtException', (err) => { console.error('Uncaught:', err); process.exit(1); });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Port ${PORT} | AI: Groq(${GROQ_API_KEYS.length} keys) → Gemini(${GEMINI_API_KEYS.length} keys)`));
+app.listen(PORT, () => {
+  console.log(`🚀 Port ${PORT}`);
+  console.log(`🤖 AI: Groq(${GROQ_API_KEYS.length} keys) → Gemini(${GEMINI_API_KEYS.length} keys)`);
+  console.log(`🔥 FCM: ${fcmReady ? 'READY ✅' : 'DISABLED ⚠️'}`);
+});
