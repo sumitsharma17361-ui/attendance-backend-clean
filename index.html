@@ -622,41 +622,29 @@ tbody tr:hover{background:var(--brand-50);}
 ::-webkit-scrollbar-thumb{background:var(--slate-300);border-radius:4px;}
 ::-webkit-scrollbar-thumb:hover{background:var(--slate-400);}
 
-/* Accessibility */
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[role="button"]:focus-visible,a:focus-visible{outline:2.5px solid var(--brand-500);outline-offset:2px;border-radius:8px;}
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;scroll-behavior:auto !important;}
   .bg-blob{display:none;}
   body::after{display:none;}
 }
-
-/* ============================================================
-   DESKTOP PREMIUM (≥641px)
-   ============================================================ */
 @media (min-width: 641px){
   .bg-blobs{display:block;}
-  body::after{
-    content:'';position:fixed;inset:0;pointer-events:none;z-index:99998;opacity:.03;mix-blend-mode:overlay;
-    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0'/></filter><rect width='240' height='240' filter='url(%23n)'/></svg>");
-  }
+  body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:99998;opacity:.03;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0'/></filter><rect width='240' height='240' filter='url(%23n)'/></svg>");}
   .scroll-progress{display:block;}
-
   .spotlight-enabled{position:relative;overflow:hidden;}
   .spotlight-enabled::after{content:'';position:absolute;inset:0;background:radial-gradient(600px circle at var(--mx,50%) var(--my,50%),rgba(59,130,246,.14),transparent 40%);opacity:0;pointer-events:none;z-index:1;transition:opacity .4s var(--ease);}
   .spotlight-enabled:hover::after{opacity:1;}
   .spotlight-enabled > *{position:relative;z-index:2;}
-
   .magnetic{will-change:transform;transition:transform .35s var(--spring-pop);}
   .icon-bounce:hover svg{animation:iconBounce .6s var(--spring-pop);}
   .icon-pulse:hover svg{animation:iconPulse .8s ease-in-out infinite;}
   .bell-ring:hover svg{animation:bellRing .9s var(--spring-pop);transform-origin:top center;}
-
   [data-tip]{position:relative;}
   [data-tip]::before,[data-tip]::after{position:absolute;left:50%;bottom:calc(100% + 8px);opacity:0;pointer-events:none;z-index:10001;transition:opacity .2s ease,transform .35s var(--spring-pop);transform:translate(-50%,6px) scale(.9);}
   [data-tip]::before{content:attr(data-tip);background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;padding:7px 12px;font-size:11px;font-weight:600;border-radius:9px;white-space:nowrap;box-shadow:0 10px 24px rgba(15,23,42,.28);font-family:var(--font);letter-spacing:.02em;}
   [data-tip]::after{content:'';bottom:calc(100% + 3px);border:5px solid transparent;border-top-color:#1e293b;transform:translate(-50%,6px);}
   [data-tip]:hover::before,[data-tip]:hover::after{opacity:1;transform:translate(-50%,0) scale(1);}
-
   .tab.active{transform:scale(1.02);}
   .subnav-item:hover{transform:translateY(-2px);}
   .stagger-list > *{animation:slideIn .5s var(--ease-out) backwards;}
@@ -1748,6 +1736,7 @@ function getFileTypeLabel(mimeType){
   return 'file';
 }
 function isDesktop(){ return window.innerWidth >= 641; }
+function isMedianApp(){ return typeof window.median !== 'undefined' && window.median !== null; }
 
 /* ============================================================
    STUDENT MENU
@@ -1861,7 +1850,6 @@ function navigateAdminMenu(key){
     }, 220);
     return;
   }
-  // Admin keys
   activeAdminMenuKey = key;
   setTimeout(() => {
     switchTab('tab-admin');
@@ -1870,14 +1858,13 @@ function navigateAdminMenu(key){
   }, 220);
 }
 
-/* Global backdrop close for both menus */
 document.addEventListener('click', function(e){
   if (e.target.closest && e.target.closest('#studentMenuBackdrop')) { e.preventDefault(); closeStudentMenu(); }
   if (e.target.closest && e.target.closest('#adminMenuBackdrop')) { e.preventDefault(); closeAdminMenu(); }
 }, true);
 
 /* ============================================================
-   SWIPE GESTURES for both drawers (with chat/modal guard)
+   SWIPE GESTURES
    ============================================================ */
 function insideChatPanel(el){ const cp = document.getElementById('chatPanel'); if (!cp) return false; return cp.contains(el); }
 function insideModal(el){ return !!(el && el.closest && el.closest('.modal-backdrop.open')); }
@@ -2375,7 +2362,6 @@ function loadDashboard(){
   const qpCard = $('quickPortalsCard');
   const aaCard = $('attendanceActionsCard');
 
-  // Populate admin drawer header
   if ($('adminMenuName')) $('adminMenuName').textContent = currentUser.name;
   if ($('adminMenuRoll')) $('adminMenuRoll').textContent = (currentUser.rollNo || '') + ' · ' + (currentUser.role === 'admin' ? 'Admin' : 'Faculty');
   if ($('adminMenuAvatar')) $('adminMenuAvatar').textContent = currentUser.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
@@ -2482,9 +2468,6 @@ function showAdmin(id){
   setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 60);
 }
 
-/* ============================================================
-   CLEAR ALL
-   ============================================================ */
 async function clearAllRequests(){
   if (!confirm('Delete ALL attendance requests? This cannot be undone.')) return;
   try {
@@ -2768,7 +2751,6 @@ function renderWorkingDays(holidays){
   if ($('wdCalendar')) $('wdCalendar').innerHTML = html;
 }
 
-/* Day info popup */
 async function showDayInfo(dateStr){
   openModal('dayInfoModal');
   const t = $('dayInfoTitle'), s = $('dayInfoSub'), b = $('dayInfoBody');
@@ -3437,7 +3419,7 @@ function getCurrentMonthRangeStrings(){ const n = new Date(); const mm = String(
 function getRangeForSelection(range, month){ let s, e; if (range === 'FULL_SEMESTER') { s = '2026-07-15'; e = '2026-12-31'; } else if (range === 'CURRENT_MONTH') { const r = getCurrentMonthRangeStrings(); s = r.start; e = r.end; } else { const r = getMonthRangeStrings(parseInt(month)); s = r.start; e = r.end; } const today = fmtDate(new Date()); if (e > today) e = today; return { start: s, end: e }; }
 
 /* ============================================================
-   FCM PUSH NOTIFICATIONS
+   ★★★ FCM PUSH NOTIFICATIONS — MEDIAN APP + BROWSER SUPPORT ★★★
    ============================================================ */
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyBBD3V20eKCo8S9Smi6LY--klDj-pBVXYQ",
@@ -3450,9 +3432,14 @@ const FIREBASE_CONFIG = {
 const VAPID_PUBLIC_KEY = "BPgV9AtuPSDUJWdIb-nu-MvD38XngpQXVj7cyrhZGGHxaL6upFPfxth6l_e1gYXOwL9bU1pnmxPYj0AzYX1jYlM";
 let firebaseApp = null, firebaseMessaging = null;
 
+// ★ initFirebase — skip in Median app
 async function initFirebase(){
   if (firebaseApp) return firebaseApp;
   try {
+    if (isMedianApp()) {
+      console.log('[FCM] In Median app — skipping web Firebase init');
+      return null;
+    }
     if (!window.firebase || !firebase.messaging) {
       console.warn('[FCM] Firebase SDK not loaded');
       return null;
@@ -3478,7 +3465,6 @@ async function initFirebase(){
 async function registerServiceWorker(){
   if (!('serviceWorker' in navigator)) return null;
   try {
-    // Detect base path dynamically (works for both root and subfolder repos)
     const basePath = window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '');
     const swPath = `${basePath}/firebase-messaging-sw.js`;
     const reg = await navigator.serviceWorker.register(swPath, { scope: `${basePath}/` });
@@ -3489,28 +3475,205 @@ async function registerServiceWorker(){
     return null;
   }
 }
+
+// ★ enableNotifications — Median app + Browser
 async function enableNotifications(){
   const btn = $('notifBtn');
   if (btn) { btn.disabled = true; }
+
   try {
     toast('Setting up notifications…', 'info');
-    const app = await initFirebase();
-    if (!app || !firebaseMessaging) {
-      toast('Notifications not supported on this browser', 'error');
+
+    // ★ Median app mode — use native bridge
+    if (isMedianApp() && window.median.firebaseMessaging) {
+      console.log('[FCM] Median app mode');
+      await enableMedianNotifications();
       if (btn) btn.disabled = false;
       return;
     }
-    const perm = await Notification.requestPermission();
-    if (perm !== 'granted') {
-      showFeedback('warning', 'Permission Denied', 'Please allow notifications in your browser settings to receive attendance reminders and passcode alerts.');
-      if (btn) btn.disabled = false;
-      return;
+
+    // ★ Browser mode — Web Push
+    console.log('[FCM] Browser Web Push mode');
+    await enableBrowserNotifications();
+
+  } catch(e) {
+    console.error('[FCM] Enable error:', e);
+    showFeedback('error', 'Setup Failed', e.message || 'Could not enable notifications.');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// ★ Median app notification setup
+async function enableMedianNotifications(){
+  const fcm = window.median.firebaseMessaging;
+
+  // Step 1: Request permission
+  const permResult = await new Promise((resolve) => {
+    try {
+      fcm.requestPermission({
+        callback: function(result) {
+          console.log('[FCM] Permission result:', result);
+          resolve(result || { granted: false });
+        }
+      });
+      setTimeout(() => resolve({ granted: false, timeout: true }), 15000);
+    } catch(e) {
+      console.warn('[FCM] requestPermission error:', e);
+      resolve({ granted: false, error: e.message });
     }
-    const reg = await registerServiceWorker();
-    if (!reg) { toast('Service worker registration failed', 'error'); if (btn) btn.disabled = false; return; }
-    const token = await firebaseMessaging.getToken({ vapidKey: VAPID_PUBLIC_KEY, serviceWorkerRegistration: reg });
-    if (!token) { toast('Could not get FCM token', 'error'); if (btn) btn.disabled = false; return; }
-    console.log('[FCM] Token:', token.substring(0, 20) + '...');
+  });
+
+  if (!permResult || !permResult.granted) {
+    showFeedback('warning', 'Permission Denied',
+      'Please allow notifications in your phone settings to receive attendance alerts.');
+    return;
+  }
+
+  // Step 2: Register device with FCM
+  await new Promise((resolve) => {
+    try {
+      fcm.register({
+        callback: function(result) {
+          console.log('[FCM] Register result:', result);
+          resolve(result);
+        }
+      });
+      setTimeout(() => resolve(null), 10000);
+    } catch(e) {
+      console.warn('[FCM] register error:', e);
+      resolve(null);
+    }
+  });
+
+  // Step 3: Get FCM token
+  const tokenResult = await new Promise((resolve) => {
+    try {
+      fcm.getToken({
+        callback: function(result) {
+          console.log('[FCM] Token result:', result);
+          resolve(result);
+        }
+      });
+      setTimeout(() => resolve(null), 10000);
+    } catch(e) {
+      console.warn('[FCM] getToken error:', e);
+      resolve(null);
+    }
+  });
+
+  const token = tokenResult?.token;
+  if (!token || token.length < 20) {
+    showFeedback('error', 'Token Error',
+      'FCM token could not be generated. Please try again or restart the app.');
+    return;
+  }
+
+  // Step 4: Save token to backend
+  await saveFCMTokenToBackend(token);
+  localStorage.setItem('BM_FCM_ENABLED', '1');
+  updateNotifBtn(true);
+
+  // Step 5: Enable foreground banners
+  try {
+    if (typeof fcm.enableForegroundBanners === 'function') {
+      fcm.enableForegroundBanners();
+    }
+  } catch(e) { console.warn('[FCM] enableForegroundBanners:', e); }
+
+  // Step 6: Create high-priority Android channel
+  try {
+    if (typeof fcm.createChannel === 'function') {
+      fcm.createChannel({
+        channelId: 'attendance_alerts',
+        channelName: 'Attendance Alerts',
+        importance: 'high',
+        callback: function(r) { console.log('[FCM] Channel created:', r); }
+      });
+    }
+  } catch(e) { console.warn('[FCM] createChannel:', e); }
+
+  // Step 7: Setup listeners
+  setupMedianFCMListeners(fcm);
+
+  showFeedback('success', 'Notifications Enabled',
+    'You will now receive:\n\n• Passcode publish alerts\n• Notice broadcasts\n• Request updates\n• Daily attendance reminders');
+}
+
+// ★ Browser notification setup
+async function enableBrowserNotifications(){
+  const app = await initFirebase();
+  if (!app || !firebaseMessaging) {
+    toast('Notifications not supported on this browser', 'error');
+    return;
+  }
+
+  if (typeof Notification === 'undefined') {
+    toast('Notifications not supported here', 'error');
+    return;
+  }
+
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') {
+    showFeedback('warning', 'Permission Denied',
+      'Please allow notifications in your browser settings.');
+    return;
+  }
+
+  const reg = await registerServiceWorker();
+  if (!reg) {
+    toast('Service worker registration failed', 'error');
+    return;
+  }
+
+  const token = await firebaseMessaging.getToken({
+    vapidKey: VAPID_PUBLIC_KEY,
+    serviceWorkerRegistration: reg
+  });
+
+  if (!token) {
+    toast('Could not get FCM token', 'error');
+    return;
+  }
+
+  await saveFCMTokenToBackend(token);
+  localStorage.setItem('BM_FCM_ENABLED', '1');
+  updateNotifBtn(true);
+  showFeedback('success', 'Notifications Enabled',
+    'You will now receive attendance reminders and alerts.');
+}
+
+// ★ Median FCM listeners (foreground + click)
+function setupMedianFCMListeners(fcm) {
+  try {
+    if (window._medianFCMListenersSet) return;
+    window._medianFCMListenersSet = true;
+
+    if (fcm.notificationReceived && fcm.notificationReceived.addListener) {
+      fcm.notificationReceived.addListener((data) => {
+        console.log('[FCM] Foreground notification:', data);
+        const title = data?.notification?.title || data?.title || 'BM Attendance';
+        const body = data?.notification?.body || data?.body || '';
+        toast(`${title}${body ? ': ' + body : ''}`, 'info');
+      });
+    }
+
+    if (fcm.notificationClicked && fcm.notificationClicked.addListener) {
+      fcm.notificationClicked.addListener((data) => {
+        console.log('[FCM] Notification clicked:', data);
+        if (typeof fetchHistory === 'function' && currentUser?.role === 'student') {
+          fetchHistory().catch(() => {});
+        }
+      });
+    }
+  } catch(e) {
+    console.warn('[FCM] Listener setup error:', e.message);
+  }
+}
+
+// ★ Save FCM token to backend
+async function saveFCMTokenToBackend(token) {
+  try {
     const res = await fetch(`${API}/api/user/save-fcm-token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3518,24 +3681,17 @@ async function enableNotifications(){
     });
     const d = await res.json().catch(() => ({}));
     if (!res.ok) {
-      // Backend might not have FCM endpoint yet — still mark local enabled
       console.warn('[FCM] Backend save failed:', d.error || res.status);
       localStorage.setItem('BM_FCM_TOKEN', token);
-      localStorage.setItem('BM_FCM_ENABLED', '1');
-      updateNotifBtn(true);
-      showFeedback('success', 'Notifications Enabled', 'You will now receive attendance reminders and alerts.\n\nNote: Backend sync pending — please update the server.');
-      if (btn) btn.disabled = false;
-      return;
+      return false;
     }
+    console.log('[FCM] Token saved to backend');
     localStorage.setItem('BM_FCM_TOKEN', token);
-    localStorage.setItem('BM_FCM_ENABLED', '1');
-    updateNotifBtn(true);
-    showFeedback('success', 'Notifications Enabled', 'You will now receive:\n\n• Daily attendance reminders (2:45 PM)\n• Passcode publish alerts\n• Request approval/rejection alerts\n• Notice broadcasts');
+    return true;
   } catch(e) {
-    console.error('[FCM] Enable error:', e);
-    showFeedback('error', 'Setup Failed', e.message || 'Could not enable notifications.');
-  } finally {
-    if (btn) btn.disabled = false;
+    console.warn('[FCM] saveFCMTokenToBackend error:', e.message);
+    localStorage.setItem('BM_FCM_TOKEN', token);
+    return false;
   }
 }
 
@@ -3553,32 +3709,57 @@ function updateNotifBtn(enabled){
   }
 }
 
+// ★ Auto-init FCM on dashboard load
 async function autoInitFCM(){
   if (!currentUser || !currentUser.rollNo) return;
   if (localStorage.getItem('BM_FCM_ENABLED') !== '1') return;
+
   try {
+    // Median app mode
+    if (isMedianApp() && window.median.firebaseMessaging) {
+      const fcm = window.median.firebaseMessaging;
+      setupMedianFCMListeners(fcm);
+
+      const tokenResult = await new Promise((resolve) => {
+        try {
+          fcm.getToken({ callback: (result) => resolve(result) });
+          setTimeout(() => resolve(null), 8000);
+        } catch(e) { resolve(null); }
+      });
+
+      const token = tokenResult?.token;
+      if (token && token.length > 20) {
+        const saved = localStorage.getItem('BM_FCM_TOKEN');
+        if (saved !== token) {
+          await saveFCMTokenToBackend(token);
+        }
+        updateNotifBtn(true);
+      }
+      return;
+    }
+
+    // Browser mode
     const app = await initFirebase();
     if (!app || !firebaseMessaging) return;
     const reg = await registerServiceWorker();
     if (!reg) return;
-    const token = await firebaseMessaging.getToken({ vapidKey: VAPID_PUBLIC_KEY, serviceWorkerRegistration: reg });
+    const token = await firebaseMessaging.getToken({
+      vapidKey: VAPID_PUBLIC_KEY,
+      serviceWorkerRegistration: reg
+    });
     if (!token) return;
     const saved = localStorage.getItem('BM_FCM_TOKEN');
     if (saved && saved === token) { updateNotifBtn(true); return; }
-    // Token changed — resave
-    await fetch(`${API}/api/user/save-fcm-token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rollNo: currentUser.rollNo, fcmToken: token })
-    }).catch(() => {});
-    localStorage.setItem('BM_FCM_TOKEN', token);
+    await saveFCMTokenToBackend(token);
     updateNotifBtn(true);
-  } catch(e) { console.warn('[FCM] autoInit:', e.message); }
+  } catch(e) {
+    console.warn('[FCM] autoInit:', e.message);
+  }
 }
 
-// Foreground messages
+// Foreground messages (browser only)
 try {
-  if (window.firebase && firebase.messaging) {
+  if (window.firebase && firebase.messaging && !isMedianApp()) {
     setTimeout(() => {
       try {
         const m = firebase.messaging();
@@ -3709,8 +3890,23 @@ document.addEventListener('DOMContentLoaded', () => {
   if (lt) lt.onchange = function(){ $('reqSubjectGroup').style.display = (this.value === 'single_lecture') ? 'block' : 'none'; };
   setTimeout(runPremiumInit, 120);
   if (localStorage.getItem('token')) loadDashboard();
+  // ★ Median library ready callback
+  if (isMedianApp()) {
+    console.log('[FCM] Median app detected — bridge ready');
+    if (typeof window.median_library_ready === 'function') {
+      window.median_library_ready();
+    }
+  }
 });
 if (document.readyState !== 'loading') { setTimeout(() => handleScrollFab(), 50); setTimeout(runPremiumInit, 200); }
+
+// ★ Global helper for Median library ready
+window.median_library_ready = function() {
+  console.log('[FCM] Median JS Bridge ready');
+  if (isMedianApp() && currentUser && localStorage.getItem('BM_FCM_ENABLED') === '1') {
+    autoInitFCM().catch(() => {});
+  }
+};
 </script>
 </body>
 </html>
