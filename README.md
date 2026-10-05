@@ -623,24 +623,23 @@ Database (MongoDB Atlas)
 <div align="center">
 
 🎓 Student Dashboard
+https://kommodo.ai/i/Yic166H0rK47VIjxFEDh
 
-https://via.placeholder.com/800x400/2563eb/ffffff?text=Student+Dashboard
 
 👨‍💼 Admin Panel
 
-https://via.placeholder.com/800x400/1d4ed8/ffffff?text=Admin+Panel
+https://kommodo.ai/i/lX3wzgp1MlD6qRBBHb9Y
 
 🤖 AI Chatbot
 
-https://via.placeholder.com/800x400/7c3aed/ffffff?text=BM+Bot+Chat
+https://kommodo.ai/i/d9EMgsnALz6KpaszbEHF
 
 📊 Analytics
 
-https://via.placeholder.com/800x400/059669/ffffff?text=Attendance+Analytics
+https://kommodo.ai/i/lF2JY979Mc7iHaKNSF6I
 
 </div>
 
-Note: Replace placeholder images with actual screenshots after deployment.
 
 ---
 
@@ -913,89 +912,3 @@ Made with ❤️ by Sumit Sharma
 https://img.shields.io/badge/BM%20Group-Attendance%20ERP-blue?style=for-the-badge
 
 </div>
-```
-
----
-
-📋 Ab Ye Karo:
-
-Step 1: README.md file banao
-
-1. GitHub repo kholo
-2. "Add file" → "Create new file"
-3. Naam: README.md
-4. Upar wala poora code paste karo
-5. "Commit new file" click karo
-
-Step 2: Screenshots add karo (optional but recommended)
-
-1. App ke screenshots lo (dashboard, admin, chatbot)
-2. screenshots/ folder banao repo mein
-3. Images upload karo
-4. README mein ![Student Dashboard](screenshots/dashboard.png) type karo
-
-Step 3: Repo ko polish karo
-
-Description add karo (top pe):
-
-🎓 AI-powered attendance management system for BM Group with GPS verification, real-time push notifications, and smart chatbot.
-
-Topics add karo:
-
-```
-attendance-system, erp, nodejs, mongodb, express, ai-chatbot, 
-groq, gemini, firebase, fcm, push-notifications, react, 
-vanilla-js, geolocation, gps, education, college, india
-```
-
-Website link add karo:
-
-```
-https://sumitsharma17361-ui.github.io/attendance-backend-clean/
-```
-
-Step 4: LICENSE file bhi add karo
-
-```
-MIT License
-
-Copyright (c) 2026 Sumit Sharma
-
-Permission is hereby granted, free of charge, to any person obtaining a copy...
-```
-
----
-
-🎁 Bonus — Screenshots Kaise Lo:
-
-Web App:
-
-1. Chrome mein site kholo
-2. F12 → Toggle device toolbar (Ctrl+Shift+M)
-3. Mobile view mein screenshot lo
-
-Mobile App:
-
-1. Phone se screenshot lo
-2. scrcpy ya adb se bhi le sakte ho
-
-Best screenshots:
-
-· 📱 Student Dashboard (with stats)
-· 📊 Attendance Calendar
-· 🤖 Chatbot conversation
-· 👨‍💼 Admin Panel
-· 🔔 Notification example
-· 📈 Attendance Chart
-· 🔐 Passcode screen
-
----
-
-💯 Final Polish:
-
-· ✅ README.md — Professional documentation
-· ✅ LICENSE — MIT License
-· ✅ CONTRIBUTING.md — Guidelines
-· ✅ .gitignore — Node modules, .env
-· ✅ CHANGELOG.md — Version history
-
