@@ -13,26 +13,35 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+// ★★★ Handle data-only messages (instant delivery)
 messaging.onBackgroundMessage((payload) => {
   console.log('[SW] Background message:', payload);
-  const title = payload.notification?.title || 'BM Attendance';
+
+  const data = payload.data || {};
+  const title = data.title || payload.notification?.title || 'BM Attendance';
+  const body  = data.body  || payload.notification?.body  || 'You have a new notification';
+
   const options = {
-    body: payload.notification?.body || 'You have a new notification',
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
+    body,
     vibrate: [200, 100, 200],
     data: payload.data || {},
-    requireInteraction: false
+    requireInteraction: true,
+    tag: data.type || 'bm-notification',
+    renotify: true
   };
+
   self.registration.showNotification(title, options);
 });
 
+// Handle notification click - open/focus the app
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) return client.focus();
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          return client.focus();
+        }
       }
       if (clients.openWindow) return clients.openWindow('/');
     })
