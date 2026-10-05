@@ -896,7 +896,7 @@ https://img.shields.io/badge/GitHub-sumitsharma17361--ui-181717?style=for-the-ba
 Channel Link
 🐛 Report Bug GitHub Issues
 💡 Feature Request GitHub Issues
-📧 Email sumitsharma@example.com
+📧 Email sumitsharma17361@gmail.com
 🌐 Website BM Group
 
 </div>
