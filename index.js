@@ -1,4 +1,4 @@
-// ================= index.js (with FCM) =================
+// ================= index.js (with FCM data-only fix) =================
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -44,21 +44,28 @@ try {
   fcmReady = false;
 }
 
+// ★★★ FIXED: Data-only message for instant delivery
 async function sendPushNotification(fcmToken, title, body, data = {}) {
   if (!fcmReady || !fcmToken) return { ok: false, reason: !fcmReady ? 'not-ready' : 'no-token' };
   try {
     const message = {
       token: fcmToken,
-      notification: { title, body },
-      data: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])),
+      data: Object.assign(
+        { title, body, icon: '/icon-192.png' },
+        Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)]))
+      ),
       webpush: {
+        headers: { Urgency: 'high', TTL: '86400' },
         notification: {
           title, body,
-          icon: '/icon-192.png',
-          badge: '/icon-192.png',
-          vibrate: [200, 100, 200]
+          vibrate: [200, 100, 200],
+          requireInteraction: true
         },
         fcmOptions: { link: '/' }
+      },
+      android: {
+        priority: 'high',
+        ttl: 86400000
       }
     };
     const resp = await admin.messaging().send(message);
@@ -73,6 +80,7 @@ async function sendPushNotification(fcmToken, title, body, data = {}) {
   }
 }
 
+// ★★★ FIXED: Data-only bulk for instant delivery
 async function sendPushToMany(tokens, title, body, data = {}) {
   if (!fcmReady || !tokens || !tokens.length) return { ok: false, sent: 0, failed: 0 };
   const valid = tokens.filter(t => t && typeof t === 'string' && t.length > 20);
@@ -80,16 +88,22 @@ async function sendPushToMany(tokens, title, body, data = {}) {
   try {
     const message = {
       tokens: valid,
-      notification: { title, body },
-      data: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])),
+      data: Object.assign(
+        { title, body, icon: '/icon-192.png' },
+        Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)]))
+      ),
       webpush: {
+        headers: { Urgency: 'high', TTL: '86400' },
         notification: {
           title, body,
-          icon: '/icon-192.png',
-          badge: '/icon-192.png',
-          vibrate: [200, 100, 200]
+          vibrate: [200, 100, 200],
+          requireInteraction: true
         },
         fcmOptions: { link: '/' }
+      },
+      android: {
+        priority: 'high',
+        ttl: 86400000
       }
     };
     const resp = await admin.messaging().sendEachForMulticast(message);
@@ -1270,7 +1284,6 @@ app.post('/api/auth/register-request', async (req, res) => {
     const hashed = await bcrypt.hash(password, 10);
     const branch = cleanRoll.includes('AIDS') ? 'AIDS' : 'CSE';
     const newReq = await RegistrationRequest.create({ name: name.trim(), rollNo: cleanRoll, password: hashed, deviceId: deviceId || null, branch });
-    // Notify admins
     sendPushToRole('admin', '📝 New Registration Request', `${newReq.name} (${newReq.rollNo}) — ${newReq.branch}`, { type: 'registration', rollNo: newReq.rollNo }).catch(() => {});
     res.status(201).json({ message: '✅ Request submitted. Wait for admin approval.', request: { _id: newReq._id, name: newReq.name, rollNo: newReq.rollNo, branch: newReq.branch, status: newReq.status, createdAt: newReq.createdAt } });
   } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
@@ -1314,7 +1327,6 @@ app.post('/api/admin/registration-requests/review/:id', async (req, res) => {
       r.approvedUserRollNo = newUser.rollNo;
     }
     await r.save();
-    // Notify the student (only if they have an FCM token — likely not since they can't login yet, so skip)
     res.json({ message: `Registration ${action}`, request: { _id: r._id, status: r.status, rollNo: r.rollNo, approvedUserRollNo: r.approvedUserRollNo } });
   } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
 });
@@ -1463,7 +1475,6 @@ app.post('/api/admin/account-requests/review/:id', async (req, res) => {
     r.status = action; r.reviewedBy = adminUser.rollNo; r.adminNote = note || '';
     await r.save();
     if (action === 'Approved' && r.type === 'device_reset') await User.updateOne({ rollNo: r.rollNo }, { $set: { boundDeviceId: null } });
-    // Notify student
     if (action === 'Approved') {
       const msg = r.type === 'forgot_password' ? 'Your password reset request was approved. Set new password now.' : 'Your device reset request was approved. Try logging in again.';
       sendPushToRollNo(r.rollNo, '✅ Request Approved', msg, { type: 'account_approved' }).catch(() => {});
@@ -1974,7 +1985,6 @@ app.post('/api/admin/generate-passcode', async (req, res) => {
           existing.published = true; existing.publishedAt = now; existing.publishedBy = req1.rollNo;
           existing.durationMinutes = durationMin; existing.expiresAt = new Date(now.getTime() + durationMin * 60 * 1000);
           await existing.save();
-          // Push notification
           sendPushToAllStudents('🔐 Lecture Passcode Published', `Passcode: ${existing.passcode} — valid ${durationMin} min`, { type: 'passcode', passcodeType: 'single_lecture' }).catch(() => {});
           return res.json({ message: 'Published', passcode: existing.passcode, type, expiresAt: existing.expiresAt, published: true, isPublic: pubPublic, durationMinutes: durationMin });
         }
@@ -2120,7 +2130,6 @@ app.post('/api/admin/notice', async (req, res) => {
     if (!req1 || req1.role !== 'admin') return res.status(403).json({ error: 'Admin only!' });
     if (!message || message.trim() === "") { await Notice.deleteMany({}); return res.json({ message: 'Cleared!' }); }
     const nn = await new Notice({ title: title || 'Announcement', message }).save();
-    // Push to all students
     sendPushToAllStudents(`📢 ${title || 'Announcement'}`, message, { type: 'notice' }).catch(() => {});
     res.status(201).json({ message: 'Published!', notice: nn });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -2384,7 +2393,7 @@ app.delete('/api/attendance/delete-day/:rollNo/:date/:requesterRollNo', async (r
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ========== MONTHLY SUMMARY — FIXED ==========
+// ========== MONTHLY SUMMARY ==========
 app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
   try {
     const cr = req.params.rollNo.trim().toUpperCase();
@@ -3854,7 +3863,7 @@ function L(lang, key) {
 }
 
 // ============================================================
-//  ★★★ MAIN CHAT — FIXED (escape hatch + clear on location fail)
+//  MAIN CHAT
 // ============================================================
 app.post('/api/ai/chat', async (req, res) => {
   try {
@@ -3884,7 +3893,6 @@ app.post('/api/ai/chat', async (req, res) => {
     thinkingCtx.flags.languageDetected = userLang;
     console.log(`🌐 [LANG] detected=${userLang} for msg="${(message||'').slice(0,60)}"`);
 
-    // ============ SEQUENTIAL FLOW WITH ESCAPE HATCH ============
     if (cr !== 'guest' && userRole === 'student') {
       const pending = await getPending(cr);
       if (pending) {
@@ -3994,7 +4002,6 @@ app.post('/api/ai/chat', async (req, res) => {
       }
     }
 
-    // ============ DB INTENT MODE ============
     if (useDb && userData) {
       try {
         const fastIntent = fastIntentParse(message, userRole);
@@ -4062,7 +4069,6 @@ app.post('/api/ai/chat', async (req, res) => {
       } catch (err) { console.warn('DB mode error:', err.message); }
     }
 
-    // ============ NORMAL CHAT ============
     let contextStr = '';
     if (useCtx && userData) {
       const lines = [];
@@ -4091,16 +4097,16 @@ app.post('/api/ai/chat', async (req, res) => {
 
     const systemPrompt = `You are "BM Bot" for BM Group of Institutions.
 
-## ★★★ IDENTITY — DO NOT FORGET ★★★
+## IDENTITY
 You are currently talking to a **${userRole.toUpperCase()}** named **${userName}** (${userBranch}).
-- If role=admin → they are an ADMINISTRATOR. NEVER ask them to "turn on Context/Database" — they already have full DB access.
-- If role=faculty → they are FACULTY. Same rule.
-- If role=student → they are a STUDENT.
+- If role=admin → ADMINISTRATOR. NEVER ask them to "turn on Context/Database".
+- If role=faculty → FACULTY. Same rule.
+- If role=student → STUDENT.
 
-## ★★★ LANGUAGE MATCHING — HIGHEST PRIORITY ★★★
+## LANGUAGE MATCHING — HIGHEST PRIORITY
 ${langInstruction}
 RULES:
-- NEVER switch language. NEVER use Devanagari for Hinglish users. NEVER use Hindi words for English users.
+- NEVER switch language. NEVER use Devanagari for Hinglish users.
 - This rule OVERRIDES every other instruction.
 
 ${isCasualChat ? '## MODE: CASUAL\nJust chat naturally. For attendance/timetable queries, suggest turning on Context or Database.' : '## MODE: DATA\nAnswer from CONTEXT.'}
@@ -4315,12 +4321,9 @@ function scheduleAttendanceReminder() {
       const istMin = getISTMinutes(now);
       const todayStr = getISTDateString(now);
       const day = now.getDay();
-      // Skip Sat/Sun
       if (day === 0 || day === 6) return;
-      // Check if it's 2:45 PM IST (hour=14, min=45)
       if (istHour !== 14 || istMin !== 45) return;
       if (_lastReminderDate === todayStr) return;
-      // Check holiday
       const hol = await Holiday.findOne({ date: todayStr });
       if (hol) return;
       _lastReminderDate = todayStr;
@@ -4334,7 +4337,7 @@ function scheduleAttendanceReminder() {
     } catch (e) {
       console.warn('⚠️ [CRON] Reminder error:', e.message);
     }
-  }, 60 * 1000); // every minute
+  }, 60 * 1000);
   console.log('⏰ [CRON] Attendance reminder scheduled (checks every minute for 2:45 PM IST)');
 }
 scheduleAttendanceReminder();
