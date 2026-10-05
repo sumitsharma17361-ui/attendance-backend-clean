@@ -10,6 +10,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent !important;-webkit-touch-callout:none;}
 html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;}
@@ -98,6 +100,8 @@ body::after{content:none;}
 .icon-btn{width:38px;height:38px;border-radius:11px;border:1px solid var(--slate-200);background:#fff;color:var(--slate-600);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;overflow:hidden;}
 .icon-btn:hover{background:var(--brand-50);border-color:var(--brand-200);color:var(--brand-700);transform:translateY(-2px);box-shadow:0 6px 14px rgba(37,99,235,.14);}
 .icon-btn svg,.btn svg,.portal svg,.advisor svg,.closed-banner svg,.mini-btn svg,.send-btn svg,.msg-action-btn svg,.dl-menu svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;}
+.icon-btn.notif-on{background:linear-gradient(135deg,#10b981,#047857);border-color:transparent;color:#fff;}
+.icon-btn.notif-on:hover{background:linear-gradient(135deg,#059669,#065f46);color:#fff;}
 .user-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--brand-500),var(--brand-700));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;border:2px solid #fff;box-shadow:0 4px 12px rgba(37,99,235,.24);transition:transform var(--dur) var(--ease-spring);}
 .user-avatar:hover{transform:scale(1.08);}
 
@@ -352,7 +356,7 @@ tbody tr:hover{background:var(--brand-50);}
 .chat-fab::after{content:'';position:absolute;top:5px;right:5px;width:14px;height:14px;background:var(--emerald-500);border-radius:50%;border:2.5px solid #fff;animation:pulse 2s infinite;}
 .chat-fab svg{width:26px;height:26px;stroke:#fff;fill:none;stroke-width:2;pointer-events:none;}
 
-.chat-panel{position:fixed;bottom:94px;right:24px;width:460px;height:620px;max-width:calc(100vw - 32px);max-height:calc(100vh - 120px);background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);display:none;flex-direction:column;overflow:hidden;z-index:8500;border:1px solid var(--slate-200);}
+.chat-panel{position:fixed;bottom:94px;right:24px;width:460px;height:520px;max-width:calc(100vw - 32px);max-height:calc(100vh - 180px);background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);display:none;flex-direction:column;overflow:hidden;z-index:8500;border:1px solid var(--slate-200);}
 .chat-panel.open{display:flex;animation:chatInSpring .5s var(--spring-pop);}
 .chat-body{display:flex;flex:1;overflow:hidden;position:relative;min-height:0;}
 .chat-sidebar{width:0;overflow:hidden;background:var(--slate-50);border-right:1px solid var(--slate-200);transition:width .38s var(--spring-pop);display:flex;flex-direction:column;flex-shrink:0;}
@@ -587,7 +591,7 @@ tbody tr:hover{background:var(--brand-50);}
   .app-body{padding:16px;}
   .stat .stat-value{font-size:22px;}
   .welcome h2{font-size:18px;}
-  .chat-panel{bottom:90px;right:12px;left:12px;width:auto;height:78vh;max-height:78vh;border-radius:20px;overflow:hidden;}
+  .chat-panel{bottom:88px;right:12px;left:12px;width:auto;height:65vh;max-height:65vh;border-radius:20px;overflow:hidden;}
   .chat-fab{bottom:20px;right:20px;width:54px;height:54px;}
   .chat-sidebar.open{position:absolute;top:0;left:0;height:100%;width:220px;z-index:20;box-shadow:var(--shadow-lg);}
   .wd-cell{min-height:34px;font-size:11.5px;border-radius:8px;}
@@ -745,6 +749,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       <button class="icon-btn" id="chatBtn" onclick="toggleChat()" title="AI Assistant" data-tip="AI Assistant" style="display:none;">
         <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       </button>
+      <button class="icon-btn" id="notifBtn" onclick="enableNotifications()" title="Enable Notifications" data-tip="Notifications" style="display:none;">
+        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </button>
       <button class="icon-btn" id="logoutBtn" onclick="logout()" title="Logout" data-tip="Logout" style="display:none;">
         <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
       </button>
@@ -782,10 +789,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       <span class="auth-link" onclick="openSetNewPassword()">Set New Password</span>
       <span class="auth-link" onclick="openDeviceReset()">Reset Device</span>
       <span class="auth-link" onclick="openRegStatusCheck()">📝 Registration Status</span>
-      <span class="auth-link highlight" style="grid-column:span 2;" onclick="openCheckStatus()">
-        <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;margin-right:4px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        Check Account Request Status
-      </span>
+      <span class="auth-link" onclick="openCheckStatus()">🔍 Request Status</span>
     </div>
   </div>
 
@@ -1873,8 +1877,11 @@ document.addEventListener('click', function(e){
 }, true);
 
 /* ============================================================
-   SWIPE GESTURES for both drawers
+   SWIPE GESTURES for both drawers (with chat/modal guard)
    ============================================================ */
+function insideChatPanel(el){ const cp = document.getElementById('chatPanel'); if (!cp) return false; return cp.contains(el); }
+function insideModal(el){ return !!(el && el.closest && el.closest('.modal-backdrop.open')); }
+
 (function initSwipeGesture(){
   const SCROLL_CLASSES = ['tabs','subnav','chat-head-bottom','req-tabs','chips','table-wrap','bulk-select-list','present-list-wrap','wd-grid','row','chart-canvas-wrap'];
   function insideScrollable(el){
@@ -1911,6 +1918,8 @@ document.addEventListener('click', function(e){
     } else {
       if (!roleOk()) { mode = null; tracking = false; return; }
       if (insideScrollable(e.target)) { mode = null; tracking = false; return; }
+      if (insideChatPanel(e.target)) { mode = null; tracking = false; return; }
+      if (insideModal(e.target)) { mode = null; tracking = false; return; }
       mode = 'open'; tracking = true;
       activeDrawer = (currentUser && currentUser.role === 'student') ? sd : ad;
     }
@@ -2347,6 +2356,8 @@ function loadDashboard(){
   const cb = $('chatBtn'); if (cb) cb.style.display = 'flex';
   const cf = $('chatFab'); if (cf) cf.style.display = 'flex';
   const ua = $('userAvatar'); if (ua) ua.style.display = 'flex';
+  const nb = $('notifBtn'); if (nb) nb.style.display = 'flex';
+  if (localStorage.getItem('BM_FCM_ENABLED') === '1') updateNotifBtn(true);
   if ($('userName')) $('userName').textContent = currentUser.name;
   if (ua) ua.textContent = currentUser.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
   const roleIcons = {admin:'<svg viewBox="0 0 24 24"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/><path d="M5 20h14"/></svg>',faculty:'<svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>',student:'<svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>'};
@@ -2431,6 +2442,7 @@ function loadDashboard(){
   fetchNotices(); fetchChatHistory();
   setTimeout(initScrollAnimations, 100);
   setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 250);
+  setTimeout(() => { autoInitFCM().catch(()=>{}); }, 2000);
 }
 function updateClock(){
   const n = new Date();
@@ -2638,12 +2650,10 @@ async function loadAdminRequests(){
     const res = await fetch(url);
     const data = await res.json();
     if (!res.ok) return el.innerHTML = `<div class="empty">${escapeHtml(data.error || 'Failed')}</div>`;
-    // FIX: Handle both { requests: [...] } and [...] response shapes
     let reqs = [];
     if (Array.isArray(data)) reqs = data;
     else if (data && Array.isArray(data.requests)) reqs = data.requests;
     else if (data && Array.isArray(data.data)) reqs = data.data;
-    // Client-side filter (in case backend ignores status param)
     if (status) reqs = reqs.filter(r => (r.status || '') === status);
     if (!reqs.length) return el.innerHTML = '<div class="empty">No requests</div>';
     el.innerHTML = reqs.map(r => {
@@ -2842,10 +2852,6 @@ async function loadStats(){
     const wdP = wd > 0 ? Math.round(((d.daysPresent || 0) / wd) * 100) : 0;
     if ($('statWorkingDaysPct')) $('statWorkingDaysPct').textContent = wdP + '%';
 
-    // FIX: Advisor now shows LECTURE bunk (not days).
-    // Total lectures conducted = t, attended = a, per lecture = 1
-    // 75% of (t + x) = a + x  =>  x = (0.75t - a) / 0.25  (extra lectures needed to reach 75%)
-    // For bunk: max x such that a / (t + x) >= 0.75  =>  x = floor((a - 0.75t) / 0.75)
     const adv = $('advisorText');
     if (adv && d.totalConductedLectures > 0) {
       const a = d.totalAcademicLectures || 0;
@@ -3429,6 +3435,161 @@ async function checkDateStatus(dateStr){ try { const res = await fetch(`${API}/a
 function getMonthRangeStrings(m){ const mm = String(m+1).padStart(2,'0'); const last = new Date(2026, m+1, 0).getDate(); const start = m === 6 ? 15 : 1; return { start: `2026-${mm}-${String(start).padStart(2,'0')}`, end: `2026-${mm}-${String(last).padStart(2,'0')}` }; }
 function getCurrentMonthRangeStrings(){ const n = new Date(); const mm = String(n.getMonth()+1).padStart(2,'0'); const last = new Date(n.getFullYear(), n.getMonth()+1, 0).getDate(); const start = (n.getFullYear() === 2026 && n.getMonth() === 6) ? 15 : 1; return { start: `${n.getFullYear()}-${mm}-${String(start).padStart(2,'0')}`, end: `${n.getFullYear()}-${mm}-${String(last).padStart(2,'0')}` }; }
 function getRangeForSelection(range, month){ let s, e; if (range === 'FULL_SEMESTER') { s = '2026-07-15'; e = '2026-12-31'; } else if (range === 'CURRENT_MONTH') { const r = getCurrentMonthRangeStrings(); s = r.start; e = r.end; } else { const r = getMonthRangeStrings(parseInt(month)); s = r.start; e = r.end; } const today = fmtDate(new Date()); if (e > today) e = today; return { start: s, end: e }; }
+
+/* ============================================================
+   FCM PUSH NOTIFICATIONS
+   ============================================================ */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBBD3V20eKCo8S9Smi6LY--kLJj-pBVXYQ",
+  authDomain: "bm-attedance.firebaseapp.com",
+  projectId: "bm-attedance",
+  storageBucket: "bm-attedance.firebasestorage.app",
+  messagingSenderId: "760728083416",
+  appId: "1:760728083416:web:0ff3d79ac1b5d89ab5f0ad"
+};
+const VAPID_PUBLIC_KEY = "BPgV9AtuPSDUJWdIb-nu-MvD38XngpQXVj7cyrhZGGHxaL6upFPfxth6l_e1gYXOwL9bU1pnmxPYj0AzYX1jYlM";
+let firebaseApp = null, firebaseMessaging = null;
+
+async function initFirebase(){
+  if (firebaseApp) return firebaseApp;
+  try {
+    if (!window.firebase || !firebase.messaging) {
+      console.warn('[FCM] Firebase SDK not loaded');
+      return null;
+    }
+    if (!firebase.apps || !firebase.apps.length) {
+      firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
+    } else {
+      firebaseApp = firebase.app();
+    }
+    try {
+      firebaseMessaging = firebase.messaging();
+    } catch(e) {
+      console.warn('[FCM] messaging init failed:', e.message);
+      return null;
+    }
+    return firebaseApp;
+  } catch(e) {
+    console.warn('[FCM] init error:', e.message);
+    return null;
+  }
+}
+
+async function registerServiceWorker(){
+  if (!('serviceWorker' in navigator)) return null;
+  try {
+    const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+    console.log('[FCM] SW registered:', reg.scope);
+    return reg;
+  } catch(e) {
+    console.warn('[FCM] SW registration failed:', e.message);
+    return null;
+  }
+}
+
+async function enableNotifications(){
+  const btn = $('notifBtn');
+  if (btn) { btn.disabled = true; }
+  try {
+    toast('Setting up notifications…', 'info');
+    const app = await initFirebase();
+    if (!app || !firebaseMessaging) {
+      toast('Notifications not supported on this browser', 'error');
+      if (btn) btn.disabled = false;
+      return;
+    }
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') {
+      showFeedback('warning', 'Permission Denied', 'Please allow notifications in your browser settings to receive attendance reminders and passcode alerts.');
+      if (btn) btn.disabled = false;
+      return;
+    }
+    const reg = await registerServiceWorker();
+    if (!reg) { toast('Service worker registration failed', 'error'); if (btn) btn.disabled = false; return; }
+    const token = await firebaseMessaging.getToken({ vapidKey: VAPID_PUBLIC_KEY, serviceWorkerRegistration: reg });
+    if (!token) { toast('Could not get FCM token', 'error'); if (btn) btn.disabled = false; return; }
+    console.log('[FCM] Token:', token.substring(0, 20) + '...');
+    const res = await fetch(`${API}/api/user/save-fcm-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rollNo: currentUser.rollNo, fcmToken: token })
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      // Backend might not have FCM endpoint yet — still mark local enabled
+      console.warn('[FCM] Backend save failed:', d.error || res.status);
+      localStorage.setItem('BM_FCM_TOKEN', token);
+      localStorage.setItem('BM_FCM_ENABLED', '1');
+      updateNotifBtn(true);
+      showFeedback('success', 'Notifications Enabled', 'You will now receive attendance reminders and alerts.\n\nNote: Backend sync pending — please update the server.');
+      if (btn) btn.disabled = false;
+      return;
+    }
+    localStorage.setItem('BM_FCM_TOKEN', token);
+    localStorage.setItem('BM_FCM_ENABLED', '1');
+    updateNotifBtn(true);
+    showFeedback('success', 'Notifications Enabled', 'You will now receive:\n\n• Daily attendance reminders (2:45 PM)\n• Passcode publish alerts\n• Request approval/rejection alerts\n• Notice broadcasts');
+  } catch(e) {
+    console.error('[FCM] Enable error:', e);
+    showFeedback('error', 'Setup Failed', e.message || 'Could not enable notifications.');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function updateNotifBtn(enabled){
+  const btn = $('notifBtn');
+  if (!btn) return;
+  if (enabled) {
+    btn.classList.add('notif-on');
+    btn.setAttribute('title', 'Notifications enabled');
+    btn.setAttribute('data-tip', 'Notifications ON');
+  } else {
+    btn.classList.remove('notif-on');
+    btn.setAttribute('title', 'Enable Notifications');
+    btn.setAttribute('data-tip', 'Notifications');
+  }
+}
+
+async function autoInitFCM(){
+  if (!currentUser || !currentUser.rollNo) return;
+  if (localStorage.getItem('BM_FCM_ENABLED') !== '1') return;
+  try {
+    const app = await initFirebase();
+    if (!app || !firebaseMessaging) return;
+    const reg = await registerServiceWorker();
+    if (!reg) return;
+    const token = await firebaseMessaging.getToken({ vapidKey: VAPID_PUBLIC_KEY, serviceWorkerRegistration: reg });
+    if (!token) return;
+    const saved = localStorage.getItem('BM_FCM_TOKEN');
+    if (saved && saved === token) { updateNotifBtn(true); return; }
+    // Token changed — resave
+    await fetch(`${API}/api/user/save-fcm-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rollNo: currentUser.rollNo, fcmToken: token })
+    }).catch(() => {});
+    localStorage.setItem('BM_FCM_TOKEN', token);
+    updateNotifBtn(true);
+  } catch(e) { console.warn('[FCM] autoInit:', e.message); }
+}
+
+// Foreground messages
+try {
+  if (window.firebase && firebase.messaging) {
+    setTimeout(() => {
+      try {
+        const m = firebase.messaging();
+        m.onMessage((payload) => {
+          console.log('[FCM] Foreground:', payload);
+          const t = payload.notification?.title || 'BM Attendance';
+          const b = payload.notification?.body || '';
+          toast(`${t}: ${b}`, 'info');
+        });
+      } catch(e){}
+    }, 1500);
+  }
+} catch(e){}
 
 /* ============================================================
    PREMIUM INIT (desktop only)
