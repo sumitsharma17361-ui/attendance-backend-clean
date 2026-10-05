@@ -3478,15 +3478,17 @@ async function initFirebase(){
 async function registerServiceWorker(){
   if (!('serviceWorker' in navigator)) return null;
   try {
-    const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
-    console.log('[FCM] SW registered:', reg.scope);
+    // Detect base path dynamically (works for both root and subfolder repos)
+    const basePath = window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '');
+    const swPath = `${basePath}/firebase-messaging-sw.js`;
+    const reg = await navigator.serviceWorker.register(swPath, { scope: `${basePath}/` });
+    console.log('[FCM] SW registered at:', reg.scope);
     return reg;
   } catch(e) {
     console.warn('[FCM] SW registration failed:', e.message);
     return null;
   }
 }
-
 async function enableNotifications(){
   const btn = $('notifBtn');
   if (btn) { btn.disabled = true; }
