@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#2563eb" />
 <title>BM Group – ERP Portal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -10,6 +10,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <style>
@@ -586,8 +588,9 @@ tbody tr:hover{background:var(--brand-50);}
 .wd-cell.absent{background:#ffe4e6;color:#9f1239;border-color:#fda4af;font-weight:800;}
 .wd-cell.tappable{cursor:pointer;}
 
+/* ★★★ MOBILE FIX: extra top padding for status bar overlap ★★★ */
 @media(max-width:640px){
-  body{padding:12px;}
+  body{padding:52px 12px 20px 12px;}
   .app-body{padding:16px;}
   .stat .stat-value{font-size:22px;}
   .welcome h2{font-size:18px;}
@@ -616,6 +619,8 @@ tbody tr:hover{background:var(--brand-50);}
   .modal-footer{padding:14px 18px 18px;}
   #auth-box{padding:28px 20px 32px;}
   .auth-title{font-size:22px;}
+  .app-header{padding:14px 16px;}
+  .toast-wrap{top:56px;}
 }
 ::-webkit-scrollbar{width:7px;height:7px;}
 ::-webkit-scrollbar-track{background:transparent;}
@@ -884,7 +889,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
               </select>
             </div>
             <div class="form-group" id="reqSubjectGroup" style="display:none;">
-              <label class="form-label">Subject</label>
+              <label class="form-label">Subject <span id="reqSubjectHint" class="text-xs text-muted" style="font-weight:500;text-transform:none;letter-spacing:0;"></span></label>
               <select id="reqSubject"><option value="">Select subject…</option></select>
             </div>
             <div class="form-group"><label class="form-label">Reason</label>
@@ -1737,6 +1742,109 @@ function getFileTypeLabel(mimeType){
 }
 function isDesktop(){ return window.innerWidth >= 641; }
 function isMedianApp(){ return typeof window.median !== 'undefined' && window.median !== null; }
+
+/* ★★★ UNIVERSAL BLOB DOWNLOAD — works in Median app + browsers ★★★ */
+function universalDownload(blob, filename){
+  try {
+    if (isMedianApp() && window.median && typeof window.median.downloadFile === 'function') {
+      try {
+        const reader = new FileReader();
+        reader.onload = function() {
+          try {
+            const base64 = reader.result.split(',')[1];
+            window.median.downloadFile({
+              base64: base64,
+              filename: filename,
+              mimeType: blob.type || 'application/octet-stream'
+            });
+            toast('Downloaded: ' + filename, 'success');
+          } catch(e) {
+            toast('Median download failed, trying fallback…', 'info');
+            fallbackBlobDownload(blob, filename);
+          }
+        };
+        reader.readAsDataURL(blob);
+        return;
+      } catch(e) {
+        console.warn('Median download error:', e);
+      }
+    }
+    fallbackBlobDownload(blob, filename);
+  } catch(e) {
+    console.error('universalDownload failed:', e);
+    toast('Download failed: ' + e.message, 'error');
+  }
+}
+function fallbackBlobDownload(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    try { document.body.removeChild(a); } catch(e){}
+    URL.revokeObjectURL(url);
+  }, 3000);
+  toast('Downloaded: ' + filename, 'success');
+}
+
+/* ★★★ PDF GENERATION via jsPDF — works everywhere ★★★ */
+function ensureJsPDF(){
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    toast('PDF library not loaded', 'error');
+    return null;
+  }
+  return window.jspdf.jsPDF;
+}
+function generatePDFBlob(title, subtitle, metaLines, tableHeaders, tableRows, summaryLines){
+  const JsPDF = ensureJsPDF();
+  if (!JsPDF) return null;
+  const doc = new JsPDF();
+  // Header
+  doc.setFillColor(37, 99, 235);
+  doc.rect(0, 0, 210, 24, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(16);
+  doc.setFont(undefined, 'bold');
+  doc.text('BM Group of Institutions', 105, 11, { align: 'center' });
+  doc.setFontSize(10);
+  doc.setFont(undefined, 'normal');
+  doc.text(title, 105, 19, { align: 'center' });
+  // Subtitle
+  let y = 32;
+  doc.setTextColor(15, 23, 42);
+  doc.setFontSize(11);
+  doc.setFont(undefined, 'bold');
+  if (subtitle) { doc.text(subtitle, 14, y); y += 6; }
+  doc.setFontSize(9);
+  doc.setFont(undefined, 'normal');
+  doc.setTextColor(100, 116, 139);
+  (metaLines || []).forEach(line => { doc.text(line, 14, y); y += 5; });
+  y += 3;
+  // Summary
+  if (summaryLines && summaryLines.length) {
+    doc.setTextColor(15, 23, 42);
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'bold');
+    summaryLines.forEach(line => { doc.text(line, 14, y); y += 5; });
+    y += 3;
+  }
+  // Table
+  if (tableHeaders && tableRows) {
+    doc.autoTable({
+      startY: y,
+      head: [tableHeaders],
+      body: tableRows,
+      theme: 'grid',
+      styles: { fontSize: 8.5, cellPadding: 3 },
+      headStyles: { fillColor: [219, 234, 254], textColor: [30, 64, 175], fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248, 250, 252] }
+    });
+  }
+  return doc.output('blob');
+}
 
 /* ============================================================
    STUDENT MENU
@@ -2806,9 +2914,58 @@ async function initStudent(){
   await updateTrend();
   if (subjectBreakdownOpen) await loadSubjectBreakdown();
   const rd = $('reqDate'); if (rd) rd.max = fmtDate(new Date());
+  // ★★★ Attach listeners for single-lecture subject filtering ★★★
+  const reqDateEl = $('reqDate');
+  if (reqDateEl && !reqDateEl._boundSubjects) { reqDateEl._boundSubjects = true; reqDateEl.addEventListener('change', loadRequestSubjects); }
+  const reqLtEl = $('reqLectureType');
+  if (reqLtEl && !reqLtEl._boundSubjects) {
+    reqLtEl._boundSubjects = true;
+    reqLtEl.addEventListener('change', function() {
+      const grp = $('reqSubjectGroup');
+      if (grp) grp.style.display = (this.value === 'single_lecture') ? 'block' : 'none';
+      loadRequestSubjects();
+    });
+  }
   loadRequestSubjects();
 }
-async function loadRequestSubjects(){ try { const subs = await fetch(`${API}/api/timetable/subjects`).then(r => r.json()); const s = $('reqSubject'); if (s) s.innerHTML = '<option value="">Select subject…</option>' + subs.map(x => `<option value="${x}">${x}</option>`).join(''); } catch(e){} }
+
+/* ★★★ UPDATED: Single-lecture subject loads by date's day-of-week + branch ★★★ */
+async function loadRequestSubjects(){
+  const lt = $('reqLectureType')?.value;
+  const d = $('reqDate')?.value;
+  const s = $('reqSubject');
+  const hint = $('reqSubjectHint');
+  if (!s) return;
+  if (lt === 'single_lecture') {
+    if (!d) {
+      s.innerHTML = '<option value="">Select a date first…</option>';
+      if (hint) hint.textContent = '— pick a date to load subjects';
+      return;
+    }
+    const dateObj = new Date(d + 'T00:00:00');
+    const dow = dateObj.getDay();
+    const dayName = FULL_DAY_NAMES[dow];
+    const branch = (currentUser && currentUser.branch) ? currentUser.branch : 'CSE';
+    const daySubs = getTimetableForBranch(branch)[dayName] || [];
+    const subs = daySubs.filter(x =>
+      !x.includes('Sports') && !x.includes('LIB') && !x.includes('Library') &&
+      x.toLowerCase() !== 'lunch break'
+    );
+    if (!subs.length) {
+      s.innerHTML = '<option value="">No lectures scheduled on this day</option>';
+      if (hint) hint.textContent = `(${dayName} · ${branch})`;
+      return;
+    }
+    s.innerHTML = '<option value="">Select subject…</option>' + subs.map(x => `<option value="${x}">${x}</option>`).join('');
+    if (hint) hint.textContent = `(${dayName} · ${branch})`;
+  } else {
+    if (hint) hint.textContent = '';
+    try {
+      const subs = await fetch(`${API}/api/timetable/subjects`).then(r => r.json());
+      s.innerHTML = '<option value="">Select subject…</option>' + (subs || []).map(x => `<option value="${x}">${x}</option>`).join('');
+    } catch(e){}
+  }
+}
 async function fetchHistory(){
   try { await ensureHolidays();
     const res = await fetch(`${API}/api/attendance/history/${currentUser.rollNo}`);
@@ -3021,6 +3178,8 @@ async function markActivePeriod(){
   } catch(e){ hideDL(); showFeedback('error', 'Network Error', e.message); }
 }
 async function exportMyAttendance(){ if (!globalHistory.length) return toast('No records','error'); let csv = 'Date,Subject,Status\n'; globalHistory.forEach(r => { csv += `${r.date},${r.subject},${r.status}\n`; }); download(csv, `my_attendance_${currentUser.rollNo}.csv`); }
+
+/* ★★★ UPDATED: PDF generation using jsPDF — actual download everywhere ★★★ */
 async function generateIndividualPDF(studentRoll, studentName, branch, range, month, isSelf){
   showDL('Generating PDF…');
   try {
@@ -3039,12 +3198,19 @@ async function generateIndividualPDF(studentRoll, studentName, branch, range, mo
     const endD = new Date(rng.end + 'T23:59:59');
     while (cur <= endD) { const ds = fmtDate(cur); const dow = cur.getDay(); if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) { const subs = (tt[FULL_DAY_NAMES[dow]] || []).filter(s => !s.includes('Sports') && !s.includes('LIB') && !s.includes('Library')); totalConducted += subs.length; } cur.setDate(cur.getDate()+1); }
     const pct = totalConducted > 0 ? Math.round((totalAttended/totalConducted)*100) : 0;
-    const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Attendance ${studentRoll}</title><style>body{font-family:Arial;padding:30px;color:#0f172a}h1{color:#1d4ed8}h2{color:#2563eb;font-weight:400;border-bottom:2px solid #dbeafe;padding-bottom:6px}table{width:100%;border-collapse:collapse;font-size:12px;margin-top:14px}th{background:#dbeafe;padding:8px;text-align:left;color:#1e40af;border:1px solid #dbeafe}td{padding:6px 8px;border-bottom:1px solid #f1f5f9}.sum{display:flex;gap:16px;margin:20px 0;flex-wrap:wrap}.box{flex:1;min-width:100px;background:#f8fafc;padding:14px;border-radius:8px;text-align:center;border:1px solid #e2e8f0}.box b{display:block;font-size:24px;color:#1d4ed8}.label{font-size:10px;color:#64748b;text-transform:uppercase}@media print{@page{margin:10mm}}</style></head><body><h1>BM Group of Institutions</h1><h2>Student Attendance Report</h2><p style="color:#64748b;font-size:13px;"><b>${studentName}</b> (${studentRoll}) · ${branch} · 5th Semester</p><p style="color:#64748b;font-size:13px;">Range: ${fmtDatePretty(rng.start)} → ${fmtDatePretty(rng.end)}</p><div class="sum"><div class="box"><b>${totalAttended}</b><span class="label">Attended</span></div><div class="box"><b>${totalConducted}</b><span class="label">Conducted</span></div><div class="box"><b>${pct}%</b><span class="label">Percentage</span></div></div><table><thead><tr><th>Date</th><th>Subject</th><th>Status</th></tr></thead><tbody>${records.sort((a,b) => b.date.localeCompare(a.date)).map(r => `<tr><td>${fmtDatePretty(r.date)}</td><td>${r.subject}</td><td>${r.status}</td></tr>`).join('')}</tbody></table></body></html>`;
-    const win = window.open('', '_blank');
-    if (!win) { hideDL(); return toast('Allow popups','error'); }
-    win.document.open(); win.document.write(htmlContent); win.document.close();
+
+    const blob = generatePDFBlob(
+      'Student Attendance Report',
+      `${studentName} (${studentRoll})`,
+      [`Branch: ${branch} · 5th Semester`, `Range: ${fmtDatePretty(rng.start)} → ${fmtDatePretty(rng.end)}`],
+      ['Date', 'Subject', 'Status'],
+      records.sort((a,b) => b.date.localeCompare(a.date)).map(r => [fmtDatePretty(r.date), r.subject, r.status]),
+      [`Attended: ${totalAttended}    |    Conducted: ${totalConducted}    |    Percentage: ${pct}%`]
+    );
     hideDL();
-    setTimeout(() => { try { win.focus(); win.print(); } catch(e){} toast('Use "Save as PDF"','success'); }, 700);
+    if (!blob) return toast('PDF library failed to load','error');
+    const filename = `attendance_${studentRoll}_${Date.now()}.pdf`;
+    universalDownload(blob, filename);
   } catch(e) { hideDL(); toast('Failed: ' + e.message, 'error'); }
 }
 async function generateSelfPDF(){ const range = $('pdfRangeSelect').value; const month = $('pdfMonthSelect').value; await generateIndividualPDF(currentUser.rollNo, currentUser.name, currentUser.branch || 'CSE', range, month, true); }
@@ -3063,7 +3229,28 @@ function exportAllCSV(){ const r = window._allRecords || []; if (!r.length) retu
 function initReports(){ const s = $('singleStudentMonth'); if (s && !s.innerHTML.trim()) s.innerHTML = [6,7,8,9,10,11].map(m=>`<option value="${m}">${MONTH_NAMES[m]} 2026</option>`).join(''); }
 function toggleSingleMonth(){ const el = $('singleStudentMonth'); if (el) el.style.display = $('singleStudentRange').value === 'SELECTED_MONTH' ? 'block' : 'none'; }
 function downloadSingle(){ const roll = $('singleStudentSelect').value; if (!roll) return toast('Select student','error'); const range = $('singleStudentRange').value; const month = $('singleStudentMonth').value; toast('Downloading CSV…','info'); window.location.href = `${API}/api/export/student-attendance/${currentUser.rollNo}?studentRollNo=${roll}&range=${range}&month=${month}`; }
-async function generateClassReport(){ const s = $('classStart').value, e = $('classEnd').value, b = $('classBranch').value; if (!s || !e) return toast('Select dates','error'); showDL('Generating…'); try { const url = `${API}/api/admin/class-attendance-report?requesterRollNo=${currentUser.rollNo}&startDate=${s}&endDate=${e}&branch=${b}`; const data = await fetch(url).then(r=>r.json()); if (!data.students || data.students.length === 0) { hideDL(); return toast('No students','error'); } const rows = data.students.map((x,i)=>`<tr><td style="text-align:center;">${i+1}</td><td>${x.rollNo}</td><td>${x.name}</td><td style="text-align:center;">${x.totalPresent}</td><td style="text-align:center;">${x.percentage}%</td></tr>`).join(''); const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Class Report</title><style>body{font-family:Arial;padding:24px;color:#0f172a}h1{color:#1d4ed8;text-align:center}h2{color:#2563eb;text-align:center;font-weight:400}table{width:100%;border-collapse:collapse;font-size:12px;margin-top:20px}th{background:#dbeafe;padding:10px;text-align:left}td{padding:8px 10px;border-bottom:1px solid #f1f5f9}@media print{@page{margin:10mm}}</style></head><body><h1>BM Group of Institutions</h1><h2>${b==='ALL'?'All Branches':b} – 5th Semester</h2><p style="text-align:center;color:#64748b;">Range: ${fmtDatePretty(s)} to ${fmtDatePretty(e)}</p><table><thead><tr><th>S.No</th><th>Roll</th><th>Name</th><th>Present</th><th>%</th></tr></thead><tbody>${rows}</tbody></table></body></html>`; const win = window.open('', '_blank'); if (!win) { hideDL(); return toast('Allow popups','error'); } win.document.open(); win.document.write(htmlContent); win.document.close(); hideDL(); setTimeout(() => { try { win.focus(); win.print(); } catch(e){} toast('Use "Save as PDF"','success'); }, 700); } catch(e){ hideDL(); toast('Failed: ' + e.message,'error'); } }
+async function generateClassReport(){
+  const s = $('classStart').value, e = $('classEnd').value, b = $('classBranch').value;
+  if (!s || !e) return toast('Select dates','error');
+  showDL('Generating…');
+  try {
+    const url = `${API}/api/admin/class-attendance-report?requesterRollNo=${currentUser.rollNo}&startDate=${s}&endDate=${e}&branch=${b}`;
+    const data = await fetch(url).then(r=>r.json());
+    if (!data.students || data.students.length === 0) { hideDL(); return toast('No students','error'); }
+    const rows = data.students.map((x,i)=>[i+1, x.rollNo, x.name, x.totalPresent, x.percentage+'%']);
+    const blob = generatePDFBlob(
+      'Class Attendance Report',
+      `${b === 'ALL' ? 'All Branches' : b} – 5th Semester`,
+      [`Range: ${fmtDatePretty(s)} to ${fmtDatePretty(e)}`],
+      ['S.No', 'Roll', 'Name', 'Present', '%'],
+      rows,
+      null
+    );
+    hideDL();
+    if (!blob) return toast('PDF library failed','error');
+    universalDownload(blob, `class_report_${b}_${Date.now()}.pdf`);
+  } catch(e){ hideDL(); toast('Failed: ' + e.message,'error'); }
+}
 function toggleAdminReportRange(){ const e = $('adminReportMonth'); if (e) e.style.display = $('adminReportRange').value === 'SELECTED_MONTH' ? 'block' : 'none'; }
 async function exportGrid(){ const r = window._allRecords || await fetch(`${API}/api/attendance/all/${currentUser.rollNo}`).then(x=>x.json()); const sel = $('exportRange').value; const hol = await fetch(`${API}/api/holidays`).then(x=>x.json()); const hS = new Set(hol.map(h => (h.date||'').split('T')[0])); const start = sel === 'ALL_SEMESTER' ? new Date(2026,6,15) : new Date(2026, parseInt(sel), 1); let end = sel === 'ALL_SEMESTER' ? new Date(2026,11,31) : new Date(2026, parseInt(sel)+1, 0); const today = new Date(); if (end > today) end = today; const days = []; let cur = new Date(start); while (cur <= end) { days.push(fmtDate(cur)); cur.setDate(cur.getDate()+1); } const bs = {}; r.forEach(x => { if (!bs[x.rollNo]) bs[x.rollNo] = { name: x.studentName||'', dates: {} }; if (!bs[x.rollNo].dates[x.date]) bs[x.rollNo].dates[x.date] = []; bs[x.rollNo].dates[x.date].push(x.status); }); let csv = 'Roll,Name,' + days.map(d => `${d}`).join(',') + ',Total\n'; Object.keys(bs).sort().forEach(roll => { const s = bs[roll]; let total = 0, row = `"${roll}","${s.name}"`; days.forEach(d => { const dow = new Date(d).getDay(); if (dow === 0 || dow === 6) { row += ',OFF'; return; } if (hS.has(d)) { row += ',H'; return; } const st = s.dates[d] || []; if (st.some(x => x === 'Present' || x === 'Duty Leave')) { row += ',P'; total++; } else row += ',A'; }); row += `,${total}`; csv += row + '\n'; }); download(csv, `attendance_grid.csv`); }
 function downloadGoogleSheets(){ const r = window._allRecords || []; if (!r.length) return toast('Load attendance first','error'); let csv = 'Date,Roll,Name,Subject,Status\n'; r.forEach(x => { csv += `"${x.date}","${x.rollNo}","${x.studentName||''}","${x.subject}","${x.status}"\n`; }); download(csv, 'google_sheets_export.csv'); }
@@ -3194,7 +3381,7 @@ function removeFacBulkDate(d){ facSelectedBulkDates = facSelectedBulkDates.filte
 async function facBulkMark(){ const students = Array.from(document.querySelectorAll('.fac-bulk-stu:checked')).map(cb => cb.value); if (!students.length) return toast('Select students','error'); if (!facSelectedBulkDates.length) return toast('Add dates','error'); const status = $('facBulkStatus').value; if (!confirm(`Mark ${status} for ${students.length} students × ${facSelectedBulkDates.length} dates?`)) return; showDL('Marking bulk…'); try { const res = await fetch(`${API}/api/teacher/bulk-mark-attendance`, {method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, studentRollNos: students, dates: facSelectedBulkDates, status }) }); const d = await res.json(); hideDL(); if (res.ok) { showFeedback('success','Bulk Marked',d.message || 'Attendance marked.'); facSelectedBulkDates = []; renderFacBulkDates(); fetchTeacherStudents(); loadFacultyRecent(); } else showFeedback('error','Failed',d.error || 'Could not mark'); } catch(e){ hideDL(); showFeedback('error','Network Error',e.message); } }
 async function facBulkDelete(){ const students = Array.from(document.querySelectorAll('.fac-bulk-stu:checked')).map(cb => cb.value); if (!students.length) return toast('Select students','error'); if (!facSelectedBulkDates.length) return toast('Add dates','error'); if (!confirm(`Delete ${students.length} students × ${facSelectedBulkDates.length} dates?`)) return; showDL('Deleting…'); try { const res = await fetch(`${API}/api/teacher/bulk-delete-attendance`, {method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, studentRollNos: students, dates: facSelectedBulkDates }) }); const d = await res.json(); hideDL(); if (res.ok) { showFeedback('success','Deleted',d.message || 'Records deleted.'); facSelectedBulkDates = []; renderFacBulkDates(); fetchTeacherStudents(); loadFacultyRecent(); } else showFeedback('error','Failed',d.error || 'Could not delete'); } catch(e){ hideDL(); showFeedback('error','Network Error',e.message); } }
 function toggleFacMonth(){ const v = $('facReportRange').value; $('facReportMonth').style.display = v === 'SELECTED_MONTH' ? 'block' : 'none'; $('facCustomRangeRow').style.display = v === 'CUSTOM' ? 'flex' : 'none'; }
-async function facReport(fmt){ const roll = $('facReportStudent').value; if (!roll) return toast('Select student','error'); const range = $('facReportRange').value; showDL('Generating…'); try { const records = await fetch(`${API}/api/attendance/student/${roll}/${currentUser.rollNo}`).then(r=>r.json()); const subs = window._facSubs || []; let filtered = records.filter(r => subs.includes(r.subject)); let startStr, endStr; if (range === 'FULL_SEMESTER') { startStr = '2026-07-15'; endStr = '2026-12-31'; } else if (range === 'CURRENT_MONTH') { const r = getCurrentMonthRangeStrings(); startStr = r.start; endStr = r.end; } else if (range === 'SELECTED_MONTH') { const r = getMonthRangeStrings(parseInt($('facReportMonth').value)); startStr = r.start; endStr = r.end; } else { const s = $('facReportStart').value, e = $('facReportEnd').value; if (!s || !e) { hideDL(); return toast('Pick dates','error'); } startStr = s; endStr = e; } const todayStr = fmtDate(new Date()); if (endStr > todayStr) endStr = todayStr; filtered = filtered.filter(r => r.date >= startStr && r.date <= endStr); if (filtered.length === 0) { hideDL(); return toast('No records in range','error'); } if (fmt === 'pdf') { const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Teacher Report ${roll}</title><style>body{font-family:Arial;padding:30px;color:#0f172a}h1{color:#1d4ed8}h2{color:#2563eb;font-weight:400;border-bottom:2px solid #dbeafe;padding-bottom:6px}table{width:100%;border-collapse:collapse;font-size:12px;margin-top:14px}th{background:#dbeafe;padding:8px;text-align:left;color:#1e40af}td{padding:6px 8px;border-bottom:1px solid #f1f5f9}@media print{@page{margin:10mm}}</style></head><body><h1>BM Group of Institutions</h1><h2>Teacher Report – ${roll}</h2><p style="color:#64748b;font-size:13px;">Teacher: ${currentUser.name} (${currentUser.rollNo})</p><p style="color:#64748b;font-size:13px;">Range: ${startStr} → ${endStr}</p><table><thead><tr><th>Date</th><th>Subject</th><th>Status</th></tr></thead><tbody>${filtered.map(r=>`<tr><td>${fmtDatePretty(r.date)}</td><td>${r.subject}</td><td>${r.status}</td></tr>`).join('')}</tbody></table></body></html>`; const win = window.open('', '_blank'); if (!win) { hideDL(); return toast('Allow popups','error'); } win.document.open(); win.document.write(htmlContent); win.document.close(); hideDL(); setTimeout(() => { try { win.focus(); win.print(); } catch(e){} toast('Use "Save as PDF"','success'); }, 700); } else { let csv = `Teacher Report\nStudent: ${roll}\nTeacher: ${currentUser.name}\nRange: ${startStr} to ${endStr}\n\nDate,Subject,Status\n`; filtered.forEach(r => { csv += `${r.date},${r.subject},${r.status}\n`; }); download(csv, `teacher_report_${roll}.csv`); hideDL(); } } catch(e){ hideDL(); toast('Failed: ' + e.message,'error'); } }
+async function facReport(fmt){ const roll = $('facReportStudent').value; if (!roll) return toast('Select student','error'); const range = $('facReportRange').value; showDL('Generating…'); try { const records = await fetch(`${API}/api/attendance/student/${roll}/${currentUser.rollNo}`).then(r=>r.json()); const subs = window._facSubs || []; let filtered = records.filter(r => subs.includes(r.subject)); let startStr, endStr; if (range === 'FULL_SEMESTER') { startStr = '2026-07-15'; endStr = '2026-12-31'; } else if (range === 'CURRENT_MONTH') { const r = getCurrentMonthRangeStrings(); startStr = r.start; endStr = r.end; } else if (range === 'SELECTED_MONTH') { const r = getMonthRangeStrings(parseInt($('facReportMonth').value)); startStr = r.start; endStr = r.end; } else { const s = $('facReportStart').value, e = $('facReportEnd').value; if (!s || !e) { hideDL(); return toast('Pick dates','error'); } startStr = s; endStr = e; } const todayStr = fmtDate(new Date()); if (endStr > todayStr) endStr = todayStr; filtered = filtered.filter(r => r.date >= startStr && r.date <= endStr); if (filtered.length === 0) { hideDL(); return toast('No records in range','error'); } if (fmt === 'pdf') { const blob = generatePDFBlob('Teacher Report', `${roll} · ${currentUser.name}`, [`Range: ${startStr} → ${endStr}`], ['Date','Subject','Status'], filtered.map(r => [fmtDatePretty(r.date), r.subject, r.status]), null); hideDL(); if (!blob) return toast('PDF library failed','error'); universalDownload(blob, `teacher_report_${roll}_${Date.now()}.pdf`); } else { let csv = `Teacher Report\nStudent: ${roll}\nTeacher: ${currentUser.name}\nRange: ${startStr} to ${endStr}\n\nDate,Subject,Status\n`; filtered.forEach(r => { csv += `${r.date},${r.subject},${r.status}\n`; }); download(csv, `teacher_report_${roll}.csv`); hideDL(); } } catch(e){ hideDL(); toast('Failed: ' + e.message,'error'); } }
 async function applyLeave(){ const f = $('leaveFrom').value, t = $('leaveTo').value, r = $('leaveReason').value.trim(); if (!f || !t || !r) return showFeedback('warning','Missing Fields','Dates and reason are required.'); try { const res = await fetch(`${API}/api/leave/apply`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo, fromDate:f, toDate:t, reason:r, leaveType:$('leaveType').value})}); const d = await res.json(); if (res.ok) { $('leaveReason').value = ''; loadMyLeaves(); showFeedback('success','Leave Applied',`${fmtDatePretty(f)} → ${fmtDatePretty(t)}\n\nDuty leave will be marked after admin approval.`); } else showFeedback('error','Failed',d.error||'Could not apply'); } catch(e){ showFeedback('error','Network Error',e.message); } }
 async function loadMyLeaves(){ try { const data = await fetch(`${API}/api/leave/my/${currentUser.rollNo}`).then(x=>x.json()); const el = $('myLeaveList'); el.innerHTML = data.length ? data.map(l => `<div style="padding:10px 0;border-bottom:1px solid var(--slate-100);"><div style="display:flex;justify-content:space-between;"><b>${fmtDatePretty(l.fromDate)} → ${fmtDatePretty(l.toDate)}</b> <span class="badge ${l.status==='Approved'?'badge-success':l.status==='Rejected'?'badge-danger':'badge-warning'}">${l.status}</span></div><div class="text-xs text-muted mt-1">${l.leaveType}: ${l.reason}</div></div>`).join('') : '<div class="empty">No applications</div>'; } catch(e){} observeNewContent(); }
 
@@ -3407,11 +3594,43 @@ function appendChat(role, text, renderMD, showDL, tSec, umsg){
 function copyMessageText(btn, id){ const el = document.getElementById(id); if (!el) return; const raw = decodeURIComponent(el.dataset.raw || el.innerText); const t = raw.replace(/<span class="time">.*<\/span>$/, '').trim(); if (navigator.clipboard) navigator.clipboard.writeText(t).then(() => { const o = btn.innerHTML; btn.classList.add('copied'); btn.innerHTML = '✓ Copied'; setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = o; }, 1800); }); }
 function toggleDownloadMenu(e, msgId){ if (e && e.stopPropagation) e.stopPropagation(); const menuId = 'dlmenu_' + msgId; const menu = document.getElementById(menuId); if (!menu) return; if (openDownloadMenuId && openDownloadMenuId !== menuId) { const old = document.getElementById(openDownloadMenuId); if (old) old.classList.remove('open'); } if (menu.classList.contains('open')) { menu.classList.remove('open'); openDownloadMenuId = null; return; } const btn = e.currentTarget || e.target; const r = btn.getBoundingClientRect(); menu.style.visibility = 'hidden'; menu.classList.add('open'); const mr = menu.getBoundingClientRect(); let top = r.bottom + 6, left = r.left; if (top + mr.height > window.innerHeight - 12) top = r.top - mr.height - 6; if (left + mr.width > window.innerWidth - 12) left = window.innerWidth - mr.width - 12; if (left < 12) left = 12; if (top < 12) top = 12; menu.style.position = 'fixed'; menu.style.top = top + 'px'; menu.style.left = left + 'px'; menu.style.bottom = 'auto'; menu.style.right = 'auto'; menu.style.visibility = ''; openDownloadMenuId = menuId; }
 function getMessageText(msgId){ const el = document.getElementById(msgId); if (!el) return ''; return decodeURIComponent(el.dataset.raw || ''); }
-function downloadMessagePDF(msgId){ try { const text = getMessageText(msgId); if (!text) return toast('Nothing','error'); const parsedBody = renderMarkdown(text); const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>BM Bot</title><style>body{font-family:Arial;padding:30px;color:#0f172a}h1{color:#1d4ed8}table{width:100%;border-collapse:collapse;margin:14px 0}th{background:#dbeafe;padding:8px;text-align:left}td{padding:6px 8px;border-bottom:1px solid #f1f5f9}</style></head><body><h1>BM Group · BM Bot</h1>${parsedBody}</body></html>`; const win = window.open('', '_blank'); if (!win) return toast('Allow popups','error'); win.document.open(); win.document.write(htmlContent); win.document.close(); setTimeout(() => { try { win.focus(); win.print(); } catch(e){} toast('Use "Save as PDF"','success'); }, 500); const menu = document.getElementById('dlmenu_' + msgId); if (menu) menu.classList.remove('open'); openDownloadMenuId = null; } catch(e) { toast('Failed','error'); } }
-function downloadMessageTXT(msgId){ try { const text = getMessageText(msgId); if (!text) return; const blob = new Blob([text], { type: 'text/plain;charset=utf-8' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `bm-bot-${Date.now()}.txt`; document.body.appendChild(a); a.click(); setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 2000); toast('Downloaded','success'); const m = document.getElementById('dlmenu_' + msgId); if (m) m.classList.remove('open'); openDownloadMenuId = null; } catch(e){} }
-function downloadMessageExcel(msgId){ try { const text = getMessageText(msgId); if (!text) return; const XLSX = window.XLSX; const wb = XLSX.utils.book_new(); const rows = text.split('\n').map(l => [l]); const ws = XLSX.utils.aoa_to_sheet(rows); XLSX.utils.book_append_sheet(wb, ws, 'BM Bot'); XLSX.writeFile(wb, `bm-bot-${Date.now()}.xlsx`); toast('Downloaded','success'); const m = document.getElementById('dlmenu_' + msgId); if (m) m.classList.remove('open'); openDownloadMenuId = null; } catch(e){} }
+
+/* ★★★ UPDATED: PDF download — uses jsPDF, downloads directly ★★★ */
+function downloadMessagePDF(msgId){
+  try {
+    const text = getMessageText(msgId);
+    if (!text) return toast('Nothing to download','error');
+    const JsPDF = ensureJsPDF();
+    if (!JsPDF) return;
+    const doc = new JsPDF();
+    doc.setFillColor(37, 99, 235);
+    doc.rect(0, 0, 210, 22, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(15);
+    doc.setFont(undefined, 'bold');
+    doc.text('BM Group · BM Bot', 105, 14, { align: 'center' });
+    doc.setTextColor(15, 23, 42);
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    const lines = doc.splitTextToSize(text, 182);
+    let y = 32;
+    const pageH = doc.internal.pageSize.height;
+    lines.forEach(line => {
+      if (y > pageH - 15) { doc.addPage(); y = 20; }
+      doc.text(line, 14, y);
+      y += 5.5;
+    });
+    const blob = doc.output('blob');
+    universalDownload(blob, `bm-bot-${Date.now()}.pdf`);
+    const menu = document.getElementById('dlmenu_' + msgId);
+    if (menu) menu.classList.remove('open');
+    openDownloadMenuId = null;
+  } catch(e) { toast('Failed: ' + e.message, 'error'); }
+}
+function downloadMessageTXT(msgId){ try { const text = getMessageText(msgId); if (!text) return toast('Nothing','error'); const blob = new Blob([text], { type: 'text/plain;charset=utf-8' }); universalDownload(blob, `bm-bot-${Date.now()}.txt`); const m = document.getElementById('dlmenu_' + msgId); if (m) m.classList.remove('open'); openDownloadMenuId = null; } catch(e){ toast('Failed','error'); } }
+function downloadMessageExcel(msgId){ try { const text = getMessageText(msgId); if (!text) return toast('Nothing','error'); const XLSX = window.XLSX; if (!XLSX) return toast('Excel library not loaded','error'); const wb = XLSX.utils.book_new(); const rows = text.split('\n').map(l => [l]); const ws = XLSX.utils.aoa_to_sheet(rows); XLSX.utils.book_append_sheet(wb, ws, 'BM Bot'); const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }); const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); universalDownload(blob, `bm-bot-${Date.now()}.xlsx`); const m = document.getElementById('dlmenu_' + msgId); if (m) m.classList.remove('open'); openDownloadMenuId = null; } catch(e){ toast('Failed','error'); } }
 function renderMarkdown(text){ if (!text) return ''; let html = escapeHtml(text); html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>'); html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>'); html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>'); html = html.replace(/\*\*([^*]+?)\*\*/g, '<strong>$1</strong>'); html = html.replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, '$1<em>$2</em>'); html = html.replace(/`([^`]+)`/g, '<code>$1</code>'); html = html.replace(/\n{2,}/g, '<br><br>'); html = html.replace(/\n/g, '<br>'); return html; }
-function download(content, filename){ const b = new Blob(['\uFEFF' + content], {type: 'text/csv;charset=utf-8;'}); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = filename; document.body.appendChild(a); a.click(); setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(u); }, 3000); toast('Downloaded: ' + filename, 'success'); }
+function download(content, filename){ const b = new Blob(['\uFEFF' + content], {type: 'text/csv;charset=utf-8;'}); universalDownload(b, filename); }
 async function ensureHolidays(){ try { const res = await fetch(`${API}/api/holidays`); if (res.ok) { globalHolidays = await res.json(); return globalHolidays; } } catch(e){} return globalHolidays || []; }
 async function checkDateStatus(dateStr){ try { const res = await fetch(`${API}/api/date-status/${dateStr}`); if (res.ok) return await res.json(); } catch(e){} const d = new Date(dateStr + 'T00:00:00'); const dow = d.getDay(); if (dow === 0 || dow === 6) return { isBlocked: true, type: 'WEEKEND', message: `${FULL_DAY_NAMES[dow]}: Closed`, dayName: FULL_DAY_NAMES[dow] }; const h = (globalHolidays || []).find(x => (x.date||'').split('T')[0] === dateStr); if (h) return { isBlocked: true, type: 'HOLIDAY', message: `${h.reason}`, dayName: FULL_DAY_NAMES[dow] }; return { isBlocked: false, dayName: FULL_DAY_NAMES[dow] }; }
 function getMonthRangeStrings(m){ const mm = String(m+1).padStart(2,'0'); const last = new Date(2026, m+1, 0).getDate(); const start = m === 6 ? 15 : 1; return { start: `2026-${mm}-${String(start).padStart(2,'0')}`, end: `2026-${mm}-${String(last).padStart(2,'0')}` }; }
@@ -3419,7 +3638,7 @@ function getCurrentMonthRangeStrings(){ const n = new Date(); const mm = String(
 function getRangeForSelection(range, month){ let s, e; if (range === 'FULL_SEMESTER') { s = '2026-07-15'; e = '2026-12-31'; } else if (range === 'CURRENT_MONTH') { const r = getCurrentMonthRangeStrings(); s = r.start; e = r.end; } else { const r = getMonthRangeStrings(parseInt(month)); s = r.start; e = r.end; } const today = fmtDate(new Date()); if (e > today) e = today; return { start: s, end: e }; }
 
 /* ============================================================
-   ★★★ FCM PUSH NOTIFICATIONS — MEDIAN APP + BROWSER SUPPORT ★★★
+   ★★★ FCM PUSH NOTIFICATIONS — MEDIAN APP + BROWSER ★★★
    ============================================================ */
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyBBD3V20eKCo8S9Smi6LY--klDj-pBVXYQ",
@@ -3432,448 +3651,133 @@ const FIREBASE_CONFIG = {
 const VAPID_PUBLIC_KEY = "BPgV9AtuPSDUJWdIb-nu-MvD38XngpQXVj7cyrhZGGHxaL6upFPfxth6l_e1gYXOwL9bU1pnmxPYj0AzYX1jYlM";
 let firebaseApp = null, firebaseMessaging = null;
 
-// ★ initFirebase — skip in Median app
 async function initFirebase(){
   if (firebaseApp) return firebaseApp;
   try {
-    if (isMedianApp()) {
-      console.log('[FCM] In Median app — skipping web Firebase init');
-      return null;
-    }
-    if (!window.firebase || !firebase.messaging) {
-      console.warn('[FCM] Firebase SDK not loaded');
-      return null;
-    }
-    if (!firebase.apps || !firebase.apps.length) {
-      firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
-    } else {
-      firebaseApp = firebase.app();
-    }
-    try {
-      firebaseMessaging = firebase.messaging();
-    } catch(e) {
-      console.warn('[FCM] messaging init failed:', e.message);
-      return null;
-    }
+    if (isMedianApp()) { console.log('[FCM] In Median app — skipping web Firebase init'); return null; }
+    if (!window.firebase || !firebase.messaging) { console.warn('[FCM] Firebase SDK not loaded'); return null; }
+    if (!firebase.apps || !firebase.apps.length) firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
+    else firebaseApp = firebase.app();
+    try { firebaseMessaging = firebase.messaging(); } catch(e) { console.warn('[FCM] messaging init failed:', e.message); return null; }
     return firebaseApp;
-  } catch(e) {
-    console.warn('[FCM] init error:', e.message);
-    return null;
-  }
+  } catch(e) { console.warn('[FCM] init error:', e.message); return null; }
 }
-
 async function registerServiceWorker(){
   if (!('serviceWorker' in navigator)) return null;
-  try {
-    const basePath = window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '');
-    const swPath = `${basePath}/firebase-messaging-sw.js`;
-    const reg = await navigator.serviceWorker.register(swPath, { scope: `${basePath}/` });
-    console.log('[FCM] SW registered at:', reg.scope);
-    return reg;
-  } catch(e) {
-    console.warn('[FCM] SW registration failed:', e.message);
-    return null;
-  }
+  try { const basePath = window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, ''); const swPath = `${basePath}/firebase-messaging-sw.js`; const reg = await navigator.serviceWorker.register(swPath, { scope: `${basePath}/` }); console.log('[FCM] SW registered at:', reg.scope); return reg; } catch(e) { console.warn('[FCM] SW registration failed:', e.message); return null; }
 }
-
-// ★ enableNotifications — Median app + Browser
 async function enableNotifications(){
   const btn = $('notifBtn');
   if (btn) { btn.disabled = true; }
-
   try {
     toast('Setting up notifications…', 'info');
-
-    // ★ Median app mode — use native bridge
-    if (isMedianApp() && window.median.firebaseMessaging) {
-      console.log('[FCM] Median app mode');
-      await enableMedianNotifications();
-      if (btn) btn.disabled = false;
-      return;
-    }
-
-    // ★ Browser mode — Web Push
+    if (isMedianApp() && window.median.firebaseMessaging) { console.log('[FCM] Median app mode'); await enableMedianNotifications(); if (btn) btn.disabled = false; return; }
     console.log('[FCM] Browser Web Push mode');
     await enableBrowserNotifications();
-
-  } catch(e) {
-    console.error('[FCM] Enable error:', e);
-    showFeedback('error', 'Setup Failed', e.message || 'Could not enable notifications.');
-  } finally {
-    if (btn) btn.disabled = false;
-  }
+  } catch(e) { console.error('[FCM] Enable error:', e); showFeedback('error', 'Setup Failed', e.message || 'Could not enable notifications.'); }
+  finally { if (btn) btn.disabled = false; }
 }
-
-// ★ Median app notification setup
 async function enableMedianNotifications(){
   const fcm = window.median.firebaseMessaging;
-
-  // Step 1: Request permission
   const permResult = await new Promise((resolve) => {
-    try {
-      fcm.requestPermission({
-        callback: function(result) {
-          console.log('[FCM] Permission result:', result);
-          resolve(result || { granted: false });
-        }
-      });
-      setTimeout(() => resolve({ granted: false, timeout: true }), 15000);
-    } catch(e) {
-      console.warn('[FCM] requestPermission error:', e);
-      resolve({ granted: false, error: e.message });
-    }
+    try { fcm.requestPermission({ callback: function(result) { console.log('[FCM] Permission result:', result); resolve(result || { granted: false }); } }); setTimeout(() => resolve({ granted: false, timeout: true }), 15000); }
+    catch(e) { console.warn('[FCM] requestPermission error:', e); resolve({ granted: false, error: e.message }); }
   });
-
-  if (!permResult || !permResult.granted) {
-    showFeedback('warning', 'Permission Denied',
-      'Please allow notifications in your phone settings to receive attendance alerts.');
-    return;
-  }
-
-  // Step 2: Register device with FCM
-  await new Promise((resolve) => {
-    try {
-      fcm.register({
-        callback: function(result) {
-          console.log('[FCM] Register result:', result);
-          resolve(result);
-        }
-      });
-      setTimeout(() => resolve(null), 10000);
-    } catch(e) {
-      console.warn('[FCM] register error:', e);
-      resolve(null);
-    }
-  });
-
-  // Step 3: Get FCM token
-  const tokenResult = await new Promise((resolve) => {
-    try {
-      fcm.getToken({
-        callback: function(result) {
-          console.log('[FCM] Token result:', result);
-          resolve(result);
-        }
-      });
-      setTimeout(() => resolve(null), 10000);
-    } catch(e) {
-      console.warn('[FCM] getToken error:', e);
-      resolve(null);
-    }
-  });
-
+  if (!permResult || !permResult.granted) { showFeedback('warning', 'Permission Denied', 'Please allow notifications in your phone settings to receive attendance alerts.'); return; }
+  await new Promise((resolve) => { try { fcm.register({ callback: function(result) { console.log('[FCM] Register result:', result); resolve(result); } }); setTimeout(() => resolve(null), 10000); } catch(e) { console.warn('[FCM] register error:', e); resolve(null); } });
+  const tokenResult = await new Promise((resolve) => { try { fcm.getToken({ callback: function(result) { console.log('[FCM] Token result:', result); resolve(result); } }); setTimeout(() => resolve(null), 10000); } catch(e) { console.warn('[FCM] getToken error:', e); resolve(null); } });
   const token = tokenResult?.token;
-  if (!token || token.length < 20) {
-    showFeedback('error', 'Token Error',
-      'FCM token could not be generated. Please try again or restart the app.');
-    return;
-  }
-
-  // Step 4: Save token to backend
+  if (!token || token.length < 20) { showFeedback('error', 'Token Error', 'FCM token could not be generated. Please try again or restart the app.'); return; }
   await saveFCMTokenToBackend(token);
   localStorage.setItem('BM_FCM_ENABLED', '1');
   updateNotifBtn(true);
-
-  // Step 5: Enable foreground banners
-  try {
-    if (typeof fcm.enableForegroundBanners === 'function') {
-      fcm.enableForegroundBanners();
-    }
-  } catch(e) { console.warn('[FCM] enableForegroundBanners:', e); }
-
-  // Step 6: Create high-priority Android channel
-  try {
-    if (typeof fcm.createChannel === 'function') {
-      fcm.createChannel({
-        channelId: 'attendance_alerts',
-        channelName: 'Attendance Alerts',
-        importance: 'high',
-        callback: function(r) { console.log('[FCM] Channel created:', r); }
-      });
-    }
-  } catch(e) { console.warn('[FCM] createChannel:', e); }
-
-  // Step 7: Setup listeners
+  try { if (typeof fcm.enableForegroundBanners === 'function') fcm.enableForegroundBanners(); } catch(e) { console.warn('[FCM] enableForegroundBanners:', e); }
+  try { if (typeof fcm.createChannel === 'function') { fcm.createChannel({ channelId: 'attendance_alerts', channelName: 'Attendance Alerts', importance: 'high', callback: function(r) { console.log('[FCM] Channel created:', r); } }); } } catch(e) { console.warn('[FCM] createChannel:', e); }
   setupMedianFCMListeners(fcm);
-
-  showFeedback('success', 'Notifications Enabled',
-    'You will now receive:\n\n• Passcode publish alerts\n• Notice broadcasts\n• Request updates\n• Daily attendance reminders');
+  showFeedback('success', 'Notifications Enabled', 'You will now receive:\n\n• Passcode publish alerts\n• Notice broadcasts\n• Request updates\n• Daily attendance reminders');
 }
-
-// ★ Browser notification setup
 async function enableBrowserNotifications(){
   const app = await initFirebase();
-  if (!app || !firebaseMessaging) {
-    toast('Notifications not supported on this browser', 'error');
-    return;
-  }
-
-  if (typeof Notification === 'undefined') {
-    toast('Notifications not supported here', 'error');
-    return;
-  }
-
+  if (!app || !firebaseMessaging) { toast('Notifications not supported on this browser', 'error'); return; }
+  if (typeof Notification === 'undefined') { toast('Notifications not supported here', 'error'); return; }
   const perm = await Notification.requestPermission();
-  if (perm !== 'granted') {
-    showFeedback('warning', 'Permission Denied',
-      'Please allow notifications in your browser settings.');
-    return;
-  }
-
+  if (perm !== 'granted') { showFeedback('warning', 'Permission Denied', 'Please allow notifications in your browser settings.'); return; }
   const reg = await registerServiceWorker();
-  if (!reg) {
-    toast('Service worker registration failed', 'error');
-    return;
-  }
-
-  const token = await firebaseMessaging.getToken({
-    vapidKey: VAPID_PUBLIC_KEY,
-    serviceWorkerRegistration: reg
-  });
-
-  if (!token) {
-    toast('Could not get FCM token', 'error');
-    return;
-  }
-
+  if (!reg) { toast('Service worker registration failed', 'error'); return; }
+  const token = await firebaseMessaging.getToken({ vapidKey: VAPID_PUBLIC_KEY, serviceWorkerRegistration: reg });
+  if (!token) { toast('Could not get FCM token', 'error'); return; }
   await saveFCMTokenToBackend(token);
   localStorage.setItem('BM_FCM_ENABLED', '1');
   updateNotifBtn(true);
-  showFeedback('success', 'Notifications Enabled',
-    'You will now receive attendance reminders and alerts.');
+  showFeedback('success', 'Notifications Enabled', 'You will now receive attendance reminders and alerts.');
 }
-
-// ★ Median FCM listeners (foreground + click)
 function setupMedianFCMListeners(fcm) {
   try {
     if (window._medianFCMListenersSet) return;
     window._medianFCMListenersSet = true;
-
     if (fcm.notificationReceived && fcm.notificationReceived.addListener) {
-      fcm.notificationReceived.addListener((data) => {
-        console.log('[FCM] Foreground notification:', data);
-        const title = data?.notification?.title || data?.title || 'BM Attendance';
-        const body = data?.notification?.body || data?.body || '';
-        toast(`${title}${body ? ': ' + body : ''}`, 'info');
-      });
+      fcm.notificationReceived.addListener((data) => { console.log('[FCM] Foreground notification:', data); const title = data?.notification?.title || data?.title || 'BM Attendance'; const body = data?.notification?.body || data?.body || ''; toast(`${title}${body ? ': ' + body : ''}`, 'info'); });
     }
-
     if (fcm.notificationClicked && fcm.notificationClicked.addListener) {
-      fcm.notificationClicked.addListener((data) => {
-        console.log('[FCM] Notification clicked:', data);
-        if (typeof fetchHistory === 'function' && currentUser?.role === 'student') {
-          fetchHistory().catch(() => {});
-        }
-      });
+      fcm.notificationClicked.addListener((data) => { console.log('[FCM] Notification clicked:', data); if (typeof fetchHistory === 'function' && currentUser?.role === 'student') { fetchHistory().catch(() => {}); } });
     }
-  } catch(e) {
-    console.warn('[FCM] Listener setup error:', e.message);
-  }
+  } catch(e) { console.warn('[FCM] Listener setup error:', e.message); }
 }
-
-// ★ Save FCM token to backend
 async function saveFCMTokenToBackend(token) {
   try {
-    const res = await fetch(`${API}/api/user/save-fcm-token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rollNo: currentUser.rollNo, fcmToken: token })
-    });
+    const res = await fetch(`${API}/api/user/save-fcm-token`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: currentUser.rollNo, fcmToken: token }) });
     const d = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      console.warn('[FCM] Backend save failed:', d.error || res.status);
-      localStorage.setItem('BM_FCM_TOKEN', token);
-      return false;
-    }
+    if (!res.ok) { console.warn('[FCM] Backend save failed:', d.error || res.status); localStorage.setItem('BM_FCM_TOKEN', token); return false; }
     console.log('[FCM] Token saved to backend');
     localStorage.setItem('BM_FCM_TOKEN', token);
     return true;
-  } catch(e) {
-    console.warn('[FCM] saveFCMTokenToBackend error:', e.message);
-    localStorage.setItem('BM_FCM_TOKEN', token);
-    return false;
-  }
+  } catch(e) { console.warn('[FCM] saveFCMTokenToBackend error:', e.message); localStorage.setItem('BM_FCM_TOKEN', token); return false; }
 }
-
-function updateNotifBtn(enabled){
-  const btn = $('notifBtn');
-  if (!btn) return;
-  if (enabled) {
-    btn.classList.add('notif-on');
-    btn.setAttribute('title', 'Notifications enabled');
-    btn.setAttribute('data-tip', 'Notifications ON');
-  } else {
-    btn.classList.remove('notif-on');
-    btn.setAttribute('title', 'Enable Notifications');
-    btn.setAttribute('data-tip', 'Notifications');
-  }
-}
-
-// ★ Auto-init FCM on dashboard load
+function updateNotifBtn(enabled){ const btn = $('notifBtn'); if (!btn) return; if (enabled) { btn.classList.add('notif-on'); btn.setAttribute('title', 'Notifications enabled'); btn.setAttribute('data-tip', 'Notifications ON'); } else { btn.classList.remove('notif-on'); btn.setAttribute('title', 'Enable Notifications'); btn.setAttribute('data-tip', 'Notifications'); } }
 async function autoInitFCM(){
   if (!currentUser || !currentUser.rollNo) return;
   if (localStorage.getItem('BM_FCM_ENABLED') !== '1') return;
-
   try {
-    // Median app mode
     if (isMedianApp() && window.median.firebaseMessaging) {
       const fcm = window.median.firebaseMessaging;
       setupMedianFCMListeners(fcm);
-
-      const tokenResult = await new Promise((resolve) => {
-        try {
-          fcm.getToken({ callback: (result) => resolve(result) });
-          setTimeout(() => resolve(null), 8000);
-        } catch(e) { resolve(null); }
-      });
-
+      const tokenResult = await new Promise((resolve) => { try { fcm.getToken({ callback: (result) => resolve(result) }); setTimeout(() => resolve(null), 8000); } catch(e) { resolve(null); } });
       const token = tokenResult?.token;
-      if (token && token.length > 20) {
-        const saved = localStorage.getItem('BM_FCM_TOKEN');
-        if (saved !== token) {
-          await saveFCMTokenToBackend(token);
-        }
-        updateNotifBtn(true);
-      }
+      if (token && token.length > 20) { const saved = localStorage.getItem('BM_FCM_TOKEN'); if (saved !== token) await saveFCMTokenToBackend(token); updateNotifBtn(true); }
       return;
     }
-
-    // Browser mode
     const app = await initFirebase();
     if (!app || !firebaseMessaging) return;
     const reg = await registerServiceWorker();
     if (!reg) return;
-    const token = await firebaseMessaging.getToken({
-      vapidKey: VAPID_PUBLIC_KEY,
-      serviceWorkerRegistration: reg
-    });
+    const token = await firebaseMessaging.getToken({ vapidKey: VAPID_PUBLIC_KEY, serviceWorkerRegistration: reg });
     if (!token) return;
     const saved = localStorage.getItem('BM_FCM_TOKEN');
     if (saved && saved === token) { updateNotifBtn(true); return; }
     await saveFCMTokenToBackend(token);
     updateNotifBtn(true);
-  } catch(e) {
-    console.warn('[FCM] autoInit:', e.message);
-  }
+  } catch(e) { console.warn('[FCM] autoInit:', e.message); }
 }
-
-// Foreground messages (browser only)
 try {
   if (window.firebase && firebase.messaging && !isMedianApp()) {
-    setTimeout(() => {
-      try {
-        const m = firebase.messaging();
-        m.onMessage((payload) => {
-          console.log('[FCM] Foreground:', payload);
-          const t = payload.notification?.title || 'BM Attendance';
-          const b = payload.notification?.body || '';
-          toast(`${t}: ${b}`, 'info');
-        });
-      } catch(e){}
-    }, 1500);
+    setTimeout(() => { try { const m = firebase.messaging(); m.onMessage((payload) => { console.log('[FCM] Foreground:', payload); const t = payload.notification?.title || 'BM Attendance'; const b = payload.notification?.body || ''; toast(`${t}: ${b}`, 'info'); }); } catch(e){} }, 1500);
   }
 } catch(e){}
 
 /* ============================================================
    PREMIUM INIT (desktop only)
    ============================================================ */
-function initScrollProgress(){
-  if (!isDesktop()) return;
-  const bar = document.getElementById('scrollProgress');
-  if (!bar) return;
-  const update = () => { const h = document.documentElement; const total = h.scrollHeight - h.clientHeight; bar.style.width = total > 0 ? (h.scrollTop / total) * 100 + '%' : '0%'; };
-  if (bar._bound) return; bar._bound = true;
-  window.addEventListener('scroll', update, { passive: true });
-  window.addEventListener('resize', update);
-  update();
-}
-function initSpotlight(){
-  if (!isDesktop()) return;
-  const targets = document.querySelectorAll('.card, .stat, .chart-wrap, .portal, .passcode-card, .collapsible-card, .advisor, .attendance-actions-card, .working-days-cta, .approved-banner');
-  targets.forEach(el => {
-    if (el.dataset.spotlight === '1') return;
-    el.dataset.spotlight = '1';
-    el.classList.add('spotlight-enabled');
-    el.addEventListener('mousemove', (e) => {
-      const r = el.getBoundingClientRect();
-      el.style.setProperty('--mx', (e.clientX - r.left) + 'px');
-      el.style.setProperty('--my', (e.clientY - r.top) + 'px');
-    });
-  });
-}
-function initMagneticButtons(){
-  if (!isDesktop()) return;
-  document.querySelectorAll('.menu-trigger-btn').forEach(btn => {
-    if (btn.dataset.magInit === '1') return;
-    btn.dataset.magInit = '1';
-    btn.classList.add('magnetic');
-    btn.addEventListener('mousemove', (e) => {
-      const r = btn.getBoundingClientRect();
-      const x = (e.clientX - r.left - r.width / 2) * 0.22;
-      const y = (e.clientY - r.top - r.height / 2) * 0.22;
-      btn.style.transform = `translate(${x}px, ${y}px)`;
-    });
-    btn.addEventListener('mouseleave', () => { btn.style.transform = ''; });
-  });
-}
-function initIconAnimations(){
-  if (!isDesktop()) return;
-  document.querySelectorAll('.icon-btn').forEach(b => {
-    if (b.dataset.iconAnim === '1') return;
-    b.dataset.iconAnim = '1';
-    b.classList.add('icon-bounce');
-  });
-  const chatBtn = document.getElementById('chatBtn');
-  if (chatBtn && chatBtn.dataset.iconPulse !== '1') { chatBtn.dataset.iconPulse = '1'; chatBtn.classList.add('icon-pulse'); }
-  const notice = document.getElementById('noticeBanner');
-  if (notice && notice.dataset.bellRing !== '1') { notice.dataset.bellRing = '1'; notice.classList.add('bell-ring'); }
-}
-function initTooltips(){
-  if (!isDesktop()) return;
-  document.querySelectorAll('[title]').forEach(el => {
-    const t = el.getAttribute('title');
-    if (!t || el.hasAttribute('data-tip')) return;
-    el.setAttribute('data-tip', t);
-    el.removeAttribute('title');
-  });
-}
-function initStaggeredLists(){
-  if (!isDesktop()) return;
-  document.querySelectorAll('.table-wrap tbody, #adminPresentList, #myRequestsList, #adminRequestsList, #accountRequestsList, #studentMenuList, #adminMenuList, .chips').forEach(el => {
-    if (!el.classList.contains('stagger-list')) el.classList.add('stagger-list');
-  });
-}
-function initStatLift(){
-  if (!isDesktop()) return;
-  document.querySelectorAll('.stat').forEach(s => {
-    if (s.dataset.tilt === '1') return;
-    s.dataset.tilt = '1';
-    s.addEventListener('mousemove', (e) => {
-      const r = s.getBoundingClientRect();
-      const x = (e.clientX - r.left) / r.width - 0.5;
-      const y = (e.clientY - r.top) / r.height - 0.5;
-      s.style.transform = `translateY(-4px) rotateX(${-y * 4}deg) rotateY(${x * 4}deg)`;
-    });
-    s.addEventListener('mouseleave', () => { s.style.transform = ''; });
-  });
-}
-function runPremiumInit(){
-  if (!isDesktop()) return;
-  initScrollProgress();
-  initSpotlight();
-  initMagneticButtons();
-  initIconAnimations();
-  initTooltips();
-  initStaggeredLists();
-  initStatLift();
-}
+function initScrollProgress(){ if (!isDesktop()) return; const bar = document.getElementById('scrollProgress'); if (!bar) return; const update = () => { const h = document.documentElement; const total = h.scrollHeight - h.clientHeight; bar.style.width = total > 0 ? (h.scrollTop / total) * 100 + '%' : '0%'; }; if (bar._bound) return; bar._bound = true; window.addEventListener('scroll', update, { passive: true }); window.addEventListener('resize', update); update(); }
+function initSpotlight(){ if (!isDesktop()) return; const targets = document.querySelectorAll('.card, .stat, .chart-wrap, .portal, .passcode-card, .collapsible-card, .advisor, .attendance-actions-card, .working-days-cta, .approved-banner'); targets.forEach(el => { if (el.dataset.spotlight === '1') return; el.dataset.spotlight = '1'; el.classList.add('spotlight-enabled'); el.addEventListener('mousemove', (e) => { const r = el.getBoundingClientRect(); el.style.setProperty('--mx', (e.clientX - r.left) + 'px'); el.style.setProperty('--my', (e.clientY - r.top) + 'px'); }); }); }
+function initMagneticButtons(){ if (!isDesktop()) return; document.querySelectorAll('.menu-trigger-btn').forEach(btn => { if (btn.dataset.magInit === '1') return; btn.dataset.magInit = '1'; btn.classList.add('magnetic'); btn.addEventListener('mousemove', (e) => { const r = btn.getBoundingClientRect(); const x = (e.clientX - r.left - r.width / 2) * 0.22; const y = (e.clientY - r.top - r.height / 2) * 0.22; btn.style.transform = `translate(${x}px, ${y}px)`; }); btn.addEventListener('mouseleave', () => { btn.style.transform = ''; }); }); }
+function initIconAnimations(){ if (!isDesktop()) return; document.querySelectorAll('.icon-btn').forEach(b => { if (b.dataset.iconAnim === '1') return; b.dataset.iconAnim = '1'; b.classList.add('icon-bounce'); }); const chatBtn = document.getElementById('chatBtn'); if (chatBtn && chatBtn.dataset.iconPulse !== '1') { chatBtn.dataset.iconPulse = '1'; chatBtn.classList.add('icon-pulse'); } const notice = document.getElementById('noticeBanner'); if (notice && notice.dataset.bellRing !== '1') { notice.dataset.bellRing = '1'; notice.classList.add('bell-ring'); } }
+function initTooltips(){ if (!isDesktop()) return; document.querySelectorAll('[title]').forEach(el => { const t = el.getAttribute('title'); if (!t || el.hasAttribute('data-tip')) return; el.setAttribute('data-tip', t); el.removeAttribute('title'); }); }
+function initStaggeredLists(){ if (!isDesktop()) return; document.querySelectorAll('.table-wrap tbody, #adminPresentList, #myRequestsList, #adminRequestsList, #accountRequestsList, #studentMenuList, #adminMenuList, .chips').forEach(el => { if (!el.classList.contains('stagger-list')) el.classList.add('stagger-list'); }); }
+function initStatLift(){ if (!isDesktop()) return; document.querySelectorAll('.stat').forEach(s => { if (s.dataset.tilt === '1') return; s.dataset.tilt = '1'; s.addEventListener('mousemove', (e) => { const r = s.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width - 0.5; const y = (e.clientY - r.top) / r.height - 0.5; s.style.transform = `translateY(-4px) rotateX(${-y * 4}deg) rotateY(${x * 4}deg)`; }); s.addEventListener('mouseleave', () => { s.style.transform = ''; }); }); }
+function runPremiumInit(){ if (!isDesktop()) return; initScrollProgress(); initSpotlight(); initMagneticButtons(); initIconAnimations(); initTooltips(); initStaggeredLists(); initStatLift(); }
 let _premiumResizeDebounce = null;
-window.addEventListener('resize', () => {
-  if (_premiumResizeDebounce) clearTimeout(_premiumResizeDebounce);
-  _premiumResizeDebounce = setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 200);
-}, { passive: true });
+window.addEventListener('resize', () => { if (_premiumResizeDebounce) clearTimeout(_premiumResizeDebounce); _premiumResizeDebounce = setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 200); }, { passive: true });
 
-/* Global dismiss handlers */
 document.addEventListener('click', (e) => {
   if (e.target && e.target.classList && e.target.classList.contains('modal-backdrop') && e.target.classList.contains('open')) e.target.classList.remove('open');
   if (openDownloadMenuId && !e.target.closest('.dl-menu') && !e.target.closest('.download-btn')) { const menu = document.getElementById(openDownloadMenuId); if (menu) menu.classList.remove('open'); openDownloadMenuId = null; }
@@ -3887,25 +3791,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const adminRepRange = $('adminReportRange');
   if (adminRepRange) adminRepRange.onchange = toggleAdminReportRange;
   const lt = $('reqLectureType');
-  if (lt) lt.onchange = function(){ $('reqSubjectGroup').style.display = (this.value === 'single_lecture') ? 'block' : 'none'; };
+  if (lt) lt.onchange = function(){ $('reqSubjectGroup').style.display = (this.value === 'single_lecture') ? 'block' : 'none'; loadRequestSubjects(); };
   setTimeout(runPremiumInit, 120);
   if (localStorage.getItem('token')) loadDashboard();
-  // ★ Median library ready callback
-  if (isMedianApp()) {
-    console.log('[FCM] Median app detected — bridge ready');
-    if (typeof window.median_library_ready === 'function') {
-      window.median_library_ready();
-    }
-  }
+  if (isMedianApp()) { console.log('[FCM] Median app detected — bridge ready'); if (typeof window.median_library_ready === 'function') { window.median_library_ready(); } }
 });
 if (document.readyState !== 'loading') { setTimeout(() => handleScrollFab(), 50); setTimeout(runPremiumInit, 200); }
 
-// ★ Global helper for Median library ready
 window.median_library_ready = function() {
   console.log('[FCM] Median JS Bridge ready');
-  if (isMedianApp() && currentUser && localStorage.getItem('BM_FCM_ENABLED') === '1') {
-    autoInitFCM().catch(() => {});
-  }
+  if (isMedianApp() && currentUser && localStorage.getItem('BM_FCM_ENABLED') === '1') { autoInitFCM().catch(() => {}); }
 };
 </script>
 </body>
