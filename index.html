@@ -11,6 +11,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<style>
+  /* ★ SAFETY: ensure html/body are always scrollable */
+  html { overflow-y: auto; overflow-x: hidden; }
+  body { overflow-y: auto; overflow-x: hidden; }
+  body.body-locked { overflow: hidden !important; }
+</style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -1044,24 +1050,26 @@ let clockIntervalId = null, dashboardIntervalId = null, periodIntervalId = null,
 let passcodeCountdownInterval = null;
 
 /* ============================================================
-   ★ BODY SCROLL LOCK — only for chat and modal open
+   ★ SCROLL LOCK — only for chat panel
    ============================================================ */
 function lockBodyScroll(lock) {
   if (lock) {
-    if (document.body.dataset.scrollLocked === '1') return;
-    document.body.dataset.scrollLocked = '1';
-    document.body.dataset.prevOverflow = document.body.style.overflow || '';
-    document.body.style.overflow = 'hidden';
+    document.body.classList.add('body-locked');
   } else {
-    if (document.body.dataset.scrollLocked !== '1') return;
-    delete document.body.dataset.scrollLocked;
-    document.body.style.overflow = document.body.dataset.prevOverflow || '';
-    delete document.body.dataset.prevOverflow;
+    document.body.classList.remove('body-locked');
+  }
+}
+/* Safety: ensure lock is cleared if chat is not open */
+function ensureScrollUnlocked() {
+  const chatOpen = document.getElementById('chatPanel')?.classList.contains('open');
+  if (!chatOpen) {
+    document.body.classList.remove('body-locked');
+    document.body.style.overflow = '';
   }
 }
 
 /* ============================================================
-   ★ PUSH NOTIFICATION HELPER (Firebase + Browser + Toast)
+   PUSH NOTIFICATION HELPER
    ============================================================ */
 async function sendPushNotification(title, body, data = {}) {
   try { toast(`${title}${body ? ' — ' + body : ''}`, 'info'); } catch(e){}
@@ -1134,8 +1142,9 @@ function showFeedback(type, title, message, opts = {}){
 
 function showDL(msg){ if ($('dlMsg')) $('dlMsg').textContent = msg; $('dlProgress')?.classList.add('show'); }
 function hideDL(){ $('dlProgress')?.classList.remove('show'); }
-function closeModal(id){ const m = $(id); if (m) m.classList.remove('open'); lockBodyScroll(false); }
-function openModal(id){ const m = $(id); if (m) { m.classList.add('open'); lockBodyScroll(true); } }
+/* ★ Modal open/close — NO body scroll lock (modals scroll internally) */
+function closeModal(id){ const m = $(id); if (m) m.classList.remove('open'); }
+function openModal(id){ const m = $(id); if (m) m.classList.add('open'); }
 function fmtDate(d){const y=d.getFullYear();const m=String(d.getMonth()+1).padStart(2,'0');const day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`;}
 function fmtDatePretty(s){if(!s)return '—';const p=s.split('T')[0].split('-');if(p.length<3)return s;return `${p[2]}/${p[1]}/${p[0]}`;}
 function sanitizeRoll(r){return r ? r.toUpperCase().replace(/[^A-Z0-9]/g,'') : '';}
@@ -1153,7 +1162,7 @@ function isDesktop(){ return window.innerWidth >= 641; }
 function isMedianApp(){ return typeof window.median !== 'undefined' && window.median !== null; }
 
 /* ============================================================
-   UNIVERSAL BLOB DOWNLOAD (Median + Browser) — with notification
+   UNIVERSAL DOWNLOAD
    ============================================================ */
 function universalDownload(blob, filename, opts = {}){
   try {
@@ -1169,9 +1178,7 @@ function universalDownload(blob, filename, opts = {}){
               mimeType: blob.type || 'application/octet-stream'
             });
             toast('Downloaded: ' + filename, 'success');
-            if (opts.notify !== false) {
-              sendPushNotification('📥 Download Complete', filename, { type: 'download', filename });
-            }
+            if (opts.notify !== false) sendPushNotification('📥 Download Complete', filename, { type: 'download', filename });
           } catch(e) {
             toast('Median download failed, trying fallback…', 'info');
             fallbackBlobDownload(blob, filename, opts);
@@ -1179,9 +1186,7 @@ function universalDownload(blob, filename, opts = {}){
         };
         reader.readAsDataURL(blob);
         return;
-      } catch(e) {
-        console.warn('Median download error:', e);
-      }
+      } catch(e) { console.warn('Median download error:', e); }
     }
     fallbackBlobDownload(blob, filename, opts);
   } catch(e) {
@@ -1202,13 +1207,11 @@ function fallbackBlobDownload(blob, filename, opts = {}){
     URL.revokeObjectURL(url);
   }, 3000);
   toast('Downloaded: ' + filename, 'success');
-  if (opts.notify !== false) {
-    sendPushNotification('📥 Download Complete', filename, { type: 'download', filename });
-  }
+  if (opts.notify !== false) sendPushNotification('📥 Download Complete', filename, { type: 'download', filename });
 }
 
 /* ============================================================
-   PDF GENERATION (jsPDF)
+   PDF GENERATION
    ============================================================ */
 function ensureJsPDF(){
   if (!window.jspdf || !window.jspdf.jsPDF) {
@@ -1860,6 +1863,11 @@ async function submitChangePassword(){
 function loadDashboard(){
   const userStr = localStorage.getItem('user'); if (!userStr) return;
   currentUser = JSON.parse(userStr);
+  
+  /* ★ SAFETY: Ensure body scroll is unlocked when dashboard loads */
+  document.body.classList.remove('body-locked');
+  document.body.style.overflow = '';
+  
   const ab = $('auth-box'); if (ab) ab.style.display = 'none';
   const db = $('dash-box'); if (db) db.style.display = 'block';
   const lb = $('logoutBtn'); if (lb) lb.style.display = 'flex';
@@ -1952,6 +1960,9 @@ function loadDashboard(){
   setTimeout(initScrollAnimations, 100);
   setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 250);
   setTimeout(() => { autoInitFCM().catch(()=>{}); }, 2000);
+  
+  /* ★ Safety: unlock scroll after dashboard fully loads */
+  setTimeout(ensureScrollUnlocked, 500);
 }
 function updateClock(){
   const n = new Date();
@@ -2546,8 +2557,6 @@ async function updatePeriod(){
     if ($('todayTimetable')) $('todayTimetable').innerHTML = todaySubs.length ? todaySubs.map((s,i) => `<div style="padding:7px 0;border-bottom:1px solid var(--slate-100);display:flex;justify-content:space-between;"><span class="text-xs font-bold text-muted">P${i+1}</span><span style="font-weight:600;">${s}</span></div>`).join('') : 'No classes today';
   } catch(e){}
 }
-
-/* ★ Mark Full Day — with Firebase notification */
 async function markFullDay(){
   const today = fmtDate(new Date());
   const st = await checkDateStatus(today);
@@ -2576,8 +2585,6 @@ async function markFullDay(){
     }, (err) => { hideDL(); showFeedback('error', 'Location Error', err.code === 1 ? 'Location permission denied. Please allow GPS.' : 'Location not available. Please try again.'); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   } catch(e){ hideDL(); showFeedback('error', 'Network Error', e.message); }
 }
-
-/* ★ Mark Active Period — with Firebase notification */
 async function markActivePeriod(){
   if (!window._activeSubject) return showFeedback('warning', 'No Active Lecture', 'There is no active lecture right now.');
   const pc = prompt(`Enter 4-digit passcode for ${window._activeSubject}:`);
@@ -2642,7 +2649,7 @@ function getTimetableForBranch(b){ const CSE = { Monday: ['BDA - Big Data Analyt
 function getScheduleForBranch(b){ const CSE = { 1:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'DAA - Design & Analysis of Algorithm',period:'P3'},{start:'11:35',end:'12:20',subject:'FLA - Formal Language & Automata',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'CN - Computer Network',period:'P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}], 2:[{start:'09:20',end:'10:05',subject:'WT - Web Technology',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'Internet Lab (Ms. Geeta)',period:'P3'},{start:'11:35',end:'12:20',subject:'FLA - Formal Language & Automata',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'BDA - Big Data Analytics',period:'P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}], 3:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'FLA - Formal Language & Automata',period:'P3'},{start:'11:35',end:'12:20',subject:'Sports / Activity',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'WT - Web Technology',period:'P6'},{start:'13:50',end:'15:20',subject:'CN LAB - Computer Network Lab',period:'P7-P8'}], 4:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'WT - Web Technology',period:'P2'},{start:'10:50',end:'11:35',subject:'CN - Computer Network',period:'P3'},{start:'11:35',end:'12:20',subject:'DAA - Design & Analysis of Algorithm',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'DAA LAB - Algorithm Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'HRM - Human Resource Mgmt',period:'P8'}], 5:[{start:'09:20',end:'10:05',subject:'DAA - Design & Analysis of Algorithm',period:'P1'},{start:'10:05',end:'10:50',subject:'CN - Computer Network',period:'P2'},{start:'10:50',end:'11:35',subject:'FLA - Formal Language & Automata',period:'P3'},{start:'11:35',end:'12:20',subject:'BDA - Big Data Analytics',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'WT LAB - Web Technology Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}] }; const AIDS = { 1:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'LIB - Library',period:'P3'},{start:'11:35',end:'12:20',subject:'FLA - Formal Language & Automata',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'PA - Predictive Analysis',period:'P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}], 2:[{start:'09:20',end:'10:05',subject:'WT - Web Technology',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'PA - Predictive Analysis',period:'P3'},{start:'11:35',end:'12:20',subject:'FLA - Formal Language & Automata',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'BDA - Big Data Analytics',period:'P7'},{start:'14:35',end:'15:20',subject:'ML - Machine Learning',period:'P8'}], 3:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'FLA - Formal Language & Automata',period:'P3'},{start:'11:35',end:'12:20',subject:'Sports / Project',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'WT - Web Technology',period:'P6'},{start:'13:50',end:'15:20',subject:'PA LAB - Predictive Analysis Lab',period:'P7-P8'}], 4:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'WT - Web Technology',period:'P2'},{start:'10:50',end:'11:35',subject:'ML - Machine Learning',period:'P3'},{start:'11:35',end:'12:20',subject:'PA - Predictive Analysis',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'ML LAB - Machine Learning Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'HRM - Human Resource Mgmt',period:'P8'}], 5:[{start:'09:20',end:'10:05',subject:'ML - Machine Learning',period:'P1'},{start:'10:05',end:'10:50',subject:'LIB - Library',period:'P2'},{start:'10:50',end:'11:35',subject:'FLA - Formal Language & Automata',period:'P3'},{start:'11:35',end:'12:20',subject:'BDA - Big Data Analytics',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'BDA LAB - Big Data Analytics Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}] }; return (b && b.toUpperCase() === 'AIDS') ? AIDS : CSE; }
 function initAdmin(){ const t = fmtDate(new Date()); if ($('manualDate')) $('manualDate').value = t; if ($('holidayDate')) $('holidayDate').value = t; if ($('classStart')) $('classStart').value = '2026-07-15'; if ($('classEnd')) $('classEnd').value = t; const ssm = $('singleStudentMonth'); if (ssm && !ssm.innerHTML.trim()) ssm.innerHTML = [6,7,8,9,10,11].map(m=>`<option value="${m}">${MONTH_NAMES[m]} 2026</option>`).join(''); setBranch('CSE'); loadHolidays(); }
 async function fetchUsers(){ try { const res = await fetch(`${API}/api/admin/all-users/${currentUser.rollNo}`); const data = await res.json(); const tb = $('directoryBody'); if (!tb) return; if (!data || data.length === 0) return tb.innerHTML = '<tr><td colspan="6" class="empty">No users</td></tr>'; const students = data.filter(u => u.role === 'student').slice(0,60); const summaries = await Promise.all(students.map(s => fetch(`${API}/api/student/summary/${s.rollNo}`).then(r=>r.json()).catch(()=>null))); const sumMap = {}; students.forEach((s,i) => { if (summaries[i]) sumMap[s.rollNo] = summaries[i]; }); tb.innerHTML = data.sort((a,b)=>a.rollNo.localeCompare(b.rollNo,undefined,{numeric:true})).map(u => { const rb = u.role === 'admin' ? '<span class="badge badge-warning">Admin</span>' : u.role === 'faculty' ? '<span class="badge badge-info">Faculty</span>' : '<span class="badge badge-neutral">Student</span>'; const dev = u.boundDeviceId ? '<span class="badge badge-success">Bound</span>' : '<span class="badge badge-neutral">—</span>'; let att = '—'; if (u.role === 'student' && sumMap[u.rollNo]) { const s = sumMap[u.rollNo]; att = `${s.totalAcademicLectures||0}/${s.totalConductedLectures||0} (${s.attendancePercentage||0}%)`; } return `<tr><td><b>${u.rollNo}</b></td><td>${u.name}</td><td>${rb}</td><td>${dev}</td><td>${att}</td><td>${u.role === 'student' ? `<button class="btn btn-outline btn-xs" onclick="viewStudentRecords('${u.rollNo}')">View</button>` : ''}</td></tr>`; }).join(''); const s2 = data.filter(u => u.role === 'student'); ['singleStudentSelect','reportStudentSelect'].forEach(id => { const el = $(id); if (el) el.innerHTML = '<option value="">Select Student…</option>' + s2.map(s => `<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`).join(''); }); const teachers = data.filter(u => u.role === 'faculty'); const ts = $('assignTeacher'); if (ts) ts.innerHTML = '<option value="">Select Teacher…</option>' + teachers.map(t => `<option value="${t.rollNo}">${t.rollNo} - ${t.name}</option>`).join(''); } catch(e){ if ($('directoryBody')) $('directoryBody').innerHTML = '<tr><td colspan="6" class="empty">Network error</td></tr>'; } }
-async function viewStudentRecords(r){ try { const res = await fetch(`${API}/api/attendance/student/${r}/${currentUser.rollNo}`); const data = await res.json(); if (!res.ok) return toast(data.error || 'Failed','error'); const g = {}; data.forEach(x => { if (!g[x.date]) g[x.date] = []; g[x.date].push(x); }); const dates = Object.keys(g).sort((a,b)=>b.localeCompare(a)); let html = `<div class="modal-backdrop open safe-top-modal" id="viewRecordsModal"><div class="modal wide"><div class="modal-header"><div><h3>Attendance – ${r}</h3><p class="text-xs text-muted" style="margin-top:4px;">${data.length} records</p></div><button type="button" class="modal-close" onclick="document.getElementById('viewRecordsModal').remove();lockBodyScroll(false);">✕</button></div><div class="modal-body">`; dates.forEach(d => { html += `<div style="margin-bottom:16px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><b>${fmtDatePretty(d)}</b><button class="btn btn-danger btn-xs" onclick="deleteAllDate('${r}','${d}')">Delete All</button></div>`; g[d].forEach(x => { html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--slate-50);border-radius:8px;margin:4px 0;font-size:12px;"><div>${x.subject} <span class="badge badge-success">${x.status}</span></div><button class="btn btn-danger btn-xs" onclick="deleteRecord('${x._id}')">Del</button></div>`; }); html += `</div>`; }); html += `</div></div></div>`; const div = document.createElement('div'); div.innerHTML = html; document.body.appendChild(div.firstElementChild); lockBodyScroll(true); } catch(e){ toast('Failed','error'); } }
+async function viewStudentRecords(r){ try { const res = await fetch(`${API}/api/attendance/student/${r}/${currentUser.rollNo}`); const data = await res.json(); if (!res.ok) return toast(data.error || 'Failed','error'); const g = {}; data.forEach(x => { if (!g[x.date]) g[x.date] = []; g[x.date].push(x); }); const dates = Object.keys(g).sort((a,b)=>b.localeCompare(a)); let html = `<div class="modal-backdrop open safe-top-modal" id="viewRecordsModal"><div class="modal wide"><div class="modal-header"><div><h3>Attendance – ${r}</h3><p class="text-xs text-muted" style="margin-top:4px;">${data.length} records</p></div><button type="button" class="modal-close" onclick="document.getElementById('viewRecordsModal').remove()">✕</button></div><div class="modal-body">`; dates.forEach(d => { html += `<div style="margin-bottom:16px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><b>${fmtDatePretty(d)}</b><button class="btn btn-danger btn-xs" onclick="deleteAllDate('${r}','${d}')">Delete All</button></div>`; g[d].forEach(x => { html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--slate-50);border-radius:8px;margin:4px 0;font-size:12px;"><div>${x.subject} <span class="badge badge-success">${x.status}</span></div><button class="btn btn-danger btn-xs" onclick="deleteRecord('${x._id}')">Del</button></div>`; }); html += `</div>`; }); html += `</div></div></div>`; const div = document.createElement('div'); div.innerHTML = html; document.body.appendChild(div.firstElementChild); } catch(e){ toast('Failed','error'); } }
 async function deleteRecord(id){ if (!confirm('Delete?')) return; try { const res = await fetch(`${API}/api/attendance/delete/${id}/${currentUser.rollNo}`, {method:'DELETE'}); if (res.ok) { toast('Deleted','success'); const m = $('viewRecordsModal'); if (m) m.remove(); loadAllAttendance(); } } catch(e){} }
 async function deleteAllDate(r, d){ if (!confirm('Delete all records for this date?')) return; try { const res = await fetch(`${API}/api/attendance/delete-day/${r}/${d}/${currentUser.rollNo}`, {method:'DELETE'}); if (res.ok) { toast('Deleted','success'); const m = $('viewRecordsModal'); if (m) m.remove(); loadAllAttendance(); } } catch(e){} }
 async function loadAllAttendance(){ try { const res = await fetch(`${API}/api/attendance/all/${currentUser.rollNo}`); const data = await res.json(); const fr = ($('filterRoll').value||'').toUpperCase(); const fd = $('filterDate').value; let filtered = data; if (fr) filtered = filtered.filter(r => r.rollNo.includes(fr)); if (fd) filtered = filtered.filter(r => r.date === fd); const tb = $('allAttendanceBody'); if (!tb) return; if (filtered.length === 0) return tb.innerHTML = '<tr><td colspan="7" class="empty">No records</td></tr>'; window._allRecords = filtered; tb.innerHTML = filtered.slice(0,200).map(r => `<tr><td><input type="checkbox" class="rec-cb" data-id="${r._id}"></td><td>${fmtDatePretty(r.date)}</td><td><b>${r.rollNo}</b></td><td>${r.studentName||''}</td><td>${r.subject}</td><td><span class="badge ${r.status==='Present'?'badge-success':r.status==='Duty Leave'?'badge-warning':'badge-danger'}">${r.status}</span></td><td><button class="btn btn-danger btn-xs" onclick="deleteRecord('${r._id}')">Del</button></td></tr>`).join(''); } catch(e){ if ($('allAttendanceBody')) $('allAttendanceBody').innerHTML = '<tr><td colspan="7" class="empty">Network error</td></tr>'; } observeNewContent(); }
@@ -2809,12 +2816,11 @@ async function applyLeave(){ const f = $('leaveFrom').value, t = $('leaveTo').va
 async function loadMyLeaves(){ try { const data = await fetch(`${API}/api/leave/my/${currentUser.rollNo}`).then(x=>x.json()); const el = $('myLeaveList'); el.innerHTML = data.length ? data.map(l => `<div style="padding:10px 0;border-bottom:1px solid var(--slate-100);"><div style="display:flex;justify-content:space-between;"><b>${fmtDatePretty(l.fromDate)} → ${fmtDatePretty(l.toDate)}</b> <span class="badge ${l.status==='Approved'?'badge-success':l.status==='Rejected'?'badge-danger':'badge-warning'}">${l.status}</span></div><div class="text-xs text-muted mt-1">${l.leaveType}: ${l.reason}</div></div>`).join('') : '<div class="empty">No applications</div>'; } catch(e){} observeNewContent(); }
 
 /* ============================================================
-   CHAT — with body scroll lock only when open
+   CHAT — body lock ONLY when chat is open
    ============================================================ */
 function toggleContext(){ useContextMode = !useContextMode; const b = $('ctxToggle'); if (b) { b.classList.toggle('active', useContextMode); const l = b.querySelector('.ctx-label'); if (l) l.textContent = useContextMode ? 'Context On' : 'Context'; } toast(useContextMode ? 'Context ON' : 'Context OFF', useContextMode ? 'success' : 'info'); if ($('chatPanel').classList.contains('open')) { const m = $('chatMsgs'); if (!m.querySelector('.msg')) renderChatWelcome(); } }
 function toggleDatabase(){ useDatabaseMode = !useDatabaseMode; const b = $('dbToggle'); if (b) { b.classList.toggle('active', useDatabaseMode); const l = b.querySelector('.db-label'); if (l) l.textContent = useDatabaseMode ? 'Database On' : 'Database'; } toast(useDatabaseMode ? 'Database ON' : 'Database OFF', useDatabaseMode ? 'success' : 'info'); if ($('chatPanel').classList.contains('open')) { const m = $('chatMsgs'); if (!m.querySelector('.msg')) renderChatWelcome(); } }
 
-/* ★ Chat open — body scroll lock ON, close — OFF */
 function toggleChat(){
   const p = $('chatPanel');
   if (!p) return;
@@ -3215,7 +3221,7 @@ try {
 } catch(e){}
 
 /* ============================================================
-   PREMIUM INIT (desktop only — light effects)
+   PREMIUM INIT (desktop only)
    ============================================================ */
 function initScrollProgress(){ if (!isDesktop()) return; const bar = document.getElementById('scrollProgress'); if (!bar) return; const update = () => { const h = document.documentElement; const total = h.scrollHeight - h.clientHeight; bar.style.width = total > 0 ? (h.scrollTop / total) * 100 + '%' : '0%'; }; if (bar._bound) return; bar._bound = true; window.addEventListener('scroll', update, { passive: true }); window.addEventListener('resize', update); update(); }
 function initSpotlight(){ if (!isDesktop()) return; const targets = document.querySelectorAll('.card, .stat, .chart-wrap, .portal, .passcode-card, .collapsible-card, .advisor, .attendance-actions-card, .working-days-cta, .approved-banner'); targets.forEach(el => { if (el.dataset.spotlight === '1') return; el.dataset.spotlight = '1'; el.classList.add('spotlight-enabled'); el.addEventListener('mousemove', (e) => { const r = el.getBoundingClientRect(); el.style.setProperty('--mx', (e.clientX - r.left) + 'px'); el.style.setProperty('--my', (e.clientY - r.top) + 'px'); }); }); }
@@ -3229,10 +3235,10 @@ let _premiumResizeDebounce = null;
 window.addEventListener('resize', () => { if (_premiumResizeDebounce) clearTimeout(_premiumResizeDebounce); _premiumResizeDebounce = setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 200); }, { passive: true });
 
 document.addEventListener('click', (e) => {
-  if (e.target && e.target.classList && e.target.classList.contains('modal-backdrop') && e.target.classList.contains('open')) { e.target.classList.remove('open'); lockBodyScroll(false); }
+  if (e.target && e.target.classList && e.target.classList.contains('modal-backdrop') && e.target.classList.contains('open')) { e.target.classList.remove('open'); }
   if (openDownloadMenuId && !e.target.closest('.dl-menu') && !e.target.closest('.download-btn')) { const menu = document.getElementById(openDownloadMenuId); if (menu) menu.classList.remove('open'); openDownloadMenuId = null; }
 }, true);
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { document.querySelectorAll('.modal-backdrop.open').forEach(m => m.classList.remove('open')); closeStudentMenu(); closeAdminMenu(); lockBodyScroll(false); if (openDownloadMenuId) { const m = document.getElementById(openDownloadMenuId); if (m) m.classList.remove('open'); openDownloadMenuId = null; } } });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { document.querySelectorAll('.modal-backdrop.open').forEach(m => m.classList.remove('open')); closeStudentMenu(); closeAdminMenu(); if (openDownloadMenuId) { const m = document.getElementById(openDownloadMenuId); if (m) m.classList.remove('open'); openDownloadMenuId = null; } } });
 
 document.addEventListener('DOMContentLoaded', () => {
   handleScrollFab();
