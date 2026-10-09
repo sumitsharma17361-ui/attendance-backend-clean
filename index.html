@@ -23,20 +23,20 @@
 <div class="scroll-progress" id="scrollProgress"></div>
 <div class="bg-blobs" aria-hidden="true"><div class="bg-blob"></div><div class="bg-blob"></div><div class="bg-blob"></div></div>
 
-<div class="toast-wrap" id="toastWrap"><div class="toast glass" id="toast">
+<div class="toast-wrap" id="toastWrap"><div class="toast" id="toast">
   <svg id="toastIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
   <span id="toastMsg">Ready</span>
 </div></div>
 
-<div class="dl-progress glass" id="dlProgress"><div class="spinner"></div><span id="dlMsg">Preparing…</span></div>
+<div class="dl-progress" id="dlProgress"><div class="spinner"></div><span id="dlMsg">Preparing…</span></div>
 
-<button class="scroll-top-fab glass" id="scrollTopFab" onclick="scrollToTop()" aria-label="Scroll to top">
+<button class="scroll-top-fab" id="scrollTopFab" onclick="scrollToTop()" aria-label="Scroll to top">
   <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
 </button>
 
 <!-- STUDENT MENU -->
 <div class="student-menu-backdrop" id="studentMenuBackdrop"></div>
-<div class="student-menu-drawer glass" id="studentMenuDrawer">
+<div class="student-menu-drawer" id="studentMenuDrawer">
   <div class="student-menu-header safe-top">
     <div class="menu-user">
       <div class="brand-mark">BM</div>
@@ -69,7 +69,7 @@
 
 <!-- ADMIN / FACULTY MENU -->
 <div class="student-menu-backdrop" id="adminMenuBackdrop"></div>
-<div class="student-menu-drawer glass" id="adminMenuDrawer">
+<div class="student-menu-drawer" id="adminMenuDrawer">
   <div class="student-menu-header safe-top">
     <div class="menu-user">
       <div class="brand-mark" id="adminMenuAvatar">AD</div>
@@ -83,8 +83,8 @@
   <div class="student-menu-footer">BM ERP · v3.0</div>
 </div>
 
-<div class="app glass-app">
-  <div class="app-header glass-header">
+<div class="app">
+  <div class="app-header">
     <div class="brand">
       <div class="brand-mark">BM</div>
       <div class="brand-text"><h1>BM Group of Institutions</h1><p>B.Tech CSE / AIDS · 5th Semester</p></div>
@@ -170,29 +170,29 @@
 
         <div id="adminLiveDashboard" style="display:none;margin-bottom:20px;">
           <div class="stats-grid cols-4">
-            <div class="stat glass-card"><div class="stat-value" id="liveTotalStudents">0</div><div class="stat-label">Total Students</div></div>
-            <div class="stat glass-card"><div class="stat-value good" id="liveTodayPresent">0</div><div class="stat-label">Present Today</div></div>
-            <div class="stat glass-card"><div class="stat-value bad" id="liveTodayAbsent">0</div><div class="stat-label">Absent Today</div></div>
-            <div class="stat glass-card"><div class="stat-value" id="liveOverallPct">0%</div><div class="stat-label">Overall %</div></div>
+            <div class="stat"><div class="stat-value" id="liveTotalStudents">0</div><div class="stat-label">Total Students</div></div>
+            <div class="stat"><div class="stat-value good" id="liveTodayPresent">0</div><div class="stat-label">Present Today</div></div>
+            <div class="stat"><div class="stat-value bad" id="liveTodayAbsent">0</div><div class="stat-label">Absent Today</div></div>
+            <div class="stat"><div class="stat-value" id="liveOverallPct">0%</div><div class="stat-label">Overall %</div></div>
           </div>
           <div class="stats-grid" style="margin-top:0;">
-            <div class="stat glass-card"><div class="stat-value" id="adminWorkingDaysSoFar">0</div><div class="stat-label">Working Days (so far)</div></div>
-            <div class="stat glass-card"><div class="stat-value" id="adminTotalWorkingDays">0</div><div class="stat-label">Total Working Days</div></div>
+            <div class="stat"><div class="stat-value" id="adminWorkingDaysSoFar">0</div><div class="stat-label">Working Days (so far)</div></div>
+            <div class="stat"><div class="stat-value" id="adminTotalWorkingDays">0</div><div class="stat-label">Total Working Days</div></div>
           </div>
-          <div class="card glass-card" style="margin-bottom:0;">
+          <div class="card" style="margin-bottom:0;">
             <div class="card-title"><span>Today's Present Students</span><button class="btn btn-outline btn-xs" onclick="loadDashboardStats()">Refresh</button></div>
             <div id="adminPresentList" class="present-list-wrap"><div class="text-muted text-xs">Loading…</div></div>
           </div>
         </div>
 
         <div class="stats-grid cols-4" id="studentStatsGrid">
-          <div class="stat glass-card"><div class="stat-value" id="statWorkingDays">0</div><div class="stat-label">Working Days</div><div class="stat-hint" id="statWorkingDaysHint">Since 15 Jul</div></div>
-          <div class="stat glass-card"><div class="stat-value" id="statAttendance">0%</div><div class="stat-label">Attendance</div><div class="stat-hint" id="statAttendanceHint">—</div></div>
-          <div class="stat glass-card"><div class="stat-value" id="statDaysPresent">0</div><div class="stat-label">Days Present</div><div class="stat-hint">Total</div></div>
-          <div class="stat glass-card"><div class="stat-value" id="statWorkingDaysPct">0%</div><div class="stat-label">Working Days %</div><div class="stat-hint">Present / Working</div></div>
+          <div class="stat"><div class="stat-value" id="statWorkingDays">0</div><div class="stat-label">Working Days</div><div class="stat-hint" id="statWorkingDaysHint">Since 15 Jul</div></div>
+          <div class="stat"><div class="stat-value" id="statAttendance">0%</div><div class="stat-label">Attendance</div><div class="stat-hint" id="statAttendanceHint">—</div></div>
+          <div class="stat"><div class="stat-value" id="statDaysPresent">0</div><div class="stat-label">Days Present</div><div class="stat-hint">Total</div></div>
+          <div class="stat"><div class="stat-value" id="statWorkingDaysPct">0%</div><div class="stat-label">Working Days %</div><div class="stat-hint">Present / Working</div></div>
         </div>
 
-        <div class="attendance-actions-card glass-card" id="attendanceActionsCard" style="display:none;">
+        <div class="attendance-actions-card" id="attendanceActionsCard" style="display:none;">
           <div id="closedBanner" class="closed-banner" style="display:none;">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <span id="closedBannerText">College Closed</span>
@@ -200,7 +200,7 @@
           <button class="btn btn-primary btn-block mb-2" id="markFullDayBtn" onclick="markFullDay()" style="padding:16px;font-size:13.5px;">
             <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Mark Full Day Attendance
           </button>
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.6);border:1px solid rgba(226,232,240,.8);border-radius:14px;" id="periodRow">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;background:#fff;border:1px solid var(--slate-200);border-radius:14px;" id="periodRow">
             <div style="min-width:0;"><div class="text-xs text-muted font-bold" id="periodLabel">CHECKING…</div>
               <div class="font-bold" id="periodName" style="font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</div></div>
             <button class="btn btn-success btn-sm" id="markPeriodBtn" onclick="markActivePeriod()" style="flex-shrink:0;">Mark</button>
@@ -224,7 +224,7 @@
           </div>
         </div>
 
-        <div class="card glass-card" id="sec-request">
+        <div class="card" id="sec-request">
           <div class="card-title"><span>📩 Request Attendance</span></div>
           <p class="text-xs text-muted mb-2" style="line-height:1.65;">Send a request for past dates or today's attendance after 3 PM. Admin will approve and mark it.</p>
           <div class="req-tabs">
@@ -274,7 +274,7 @@
           <div id="myRequestsList"><div class="empty" style="padding:14px 0;">Loading…</div></div>
         </div>
 
-        <div class="collapsible-card glass-card" id="subjectBreakdownCard" style="display:none;">
+        <div class="collapsible-card" id="subjectBreakdownCard" style="display:none;">
           <div class="collapsible-header" onclick="toggleSubjectBreakdown()">
             <h3><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Subject-wise Attendance</h3>
             <div style="font-size:11.5px;color:var(--slate-500);font-weight:600;display:flex;align-items:center;gap:8px;">
@@ -305,24 +305,24 @@
           <div class="cta-arrow">›</div>
         </button>
 
-        <div class="card glass-card" id="quickPortalsCard" style="display:none;">
+        <div class="card" id="quickPortalsCard" style="display:none;">
           <div class="card-title">Quick Portals</div>
           <div class="portal-grid">
-            <button class="portal glass-card" onclick="window.open('https://erp.bmctm.com/fees','_blank')">
+            <button class="portal" onclick="window.open('https://erp.bmctm.com/fees','_blank')">
               <svg viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg><span>Pay Fees</span></button>
-            <button class="portal glass-card" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login','_blank')">
+            <button class="portal" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login','_blank')">
               <svg viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg><span>Admit Card</span></button>
-            <button class="portal glass-card" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login','_blank')">
+            <button class="portal" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login','_blank')">
               <svg viewBox="0 0 24 24"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg><span>Results</span></button>
           </div>
         </div>
 
-        <div class="advisor glass-card" id="advisorBox">
+        <div class="advisor" id="advisorBox">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
           <div><b>Advisor:</b> <span id="advisorText">Calculating…</span></div>
         </div>
 
-        <div class="chart-wrap glass-card" id="sec-chart">
+        <div class="chart-wrap" id="sec-chart">
           <div class="chart-head"><h4>Attendance Trend</h4>
             <div class="chart-controls">
               <button class="active" id="btnMonthly" onclick="setTrendView('monthly')">Monthly</button>
@@ -332,9 +332,9 @@
           <div class="chart-canvas-wrap"><canvas id="trendChart"></canvas></div>
         </div>
 
-        <div class="card glass-card" id="sec-timetable"><div class="card-title">Today's Timetable</div><div id="todayTimetable" class="text-sm text-muted">Loading…</div></div>
+        <div class="card" id="sec-timetable"><div class="card-title">Today's Timetable</div><div id="todayTimetable" class="text-sm text-muted">Loading…</div></div>
 
-        <div class="card glass-card" id="sec-calendar">
+        <div class="card" id="sec-calendar">
           <div class="card-title"><span>Attendance Calendar</span>
             <select id="calendarViewMode" onchange="onCalendarModeChange()" style="width:auto;padding:7px 12px;font-size:11.5px;">
               <option value="CURRENT_MONTH">Current Month</option>
@@ -357,7 +357,7 @@
           <div id="calendarDisplay"></div>
         </div>
 
-        <div class="card glass-card" id="sec-reports">
+        <div class="card" id="sec-reports">
           <div class="card-title">My Reports (PDF / CSV)</div>
           <div class="row mb-1">
             <select id="pdfRangeSelect">
@@ -376,7 +376,7 @@
           </div>
         </div>
 
-        <div class="card glass-card" id="sec-logs">
+        <div class="card" id="sec-logs">
           <div class="card-title"><span>My Attendance Logs</span><button class="btn btn-success btn-xs" onclick="exportMyAttendance()">CSV</button></div>
           <div class="table-wrap" style="max-height:280px;">
             <table><thead><tr><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
@@ -401,7 +401,7 @@
           <button class="subnav-item" onclick="showAdmin('a-defaulters')">Defaulters</button>
         </div>
         <div id="a-directory">
-          <div class="card glass-card">
+          <div class="card">
             <div class="card-title"><span>All Users</span><button class="btn btn-outline btn-xs" onclick="fetchUsers()">Refresh</button></div>
             <div class="table-wrap" style="max-height:400px;">
               <table><thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Device</th><th>Attendance</th><th></th></tr></thead>
@@ -410,7 +410,7 @@
           </div>
         </div>
         <div id="a-attendance" style="display:none;">
-          <div class="card glass-card">
+          <div class="card">
             <div class="card-title">All Attendance Records</div>
             <div class="row mb-1">
               <input type="text" id="filterRoll" placeholder="Filter by Roll No" oninput="loadAllAttendance()" />
@@ -428,7 +428,7 @@
           </div>
         </div>
         <div id="a-requests" style="display:none;">
-          <div class="card glass-card">
+          <div class="card">
             <div class="card-title">
               <span>Attendance Requests</span>
               <div style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -447,7 +447,7 @@
           </div>
         </div>
         <div id="a-registrations" style="display:none;">
-          <div class="card glass-card">
+          <div class="card">
             <div class="card-title">
               <span>📝 Registration Requests</span>
               <div style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -466,7 +466,7 @@
           </div>
         </div>
         <div id="a-account" style="display:none;">
-          <div class="card glass-card">
+          <div class="card">
             <div class="card-title">
               <span>Password / Device Requests</span>
               <div style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -478,7 +478,7 @@
           </div>
         </div>
         <div id="a-reports" style="display:none;">
-          <div class="card glass-card">
+          <div class="card">
             <div class="card-title">Export Reports</div>
             <select id="exportRange" class="mb-2">
               <option value="ALL_SEMESTER">Full Semester (Jul–Dec 2026)</option>
@@ -488,7 +488,7 @@
             <button class="btn btn-success btn-block mb-2" onclick="exportGrid()">Download Grid CSV</button>
             <button class="btn btn-primary btn-block" onclick="downloadGoogleSheets()">Export to Google Sheets</button>
           </div>
-          <div class="card glass-card">
+          <div class="card">
             <div class="card-title">Single Student Report</div>
             <select id="singleStudentSelect" class="mb-2"><option value="">Select Student…</option></select>
             <select id="singleStudentRange" class="mb-2" onchange="toggleSingleMonth()">
@@ -499,7 +499,7 @@
             <select id="singleStudentMonth" class="mb-2" style="display:none;"></select>
             <button class="btn btn-primary btn-block" onclick="downloadSingle()">Download CSV</button>
           </div>
-          <div class="card glass-card">
+          <div class="card">
             <div class="card-title">Individual Report (PDF / CSV)</div>
             <select id="reportStudentSelect" class="mb-2"><option value="">Select Student…</option></select>
             <select id="adminReportRange" class="mb-2" onchange="toggleAdminReportRange()">
@@ -514,7 +514,7 @@
               <button class="btn btn-success btn-sm" onclick="generateStudentReport('csv')">CSV</button>
             </div>
           </div>
-          <div class="card glass-card">
+          <div class="card">
             <div class="card-title">Class Attendance Report</div>
             <div class="row mb-1">
               <div><label class="form-label">From</label><input type="date" id="classStart" /></div>
@@ -529,7 +529,7 @@
           </div>
         </div>
         <div id="a-entry" style="display:none;">
-          <div class="card glass-card">
+          <div class="card">
             <div class="card-title">Manual Backdate Attendance</div>
             <div class="row mb-1">
               <button class="btn btn-primary btn-sm" id="branchCSE" onclick="setBranch('CSE')">CSE</button>
@@ -547,7 +547,7 @@
             </div>
             <button class="btn btn-success btn-block mt-2" onclick="markAllForDay()">Mark All Subjects for this Day</button>
           </div>
-          <div class="card glass-card">
+          <div class="card">
             <div class="card-title">Bulk Actions</div>
             <select id="bulkBranch" class="mb-1" onchange="loadBulkStudents()"><option value="CSE">CSE</option><option value="AIDS">AIDS</option></select>
             <div class="section-title">Select Students</div>
@@ -561,19 +561,19 @@
           </div>
         </div>
         <div id="a-holiday" style="display:none;">
-          <div class="card glass-card">
+          <div class="card">
             <div class="card-title">Declare Holiday</div>
             <input type="date" id="holidayDate" class="mb-1" /><input type="text" id="holidayReason" placeholder="Reason" class="mb-1" />
             <button class="btn btn-warning btn-block" onclick="declareHoliday()">Mark Holiday</button>
           </div>
-          <div class="card glass-card">
+          <div class="card">
             <div class="card-title">Bulk Add Holidays</div>
             <div class="row mb-1"><input type="date" id="bulkHolidayFrom" /><span style="flex:0 0 auto;font-size:11px;align-self:center;">to</span><input type="date" id="bulkHolidayTo" /></div>
             <button class="btn btn-primary btn-sm mb-2" onclick="addBulkHolidayRange()">+ Add Range</button>
             <textarea class="bulk-holiday-textarea" id="bulkHolidayText" placeholder="2026-09-01&#10;2026-09-02"></textarea>
             <button class="btn btn-success btn-block mt-2" onclick="submitBulkHolidays()">Add All Holidays</button>
           </div>
-          <div class="card glass-card">
+          <div class="card">
             <div class="card-title"><span>Existing Holidays</span><button class="btn btn-danger btn-xs" onclick="deleteSelectedHolidays()">Delete Selected</button></div>
             <div id="holidayList"></div>
           </div>
@@ -583,7 +583,7 @@
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <span id="passcodeClosedText">College closed today</span>
           </div>
-          <div class="passcode-card glass-card" id="fullDayPasscodeCard">
+          <div class="passcode-card" id="fullDayPasscodeCard">
             <div class="card-title" style="margin-bottom:12px;">Full Day Passcode</div>
             <div class="passcode-display" id="fdPasscodeDisplay">
               <div class="passcode-value empty" id="fdPasscode">— — — — —</div>
@@ -594,7 +594,7 @@
               <button class="btn btn-warning btn-sm" onclick="genPass('full_day', true)">Change</button>
             </div>
           </div>
-          <div class="passcode-card glass-card" id="singlePasscodeCard">
+          <div class="passcode-card" id="singlePasscodeCard">
             <div class="card-title" style="margin-bottom:12px;">Single Lecture Passcode</div>
             <div class="passcode-display" id="slPasscodeDisplay">
               <div class="passcode-value empty" id="slPasscode">— — — —</div>
@@ -605,7 +605,7 @@
               <button class="btn btn-warning btn-sm" onclick="genPass('single_lecture', true)">Change</button>
             </div>
           </div>
-          <div class="passcode-card glass-card" style="border-color:var(--brand-300);background:linear-gradient(135deg,rgba(255,255,255,.9),rgba(239,246,255,.9));">
+          <div class="passcode-card" style="border-color:var(--brand-300);background:linear-gradient(135deg,#fff,var(--brand-50));">
             <div class="card-title" style="margin-bottom:12px;color:var(--brand-700);">📢 Publish Passcode to Students</div>
             <p class="text-xs text-muted" style="margin-bottom:12px;line-height:1.6;">Students will see this passcode on their home page and in the menu.</p>
             <select id="pubPassType" class="mb-1">
@@ -617,7 +617,7 @@
           </div>
         </div>
         <div id="a-tools" style="display:none;">
-          <div class="card glass-card">
+          <div class="card">
             <div class="card-title">Register User (direct)</div>
             <input type="text" id="toolName" placeholder="Full Name" class="mb-1" />
             <input type="text" id="toolRoll" placeholder="Roll/ID" class="mb-1" />
@@ -631,7 +631,7 @@
             <input type="text" id="toolPassword" placeholder="Password (default 123456)" class="mb-1" />
             <button class="btn btn-primary btn-block" onclick="registerUser()">Register</button>
           </div>
-          <div class="card glass-card">
+          <div class="card">
             <div class="card-title">Assign Subject to Teacher</div>
             <select id="assignTeacher" class="mb-1"><option value="">Select Teacher…</option></select>
             <select id="assignSubject" class="mb-1"><option value="">Select Subject…</option></select>
@@ -640,11 +640,11 @@
               <button class="btn btn-danger btn-sm" onclick="removeSubject()">Remove</button>
             </div>
           </div>
-          <div class="card glass-card"><div class="card-title">Reset Device</div><input type="text" id="resetDeviceRoll" placeholder="Student Roll No" class="mb-1" /><button class="btn btn-outline btn-block" onclick="resetDevice()">Reset</button></div>
-          <div class="card glass-card"><div class="card-title">Broadcast Notice</div><input type="text" id="noticeMsg" placeholder="Notice text" class="mb-1" /><div class="row"><button class="btn btn-primary btn-sm" onclick="postNotice()">Publish</button><button class="btn btn-danger btn-sm" onclick="clearNotice()">Clear</button></div></div>
-          <div class="card glass-card"><div class="card-title">Update Roll Number</div><input type="text" id="oldRoll" placeholder="Old ID" class="mb-1" /><input type="text" id="newRoll" placeholder="New ID" class="mb-1" /><button class="btn btn-primary btn-block" onclick="updateRoll()">Update</button></div>
-          <div class="card glass-card"><div class="card-title">Reset Password</div><input type="text" id="pwResetRoll" placeholder="ID" class="mb-1" /><input type="text" id="pwResetPass" placeholder="New password" class="mb-1" /><button class="btn btn-warning btn-block" onclick="resetPassword()">Reset</button></div>
-          <div class="card glass-card" style="border-color:#fecdd3;background:linear-gradient(135deg,rgba(255,255,255,.9),rgba(255,241,242,.9));">
+          <div class="card"><div class="card-title">Reset Device</div><input type="text" id="resetDeviceRoll" placeholder="Student Roll No" class="mb-1" /><button class="btn btn-outline btn-block" onclick="resetDevice()">Reset</button></div>
+          <div class="card"><div class="card-title">Broadcast Notice</div><input type="text" id="noticeMsg" placeholder="Notice text" class="mb-1" /><div class="row"><button class="btn btn-primary btn-sm" onclick="postNotice()">Publish</button><button class="btn btn-danger btn-sm" onclick="clearNotice()">Clear</button></div></div>
+          <div class="card"><div class="card-title">Update Roll Number</div><input type="text" id="oldRoll" placeholder="Old ID" class="mb-1" /><input type="text" id="newRoll" placeholder="New ID" class="mb-1" /><button class="btn btn-primary btn-block" onclick="updateRoll()">Update</button></div>
+          <div class="card"><div class="card-title">Reset Password</div><input type="text" id="pwResetRoll" placeholder="ID" class="mb-1" /><input type="text" id="pwResetPass" placeholder="New password" class="mb-1" /><button class="btn btn-warning btn-block" onclick="resetPassword()">Reset</button></div>
+          <div class="card" style="border-color:#fecdd3;background:linear-gradient(135deg,#fff,#fff1f2);">
             <div class="card-title" style="color:#be123c;">Fix All Student Attendance</div>
             <div style="background:#fff;border:1px solid #fecdd3;border-radius:8px;padding:10px;margin-bottom:10px;">
               <label class="form-label" style="color:#be123c;font-size:10px;margin-bottom:4px;">Test on Single Student</label>
@@ -655,11 +655,11 @@
             <p id="fixAllStatus" class="text-xs text-muted" style="margin-top:10px;text-align:center;font-weight:700;"></p>
             <div id="fixAllReport" style="margin-top:10px;"></div>
           </div>
-          <div class="card glass-card"><div class="card-title">Login as Student</div><input type="text" id="impRollInput" placeholder="Student Roll No" class="mb-1" /><button class="btn btn-warning btn-block" onclick="impersonate()">Login as Student</button></div>
-          <div class="card glass-card"><div class="card-title">Delete Account</div><input type="text" id="deleteRoll" placeholder="ID" class="mb-1" /><button class="btn btn-danger btn-block" onclick="deleteUser()">Delete</button></div>
+          <div class="card"><div class="card-title">Login as Student</div><input type="text" id="impRollInput" placeholder="Student Roll No" class="mb-1" /><button class="btn btn-warning btn-block" onclick="impersonate()">Login as Student</button></div>
+          <div class="card"><div class="card-title">Delete Account</div><input type="text" id="deleteRoll" placeholder="ID" class="mb-1" /><button class="btn btn-danger btn-block" onclick="deleteUser()">Delete</button></div>
         </div>
         <div id="a-leave" style="display:none;">
-          <div class="card glass-card">
+          <div class="card">
             <div class="card-title">
               <span>Leave Requests</span>
               <button class="btn btn-danger btn-xs" onclick="clearAllLeaves()">Clear All</button>
@@ -668,7 +668,7 @@
           </div>
         </div>
         <div id="a-defaulters" style="display:none;">
-          <div class="card glass-card">
+          <div class="card">
             <div class="card-title">Defaulters</div>
             <div class="row mb-2"><input type="number" id="defThreshold" value="75" /><button class="btn btn-primary btn-sm" onclick="loadDefaulters()">View</button></div>
             <div id="defaulterList"><div class="empty">Click View</div></div>
@@ -678,13 +678,13 @@
 
       <div id="tab-faculty" style="display:none;">
         <div class="stats-grid">
-          <div class="stat glass-card"><div class="stat-value" id="facTodayPresent">0</div><div class="stat-label">Present Today</div></div>
-          <div class="stat glass-card"><div class="stat-value" id="facTodayAbsent">0</div><div class="stat-label">Absent Today</div></div>
-          <div class="stat glass-card"><div class="stat-value" id="facClassAvg">0%</div><div class="stat-label">Class Avg</div></div>
-          <div class="stat glass-card"><div class="stat-value" id="facTotalStudents">0</div><div class="stat-label">My Students</div></div>
+          <div class="stat"><div class="stat-value" id="facTodayPresent">0</div><div class="stat-label">Present Today</div></div>
+          <div class="stat"><div class="stat-value" id="facTodayAbsent">0</div><div class="stat-label">Absent Today</div></div>
+          <div class="stat"><div class="stat-value" id="facClassAvg">0%</div><div class="stat-label">Class Avg</div></div>
+          <div class="stat"><div class="stat-value" id="facTotalStudents">0</div><div class="stat-label">My Students</div></div>
         </div>
-        <div class="card glass-card"><div class="card-title">Today's Present Students</div><div id="facPresentList" class="text-sm text-muted">Loading…</div></div>
-        <div class="card glass-card">
+        <div class="card"><div class="card-title">Today's Present Students</div><div id="facPresentList" class="text-sm text-muted">Loading…</div></div>
+        <div class="card">
           <div class="card-title">Single Lecture Passcode</div>
           <div class="passcode-display" id="facPasscodeDisplay">
             <div class="passcode-value empty" id="facPasscode">— — — —</div>
@@ -695,13 +695,13 @@
             <button class="btn btn-warning btn-sm" onclick="genTeacherPass(true)">Change</button>
           </div>
         </div>
-        <div class="card glass-card">
+        <div class="card">
           <div class="card-title">Mark Student</div>
           <select id="facMarkStudent" class="mb-1"><option value="">Select Student…</option></select>
           <select id="facMarkSubject" class="mb-1"><option value="">Select Subject…</option></select>
           <button class="btn btn-primary btn-block" onclick="facMark()">Mark Present</button>
         </div>
-        <div class="card glass-card" style="border:1px solid var(--brand-200);">
+        <div class="card" style="border:1px solid var(--brand-200);background:linear-gradient(135deg,#fff,#f8fafc);">
           <div class="card-title" style="color:var(--brand-700);">Bulk Actions (My Subjects)</div>
           <p class="text-xs text-muted" style="margin-bottom:12px;line-height:1.6;">Mark/delete attendance in bulk for your assigned subjects only. No location check needed.</p>
           <div class="section-title">Select Students</div>
@@ -714,7 +714,7 @@
             <button class="btn btn-danger btn-sm" onclick="facBulkDelete()">Delete Bulk</button>
           </div>
         </div>
-        <div class="card glass-card">
+        <div class="card">
           <div class="card-title">My Students</div>
           <button class="btn btn-outline btn-sm mb-2" onclick="fetchTeacherStudents()">Refresh</button>
           <div class="table-wrap" style="max-height:280px;">
@@ -722,14 +722,14 @@
               <tbody id="facStudentsBody"><tr><td colspan="3" class="empty">Click Refresh</td></tr></tbody></table>
           </div>
         </div>
-        <div class="card glass-card">
+        <div class="card">
           <div class="card-title">Recent Marks</div>
           <div class="table-wrap" style="max-height:200px;">
             <table><thead><tr><th>Date</th><th>Student</th><th>Subject</th></tr></thead>
               <tbody id="facRecentBody"><tr><td colspan="3" class="empty">Loading…</td></tr></tbody></table>
           </div>
         </div>
-        <div class="card glass-card">
+        <div class="card">
           <div class="card-title">Student Report (PDF / CSV)</div>
           <select id="facReportStudent" class="mb-1"><option value="">Select Student…</option></select>
           <select id="facReportRange" class="mb-1" onchange="toggleFacMonth()">
@@ -751,7 +751,7 @@
       </div>
 
       <div id="tab-leave" style="display:none;">
-        <div class="card glass-card">
+        <div class="card">
           <div class="card-title"><span>Apply for Leave</span><button class="btn btn-outline btn-xs" onclick="switchTab('tab-mark')">← Back</button></div>
           <div class="row mb-1">
             <div><label class="form-label">From</label><input type="date" id="leaveFrom" /></div>
@@ -763,7 +763,7 @@
           <div class="form-group"><label class="form-label">Reason</label><input type="text" id="leaveReason" placeholder="Enter reason" /></div>
           <button class="btn btn-primary btn-block" onclick="applyLeave()">Submit Leave</button>
         </div>
-        <div class="card glass-card"><div class="card-title">My Leave History</div><div id="myLeaveList"><div class="empty">Loading…</div></div></div>
+        <div class="card"><div class="card-title">My Leave History</div><div id="myLeaveList"><div class="empty">Loading…</div></div></div>
       </div>
     </div>
   </div>
@@ -771,8 +771,8 @@
 
 <!-- MODALS -->
 <div class="modal-backdrop safe-top-modal" id="wdModal">
-  <div class="modal wide glass-modal">
-    <div class="modal-header glass-modal-header">
+  <div class="modal wide">
+    <div class="modal-header">
       <div><h3>College Working Days</h3><p id="wdModalSub" class="text-xs text-muted" style="margin-top:4px;">Calendar</p></div>
       <button type="button" class="modal-close" onclick="closeModal('wdModal')">✕</button>
     </div>
@@ -788,16 +788,16 @@
 </div>
 
 <div class="modal-backdrop safe-top-modal" id="dayInfoModal">
-  <div class="modal glass-modal">
-    <div class="modal-header glass-modal-header"><div><h3 id="dayInfoTitle">Day Info</h3><p id="dayInfoSub" class="text-xs text-muted" style="margin-top:4px;">—</p></div>
+  <div class="modal">
+    <div class="modal-header"><div><h3 id="dayInfoTitle">Day Info</h3><p id="dayInfoSub" class="text-xs text-muted" style="margin-top:4px;">—</p></div>
       <button type="button" class="modal-close" onclick="closeModal('dayInfoModal')">✕</button></div>
     <div class="modal-body" id="dayInfoBody"></div>
   </div>
 </div>
 
 <div class="modal-backdrop safe-top-modal" id="bulkMarkModal">
-  <div class="modal wide glass-modal">
-    <div class="modal-header glass-modal-header"><div><h3>Confirm Bulk Marking</h3></div>
+  <div class="modal wide">
+    <div class="modal-header"><div><h3>Confirm Bulk Marking</h3></div>
       <button type="button" class="modal-close" onclick="closeModal('bulkMarkModal')">✕</button></div>
     <div class="modal-body"><div id="bulkMarkSummary"></div></div>
     <div class="modal-footer">
@@ -808,8 +808,8 @@
 </div>
 
 <div class="modal-backdrop safe-top-modal" id="bulkDeleteModal">
-  <div class="modal wide glass-modal">
-    <div class="modal-header glass-modal-header"><div><h3>Confirm Bulk Delete</h3></div>
+  <div class="modal wide">
+    <div class="modal-header"><div><h3>Confirm Bulk Delete</h3></div>
       <button type="button" class="modal-close" onclick="closeModal('bulkDeleteModal')">✕</button></div>
     <div class="modal-body"><div id="bulkDeleteSummary"></div></div>
     <div class="modal-footer">
@@ -820,8 +820,8 @@
 </div>
 
 <div class="modal-backdrop safe-top-modal" id="changePassModal">
-  <div class="modal glass-modal" style="max-width:420px;">
-    <div class="modal-header glass-modal-header"><h3>Change Password</h3><button type="button" class="modal-close" onclick="closeModal('changePassModal')">✕</button></div>
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header"><h3>Change Password</h3><button type="button" class="modal-close" onclick="closeModal('changePassModal')">✕</button></div>
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Current Password</label><input type="password" id="cpCurrent" placeholder="Enter current password" /></div>
       <div class="form-group"><label class="form-label">New Password</label><input type="password" id="cpNew" placeholder="Enter new password (min 6)" /></div>
@@ -835,8 +835,8 @@
 </div>
 
 <div class="modal-backdrop safe-top-modal" id="forgotPassModal">
-  <div class="modal glass-modal" style="max-width:420px;">
-    <div class="modal-header glass-modal-header"><h3>Forgot Password</h3><button type="button" class="modal-close" onclick="closeModal('forgotPassModal')">✕</button></div>
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header"><h3>Forgot Password</h3><button type="button" class="modal-close" onclick="closeModal('forgotPassModal')">✕</button></div>
     <div class="modal-body">
       <p class="text-xs text-muted" style="margin-bottom:16px;line-height:1.65;">Enter your roll number to send a reset request. Admin will approve it, then use "Set New Password" to create a new one.</p>
       <div class="form-group"><label class="form-label">Roll No</label><input type="text" id="fpRoll" placeholder="e.g. 24CSE48" /></div>
@@ -850,8 +850,8 @@
 </div>
 
 <div class="modal-backdrop safe-top-modal" id="setNewPassModal">
-  <div class="modal glass-modal" style="max-width:420px;">
-    <div class="modal-header glass-modal-header"><h3>Set New Password</h3><button type="button" class="modal-close" onclick="closeModal('setNewPassModal')">✕</button></div>
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header"><h3>Set New Password</h3><button type="button" class="modal-close" onclick="closeModal('setNewPassModal')">✕</button></div>
     <div class="modal-body">
       <p class="text-xs text-muted" style="margin-bottom:16px;line-height:1.65;">Works only after admin approves your "Forgot Password" request.</p>
       <div class="form-group"><label class="form-label">Roll No</label><input type="text" id="snpRoll" placeholder="e.g. 24CSE48" /></div>
@@ -866,8 +866,8 @@
 </div>
 
 <div class="modal-backdrop safe-top-modal" id="deviceResetModal">
-  <div class="modal glass-modal" style="max-width:420px;">
-    <div class="modal-header glass-modal-header"><h3>Request Device Reset</h3><button type="button" class="modal-close" onclick="closeModal('deviceResetModal')">✕</button></div>
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header"><h3>Request Device Reset</h3><button type="button" class="modal-close" onclick="closeModal('deviceResetModal')">✕</button></div>
     <div class="modal-body">
       <p class="text-xs text-muted" style="margin-bottom:16px;line-height:1.65;">If you can't log in from a new phone, send a device reset request.</p>
       <div class="form-group"><label class="form-label">Roll No</label><input type="text" id="drRoll" placeholder="e.g. 24CSE48" /></div>
@@ -881,8 +881,8 @@
 </div>
 
 <div class="modal-backdrop safe-top-modal" id="checkStatusModal">
-  <div class="modal glass-modal" style="max-width:440px;">
-    <div class="modal-header glass-modal-header">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
       <div><h3>Check Request Status</h3><p class="text-xs text-muted" style="margin-top:4px;">Forgot Password · Device Reset</p></div>
       <button type="button" class="modal-close" onclick="closeModal('checkStatusModal')">✕</button>
     </div>
@@ -898,8 +898,8 @@
 </div>
 
 <div class="modal-backdrop safe-top-modal" id="regStatusModal">
-  <div class="modal glass-modal" style="max-width:440px;">
-    <div class="modal-header glass-modal-header">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
       <div><h3>Registration Status</h3><p class="text-xs text-muted" style="margin-top:4px;">Check if admin approved your request</p></div>
       <button type="button" class="modal-close" onclick="closeModal('regStatusModal')">✕</button>
     </div>
@@ -917,8 +917,8 @@
 <button class="chat-fab" id="chatFab" onclick="toggleChat()">
   <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
 </button>
-<div class="chat-panel glass-chat" id="chatPanel">
-  <div class="chat-head glass-header">
+<div class="chat-panel" id="chatPanel">
+  <div class="chat-head">
     <div class="chat-head-top">
       <h4><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg>BM Bot <span class="ai-tag">Groq AI</span></h4>
       <button type="button" class="chat-close-btn" onclick="toggleChat()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
@@ -976,7 +976,7 @@
 
 <script>
 /* ============================================================
-   ★★★ GLOBAL CONFIG ★★★
+   GLOBAL CONFIG
    ============================================================ */
 const API = "https://attendance-backend-clean-l2bu.onrender.com";
 const SEMESTER_START = new Date(2026, 6, 15);
@@ -1044,70 +1044,28 @@ let clockIntervalId = null, dashboardIntervalId = null, periodIntervalId = null,
 let passcodeCountdownInterval = null;
 
 /* ============================================================
-   ★★★ OVERSCROLL / PULL-TO-REFRESH FIX ★★★
-   Prevent accidental refresh on slight drag — mimic native app
-   ============================================================ */
-(function preventPullToRefresh(){
-  // Method 1: overscroll-behavior (CSS approach, inject via JS)
-  const style = document.createElement('style');
-  style.textContent = `
-    html, body { overscroll-behavior-y: contain !important; }
-    .app, .chat-msgs, .table-wrap, .modal, .student-menu-list,
-    .present-list-wrap, .bulk-select-list, .wd-month, .chat-sidebar-list { overscroll-behavior: contain; }
-  `;
-  document.head.appendChild(style);
-
-  // Method 2: JS fallback — track touch and block passive refresh
-  let startY = 0, isAtTop = false;
-  document.addEventListener('touchstart', (e) => {
-    if (!e.touches[0]) return;
-    startY = e.touches[0].clientY;
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
-    isAtTop = scrollTop <= 0;
-  }, { passive: true });
-
-  document.addEventListener('touchmove', (e) => {
-    if (!e.touches[0]) return;
-    const currentY = e.touches[0].clientY;
-    const dy = currentY - startY;
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
-    // Only block when at top and pulling down (or pulling further down)
-    if (isAtTop && dy > 0 && scrollTop <= 0) {
-      // Allow some slack (30px) then block
-      if (dy > 30 && e.cancelable) {
-        e.preventDefault();
-      }
-    }
-  }, { passive: false });
-})();
-
-/* ============================================================
-   ★★★ CHAT BODY SCROLL LOCK ★★★
-   Lock body scroll when chat panel is open
+   ★ BODY SCROLL LOCK — only for chat and modal open
    ============================================================ */
 function lockBodyScroll(lock) {
   if (lock) {
+    if (document.body.dataset.scrollLocked === '1') return;
+    document.body.dataset.scrollLocked = '1';
     document.body.dataset.prevOverflow = document.body.style.overflow || '';
     document.body.style.overflow = 'hidden';
-    document.documentElement.style.overflow = 'hidden';
   } else {
+    if (document.body.dataset.scrollLocked !== '1') return;
+    delete document.body.dataset.scrollLocked;
     document.body.style.overflow = document.body.dataset.prevOverflow || '';
-    document.documentElement.style.overflow = '';
     delete document.body.dataset.prevOverflow;
   }
 }
 
 /* ============================================================
-   ★★★ PUSH NOTIFICATION HELPER (Firebase + Browser) ★★★
-   Sends real system notification + toast for important events
+   ★ PUSH NOTIFICATION HELPER (Firebase + Browser + Toast)
    ============================================================ */
 async function sendPushNotification(title, body, data = {}) {
-  // 1. Toast (always)
   try { toast(`${title}${body ? ' — ' + body : ''}`, 'info'); } catch(e){}
-
-  // 2. Native/browser notification
   try {
-    // 2a. Median app native notification
     if (isMedianApp() && window.median && window.median.firebaseMessaging) {
       const fcm = window.median.firebaseMessaging;
       if (typeof fcm.showNotification === 'function') {
@@ -1119,7 +1077,6 @@ async function sendPushNotification(title, body, data = {}) {
         return;
       }
     }
-    // 2b. Browser Notification API (works even without SW when page is foreground)
     if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
       const iconSvg = 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#2563eb"/><text x="50" y="66" font-size="44" text-anchor="middle" fill="white" font-family="Arial,sans-serif" font-weight="900">BM</text></svg>`);
       new Notification(title, {
@@ -1144,7 +1101,7 @@ function toast(msg, type='info'){
   const el = $('toast'); if (!el) return;
   const icon = $('toastIcon');
   if ($('toastMsg')) $('toastMsg').textContent = msg;
-  el.className = 'toast glass ' + type;
+  el.className = 'toast ' + type;
   if (type === 'success') icon.innerHTML = '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>';
   else if (type === 'error') icon.innerHTML = '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>';
   else icon.innerHTML = '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>';
@@ -1163,7 +1120,7 @@ function showFeedback(type, title, message, opts = {}){
   };
   const btnClass = type === 'success' ? 'btn-success' : type === 'error' ? 'btn-danger' : type === 'warning' ? 'btn-warning' : 'btn-primary';
   overlay.innerHTML = `
-    <div class="feedback-card glass-modal fb-${type}">
+    <div class="feedback-card fb-${type}">
       <div class="fb-icon">${iconMap[type] || iconMap.info}</div>
       <div class="fb-title">${escapeHtml(title)}</div>
       <div class="fb-message">${escapeHtml(message)}</div>
@@ -1196,8 +1153,7 @@ function isDesktop(){ return window.innerWidth >= 641; }
 function isMedianApp(){ return typeof window.median !== 'undefined' && window.median !== null; }
 
 /* ============================================================
-   ★★★ UNIVERSAL BLOB DOWNLOAD (Median + Browser) ★★★
-   Sends notification on success
+   UNIVERSAL BLOB DOWNLOAD (Median + Browser) — with notification
    ============================================================ */
 function universalDownload(blob, filename, opts = {}){
   try {
@@ -1252,7 +1208,7 @@ function fallbackBlobDownload(blob, filename, opts = {}){
 }
 
 /* ============================================================
-   ★★★ PDF GENERATION (jsPDF) ★★★
+   PDF GENERATION (jsPDF)
    ============================================================ */
 function ensureJsPDF(){
   if (!window.jspdf || !window.jspdf.jsPDF) {
@@ -2093,7 +2049,7 @@ async function loadAccountRequests(){
     el.innerHTML = reqs.map(r => {
       const isPending = r.status === 'Pending';
       const type = r.type === 'forgot_password' ? '🔑 Forgot Password' : '📱 Device Reset';
-      return `<div style="padding:14px;border:1px solid var(--slate-200);border-radius:11px;margin-bottom:10px;background:rgba(255,255,255,.7);">
+      return `<div style="padding:14px;border:1px solid var(--slate-200);border-radius:11px;margin-bottom:10px;background:#fff;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
           <div style="min-width:0;flex:1;"><div style="font-weight:800;font-size:13px;">${escapeHtml(r.rollNo)}</div><div style="font-size:11px;color:var(--slate-500);margin-top:3px;">${type}</div></div>
           <span class="badge ${r.status==='Approved'?'badge-success':r.status==='Rejected'?'badge-danger':r.status==='Used'?'badge-info':'badge-warning'}">${r.status}</span>
@@ -2209,7 +2165,7 @@ async function loadAdminRequests(){
     el.innerHTML = reqs.map(r => {
       const sc = r.status === 'Approved' ? 'badge-success' : r.status === 'Rejected' ? 'badge-danger' : r.status === 'Partially Approved' ? 'badge-info' : 'badge-warning';
       const ll = r.lectureType === 'full_day' ? '📅 Full Day' : '📖 Single Lecture';
-      return `<div style="padding:14px;border:1px solid var(--slate-200);border-radius:11px;margin-bottom:10px;background:rgba(255,255,255,.7);">
+      return `<div style="padding:14px;border:1px solid var(--slate-200);border-radius:11px;margin-bottom:10px;background:#fff;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
           <div style="min-width:0;flex:1;"><div style="font-weight:800;font-size:13px;">${escapeHtml(r.studentName || r.name || '')} <span class="badge badge-neutral">${escapeHtml(r.rollNo || '')}</span></div><div style="font-size:11px;color:var(--slate-500);margin-top:3px;">${escapeHtml(r.branch || '')} · ${fmtDatePretty(r.date)}</div></div>
           <span class="badge ${sc}">${escapeHtml(r.status || '')}</span>
@@ -2591,7 +2547,7 @@ async function updatePeriod(){
   } catch(e){}
 }
 
-/* ★★★ Mark Full Day — with Firebase notification ★★★ */
+/* ★ Mark Full Day — with Firebase notification */
 async function markFullDay(){
   const today = fmtDate(new Date());
   const st = await checkDateStatus(today);
@@ -2613,7 +2569,6 @@ async function markFullDay(){
       hideDL();
       if (res.ok) {
         showFeedback('success', 'Attendance Marked', d.message || `Full day attendance marked successfully.`);
-        // ★ Firebase notification on success
         sendPushNotification('✅ Attendance Marked', `Full day marked for ${fmtDatePretty(today)}`, { type: 'mark', date: today });
         fetchHistory(); if (subjectBreakdownOpen) loadSubjectBreakdown();
       }
@@ -2622,7 +2577,7 @@ async function markFullDay(){
   } catch(e){ hideDL(); showFeedback('error', 'Network Error', e.message); }
 }
 
-/* ★★★ Mark Active Period — with Firebase notification ★★★ */
+/* ★ Mark Active Period — with Firebase notification */
 async function markActivePeriod(){
   if (!window._activeSubject) return showFeedback('warning', 'No Active Lecture', 'There is no active lecture right now.');
   const pc = prompt(`Enter 4-digit passcode for ${window._activeSubject}:`);
@@ -2640,7 +2595,6 @@ async function markActivePeriod(){
       hideDL();
       if (res.ok) {
         showFeedback('success', 'Lecture Marked', `${window._activeSubject} — attendance marked.`);
-        // ★ Firebase notification on success
         sendPushNotification('✅ Lecture Marked', `${window._activeSubject} attendance recorded`, { type: 'mark_lecture', subject: window._activeSubject });
         fetchHistory();
       }
@@ -2650,7 +2604,6 @@ async function markActivePeriod(){
 }
 async function exportMyAttendance(){ if (!globalHistory.length) return toast('No records','error'); let csv = 'Date,Subject,Status\n'; globalHistory.forEach(r => { csv += `${r.date},${r.subject},${r.status}\n`; }); download(csv, `my_attendance_${currentUser.rollNo}.csv`); }
 
-/* ★★★ PDF generation with notification ★★★ */
 async function generateIndividualPDF(studentRoll, studentName, branch, range, month, isSelf){
   showDL('Generating PDF…');
   try {
@@ -2689,7 +2642,7 @@ function getTimetableForBranch(b){ const CSE = { Monday: ['BDA - Big Data Analyt
 function getScheduleForBranch(b){ const CSE = { 1:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'DAA - Design & Analysis of Algorithm',period:'P3'},{start:'11:35',end:'12:20',subject:'FLA - Formal Language & Automata',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'CN - Computer Network',period:'P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}], 2:[{start:'09:20',end:'10:05',subject:'WT - Web Technology',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'Internet Lab (Ms. Geeta)',period:'P3'},{start:'11:35',end:'12:20',subject:'FLA - Formal Language & Automata',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'BDA - Big Data Analytics',period:'P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}], 3:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'FLA - Formal Language & Automata',period:'P3'},{start:'11:35',end:'12:20',subject:'Sports / Activity',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'WT - Web Technology',period:'P6'},{start:'13:50',end:'15:20',subject:'CN LAB - Computer Network Lab',period:'P7-P8'}], 4:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'WT - Web Technology',period:'P2'},{start:'10:50',end:'11:35',subject:'CN - Computer Network',period:'P3'},{start:'11:35',end:'12:20',subject:'DAA - Design & Analysis of Algorithm',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'DAA LAB - Algorithm Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'HRM - Human Resource Mgmt',period:'P8'}], 5:[{start:'09:20',end:'10:05',subject:'DAA - Design & Analysis of Algorithm',period:'P1'},{start:'10:05',end:'10:50',subject:'CN - Computer Network',period:'P2'},{start:'10:50',end:'11:35',subject:'FLA - Formal Language & Automata',period:'P3'},{start:'11:35',end:'12:20',subject:'BDA - Big Data Analytics',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'WT LAB - Web Technology Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}] }; const AIDS = { 1:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'LIB - Library',period:'P3'},{start:'11:35',end:'12:20',subject:'FLA - Formal Language & Automata',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'PA - Predictive Analysis',period:'P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}], 2:[{start:'09:20',end:'10:05',subject:'WT - Web Technology',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'PA - Predictive Analysis',period:'P3'},{start:'11:35',end:'12:20',subject:'FLA - Formal Language & Automata',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'BDA - Big Data Analytics',period:'P7'},{start:'14:35',end:'15:20',subject:'ML - Machine Learning',period:'P8'}], 3:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'FLA - Formal Language & Automata',period:'P3'},{start:'11:35',end:'12:20',subject:'Sports / Project',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'WT - Web Technology',period:'P6'},{start:'13:50',end:'15:20',subject:'PA LAB - Predictive Analysis Lab',period:'P7-P8'}], 4:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'WT - Web Technology',period:'P2'},{start:'10:50',end:'11:35',subject:'ML - Machine Learning',period:'P3'},{start:'11:35',end:'12:20',subject:'PA - Predictive Analysis',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'ML LAB - Machine Learning Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'HRM - Human Resource Mgmt',period:'P8'}], 5:[{start:'09:20',end:'10:05',subject:'ML - Machine Learning',period:'P1'},{start:'10:05',end:'10:50',subject:'LIB - Library',period:'P2'},{start:'10:50',end:'11:35',subject:'FLA - Formal Language & Automata',period:'P3'},{start:'11:35',end:'12:20',subject:'BDA - Big Data Analytics',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'BDA LAB - Big Data Analytics Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}] }; return (b && b.toUpperCase() === 'AIDS') ? AIDS : CSE; }
 function initAdmin(){ const t = fmtDate(new Date()); if ($('manualDate')) $('manualDate').value = t; if ($('holidayDate')) $('holidayDate').value = t; if ($('classStart')) $('classStart').value = '2026-07-15'; if ($('classEnd')) $('classEnd').value = t; const ssm = $('singleStudentMonth'); if (ssm && !ssm.innerHTML.trim()) ssm.innerHTML = [6,7,8,9,10,11].map(m=>`<option value="${m}">${MONTH_NAMES[m]} 2026</option>`).join(''); setBranch('CSE'); loadHolidays(); }
 async function fetchUsers(){ try { const res = await fetch(`${API}/api/admin/all-users/${currentUser.rollNo}`); const data = await res.json(); const tb = $('directoryBody'); if (!tb) return; if (!data || data.length === 0) return tb.innerHTML = '<tr><td colspan="6" class="empty">No users</td></tr>'; const students = data.filter(u => u.role === 'student').slice(0,60); const summaries = await Promise.all(students.map(s => fetch(`${API}/api/student/summary/${s.rollNo}`).then(r=>r.json()).catch(()=>null))); const sumMap = {}; students.forEach((s,i) => { if (summaries[i]) sumMap[s.rollNo] = summaries[i]; }); tb.innerHTML = data.sort((a,b)=>a.rollNo.localeCompare(b.rollNo,undefined,{numeric:true})).map(u => { const rb = u.role === 'admin' ? '<span class="badge badge-warning">Admin</span>' : u.role === 'faculty' ? '<span class="badge badge-info">Faculty</span>' : '<span class="badge badge-neutral">Student</span>'; const dev = u.boundDeviceId ? '<span class="badge badge-success">Bound</span>' : '<span class="badge badge-neutral">—</span>'; let att = '—'; if (u.role === 'student' && sumMap[u.rollNo]) { const s = sumMap[u.rollNo]; att = `${s.totalAcademicLectures||0}/${s.totalConductedLectures||0} (${s.attendancePercentage||0}%)`; } return `<tr><td><b>${u.rollNo}</b></td><td>${u.name}</td><td>${rb}</td><td>${dev}</td><td>${att}</td><td>${u.role === 'student' ? `<button class="btn btn-outline btn-xs" onclick="viewStudentRecords('${u.rollNo}')">View</button>` : ''}</td></tr>`; }).join(''); const s2 = data.filter(u => u.role === 'student'); ['singleStudentSelect','reportStudentSelect'].forEach(id => { const el = $(id); if (el) el.innerHTML = '<option value="">Select Student…</option>' + s2.map(s => `<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`).join(''); }); const teachers = data.filter(u => u.role === 'faculty'); const ts = $('assignTeacher'); if (ts) ts.innerHTML = '<option value="">Select Teacher…</option>' + teachers.map(t => `<option value="${t.rollNo}">${t.rollNo} - ${t.name}</option>`).join(''); } catch(e){ if ($('directoryBody')) $('directoryBody').innerHTML = '<tr><td colspan="6" class="empty">Network error</td></tr>'; } }
-async function viewStudentRecords(r){ try { const res = await fetch(`${API}/api/attendance/student/${r}/${currentUser.rollNo}`); const data = await res.json(); if (!res.ok) return toast(data.error || 'Failed','error'); const g = {}; data.forEach(x => { if (!g[x.date]) g[x.date] = []; g[x.date].push(x); }); const dates = Object.keys(g).sort((a,b)=>b.localeCompare(a)); let html = `<div class="modal-backdrop open" id="viewRecordsModal"><div class="modal wide glass-modal"><div class="modal-header glass-modal-header"><div><h3>Attendance – ${r}</h3><p class="text-xs text-muted" style="margin-top:4px;">${data.length} records</p></div><button type="button" class="modal-close" onclick="document.getElementById('viewRecordsModal').remove()">✕</button></div><div class="modal-body">`; dates.forEach(d => { html += `<div style="margin-bottom:16px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><b>${fmtDatePretty(d)}</b><button class="btn btn-danger btn-xs" onclick="deleteAllDate('${r}','${d}')">Delete All</button></div>`; g[d].forEach(x => { html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--slate-50);border-radius:8px;margin:4px 0;font-size:12px;"><div>${x.subject} <span class="badge badge-success">${x.status}</span></div><button class="btn btn-danger btn-xs" onclick="deleteRecord('${x._id}')">Del</button></div>`; }); html += `</div>`; }); html += `</div></div></div>`; const div = document.createElement('div'); div.innerHTML = html; document.body.appendChild(div.firstElementChild); lockBodyScroll(true); } catch(e){ toast('Failed','error'); } }
+async function viewStudentRecords(r){ try { const res = await fetch(`${API}/api/attendance/student/${r}/${currentUser.rollNo}`); const data = await res.json(); if (!res.ok) return toast(data.error || 'Failed','error'); const g = {}; data.forEach(x => { if (!g[x.date]) g[x.date] = []; g[x.date].push(x); }); const dates = Object.keys(g).sort((a,b)=>b.localeCompare(a)); let html = `<div class="modal-backdrop open safe-top-modal" id="viewRecordsModal"><div class="modal wide"><div class="modal-header"><div><h3>Attendance – ${r}</h3><p class="text-xs text-muted" style="margin-top:4px;">${data.length} records</p></div><button type="button" class="modal-close" onclick="document.getElementById('viewRecordsModal').remove();lockBodyScroll(false);">✕</button></div><div class="modal-body">`; dates.forEach(d => { html += `<div style="margin-bottom:16px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><b>${fmtDatePretty(d)}</b><button class="btn btn-danger btn-xs" onclick="deleteAllDate('${r}','${d}')">Delete All</button></div>`; g[d].forEach(x => { html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--slate-50);border-radius:8px;margin:4px 0;font-size:12px;"><div>${x.subject} <span class="badge badge-success">${x.status}</span></div><button class="btn btn-danger btn-xs" onclick="deleteRecord('${x._id}')">Del</button></div>`; }); html += `</div>`; }); html += `</div></div></div>`; const div = document.createElement('div'); div.innerHTML = html; document.body.appendChild(div.firstElementChild); lockBodyScroll(true); } catch(e){ toast('Failed','error'); } }
 async function deleteRecord(id){ if (!confirm('Delete?')) return; try { const res = await fetch(`${API}/api/attendance/delete/${id}/${currentUser.rollNo}`, {method:'DELETE'}); if (res.ok) { toast('Deleted','success'); const m = $('viewRecordsModal'); if (m) m.remove(); loadAllAttendance(); } } catch(e){} }
 async function deleteAllDate(r, d){ if (!confirm('Delete all records for this date?')) return; try { const res = await fetch(`${API}/api/attendance/delete-day/${r}/${d}/${currentUser.rollNo}`, {method:'DELETE'}); if (res.ok) { toast('Deleted','success'); const m = $('viewRecordsModal'); if (m) m.remove(); loadAllAttendance(); } } catch(e){} }
 async function loadAllAttendance(){ try { const res = await fetch(`${API}/api/attendance/all/${currentUser.rollNo}`); const data = await res.json(); const fr = ($('filterRoll').value||'').toUpperCase(); const fd = $('filterDate').value; let filtered = data; if (fr) filtered = filtered.filter(r => r.rollNo.includes(fr)); if (fd) filtered = filtered.filter(r => r.date === fd); const tb = $('allAttendanceBody'); if (!tb) return; if (filtered.length === 0) return tb.innerHTML = '<tr><td colspan="7" class="empty">No records</td></tr>'; window._allRecords = filtered; tb.innerHTML = filtered.slice(0,200).map(r => `<tr><td><input type="checkbox" class="rec-cb" data-id="${r._id}"></td><td>${fmtDatePretty(r.date)}</td><td><b>${r.rollNo}</b></td><td>${r.studentName||''}</td><td>${r.subject}</td><td><span class="badge ${r.status==='Present'?'badge-success':r.status==='Duty Leave'?'badge-warning':'badge-danger'}">${r.status}</span></td><td><button class="btn btn-danger btn-xs" onclick="deleteRecord('${r._id}')">Del</button></td></tr>`).join(''); } catch(e){ if ($('allAttendanceBody')) $('allAttendanceBody').innerHTML = '<tr><td colspan="7" class="empty">Network error</td></tr>'; } observeNewContent(); }
@@ -2856,12 +2809,12 @@ async function applyLeave(){ const f = $('leaveFrom').value, t = $('leaveTo').va
 async function loadMyLeaves(){ try { const data = await fetch(`${API}/api/leave/my/${currentUser.rollNo}`).then(x=>x.json()); const el = $('myLeaveList'); el.innerHTML = data.length ? data.map(l => `<div style="padding:10px 0;border-bottom:1px solid var(--slate-100);"><div style="display:flex;justify-content:space-between;"><b>${fmtDatePretty(l.fromDate)} → ${fmtDatePretty(l.toDate)}</b> <span class="badge ${l.status==='Approved'?'badge-success':l.status==='Rejected'?'badge-danger':'badge-warning'}">${l.status}</span></div><div class="text-xs text-muted mt-1">${l.leaveType}: ${l.reason}</div></div>`).join('') : '<div class="empty">No applications</div>'; } catch(e){} observeNewContent(); }
 
 /* ============================================================
-   CHAT — with body scroll lock
+   CHAT — with body scroll lock only when open
    ============================================================ */
 function toggleContext(){ useContextMode = !useContextMode; const b = $('ctxToggle'); if (b) { b.classList.toggle('active', useContextMode); const l = b.querySelector('.ctx-label'); if (l) l.textContent = useContextMode ? 'Context On' : 'Context'; } toast(useContextMode ? 'Context ON' : 'Context OFF', useContextMode ? 'success' : 'info'); if ($('chatPanel').classList.contains('open')) { const m = $('chatMsgs'); if (!m.querySelector('.msg')) renderChatWelcome(); } }
 function toggleDatabase(){ useDatabaseMode = !useDatabaseMode; const b = $('dbToggle'); if (b) { b.classList.toggle('active', useDatabaseMode); const l = b.querySelector('.db-label'); if (l) l.textContent = useDatabaseMode ? 'Database On' : 'Database'; } toast(useDatabaseMode ? 'Database ON' : 'Database OFF', useDatabaseMode ? 'success' : 'info'); if ($('chatPanel').classList.contains('open')) { const m = $('chatMsgs'); if (!m.querySelector('.msg')) renderChatWelcome(); } }
 
-/* ★★★ Chat open — body scroll lock ★★★ */
+/* ★ Chat open — body scroll lock ON, close — OFF */
 function toggleChat(){
   const p = $('chatPanel');
   if (!p) return;
@@ -3262,7 +3215,7 @@ try {
 } catch(e){}
 
 /* ============================================================
-   PREMIUM INIT (desktop only)
+   PREMIUM INIT (desktop only — light effects)
    ============================================================ */
 function initScrollProgress(){ if (!isDesktop()) return; const bar = document.getElementById('scrollProgress'); if (!bar) return; const update = () => { const h = document.documentElement; const total = h.scrollHeight - h.clientHeight; bar.style.width = total > 0 ? (h.scrollTop / total) * 100 + '%' : '0%'; }; if (bar._bound) return; bar._bound = true; window.addEventListener('scroll', update, { passive: true }); window.addEventListener('resize', update); update(); }
 function initSpotlight(){ if (!isDesktop()) return; const targets = document.querySelectorAll('.card, .stat, .chart-wrap, .portal, .passcode-card, .collapsible-card, .advisor, .attendance-actions-card, .working-days-cta, .approved-banner'); targets.forEach(el => { if (el.dataset.spotlight === '1') return; el.dataset.spotlight = '1'; el.classList.add('spotlight-enabled'); el.addEventListener('mousemove', (e) => { const r = el.getBoundingClientRect(); el.style.setProperty('--mx', (e.clientX - r.left) + 'px'); el.style.setProperty('--my', (e.clientY - r.top) + 'px'); }); }); }
