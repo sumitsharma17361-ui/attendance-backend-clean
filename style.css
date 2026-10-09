@@ -54,6 +54,18 @@ body{
   overflow-x:hidden;position:relative;isolation:isolate;
 }
 
+/* ★ TOP BLUE STRIP — makes status bar (time/battery/notification) visible */
+body::before{
+  content:'';
+  position:fixed;
+  top:0;left:0;right:0;
+  height:calc(52px + var(--sat));
+  background:linear-gradient(180deg,#1e3a8a 0%,#2563eb 100%);
+  z-index:0;
+  pointer-events:none;
+  display:none; /* desktop pe off, mobile pe on */
+}
+
 /* ---------- INTERACTIVE BASE ---------- */
 button,.btn,.tab,.subnav-item,.portal,.chip,.icon-btn,.mini-btn,.send-btn,.msg-action-btn,
 .chat-close-btn,.chat-sidebar-toggle,.modal-close,.chat-fab,.working-days-cta,.ctx-toggle,
@@ -1251,7 +1263,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
    MOBILE — safe area + performance
    ============================================================ */
 @media(max-width:640px){
-  /* ★ Safe area top margin for status bar */
+  /* ★ TOP BLUE STRIP active on mobile — status bar (white icons) visible */
+  body::before{display:block;}
+
+  /* Body padding-top = exactly where the blue strip ends */
   body{
     padding:calc(52px + var(--sat)) 12px calc(20px + var(--sab));
   }
@@ -1289,14 +1304,18 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   #auth-box{padding:28px 20px 32px;}
   .auth-title{font-size:22px;}
   .toast-wrap{top:calc(52px + var(--sat));}
-  /* Menu drawers — safe area */
-  .student-menu-drawer{padding-top:var(--sat);padding-bottom:var(--sab);}
+
+  /* ★ FIX: Remove drawer padding-top so blue header extends to top of screen */
+  .student-menu-drawer{padding-top:0 !important;padding-bottom:0 !important;}
+  .student-menu-header{padding-top:calc(16px + var(--sat));}
+  .safe-top{padding-top:calc(16px + var(--sat)) !important;}
 }
 
 /* ============================================================
    DESKTOP — light premium effects
    ============================================================ */
 @media (min-width: 641px){
+  body::before{display:none;} /* blue strip sirf mobile pe */
   .bg-blobs{display:block;}
   body::after{
     content:'';position:fixed;inset:0;pointer-events:none;z-index:99998;opacity:.03;
@@ -1317,7 +1336,6 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   .icon-pulse:hover svg{animation:iconPulse .8s ease-in-out infinite;}
   .bell-ring:hover svg{animation:bellRing .9s var(--ease-spring);transform-origin:top center;}
 
-  /* Tooltips */
   [data-tip]{position:relative;}
   [data-tip]::before,[data-tip]::after{
     position:absolute;left:50%;bottom:calc(100% + 8px);
