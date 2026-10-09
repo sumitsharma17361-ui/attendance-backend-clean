@@ -1,11 +1,11 @@
 /* ============================================================
    BM GROUP ERP · style.css
-   Lightweight Performance Edition (Lite Glass)
+   Minimal Glass Edition — Smooth & Fast
    ============================================================ */
 
 /* ---------- RESET ---------- */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent !important;-webkit-touch-callout:none;}
-html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;overscroll-behavior-y:contain;}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;}
 button,input,select,textarea{font-family:inherit;}
 img,svg{display:block;max-width:100%;}
 button{-webkit-user-select:none;user-select:none;}
@@ -30,10 +30,6 @@ button{-webkit-user-select:none;user-select:none;}
   --shadow-md:0 12px 32px rgba(15,23,42,.10),0 4px 12px rgba(15,23,42,.05);
   --shadow-lg:0 24px 56px rgba(15,23,42,.16),0 8px 20px rgba(15,23,42,.08);
 
-  /* Lightweight glass — only for floating layers */
-  --glass-blur:blur(8px) saturate(140%);
-  --glass-blur-light:blur(6px) saturate(130%);
-
   --ease:cubic-bezier(.4,0,.2,1);--ease-out:cubic-bezier(.22,1,.36,1);--ease-spring:cubic-bezier(.34,1.56,.64,1);
   --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
   --dur-fast:.18s;--dur:.28s;--dur-slow:.45s;
@@ -56,7 +52,6 @@ body{
   margin:0;line-height:1.5;
   -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
   overflow-x:hidden;position:relative;isolation:isolate;
-  overscroll-behavior-y:contain;
 }
 
 /* ---------- INTERACTIVE BASE ---------- */
@@ -79,16 +74,15 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
 }
 
 /* ============================================================
-   ★ LITE GLASS — only applied to floating layers
-   Cards/stat use simple background (no blur → no lag)
+   ★ MINIMAL GLASS — only 4 places, very light blur
    ============================================================ */
 .glass-modal,
 .glass-chat{
-  -webkit-backdrop-filter:var(--glass-blur);
-  backdrop-filter:var(--glass-blur);
+  -webkit-backdrop-filter:blur(4px);
+  backdrop-filter:blur(4px);
 }
 
-/* Non-floating elements: solid/near-solid backgrounds */
+/* Everything else: solid backgrounds, no blur */
 .glass,
 .glass-card,
 .glass-header,
@@ -161,7 +155,7 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
 
 /* ---------- BG BLOBS ---------- */
 .bg-blobs{display:none;position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
-.bg-blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.4;animation:blobMorph 24s ease-in-out infinite;will-change:transform,border-radius;}
+.bg-blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.35;animation:blobMorph 24s ease-in-out infinite;will-change:transform,border-radius;}
 .bg-blob:nth-child(1){width:460px;height:460px;background:radial-gradient(circle,#93c5fd 0%,transparent 70%);top:-140px;left:-120px;}
 .bg-blob:nth-child(2){width:420px;height:420px;background:radial-gradient(circle,#c4b5fd 0%,transparent 70%);bottom:-140px;right:-100px;animation-delay:-8s;}
 .bg-blob:nth-child(3){width:340px;height:340px;background:radial-gradient(circle,#6ee7b7 0%,transparent 70%);top:42%;right:6%;animation-delay:-16s;}
@@ -603,12 +597,10 @@ tbody tr:hover{background:var(--brand-50);}
 .empty{text-align:center;padding:36px 20px;color:var(--slate-400);font-size:12.5px;font-weight:500;animation:fadeIn .4s var(--ease-out);}
 .section-title{font-size:11px;font-weight:700;color:var(--slate-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;}
 
-/* ---------- MODAL (with light blur — safe, only 1 at a time) ---------- */
+/* ---------- MODAL ---------- */
 .modal-backdrop{
   position:fixed;inset:0;
-  background:rgba(15,23,42,.55);
-  -webkit-backdrop-filter:blur(6px);
-  backdrop-filter:blur(6px);
+  background:rgba(15,23,42,.45);
   z-index:9000;display:none;align-items:flex-start;justify-content:center;
   padding:20px;overflow-y:auto;
   animation:fadeIn .25s var(--ease);
@@ -656,8 +648,6 @@ tbody tr:hover{background:var(--brand-50);}
 /* ---------- STUDENT / ADMIN DRAWER ---------- */
 .student-menu-backdrop{
   position:fixed;inset:0;background:rgba(15,23,42,.5);
-  -webkit-backdrop-filter:blur(4px);
-  backdrop-filter:blur(4px);
   z-index:9400;display:none;opacity:0;
   transition:opacity var(--dur-slow) var(--ease);
 }
@@ -926,12 +916,10 @@ tbody tr:hover{background:var(--brand-50);}
 /* ---------- FACULTY FIELDS ---------- */
 .faculty-fields{display:none;margin-top:12px;padding:12px;background:var(--slate-50);border-radius:var(--radius-sm);border:1px solid var(--slate-200);animation:slideIn .3s var(--ease-out);}
 
-/* ---------- TOAST (light blur for professional look) ---------- */
+/* ---------- TOAST ---------- */
 .toast-wrap{position:fixed;top:calc(22px + var(--sat));left:50%;transform:translateX(-50%);z-index:99999;width:calc(100% - 32px);max-width:440px;pointer-events:none;}
 .toast{
-  background:rgba(255,255,255,.94);
-  -webkit-backdrop-filter:var(--glass-blur-light);
-  backdrop-filter:var(--glass-blur-light);
+  background:#fff;
   border:1px solid var(--slate-200);
   border-left:4px solid var(--brand-600);
   border-radius:var(--radius-sm);padding:14px 18px;
@@ -962,8 +950,6 @@ tbody tr:hover{background:var(--brand-50);}
 /* ---------- FEEDBACK OVERLAY ---------- */
 .feedback-overlay{
   position:fixed;inset:0;background:rgba(15,23,42,.55);
-  -webkit-backdrop-filter:blur(6px);
-  backdrop-filter:blur(6px);
   z-index:99000;display:flex;align-items:center;justify-content:center;
   padding:24px;animation:fadeIn .25s var(--ease-out);
 }
