@@ -1,6 +1,7 @@
 /* ============================================================
    BM GROUP ERP · style.css
    Minimal Glass Edition — Smooth & Fast
+   Menu crop + glass translucent + status bar blue
    ============================================================ */
 
 /* ---------- RESET ---------- */
@@ -63,7 +64,7 @@ body::before{
   background:linear-gradient(180deg,#1e3a8a 0%,#2563eb 100%);
   z-index:0;
   pointer-events:none;
-  display:none; /* desktop pe off, mobile pe on */
+  display:none;
 }
 
 /* ---------- INTERACTIVE BASE ---------- */
@@ -86,32 +87,12 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
 }
 
 /* ============================================================
-   ★ MINIMAL GLASS — only 4 places, very light blur
+   LITE GLASS — only modals & chat get blur
    ============================================================ */
-.glass-modal,
-.glass-chat{
-  -webkit-backdrop-filter:blur(4px);
-  backdrop-filter:blur(4px);
-}
-
-/* Everything else: solid backgrounds, no blur */
-.glass,
-.glass-card,
-.glass-header,
-.glass-app{
-  background:#fff;
-  border:1px solid var(--slate-200);
-  box-shadow:var(--shadow-sm);
-}
-.glass-app{
-  background:#fff;
-  box-shadow:var(--shadow-md);
-}
-.glass-header{
-  background:#fff;
-}
-
-/* Fallback */
+.glass-modal,.glass-chat{-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);}
+.glass,.glass-card,.glass-header,.glass-app{background:#fff;border:1px solid var(--slate-200);box-shadow:var(--shadow-sm);}
+.glass-app{background:#fff;box-shadow:var(--shadow-md);}
+.glass-header{background:#fff;}
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))){
   .glass-modal,.glass-chat{background:rgba(255,255,255,.98);}
 }
@@ -618,7 +599,6 @@ tbody tr:hover{background:var(--brand-50);}
   animation:fadeIn .25s var(--ease);
   overscroll-behavior:contain;
 }
-/* ★ Modal safe top — for mobile status bar */
 .safe-top-modal{padding-top:calc(60px + var(--sat));}
 @media(min-width:641px){.safe-top-modal{padding-top:20px;}}
 .modal-backdrop.open{display:flex;}
@@ -657,9 +637,12 @@ tbody tr:hover{background:var(--brand-50);}
   background:#fff;
 }
 
-/* ---------- STUDENT / ADMIN DRAWER ---------- */
+/* ============================================================
+   STUDENT / ADMIN DRAWER (GLASS + CROP)
+   ============================================================ */
 .student-menu-backdrop{
-  position:fixed;inset:0;background:rgba(15,23,42,.5);
+  position:fixed;inset:0;
+  background:rgba(15,23,42,.5);
   z-index:9400;display:none;opacity:0;
   transition:opacity var(--dur-slow) var(--ease);
 }
@@ -668,7 +651,10 @@ tbody tr:hover{background:var(--brand-50);}
   position:fixed;top:0;right:0;left:auto;
   width:300px;max-width:88vw;
   height:100vh;height:100dvh;
-  background:#fff;
+  background:rgba(255,255,255,.72);
+  -webkit-backdrop-filter:blur(24px) saturate(180%);
+  backdrop-filter:blur(24px) saturate(180%);
+  border-left:1px solid rgba(255,255,255,.5);
   box-shadow:-10px 0 50px rgba(15,23,42,.22);
   transform:translateX(100%);
   transition:transform .42s var(--ease-spring);
@@ -684,7 +670,6 @@ tbody tr:hover{background:var(--brand-50);}
   color:#fff;display:flex;align-items:center;gap:14px;
   flex-shrink:0;position:relative;overflow:hidden;
 }
-/* ★ Safe top for status bar overlap */
 .safe-top{padding-top:calc(20px + var(--sat)) !important;}
 .student-menu-header::after{
   content:'';position:absolute;top:-40%;right:-20%;
@@ -698,9 +683,9 @@ tbody tr:hover{background:var(--brand-50);}
 .student-menu-header .menu-user-name{font-weight:800;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .student-menu-header .menu-user-roll{font-size:10.5px;opacity:.92;margin-top:3px;font-weight:500;}
 
-.student-menu-list{flex:1;overflow-y:auto;padding:10px 8px;display:flex;flex-direction:column;gap:2px;overscroll-behavior:contain;}
+.student-menu-list{flex:1;overflow-y:auto;padding:10px 8px;display:flex;flex-direction:column;gap:2px;overscroll-behavior:contain;background:transparent;}
 .student-menu-list::-webkit-scrollbar{width:4px;}
-.student-menu-list::-webkit-scrollbar-thumb{background:var(--slate-300);border-radius:2px;}
+.student-menu-list::-webkit-scrollbar-thumb{background:rgba(148,163,184,.5);border-radius:2px;}
 .student-menu-item{
   display:flex;align-items:center;gap:12px;
   padding:12px 14px;background:transparent;border:none;border-radius:11px;
@@ -718,19 +703,19 @@ tbody tr:hover{background:var(--brand-50);}
 .student-menu-item:nth-child(8){animation-delay:.16s;}
 .student-menu-item:nth-child(9){animation-delay:.18s;}
 .student-menu-item:nth-child(10){animation-delay:.20s;}
-.student-menu-item:hover{background:var(--brand-50);color:var(--brand-700);}
+.student-menu-item:hover{background:rgba(239,246,255,.75);color:var(--brand-700);}
 .student-menu-item:hover svg{transform:scale(1.10);color:var(--brand-600);}
 .student-menu-item.active{background:linear-gradient(135deg,var(--brand-600),var(--brand-700));color:#fff;box-shadow:0 6px 18px rgba(37,99,235,.28);}
 .student-menu-item.active svg{color:#fff;}
 .student-menu-item svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0;pointer-events:none;transition:transform var(--dur) var(--ease-spring);}
 .student-menu-item .menu-label{flex:1;pointer-events:none;}
-.student-menu-divider{height:1px;background:var(--slate-200);margin:8px 10px;}
+.student-menu-divider{height:1px;background:rgba(226,232,240,.7);margin:8px 10px;}
 .student-menu-footer{
   padding:12px 18px;
   padding-bottom:calc(12px + var(--sab));
-  border-top:1px solid var(--slate-200);
+  border-top:1px solid rgba(226,232,240,.6);
   font-size:10px;color:var(--slate-400);text-align:center;
-  background:var(--slate-50);
+  background:rgba(248,250,252,.55);
   flex-shrink:0;
 }
 
@@ -1303,12 +1288,28 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   .modal-footer{padding:14px 18px 18px;}
   #auth-box{padding:28px 20px 32px;}
   .auth-title{font-size:22px;}
-  .toast-wrap{top:calc(52px + var(--sat));}
+  .toast-wrap{top:calc(60px + var(--sat));}
 
-  /* ★ FIX: Remove drawer padding-top so blue header extends to top of screen */
-  .student-menu-drawer{padding-top:0 !important;padding-bottom:0 !important;}
-  .student-menu-header{padding-top:calc(16px + var(--sat));}
-  .safe-top{padding-top:calc(16px + var(--sat)) !important;}
+  /* ★ MENU DRAWER — CROP below status bar + GLASS */
+  .student-menu-drawer{
+    top: calc(52px + var(--sat));
+    height: calc(100vh - 52px - var(--sat));
+    height: calc(100dvh - 52px - var(--sat));
+    border-top-left-radius: 20px;
+    border-bottom-left-radius: 20px;
+  }
+  .student-menu-backdrop{ top: calc(52px + var(--sat)); }
+  .student-menu-header{
+    padding-top: 16px;
+    border-top-left-radius: 20px;
+  }
+  .student-menu-header.safe-top{ padding-top: 16px !important; }
+  .student-menu-list{ background: transparent; }
+  .student-menu-footer{
+    background: rgba(248,250,252,.55);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
 }
 
 /* ============================================================
@@ -1336,6 +1337,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   .icon-pulse:hover svg{animation:iconPulse .8s ease-in-out infinite;}
   .bell-ring:hover svg{animation:bellRing .9s var(--ease-spring);transform-origin:top center;}
 
+  /* Tooltips */
   [data-tip]{position:relative;}
   [data-tip]::before,[data-tip]::after{
     position:absolute;left:50%;bottom:calc(100% + 8px);
