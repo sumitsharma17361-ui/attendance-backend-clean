@@ -16,6 +16,19 @@
   html { overflow-y: auto; overflow-x: hidden; }
   body { overflow-y: auto; overflow-x: hidden; }
   body.body-locked { overflow: hidden !important; }
+  
+  /* ★ Refresh button spin animation */
+  @keyframes spinRefresh {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .icon-btn.refreshing svg {
+    animation: spinRefresh 0.8s linear infinite;
+  }
+  .icon-btn.refreshing {
+    pointer-events: none;
+    opacity: 0.7;
+  }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -96,6 +109,15 @@
       <div class="brand-text"><h1>BM Group of Institutions</h1><p>B.Tech CSE / AIDS · 5th Semester</p></div>
     </div>
     <div class="header-right">
+      <!-- ★ REFRESH BUTTON -->
+      <button class="icon-btn" id="refreshBtn" onclick="refreshPage()" title="Refresh" data-tip="Refresh" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/>
+          <polyline points="1 20 1 14 7 14"/>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/>
+          <path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+      </button>
       <button class="icon-btn" id="chatBtn" onclick="toggleChat()" title="AI Assistant" data-tip="AI Assistant" style="display:none;">
         <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       </button>
@@ -1050,16 +1072,27 @@ let clockIntervalId = null, dashboardIntervalId = null, periodIntervalId = null,
 let passcodeCountdownInterval = null;
 
 /* ============================================================
-   ★ SCROLL LOCK — only for chat panel
+   ★ PAGE REFRESH FUNCTION
+   ============================================================ */
+function refreshPage() {
+  const btn = $('refreshBtn');
+  if (btn) btn.classList.add('refreshing');
+  showDL('Refreshing…');
+  setTimeout(() => {
+    // Clean up any locks before reloading
+    document.body.classList.remove('body-locked');
+    document.body.style.overflow = '';
+    location.reload();
+  }, 300);
+}
+
+/* ============================================================
+   SCROLL LOCK — only for chat panel
    ============================================================ */
 function lockBodyScroll(lock) {
-  if (lock) {
-    document.body.classList.add('body-locked');
-  } else {
-    document.body.classList.remove('body-locked');
-  }
+  if (lock) document.body.classList.add('body-locked');
+  else document.body.classList.remove('body-locked');
 }
-/* Safety: ensure lock is cleared if chat is not open */
 function ensureScrollUnlocked() {
   const chatOpen = document.getElementById('chatPanel')?.classList.contains('open');
   if (!chatOpen) {
@@ -1069,36 +1102,27 @@ function ensureScrollUnlocked() {
 }
 
 /* ============================================================
-   PUSH NOTIFICATION HELPER
+   PUSH NOTIFICATION
    ============================================================ */
 async function sendPushNotification(title, body, data = {}) {
   try { toast(`${title}${body ? ' — ' + body : ''}`, 'info'); } catch(e){}
+  // Backend push (FCM server-side)
   try {
-    if (isMedianApp() && window.median && window.median.firebaseMessaging) {
-      const fcm = window.median.firebaseMessaging;
-      if (typeof fcm.showNotification === 'function') {
-        fcm.showNotification({
-          title: title,
-          body: body,
-          data: Object.assign({ timestamp: Date.now() }, data)
-        });
-        return;
-      }
-    }
-    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-      const iconSvg = 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#2563eb"/><text x="50" y="66" font-size="44" text-anchor="middle" fill="white" font-family="Arial,sans-serif" font-weight="900">BM</text></svg>`);
-      new Notification(title, {
-        body: body,
-        icon: iconSvg,
-        badge: iconSvg,
-        tag: 'bm-ntf-' + (data.tag || Date.now()),
-        requireInteraction: false,
-        silent: false
+    if (currentUser && currentUser.rollNo) {
+      await fetch(`${API}/api/user/send-notification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rollNo: currentUser.rollNo, title: title, body: body, data: data })
       });
     }
-  } catch(e) {
-    console.warn('[Push] Notification failed:', e.message);
-  }
+  } catch(e) { console.warn('[Push] Backend push failed:', e.message); }
+  // Browser notification fallback (only when tab is backgrounded)
+  try {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && document.visibilityState === 'hidden') {
+      const iconSvg = 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#2563eb"/><text x="50" y="66" font-size="44" text-anchor="middle" fill="white" font-family="Arial,sans-serif" font-weight="900">BM</text></svg>`);
+      new Notification(title, { body: body, icon: iconSvg, tag: 'bm-ntf-' + (data.tag || Date.now()) });
+    }
+  } catch(e) { console.warn('[Push] Browser notification failed:', e.message); }
 }
 
 /* ============================================================
@@ -1142,7 +1166,6 @@ function showFeedback(type, title, message, opts = {}){
 
 function showDL(msg){ if ($('dlMsg')) $('dlMsg').textContent = msg; $('dlProgress')?.classList.add('show'); }
 function hideDL(){ $('dlProgress')?.classList.remove('show'); }
-/* ★ Modal open/close — NO body scroll lock (modals scroll internally) */
 function closeModal(id){ const m = $(id); if (m) m.classList.remove('open'); }
 function openModal(id){ const m = $(id); if (m) m.classList.add('open'); }
 function fmtDate(d){const y=d.getFullYear();const m=String(d.getMonth()+1).padStart(2,'0');const day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`;}
@@ -1172,40 +1195,24 @@ function universalDownload(blob, filename, opts = {}){
         reader.onload = function() {
           try {
             const base64 = reader.result.split(',')[1];
-            window.median.downloadFile({
-              base64: base64,
-              filename: filename,
-              mimeType: blob.type || 'application/octet-stream'
-            });
+            window.median.downloadFile({ base64: base64, filename: filename, mimeType: blob.type || 'application/octet-stream' });
             toast('Downloaded: ' + filename, 'success');
             if (opts.notify !== false) sendPushNotification('📥 Download Complete', filename, { type: 'download', filename });
-          } catch(e) {
-            toast('Median download failed, trying fallback…', 'info');
-            fallbackBlobDownload(blob, filename, opts);
-          }
+          } catch(e) { toast('Median download failed, trying fallback…', 'info'); fallbackBlobDownload(blob, filename, opts); }
         };
         reader.readAsDataURL(blob);
         return;
       } catch(e) { console.warn('Median download error:', e); }
     }
     fallbackBlobDownload(blob, filename, opts);
-  } catch(e) {
-    console.error('universalDownload failed:', e);
-    toast('Download failed: ' + e.message, 'error');
-  }
+  } catch(e) { console.error('universalDownload failed:', e); toast('Download failed: ' + e.message, 'error'); }
 }
 function fallbackBlobDownload(blob, filename, opts = {}){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    try { document.body.removeChild(a); } catch(e){}
-    URL.revokeObjectURL(url);
-  }, 3000);
+  a.href = url; a.download = filename; a.style.display = 'none';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { try { document.body.removeChild(a); } catch(e){} URL.revokeObjectURL(url); }, 3000);
   toast('Downloaded: ' + filename, 'success');
   if (opts.notify !== false) sendPushNotification('📥 Download Complete', filename, { type: 'download', filename });
 }
@@ -1214,52 +1221,30 @@ function fallbackBlobDownload(blob, filename, opts = {}){
    PDF GENERATION
    ============================================================ */
 function ensureJsPDF(){
-  if (!window.jspdf || !window.jspdf.jsPDF) {
-    toast('PDF library not loaded', 'error');
-    return null;
-  }
+  if (!window.jspdf || !window.jspdf.jsPDF) { toast('PDF library not loaded', 'error'); return null; }
   return window.jspdf.jsPDF;
 }
 function generatePDFBlob(title, subtitle, metaLines, tableHeaders, tableRows, summaryLines){
   const JsPDF = ensureJsPDF();
   if (!JsPDF) return null;
   const doc = new JsPDF();
-  doc.setFillColor(37, 99, 235);
-  doc.rect(0, 0, 210, 24, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(16);
-  doc.setFont(undefined, 'bold');
+  doc.setFillColor(37, 99, 235); doc.rect(0, 0, 210, 24, 'F');
+  doc.setTextColor(255, 255, 255); doc.setFontSize(16); doc.setFont(undefined, 'bold');
   doc.text('BM Group of Institutions', 105, 11, { align: 'center' });
-  doc.setFontSize(10);
-  doc.setFont(undefined, 'normal');
-  doc.text(title, 105, 19, { align: 'center' });
+  doc.setFontSize(10); doc.setFont(undefined, 'normal'); doc.text(title, 105, 19, { align: 'center' });
   let y = 32;
-  doc.setTextColor(15, 23, 42);
-  doc.setFontSize(11);
-  doc.setFont(undefined, 'bold');
+  doc.setTextColor(15, 23, 42); doc.setFontSize(11); doc.setFont(undefined, 'bold');
   if (subtitle) { doc.text(subtitle, 14, y); y += 6; }
-  doc.setFontSize(9);
-  doc.setFont(undefined, 'normal');
-  doc.setTextColor(100, 116, 139);
+  doc.setFontSize(9); doc.setFont(undefined, 'normal'); doc.setTextColor(100, 116, 139);
   (metaLines || []).forEach(line => { doc.text(line, 14, y); y += 5; });
   y += 3;
   if (summaryLines && summaryLines.length) {
-    doc.setTextColor(15, 23, 42);
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'bold');
+    doc.setTextColor(15, 23, 42); doc.setFontSize(10); doc.setFont(undefined, 'bold');
     summaryLines.forEach(line => { doc.text(line, 14, y); y += 5; });
     y += 3;
   }
   if (tableHeaders && tableRows) {
-    doc.autoTable({
-      startY: y,
-      head: [tableHeaders],
-      body: tableRows,
-      theme: 'grid',
-      styles: { fontSize: 8.5, cellPadding: 3 },
-      headStyles: { fillColor: [219, 234, 254], textColor: [30, 64, 175], fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [248, 250, 252] }
-    });
+    doc.autoTable({ startY: y, head: [tableHeaders], body: tableRows, theme: 'grid', styles: { fontSize: 8.5, cellPadding: 3 }, headStyles: { fillColor: [219, 234, 254], textColor: [30, 64, 175], fontStyle: 'bold' }, alternateRowStyles: { fillColor: [248, 250, 252] } });
   }
   return doc.output('blob');
 }
@@ -1270,8 +1255,7 @@ function generatePDFBlob(title, subtitle, metaLines, tableHeaders, tableRows, su
 function openStudentMenu(){
   const drawer = $('studentMenuDrawer'); const backdrop = $('studentMenuBackdrop');
   if (!drawer || !backdrop) return;
-  populateStudentMenu();
-  drawer.classList.add('open'); backdrop.classList.add('open');
+  populateStudentMenu(); drawer.classList.add('open'); backdrop.classList.add('open');
   loadLivePasscodes();
 }
 function closeStudentMenu(){
@@ -1326,8 +1310,7 @@ function navigateStudentMenu(key){
 function openAdminMenu(){
   const drawer = $('adminMenuDrawer'); const backdrop = $('adminMenuBackdrop');
   if (!drawer || !backdrop) return;
-  populateAdminMenu();
-  drawer.classList.add('open'); backdrop.classList.add('open');
+  populateAdminMenu(); drawer.classList.add('open'); backdrop.classList.add('open');
 }
 function closeAdminMenu(){
   const drawer = $('adminMenuDrawer'); const backdrop = $('adminMenuBackdrop');
@@ -1349,10 +1332,7 @@ function populateAdminMenu(){
 function navigateAdminMenu(key){
   closeAdminMenu();
   if (key === 'changepassword') { setTimeout(() => openModal('changePassModal'), 200); return; }
-  if (key === 'home') {
-    setTimeout(() => { switchTab('tab-mark'); window.scrollTo({ top: 0, behavior: 'smooth' }); }, 200);
-    return;
-  }
+  if (key === 'home') { setTimeout(() => { switchTab('tab-mark'); window.scrollTo({ top: 0, behavior: 'smooth' }); }, 200); return; }
   if (key.startsWith('fac-')) {
     if (currentUser && currentUser.role !== 'faculty') return;
     activeFacultyMenuKey = key;
@@ -1377,11 +1357,7 @@ function navigateAdminMenu(key){
     return;
   }
   activeAdminMenuKey = key;
-  setTimeout(() => {
-    switchTab('tab-admin');
-    showAdmin(key);
-    populateAdminMenu();
-  }, 220);
+  setTimeout(() => { switchTab('tab-admin'); showAdmin(key); populateAdminMenu(); }, 220);
 }
 
 document.addEventListener('click', function(e){
@@ -1407,14 +1383,12 @@ function insideModal(el){ return !!(el && el.closest && el.closest('.modal-backd
   let sx = 0, sy = 0, st = 0, tracking = false, mode = null, activeDrawer = null;
   const studentDrawer = () => $('studentMenuDrawer');
   const adminDrawer = () => $('adminMenuDrawer');
-
   function roleOk(){
     if (!currentUser) return false;
     if (currentUser.role === 'student') return true;
     if (currentUser.role === 'admin' || currentUser.role === 'faculty') return true;
     return false;
   }
-
   document.addEventListener('touchstart', (e) => {
     if (!e.touches || !e.touches[0]) return;
     const sd = studentDrawer(); const ad = adminDrawer();
@@ -1437,7 +1411,6 @@ function insideModal(el){ return !!(el && el.closest && el.closest('.modal-backd
       activeDrawer = (currentUser && currentUser.role === 'student') ? sd : ad;
     }
   }, { passive: true });
-
   document.addEventListener('touchmove', (e) => {
     if (!tracking || !mode || !activeDrawer) return;
     const t = e.touches[0]; if (!t) return;
@@ -1460,7 +1433,6 @@ function insideModal(el){ return !!(el && el.closest && el.closest('.modal-backd
       activeDrawer.style.transform = `translateX(${t2}px)`;
     }
   }, { passive: false });
-
   document.addEventListener('touchend', (e) => {
     if (!tracking || !mode || !activeDrawer) { tracking = false; mode = null; activeDrawer = null; return; }
     const t = e.changedTouches[0]; if (!t) { tracking = false; mode = null; activeDrawer = null; return; }
@@ -1471,15 +1443,11 @@ function insideModal(el){ return !!(el && el.closest && el.closest('.modal-backd
     if (Math.abs(dy) > Math.abs(dx) * 0.9) { tracking = false; mode = null; activeDrawer = null; return; }
     const isStudent = activeDrawer === studentDrawer();
     if (mode === 'open') {
-      if (dx < -90 || (dt < 300 && dx < -50)) {
-        if (isStudent) openStudentMenu(); else openAdminMenu();
-      } else {
-        if (isStudent) closeStudentMenu(); else closeAdminMenu();
-      }
+      if (dx < -90 || (dt < 300 && dx < -50)) { if (isStudent) openStudentMenu(); else openAdminMenu(); }
+      else { if (isStudent) closeStudentMenu(); else closeAdminMenu(); }
     } else if (mode === 'close') {
-      if (dx > 60 || (dt < 300 && dx > 40)) {
-        if (isStudent) closeStudentMenu(); else closeAdminMenu();
-      } else {
+      if (dx > 60 || (dt < 300 && dx > 40)) { if (isStudent) closeStudentMenu(); else closeAdminMenu(); }
+      else {
         activeDrawer.classList.add('open');
         const bd = isStudent ? $('studentMenuBackdrop') : $('adminMenuBackdrop');
         if (bd) bd.classList.add('open');
@@ -1554,10 +1522,8 @@ async function reviewRegistration(id, action){
   try {
     const res = await fetch(`${API}/api/admin/registration-requests/review/${id}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, action, note})});
     const d = await res.json();
-    if (res.ok) {
-      showFeedback(action === 'Approved' ? 'success' : 'info', action === 'Approved' ? 'Registration Approved' : 'Registration Rejected', action === 'Approved' ? 'Account created successfully. Student can sign in now.' : 'Request has been rejected.');
-      loadRegistrationRequests();
-    } else showFeedback('error', 'Failed', d.error || 'Could not process');
+    if (res.ok) { showFeedback(action === 'Approved' ? 'success' : 'info', action === 'Approved' ? 'Registration Approved' : 'Registration Rejected', action === 'Approved' ? 'Account created successfully. Student can sign in now.' : 'Request has been rejected.'); loadRegistrationRequests(); }
+    else showFeedback('error', 'Failed', d.error || 'Could not process');
   } catch(e){ showFeedback('error', 'Network Error', e.message); }
 }
 
@@ -1578,15 +1544,10 @@ async function checkRequestStatus(){
       const statusClass = r.status === 'Approved' ? 'badge-success' : r.status === 'Rejected' ? 'badge-danger' : r.status === 'Used' ? 'badge-info' : 'badge-warning';
       const statusEmoji = r.status === 'Approved' ? '✅' : r.status === 'Rejected' ? '❌' : r.status === 'Used' ? '✨' : '⏳';
       let action = '';
-      if (r.status === 'Approved' && r.type === 'forgot_password') {
-        action = `<button class="btn btn-success btn-xs" style="margin-top:10px;" onclick="closeModal('checkStatusModal');openSetNewPassword();document.getElementById('snpRoll').value='${r.rollNo}';">Set New Password →</button>`;
-      } else if (r.status === 'Approved' && r.type === 'device_reset') {
-        action = `<div style="margin-top:10px;font-size:11px;color:#047857;font-weight:600;">Device unlocked — try logging in from new phone.</div>`;
-      } else if (r.status === 'Rejected') {
-        action = `<div style="margin-top:10px;font-size:11px;color:#be123c;font-weight:600;">Contact admin for details.</div>`;
-      } else {
-        action = `<div style="margin-top:10px;font-size:11px;color:#b45309;font-weight:600;">Waiting for admin approval.</div>`;
-      }
+      if (r.status === 'Approved' && r.type === 'forgot_password') action = `<button class="btn btn-success btn-xs" style="margin-top:10px;" onclick="closeModal('checkStatusModal');openSetNewPassword();document.getElementById('snpRoll').value='${r.rollNo}';">Set New Password →</button>`;
+      else if (r.status === 'Approved' && r.type === 'device_reset') action = `<div style="margin-top:10px;font-size:11px;color:#047857;font-weight:600;">Device unlocked — try logging in from new phone.</div>`;
+      else if (r.status === 'Rejected') action = `<div style="margin-top:10px;font-size:11px;color:#be123c;font-weight:600;">Contact admin for details.</div>`;
+      else action = `<div style="margin-top:10px;font-size:11px;color:#b45309;font-weight:600;">Waiting for admin approval.</div>`;
       return `<div style="padding:14px;border:1px solid var(--slate-200);border-radius:11px;margin-bottom:10px;background:#fff;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
           <div style="font-weight:800;font-size:13px;">${type}</div>
@@ -1710,9 +1671,8 @@ function updatePasscodeBoxes(active, meta){
 function copyPasscode(){
   if (!currentPasscodeData || !currentPasscodeData.passcode) return toast('No passcode active','error');
   const code = currentPasscodeData.passcode;
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(code).then(() => toast('Copied: ' + code, 'success')).catch(() => fallbackCopyPass(code));
-  } else fallbackCopyPass(code);
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(() => toast('Copied: ' + code, 'success')).catch(() => fallbackCopyPass(code));
+  else fallbackCopyPass(code);
 }
 function fallbackCopyPass(code){
   const ta = document.createElement('textarea'); ta.value = code; ta.style.position = 'fixed'; ta.style.left = '-9999px';
@@ -1807,10 +1767,8 @@ async function submitForgotPassword(){
   try {
     const res = await fetch(`${API}/api/auth/forgot-password-request`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: roll, reason})});
     const d = await res.json();
-    if (res.ok) {
-      closeModal('forgotPassModal'); $('fpRoll').value=''; $('fpReason').value='';
-      showFeedback('success', 'Request Sent', 'Your forgot-password request has been sent to the admin.\nAfter approval, use "Set New Password" to create a new password.');
-    } else showFeedback('error', 'Failed', d.error || 'Could not send request');
+    if (res.ok) { closeModal('forgotPassModal'); $('fpRoll').value=''; $('fpReason').value=''; showFeedback('success', 'Request Sent', 'Your forgot-password request has been sent to the admin.\nAfter approval, use "Set New Password" to create a new password.'); }
+    else showFeedback('error', 'Failed', d.error || 'Could not send request');
   } catch(e){ showFeedback('error', 'Network Error', e.message); }
 }
 async function submitSetNewPassword(){
@@ -1822,10 +1780,8 @@ async function submitSetNewPassword(){
   try {
     const res = await fetch(`${API}/api/auth/change-password-direct`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: roll, newPassword: nw})});
     const d = await res.json();
-    if (res.ok) {
-      closeModal('setNewPassModal'); $('snpRoll').value=''; $('snpNew').value=''; $('snpConfirm').value='';
-      showFeedback('success', 'Password Updated', 'Your new password has been set. You can sign in now.');
-    } else showFeedback('warning', 'Not Approved Yet', d.error || 'Please wait for admin approval.');
+    if (res.ok) { closeModal('setNewPassModal'); $('snpRoll').value=''; $('snpNew').value=''; $('snpConfirm').value=''; showFeedback('success', 'Password Updated', 'Your new password has been set. You can sign in now.'); }
+    else showFeedback('warning', 'Not Approved Yet', d.error || 'Please wait for admin approval.');
   } catch(e){ showFeedback('error', 'Network Error', e.message); }
 }
 async function submitDeviceReset(){
@@ -1836,10 +1792,8 @@ async function submitDeviceReset(){
   try {
     const res = await fetch(`${API}/api/auth/device-reset-request`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: roll, reason})});
     const d = await res.json();
-    if (res.ok) {
-      closeModal('deviceResetModal'); $('drRoll').value=''; $('drReason').value='';
-      showFeedback('success', 'Request Sent', 'Your device reset request has been sent to the admin.\nAfter approval, you can log in from a new phone.');
-    } else showFeedback('error', 'Failed', d.error || 'Could not send request');
+    if (res.ok) { closeModal('deviceResetModal'); $('drRoll').value=''; $('drReason').value=''; showFeedback('success', 'Request Sent', 'Your device reset request has been sent to the admin.\nAfter approval, you can log in from a new phone.'); }
+    else showFeedback('error', 'Failed', d.error || 'Could not send request');
   } catch(e){ showFeedback('error', 'Network Error', e.message); }
 }
 async function submitChangePassword(){
@@ -1850,10 +1804,8 @@ async function submitChangePassword(){
   try {
     const res = await fetch(`${API}/api/auth/change-password`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo, currentPassword: cur, newPassword: nw})});
     const d = await res.json();
-    if (res.ok) {
-      closeModal('changePassModal'); $('cpCurrent').value=''; $('cpNew').value=''; $('cpConfirm').value='';
-      showFeedback('success', 'Password Changed', 'Your password has been updated successfully.');
-    } else showFeedback('error', 'Failed', d.error || 'Could not change password');
+    if (res.ok) { closeModal('changePassModal'); $('cpCurrent').value=''; $('cpNew').value=''; $('cpConfirm').value=''; showFeedback('success', 'Password Changed', 'Your password has been updated successfully.'); }
+    else showFeedback('error', 'Failed', d.error || 'Could not change password');
   } catch(e){ showFeedback('error', 'Network Error', e.message); }
 }
 
@@ -1863,11 +1815,8 @@ async function submitChangePassword(){
 function loadDashboard(){
   const userStr = localStorage.getItem('user'); if (!userStr) return;
   currentUser = JSON.parse(userStr);
-  
-  /* ★ SAFETY: Ensure body scroll is unlocked when dashboard loads */
   document.body.classList.remove('body-locked');
   document.body.style.overflow = '';
-  
   const ab = $('auth-box'); if (ab) ab.style.display = 'none';
   const db = $('dash-box'); if (db) db.style.display = 'block';
   const lb = $('logoutBtn'); if (lb) lb.style.display = 'flex';
@@ -1875,6 +1824,7 @@ function loadDashboard(){
   const cf = $('chatFab'); if (cf) cf.style.display = 'flex';
   const ua = $('userAvatar'); if (ua) ua.style.display = 'flex';
   const nb = $('notifBtn'); if (nb) nb.style.display = 'flex';
+  const rb2 = $('refreshBtn'); if (rb2) rb2.style.display = 'flex'; // ★ show refresh button
   if (localStorage.getItem('BM_FCM_ENABLED') === '1') updateNotifBtn(true);
   if ($('userName')) $('userName').textContent = currentUser.name;
   if (ua) ua.textContent = currentUser.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
@@ -1960,8 +1910,6 @@ function loadDashboard(){
   setTimeout(initScrollAnimations, 100);
   setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 250);
   setTimeout(() => { autoInitFCM().catch(()=>{}); }, 2000);
-  
-  /* ★ Safety: unlock scroll after dashboard fully loads */
   setTimeout(ensureScrollUnlocked, 500);
 }
 function updateClock(){
@@ -1977,9 +1925,7 @@ function switchTab(id){
   ['tab-mark','tab-admin','tab-faculty','tab-leave'].forEach(t => { const el = $(t); if (el) el.style.display = 'none'; });
   const el = $(id); if (el) { el.style.display = 'block'; el.style.animation = 'tabFadeIn .4s ease'; }
   if (id === 'tab-leave') { activeStudentMenuKey = 'leave'; populateStudentMenu(); }
-  else if (id === 'tab-mark' && currentUser && currentUser.role === 'student' && !['request','timetable','calendar','subjects','workingdays','reports','logs','portals'].includes(activeStudentMenuKey)) {
-    activeStudentMenuKey = 'home'; populateStudentMenu();
-  }
+  else if (id === 'tab-mark' && currentUser && currentUser.role === 'student' && !['request','timetable','calendar','subjects','workingdays','reports','logs','portals'].includes(activeStudentMenuKey)) { activeStudentMenuKey = 'home'; populateStudentMenu(); }
   observeNewContent();
   setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 60);
 }
@@ -2002,51 +1948,11 @@ function showAdmin(id){
   setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 60);
 }
 
-async function clearAllRequests(){
-  if (!confirm('Delete ALL attendance requests? This cannot be undone.')) return;
-  try {
-    const res = await fetch(`${API}/api/admin/clear-requests`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})});
-    const d = await res.json();
-    if (res.ok) { showFeedback('success','Cleared', d.message || 'All attendance requests have been deleted.'); loadAdminRequests(); }
-    else showFeedback('error','Failed', d.error || 'Could not clear requests');
-  } catch(e){ showFeedback('error','Network Error', e.message); }
-}
-async function clearAllRegistrations(){
-  if (!confirm('Delete ALL registration requests? This cannot be undone.')) return;
-  try {
-    const res = await fetch(`${API}/api/admin/clear-registrations`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})});
-    const d = await res.json();
-    if (res.ok) { showFeedback('success','Cleared', d.message || 'All registration requests have been deleted.'); loadRegistrationRequests(); }
-    else showFeedback('error','Failed', d.error || 'Could not clear registrations');
-  } catch(e){ showFeedback('error','Network Error', e.message); }
-}
-async function clearAllAccountRequests(){
-  if (!confirm('Delete ALL account requests? This cannot be undone.')) return;
-  try {
-    const res = await fetch(`${API}/api/admin/clear-account-requests`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})});
-    const d = await res.json();
-    if (res.ok) { showFeedback('success','Cleared', d.message || 'All account requests have been deleted.'); loadAccountRequests(); }
-    else showFeedback('error','Failed', d.error || 'Could not clear account requests');
-  } catch(e){ showFeedback('error','Network Error', e.message); }
-}
-async function clearAllLeaves(){
-  if (!confirm('Delete ALL leave requests? This cannot be undone.')) return;
-  try {
-    const res = await fetch(`${API}/api/admin/clear-leaves`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})});
-    const d = await res.json();
-    if (res.ok) { showFeedback('success','Cleared', d.message || 'All leave requests have been deleted.'); loadLeaveRequests(); }
-    else showFeedback('error','Failed', d.error || 'Could not clear leaves');
-  } catch(e){ showFeedback('error','Network Error', e.message); }
-}
-async function clearAllChats(){
-  if (!confirm('Delete ALL your chat history? This cannot be undone.')) return;
-  try {
-    const res = await fetch(`${API}/api/chats/clear-all`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo})});
-    const d = await res.json();
-    if (res.ok) { showFeedback('success','Chats Cleared', d.message || 'All chat history has been deleted.'); chatHistory = []; currentThreadId = null; renderChatHistory(); newChat(); }
-    else showFeedback('error','Failed', d.error || 'Could not clear chats');
-  } catch(e){ showFeedback('error','Network Error', e.message); }
-}
+async function clearAllRequests(){ if (!confirm('Delete ALL attendance requests? This cannot be undone.')) return; try { const res = await fetch(`${API}/api/admin/clear-requests`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})}); const d = await res.json(); if (res.ok) { showFeedback('success','Cleared', d.message || 'All attendance requests have been deleted.'); loadAdminRequests(); } else showFeedback('error','Failed', d.error || 'Could not clear requests'); } catch(e){ showFeedback('error','Network Error', e.message); } }
+async function clearAllRegistrations(){ if (!confirm('Delete ALL registration requests? This cannot be undone.')) return; try { const res = await fetch(`${API}/api/admin/clear-registrations`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})}); const d = await res.json(); if (res.ok) { showFeedback('success','Cleared', d.message || 'All registration requests have been deleted.'); loadRegistrationRequests(); } else showFeedback('error','Failed', d.error || 'Could not clear registrations'); } catch(e){ showFeedback('error','Network Error', e.message); } }
+async function clearAllAccountRequests(){ if (!confirm('Delete ALL account requests? This cannot be undone.')) return; try { const res = await fetch(`${API}/api/admin/clear-account-requests`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})}); const d = await res.json(); if (res.ok) { showFeedback('success','Cleared', d.message || 'All account requests have been deleted.'); loadAccountRequests(); } else showFeedback('error','Failed', d.error || 'Could not clear account requests'); } catch(e){ showFeedback('error','Network Error', e.message); } }
+async function clearAllLeaves(){ if (!confirm('Delete ALL leave requests? This cannot be undone.')) return; try { const res = await fetch(`${API}/api/admin/clear-leaves`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})}); const d = await res.json(); if (res.ok) { showFeedback('success','Cleared', d.message || 'All leave requests have been deleted.'); loadLeaveRequests(); } else showFeedback('error','Failed', d.error || 'Could not clear leaves'); } catch(e){ showFeedback('error','Network Error', e.message); } }
+async function clearAllChats(){ if (!confirm('Delete ALL your chat history? This cannot be undone.')) return; try { const res = await fetch(`${API}/api/chats/clear-all`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo})}); const d = await res.json(); if (res.ok) { showFeedback('success','Chats Cleared', d.message || 'All chat history has been deleted.'); chatHistory = []; currentThreadId = null; renderChatHistory(); newChat(); } else showFeedback('error','Failed', d.error || 'Could not clear chats'); } catch(e){ showFeedback('error','Network Error', e.message); } }
 
 async function loadAccountRequests(){
   const el = $('accountRequestsList'); if (!el) return;
@@ -2076,33 +1982,12 @@ async function loadAccountRequests(){
   } catch(e){ el.innerHTML = '<div class="empty">Network error</div>'; }
   observeNewContent();
 }
-async function reviewAccountRequest(id, action){
-  const note = prompt(`Note for ${action} (optional):`) || '';
-  try {
-    const res = await fetch(`${API}/api/admin/account-requests/review/${id}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, action, note})});
-    const d = await res.json();
-    if (res.ok) { toast(d.message || 'Done','success'); loadAccountRequests(); }
-    else toast(d.error || 'Failed','error');
-  } catch(e){ toast('Network error','error'); }
-}
-function switchReqTab(tab){
-  document.querySelectorAll('.req-tab').forEach(t => t.classList.toggle('active', t.dataset.reqtab === tab));
-  const sp = $('reqSinglePane'); if (sp) sp.style.display = tab === 'single' ? 'block' : 'none';
-  const bp = $('reqBulkPane'); if (bp) bp.style.display = tab === 'bulk' ? 'block' : 'none';
-}
+async function reviewAccountRequest(id, action){ const note = prompt(`Note for ${action} (optional):`) || ''; try { const res = await fetch(`${API}/api/admin/account-requests/review/${id}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, action, note})}); const d = await res.json(); if (res.ok) { toast(d.message || 'Done','success'); loadAccountRequests(); } else toast(d.error || 'Failed','error'); } catch(e){ toast('Network error','error'); } }
+function switchReqTab(tab){ document.querySelectorAll('.req-tab').forEach(t => t.classList.toggle('active', t.dataset.reqtab === tab)); const sp = $('reqSinglePane'); if (sp) sp.style.display = tab === 'single' ? 'block' : 'none'; const bp = $('reqBulkPane'); if (bp) bp.style.display = tab === 'bulk' ? 'block' : 'none'; }
 function addReqBulkDate(){ const d = $('reqBulkDate').value; if (!d) return toast('Select date','error'); const t = fmtDate(new Date()); if (d > t) return toast('Future date not allowed','error'); if (reqBulkDates.includes(d)) return toast('Already added','error'); reqBulkDates.push(d); renderReqBulkDates(); $('reqBulkDate').value = ''; }
 function renderReqBulkDates(){ if ($('reqBulkDates')) $('reqBulkDates').innerHTML = reqBulkDates.map(d => `<span class="chip">${fmtDatePretty(d)} <span onclick="removeReqBulkDate('${d}')" style="cursor:pointer;color:var(--rose-600);font-weight:800;">×</span></span>`).join(''); }
 function removeReqBulkDate(d){ reqBulkDates = reqBulkDates.filter(x=>x!==d); renderReqBulkDates(); }
-function getBrowserLocation(){
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) return reject(new Error('Geolocation not supported.'));
-    navigator.geolocation.getCurrentPosition(
-      pos => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
-      err => reject(new Error(err.code === 1 ? 'Location permission denied.' : 'Failed to get location.')),
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
-  });
-}
+function getBrowserLocation(){ return new Promise((resolve, reject) => { if (!navigator.geolocation) return reject(new Error('Geolocation not supported.')); navigator.geolocation.getCurrentPosition(pos => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }), err => reject(new Error(err.code === 1 ? 'Location permission denied.' : 'Failed to get location.')), { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }); }); }
 async function submitAttendanceRequest(){
   const date = $('reqDate').value, lt = $('reqLectureType').value, sub = $('reqSubject').value, reason = $('reqReason').value.trim();
   if (!date) return showFeedback('warning','Select a Date','Please pick a date to request attendance.');
@@ -2111,11 +1996,8 @@ async function submitAttendanceRequest(){
   try {
     const res = await fetch(`${API}/api/requests/submit`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: currentUser.rollNo, date, lectureType: lt, subject: sub || null, reason: reason || 'Attendance request' }) });
     const d = await res.json(); hideDL();
-    if (res.ok) {
-      $('reqDate').value = ''; $('reqSubject').value = ''; $('reqReason').value = '';
-      loadMyRequests();
-      showFeedback('success','Request Submitted',`Your attendance request has been sent to the admin.\n\n📅 Date: ${fmtDatePretty(date)}\n📖 Type: ${lt === 'full_day' ? 'Full Day' : 'Single Lecture'}${sub ? '\n📚 Subject: ' + sub : ''}`);
-    } else showFeedback('error','Request Failed', d.error || 'Could not submit request.');
+    if (res.ok) { $('reqDate').value = ''; $('reqSubject').value = ''; $('reqReason').value = ''; loadMyRequests(); showFeedback('success','Request Submitted',`Your attendance request has been sent to the admin.\n\n📅 Date: ${fmtDatePretty(date)}\n📖 Type: ${lt === 'full_day' ? 'Full Day' : 'Single Lecture'}${sub ? '\n📚 Subject: ' + sub : ''}`); }
+    else showFeedback('error','Request Failed', d.error || 'Could not submit request.');
   } catch(e) { hideDL(); showFeedback('error','Network Error', e.message); }
 }
 async function submitBulkAttendanceRequests(){
@@ -2124,12 +2006,7 @@ async function submitBulkAttendanceRequests(){
   showDL(`Submitting ${reqBulkDates.length} requests…`);
   try {
     let ok = 0, fail = 0; const failedDates = [];
-    for (const date of reqBulkDates) {
-      try {
-        const res = await fetch(`${API}/api/requests/submit`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: currentUser.rollNo, date, lectureType: lt, reason: reason || 'Bulk request' }) });
-        if (res.ok) ok++; else { fail++; failedDates.push(date); }
-      } catch(e) { fail++; failedDates.push(date); }
-    }
+    for (const date of reqBulkDates) { try { const res = await fetch(`${API}/api/requests/submit`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: currentUser.rollNo, date, lectureType: lt, reason: reason || 'Bulk request' }) }); if (res.ok) ok++; else { fail++; failedDates.push(date); } } catch(e) { fail++; failedDates.push(date); } }
     hideDL();
     reqBulkDates = []; renderReqBulkDates(); $('reqBulkReason').value = '';
     loadMyRequests();
@@ -2189,14 +2066,8 @@ async function loadAdminRequests(){
   } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
   observeNewContent();
 }
-async function approveRequest(id){
-  const note = prompt('Approval note (optional):') || '';
-  try { const res = await fetch(`${API}/api/requests/review/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, action: 'Approved', note }) }); const d = await res.json(); if (res.ok) { toast(d.message || 'Approved','success'); loadAdminRequests(); loadDashboardStats(); } else toast(d.error,'error'); } catch(e){ toast('Network error','error'); }
-}
-async function rejectRequest(id){
-  const note = prompt('Rejection reason (optional):') || '';
-  try { const res = await fetch(`${API}/api/requests/review/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, action: 'Rejected', note }) }); const d = await res.json(); if (res.ok) { toast('Rejected','success'); loadAdminRequests(); } else toast(d.error,'error'); } catch(e){ toast('Network error','error'); }
-}
+async function approveRequest(id){ const note = prompt('Approval note (optional):') || ''; try { const res = await fetch(`${API}/api/requests/review/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, action: 'Approved', note }) }); const d = await res.json(); if (res.ok) { toast(d.message || 'Approved','success'); loadAdminRequests(); loadDashboardStats(); } else toast(d.error,'error'); } catch(e){ toast('Network error','error'); } }
+async function rejectRequest(id){ const note = prompt('Rejection reason (optional):') || ''; try { const res = await fetch(`${API}/api/requests/review/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, action: 'Rejected', note }) }); const d = await res.json(); if (res.ok) { toast('Rejected','success'); loadAdminRequests(); } else toast(d.error,'error'); } catch(e){ toast('Network error','error'); } }
 async function bulkApproveAllRequests(){
   if (!confirm('Approve ALL pending?')) return;
   try {
@@ -2233,9 +2104,8 @@ async function loadDashboardStats(){
     const pl = $('adminPresentList');
     if (pl) {
       const list = (d.todayPresentStudents || []).slice().sort((a,b) => a.rollNo.localeCompare(b.rollNo, undefined, {numeric: true}));
-      if (list.length === 0) {
-        pl.innerHTML = '<div class="text-muted text-xs" style="padding:8px 0;">No students present yet.</div>';
-      } else {
+      if (list.length === 0) pl.innerHTML = '<div class="text-muted text-xs" style="padding:8px 0;">No students present yet.</div>';
+      else {
         const cse = list.filter(s => s.rollNo.startsWith('24CSE'));
         const aids = list.filter(s => s.rollNo.startsWith('24AIDS'));
         const others = list.filter(s => !s.rollNo.startsWith('24CSE') && !s.rollNo.startsWith('24AIDS'));
@@ -2345,11 +2215,7 @@ async function initStudent(){
   const reqLtEl = $('reqLectureType');
   if (reqLtEl && !reqLtEl._boundSubjects) {
     reqLtEl._boundSubjects = true;
-    reqLtEl.addEventListener('change', function() {
-      const grp = $('reqSubjectGroup');
-      if (grp) grp.style.display = (this.value === 'single_lecture') ? 'block' : 'none';
-      loadRequestSubjects();
-    });
+    reqLtEl.addEventListener('change', function() { const grp = $('reqSubjectGroup'); if (grp) grp.style.display = (this.value === 'single_lecture') ? 'block' : 'none'; loadRequestSubjects(); });
   }
   loadRequestSubjects();
 }
@@ -2361,33 +2227,19 @@ async function loadRequestSubjects(){
   const hint = $('reqSubjectHint');
   if (!s) return;
   if (lt === 'single_lecture') {
-    if (!d) {
-      s.innerHTML = '<option value="">Select a date first…</option>';
-      if (hint) hint.textContent = '— pick a date to load subjects';
-      return;
-    }
+    if (!d) { s.innerHTML = '<option value="">Select a date first…</option>'; if (hint) hint.textContent = '— pick a date to load subjects'; return; }
     const dateObj = new Date(d + 'T00:00:00');
     const dow = dateObj.getDay();
     const dayName = FULL_DAY_NAMES[dow];
     const branch = (currentUser && currentUser.branch) ? currentUser.branch : 'CSE';
     const daySubs = getTimetableForBranch(branch)[dayName] || [];
-    const subs = daySubs.filter(x =>
-      !x.includes('Sports') && !x.includes('LIB') && !x.includes('Library') &&
-      x.toLowerCase() !== 'lunch break'
-    );
-    if (!subs.length) {
-      s.innerHTML = '<option value="">No lectures scheduled on this day</option>';
-      if (hint) hint.textContent = `(${dayName} · ${branch})`;
-      return;
-    }
+    const subs = daySubs.filter(x => !x.includes('Sports') && !x.includes('LIB') && !x.includes('Library') && x.toLowerCase() !== 'lunch break');
+    if (!subs.length) { s.innerHTML = '<option value="">No lectures scheduled on this day</option>'; if (hint) hint.textContent = `(${dayName} · ${branch})`; return; }
     s.innerHTML = '<option value="">Select subject…</option>' + subs.map(x => `<option value="${x}">${x}</option>`).join('');
     if (hint) hint.textContent = `(${dayName} · ${branch})`;
   } else {
     if (hint) hint.textContent = '';
-    try {
-      const subs = await fetch(`${API}/api/timetable/subjects`).then(r => r.json());
-      s.innerHTML = '<option value="">Select subject…</option>' + (subs || []).map(x => `<option value="${x}">${x}</option>`).join('');
-    } catch(e){}
+    try { const subs = await fetch(`${API}/api/timetable/subjects`).then(r => r.json()); s.innerHTML = '<option value="">Select subject…</option>' + (subs || []).map(x => `<option value="${x}">${x}</option>`).join(''); } catch(e){}
   }
 }
 async function fetchHistory(){
@@ -2414,19 +2266,11 @@ async function loadStats(){
     if ($('statDaysPresent')) $('statDaysPresent').textContent = d.daysPresent || 0;
     const wdP = wd > 0 ? Math.round(((d.daysPresent || 0) / wd) * 100) : 0;
     if ($('statWorkingDaysPct')) $('statWorkingDaysPct').textContent = wdP + '%';
-
     const adv = $('advisorText');
     if (adv && d.totalConductedLectures > 0) {
-      const a = d.totalAcademicLectures || 0;
-      const t = d.totalConductedLectures || 0;
-      const p = d.attendancePercentage || 0;
-      if (p >= 75) {
-        const safeLectures = Math.max(0, Math.floor((a - 0.75 * t) / 0.75));
-        adv.innerHTML = `Safe zone (<b style="color:var(--emerald-700);">${p}%</b>). You can skip ~<b>${safeLectures}</b> lecture${safeLectures === 1 ? '' : 's'} safely.`;
-      } else {
-        const needLectures = Math.max(0, Math.ceil((0.75 * t - a) / 0.25));
-        adv.innerHTML = `Low attendance (<b style="color:var(--rose-700);">${p}%</b>). Attend <b>${needLectures}</b> more lecture${needLectures === 1 ? '' : 's'} to reach 75%.`;
-      }
+      const a = d.totalAcademicLectures || 0, t = d.totalConductedLectures || 0, p = d.attendancePercentage || 0;
+      if (p >= 75) { const safeLectures = Math.max(0, Math.floor((a - 0.75 * t) / 0.75)); adv.innerHTML = `Safe zone (<b style="color:var(--emerald-700);">${p}%</b>). You can skip ~<b>${safeLectures}</b> lecture${safeLectures === 1 ? '' : 's'} safely.`; }
+      else { const needLectures = Math.max(0, Math.ceil((0.75 * t - a) / 0.25)); adv.innerHTML = `Low attendance (<b style="color:var(--rose-700);">${p}%</b>). Attend <b>${needLectures}</b> more lecture${needLectures === 1 ? '' : 's'} to reach 75%.`; }
     } else if (adv) adv.textContent = 'No data yet.';
   } catch(e){}
   observeNewContent();
@@ -2513,11 +2357,7 @@ async function updateTrend(){
       }
     }
     if (trendChart) trendChart.destroy();
-    trendChart = new Chart(c, {
-      type: 'line',
-      data: { labels, datasets: [{ label: 'Attendance %', data: pctData, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.08)', borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#2563eb', pointBorderColor: '#fff', pointBorderWidth: 2, tension: 0.25, fill: true, spanGaps: false }] },
-      options: { responsive: true, maintainAspectRatio: false, animation: { duration: 800, easing: 'easeOutQuart' }, plugins: { legend: { display: false } }, scales: { y: { min:0, max:100, grid:{color:'#f1f5f9'}, ticks:{font:{size:10},color:'#94a3b8',callback:v=>v+'%'} }, x: { grid:{display:false}, ticks:{font:{size:9},color:'#94a3b8'} } } }
-    });
+    trendChart = new Chart(c, { type: 'line', data: { labels, datasets: [{ label: 'Attendance %', data: pctData, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.08)', borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#2563eb', pointBorderColor: '#fff', pointBorderWidth: 2, tension: 0.25, fill: true, spanGaps: false }] }, options: { responsive: true, maintainAspectRatio: false, animation: { duration: 800, easing: 'easeOutQuart' }, plugins: { legend: { display: false } }, scales: { y: { min:0, max:100, grid:{color:'#f1f5f9'}, ticks:{font:{size:10},color:'#94a3b8',callback:v=>v+'%'} }, x: { grid:{display:false}, ticks:{font:{size:9},color:'#94a3b8'} } } } });
   } catch(e){}
 }
 async function updatePeriod(){
@@ -2545,11 +2385,7 @@ async function updatePeriod(){
     const mins = now.getHours()*60 + now.getMinutes();
     const slots = schedule[dow] || [];
     let active = null;
-    for (const s of slots) {
-      const [sh,sm] = s.start.split(':').map(Number);
-      const [eh,em] = s.end.split(':').map(Number);
-      if (mins >= sh*60+sm && mins < eh*60+em) { active = s; break; }
-    }
+    for (const s of slots) { const [sh,sm] = s.start.split(':').map(Number); const [eh,em] = s.end.split(':').map(Number); if (mins >= sh*60+sm && mins < eh*60+em) { active = s; break; } }
     if (active && active.period !== 'LUNCH') { if ($('periodLabel')) $('periodLabel').textContent = `${active.start} – ${active.end}`; if ($('periodName')) $('periodName').textContent = active.subject; if ($('markPeriodBtn')) $('markPeriodBtn').disabled = false; window._activeSubject = active.subject; }
     else if (active && active.period === 'LUNCH') { if ($('periodLabel')) $('periodLabel').textContent = 'LUNCH BREAK'; if ($('periodName')) $('periodName').textContent = 'No active lecture'; if ($('markPeriodBtn')) $('markPeriodBtn').disabled = true; window._activeSubject = null; }
     else { if ($('periodLabel')) $('periodLabel').textContent = 'OFF HOURS'; if ($('periodName')) $('periodName').textContent = 'No active lecture'; if ($('markPeriodBtn')) $('markPeriodBtn').disabled = true; window._activeSubject = null; }
@@ -2576,11 +2412,7 @@ async function markFullDay(){
       const res = await fetch(`${API}/api/attendance/mark-fullday`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo, name: currentUser.name, latitude: pos.coords.latitude, longitude: pos.coords.longitude, passcode: pc.trim()})});
       const d = await res.json();
       hideDL();
-      if (res.ok) {
-        showFeedback('success', 'Attendance Marked', d.message || `Full day attendance marked successfully.`);
-        sendPushNotification('✅ Attendance Marked', `Full day marked for ${fmtDatePretty(today)}`, { type: 'mark', date: today });
-        fetchHistory(); if (subjectBreakdownOpen) loadSubjectBreakdown();
-      }
+      if (res.ok) { showFeedback('success', 'Attendance Marked', d.message || `Full day attendance marked successfully.`); sendPushNotification('✅ Attendance Marked', `Full day marked for ${fmtDatePretty(today)}`, { type: 'mark', date: today }); fetchHistory(); if (subjectBreakdownOpen) loadSubjectBreakdown(); }
       else showFeedback('error', 'Marking Failed', d.error || 'Could not mark attendance.');
     }, (err) => { hideDL(); showFeedback('error', 'Location Error', err.code === 1 ? 'Location permission denied. Please allow GPS.' : 'Location not available. Please try again.'); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   } catch(e){ hideDL(); showFeedback('error', 'Network Error', e.message); }
@@ -2600,11 +2432,7 @@ async function markActivePeriod(){
       const res = await fetch(`${API}/api/attendance/mark-lecture`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo, name: currentUser.name, subject: window._activeSubject, latitude: pos.coords.latitude, longitude: pos.coords.longitude, passcode: pc.trim()})});
       const d = await res.json();
       hideDL();
-      if (res.ok) {
-        showFeedback('success', 'Lecture Marked', `${window._activeSubject} — attendance marked.`);
-        sendPushNotification('✅ Lecture Marked', `${window._activeSubject} attendance recorded`, { type: 'mark_lecture', subject: window._activeSubject });
-        fetchHistory();
-      }
+      if (res.ok) { showFeedback('success', 'Lecture Marked', `${window._activeSubject} — attendance marked.`); sendPushNotification('✅ Lecture Marked', `${window._activeSubject} attendance recorded`, { type: 'mark_lecture', subject: window._activeSubject }); fetchHistory(); }
       else showFeedback('error', 'Marking Failed', d.error || 'Could not mark attendance.');
     }, (err) => { hideDL(); showFeedback('error', 'Location Error', err.code === 1 ? 'Location permission denied.' : 'Location not available.'); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   } catch(e){ hideDL(); showFeedback('error', 'Network Error', e.message); }
@@ -2629,14 +2457,7 @@ async function generateIndividualPDF(studentRoll, studentName, branch, range, mo
     const endD = new Date(rng.end + 'T23:59:59');
     while (cur <= endD) { const ds = fmtDate(cur); const dow = cur.getDay(); if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) { const subs = (tt[FULL_DAY_NAMES[dow]] || []).filter(s => !s.includes('Sports') && !s.includes('LIB') && !s.includes('Library')); totalConducted += subs.length; } cur.setDate(cur.getDate()+1); }
     const pct = totalConducted > 0 ? Math.round((totalAttended/totalConducted)*100) : 0;
-    const blob = generatePDFBlob(
-      'Student Attendance Report',
-      `${studentName} (${studentRoll})`,
-      [`Branch: ${branch} · 5th Semester`, `Range: ${fmtDatePretty(rng.start)} → ${fmtDatePretty(rng.end)}`],
-      ['Date', 'Subject', 'Status'],
-      records.sort((a,b) => b.date.localeCompare(a.date)).map(r => [fmtDatePretty(r.date), r.subject, r.status]),
-      [`Attended: ${totalAttended}    |    Conducted: ${totalConducted}    |    Percentage: ${pct}%`]
-    );
+    const blob = generatePDFBlob('Student Attendance Report', `${studentName} (${studentRoll})`, [`Branch: ${branch} · 5th Semester`, `Range: ${fmtDatePretty(rng.start)} → ${fmtDatePretty(rng.end)}`], ['Date', 'Subject', 'Status'], records.sort((a,b) => b.date.localeCompare(a.date)).map(r => [fmtDatePretty(r.date), r.subject, r.status]), [`Attended: ${totalAttended}    |    Conducted: ${totalConducted}    |    Percentage: ${pct}%`]);
     hideDL();
     if (!blob) return toast('PDF library failed to load','error');
     const filename = `attendance_${studentRoll}_${Date.now()}.pdf`;
@@ -2668,14 +2489,7 @@ async function generateClassReport(){
     const data = await fetch(url).then(r=>r.json());
     if (!data.students || data.students.length === 0) { hideDL(); return toast('No students','error'); }
     const rows = data.students.map((x,i)=>[i+1, x.rollNo, x.name, x.totalPresent, x.percentage+'%']);
-    const blob = generatePDFBlob(
-      'Class Attendance Report',
-      `${b === 'ALL' ? 'All Branches' : b} – 5th Semester`,
-      [`Range: ${fmtDatePretty(s)} to ${fmtDatePretty(e)}`],
-      ['S.No', 'Roll', 'Name', 'Present', '%'],
-      rows,
-      null
-    );
+    const blob = generatePDFBlob('Class Attendance Report', `${b === 'ALL' ? 'All Branches' : b} – 5th Semester`, [`Range: ${fmtDatePretty(s)} to ${fmtDatePretty(e)}`], ['S.No', 'Roll', 'Name', 'Present', '%'], rows, null);
     hideDL();
     if (!blob) return toast('PDF library failed','error');
     universalDownload(blob, `class_report_${b}_${Date.now()}.pdf`);
@@ -2700,18 +2514,7 @@ async function loadBulkStudents(){
     const students = data.filter(u => u.role === 'student' && (u.branch === b || u.rollNo.startsWith(b === 'CSE' ? '24CSE' : '24AIDS')));
     if ($('bulkStudents')) {
       const sorted = students.sort((a,b) => a.rollNo.localeCompare(b.rollNo, undefined, {numeric: true}));
-      $('bulkStudents').innerHTML =
-        `<label class="bulk-select-item" style="font-weight:700;border-bottom:1px solid var(--slate-200);margin-bottom:6px;padding-bottom:8px;">
-          <input type="checkbox" onchange="document.querySelectorAll('.bulk-stu').forEach(c=>c.checked=this.checked)">
-          <span class="bulk-name" style="font-weight:700;color:var(--slate-900);">Select All (${sorted.length})</span>
-        </label>` +
-        sorted.map(s =>
-          `<label class="bulk-select-item">
-            <input type="checkbox" class="bulk-stu" value="${escapeHtml(s.rollNo)}" data-name="${escapeHtml(s.name)}">
-            <span class="bulk-roll">${escapeHtml(s.rollNo)}</span>
-            <span class="bulk-name">${escapeHtml(s.name)}</span>
-          </label>`
-        ).join('');
+      $('bulkStudents').innerHTML = `<label class="bulk-select-item" style="font-weight:700;border-bottom:1px solid var(--slate-200);margin-bottom:6px;padding-bottom:8px;"><input type="checkbox" onchange="document.querySelectorAll('.bulk-stu').forEach(c=>c.checked=this.checked)"><span class="bulk-name" style="font-weight:700;color:var(--slate-900);">Select All (${sorted.length})</span></label>` + sorted.map(s => `<label class="bulk-select-item"><input type="checkbox" class="bulk-stu" value="${escapeHtml(s.rollNo)}" data-name="${escapeHtml(s.name)}"><span class="bulk-roll">${escapeHtml(s.rollNo)}</span><span class="bulk-name">${escapeHtml(s.name)}</span></label>`).join('');
     }
   } catch(e){ console.error('loadBulkStudents error:', e); }
 }
@@ -2762,12 +2565,7 @@ async function fetchTeacherStudents(){
   try {
     const data = await fetch(`${API}/api/teacher/students/${currentUser.rollNo}`).then(x=>x.json());
     const tb = $('facStudentsBody');
-    if (!data || !data.length) {
-      tb.innerHTML = '<tr><td colspan="3" class="empty">No students</td></tr>';
-      $('facTotalStudents').textContent = '0';
-      $('facBulkStudents').innerHTML = '<div class="empty">No students</div>';
-      return;
-    }
+    if (!data || !data.length) { tb.innerHTML = '<tr><td colspan="3" class="empty">No students</td></tr>'; $('facTotalStudents').textContent = '0'; $('facBulkStudents').innerHTML = '<div class="empty">No students</div>'; return; }
     window._facStudents = data;
     $('facMarkStudent').innerHTML = '<option value="">Select Student…</option>' + data.map(s=>`<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`).join('');
     const fr = $('facReportStudent');
@@ -2775,27 +2573,10 @@ async function fetchTeacherStudents(){
     $('facTotalStudents').textContent = data.length;
     tb.innerHTML = data.map(s => `<tr><td><b>${s.rollNo}</b></td><td>${s.name}</td><td><button class="btn btn-outline btn-xs" onclick="viewStudentRecords('${s.rollNo}')">View</button></td></tr>`).join('');
     const sorted = data.sort((a,b) => a.rollNo.localeCompare(b.rollNo, undefined, {numeric: true}));
-    $('facBulkStudents').innerHTML =
-      `<label class="bulk-select-item" style="font-weight:700;border-bottom:1px solid var(--slate-200);margin-bottom:6px;padding-bottom:8px;">
-        <input type="checkbox" onchange="document.querySelectorAll('.fac-bulk-stu').forEach(c=>c.checked=this.checked)">
-        <span class="bulk-name" style="font-weight:700;color:var(--slate-900);">Select All (${sorted.length})</span>
-      </label>` +
-      sorted.map(s =>
-        `<label class="bulk-select-item">
-          <input type="checkbox" class="fac-bulk-stu" value="${escapeHtml(s.rollNo)}" data-name="${escapeHtml(s.name)}">
-          <span class="bulk-roll">${escapeHtml(s.rollNo)}</span>
-          <span class="bulk-name">${escapeHtml(s.name)}</span>
-        </label>`
-      ).join('');
+    $('facBulkStudents').innerHTML = `<label class="bulk-select-item" style="font-weight:700;border-bottom:1px solid var(--slate-200);margin-bottom:6px;padding-bottom:8px;"><input type="checkbox" onchange="document.querySelectorAll('.fac-bulk-stu').forEach(c=>c.checked=this.checked)"><span class="bulk-name" style="font-weight:700;color:var(--slate-900);">Select All (${sorted.length})</span></label>` + sorted.map(s => `<label class="bulk-select-item"><input type="checkbox" class="fac-bulk-stu" value="${escapeHtml(s.rollNo)}" data-name="${escapeHtml(s.name)}"><span class="bulk-roll">${escapeHtml(s.rollNo)}</span><span class="bulk-name">${escapeHtml(s.name)}</span></label>`).join('');
     const today = fmtDate(new Date());
     let present = 0, absent = 0, presentNames = [];
-    for (const s of data) {
-      try {
-        const recs = await fetch(`${API}/api/attendance/student/${s.rollNo}/${currentUser.rollNo}`).then(x=>x.json());
-        const todayRecs = recs.filter(r => r.date === today && (window._facSubs||[]).includes(r.subject));
-        if (todayRecs.some(r => r.status === 'Present' || r.status === 'Duty Leave')) { present++; presentNames.push(s); } else absent++;
-      } catch(e){}
-    }
+    for (const s of data) { try { const recs = await fetch(`${API}/api/attendance/student/${s.rollNo}/${currentUser.rollNo}`).then(x=>x.json()); const todayRecs = recs.filter(r => r.date === today && (window._facSubs||[]).includes(r.subject)); if (todayRecs.some(r => r.status === 'Present' || r.status === 'Duty Leave')) { present++; presentNames.push(s); } else absent++; } catch(e){} }
     $('facTodayPresent').textContent = present;
     $('facTodayAbsent').textContent = absent;
     try { const avg = await fetch(`${API}/api/teacher/class-average/${currentUser.rollNo}`).then(x=>x.json()); $('facClassAvg').textContent = (avg.average||0) + '%'; } catch(e){}
@@ -2816,7 +2597,7 @@ async function applyLeave(){ const f = $('leaveFrom').value, t = $('leaveTo').va
 async function loadMyLeaves(){ try { const data = await fetch(`${API}/api/leave/my/${currentUser.rollNo}`).then(x=>x.json()); const el = $('myLeaveList'); el.innerHTML = data.length ? data.map(l => `<div style="padding:10px 0;border-bottom:1px solid var(--slate-100);"><div style="display:flex;justify-content:space-between;"><b>${fmtDatePretty(l.fromDate)} → ${fmtDatePretty(l.toDate)}</b> <span class="badge ${l.status==='Approved'?'badge-success':l.status==='Rejected'?'badge-danger':'badge-warning'}">${l.status}</span></div><div class="text-xs text-muted mt-1">${l.leaveType}: ${l.reason}</div></div>`).join('') : '<div class="empty">No applications</div>'; } catch(e){} observeNewContent(); }
 
 /* ============================================================
-   CHAT — body lock ONLY when chat is open
+   CHAT
    ============================================================ */
 function toggleContext(){ useContextMode = !useContextMode; const b = $('ctxToggle'); if (b) { b.classList.toggle('active', useContextMode); const l = b.querySelector('.ctx-label'); if (l) l.textContent = useContextMode ? 'Context On' : 'Context'; } toast(useContextMode ? 'Context ON' : 'Context OFF', useContextMode ? 'success' : 'info'); if ($('chatPanel').classList.contains('open')) { const m = $('chatMsgs'); if (!m.querySelector('.msg')) renderChatWelcome(); } }
 function toggleDatabase(){ useDatabaseMode = !useDatabaseMode; const b = $('dbToggle'); if (b) { b.classList.toggle('active', useDatabaseMode); const l = b.querySelector('.db-label'); if (l) l.textContent = useDatabaseMode ? 'Database On' : 'Database'; } toast(useDatabaseMode ? 'Database ON' : 'Database OFF', useDatabaseMode ? 'success' : 'info'); if ($('chatPanel').classList.contains('open')) { const m = $('chatMsgs'); if (!m.querySelector('.msg')) renderChatWelcome(); } }
@@ -2825,27 +2606,13 @@ function toggleChat(){
   const p = $('chatPanel');
   if (!p) return;
   p.classList.toggle('open');
-  if (p.classList.contains('open')) {
-    lockBodyScroll(true);
-    chatGreeted = false;
-    fetchChatHistory();
-    renderChatWelcome();
-  } else {
-    lockBodyScroll(false);
-    if (openDownloadMenuId) {
-      const m = document.getElementById(openDownloadMenuId);
-      if (m) m.classList.remove('open');
-      openDownloadMenuId = null;
-    }
-    const sb = $('chatSidebar');
-    if (sb) sb.classList.remove('open');
-  }
+  if (p.classList.contains('open')) { lockBodyScroll(true); chatGreeted = false; fetchChatHistory(); renderChatWelcome(); }
+  else { lockBodyScroll(false); if (openDownloadMenuId) { const m = document.getElementById(openDownloadMenuId); if (m) m.classList.remove('open'); openDownloadMenuId = null; } const sb = $('chatSidebar'); if (sb) sb.classList.remove('open'); }
 }
 function toggleChatSidebar(){ const s = $('chatSidebar'); if (s) s.classList.toggle('open'); }
 
 document.addEventListener('click', (e) => {
-  const sidebar = $('chatSidebar');
-  const panel = $('chatPanel');
+  const sidebar = $('chatSidebar'); const panel = $('chatPanel');
   if (!sidebar || !panel) return;
   if (!sidebar.classList.contains('open')) return;
   if (sidebar.contains(e.target)) return;
@@ -2859,10 +2626,7 @@ function renderChatWelcome(){
   const now = new Date(); const hour = now.getHours();
   let greeting = 'Hello'; if (hour < 12) greeting = 'Good morning'; else if (hour < 17) greeting = 'Good afternoon'; else greeting = 'Good evening';
   const name = currentUser ? currentUser.name : 'there';
-  if (!useContextMode && !useDatabaseMode) {
-    el.innerHTML = `<div class="chat-welcome"><div class="greeting-emoji"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg></div><div><strong>${greeting}, ${name}!</strong> I'm <strong>BM Bot</strong>.</div><div style="margin-top:8px;">Turn on <b>Context</b> for personal data or <b>Database</b> for commands.</div><div style="font-size:11.5px;margin-top:10px;color:var(--slate-400);">Ask me anything — notes, coding, general help.</div></div>`;
-    return;
-  }
+  if (!useContextMode && !useDatabaseMode) { el.innerHTML = `<div class="chat-welcome"><div class="greeting-emoji"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg></div><div><strong>${greeting}, ${name}!</strong> I'm <strong>BM Bot</strong>.</div><div style="margin-top:8px;">Turn on <b>Context</b> for personal data or <b>Database</b> for commands.</div><div style="font-size:11.5px;margin-top:10px;color:var(--slate-400);">Ask me anything — notes, coding, general help.</div></div>`; return; }
   const role = currentUser ? currentUser.role : 'student';
   let extra = '';
   if (useContextMode && !useDatabaseMode) extra = `<div style="margin-top:12px;font-size:12px;text-align:left;background:#ecfdf5;padding:12px 14px;border-radius:10px;color:#065f46;border:1px solid #a7f3d0;"><b>✅ Context ON</b> — Ask about attendance, timetable, holidays.</div>`;
@@ -2883,17 +2647,7 @@ function autoResizeTextarea(el){ el.style.height = 'auto'; el.style.height = Mat
 function createAIThinkingIndicator(l){
   const d = document.createElement('div');
   d.className = 'msg bot';
-  d.innerHTML = `<div class="bubble ai-thinking-bubble">
-    <div class="ai-avatar"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg></div>
-    <div class="ai-thinking-content">
-      <div class="ai-thinking-top">
-        <span class="ai-thinking-text">${escapeHtml(l||'Thinking')}</span>
-        <span class="ai-dots"><span></span><span></span><span></span></span>
-        <span class="ai-timer">0.0s</span>
-      </div>
-      <div class="ai-progress-bar"></div>
-    </div>
-  </div>`;
+  d.innerHTML = `<div class="bubble ai-thinking-bubble"><div class="ai-avatar"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg></div><div class="ai-thinking-content"><div class="ai-thinking-top"><span class="ai-thinking-text">${escapeHtml(l||'Thinking')}</span><span class="ai-dots"><span></span><span></span><span></span></span><span class="ai-timer">0.0s</span></div><div class="ai-progress-bar"></div></div></div>`;
   return d;
 }
 function startThinkingTimer(el){ thinkingStartTime = Date.now(); if (thinkingTimerId) clearInterval(thinkingTimerId); const t = el.querySelector('.ai-timer'); thinkingTimerId = setInterval(() => { if (!t) return; const s = (Date.now() - thinkingStartTime) / 1000; t.textContent = s.toFixed(1) + 's'; }, 100); }
@@ -2917,14 +2671,10 @@ async function sendChat(){
   const w = $('chatMsgs').querySelector('.chat-welcome'); if (w) w.remove();
   const userWantsDL = DOWNLOAD_KEYWORDS.some(k => msg.toLowerCase().includes(k));
   if (pendingChatFile) {
-    const fd = pendingChatFile;
-    const isImage = fd.mimeType.startsWith('image/');
-    const fileLabel = isImage ? 'image' : getFileTypeLabel(fd.mimeType);
-    appendChat('user', `[${fd.name}]${msg ? ' — ' + msg : ''}`);
-    clearChatFile();
+    const fd = pendingChatFile; const isImage = fd.mimeType.startsWith('image/'); const fileLabel = isImage ? 'image' : getFileTypeLabel(fd.mimeType);
+    appendChat('user', `[${fd.name}]${msg ? ' — ' + msg : ''}`); clearChatFile();
     const typing = createAIThinkingIndicator(isImage ? 'Analyzing image' : `Reading ${fileLabel}`);
-    $('chatMsgs').appendChild(typing); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
-    startThinkingTimer(typing);
+    $('chatMsgs').appendChild(typing); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight; startThinkingTimer(typing);
     try {
       const res = await fetch(`${API}/api/ai/chat-with-file`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: msg || (isImage ? 'Explain this image.' : `Analyze this file.`), fileBase64: fd.base64, mimeType: fd.mimeType, rollNo: currentUser.rollNo, role: currentUser.role, name: currentUser.name, branch: currentUser.branch, threadId: currentThreadId }) });
       let d; try { d = await res.json(); } catch(_) { d = {}; }
@@ -2938,8 +2688,7 @@ async function sendChat(){
   }
   appendChat('user', msg);
   const typing = createAIThinkingIndicator(useDatabaseMode ? 'Checking database…' : 'Thinking');
-  $('chatMsgs').appendChild(typing); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
-  startThinkingTimer(typing);
+  $('chatMsgs').appendChild(typing); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight; startThinkingTimer(typing);
   try {
     const res = await fetch(`${API}/api/ai/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg, rollNo: currentUser.rollNo, role: currentUser.role, name: currentUser.name, branch: currentUser.branch, threadId: currentThreadId, skipGreeting: chatGreeted, useContext: useContextMode, useDatabase: useDatabaseMode }) });
     let d; try { d = await res.json(); } catch(_) { d = {}; }
@@ -2961,16 +2710,7 @@ async function sendChat(){
 function renderLocationRequest(explanation){
   const div = document.createElement('div'); div.className = 'msg bot';
   const opId = 'locreq_' + Date.now(); div.id = opId;
-  div.innerHTML = `
-    <div class="bubble" style="border-left:4px solid #6d28d9;background:linear-gradient(135deg,#fff,#f3e8ff);max-width:95%;">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span style="background:#6d28d9;color:#fff;padding:4px 11px;border-radius:7px;font-size:10.5px;font-weight:800;">📍 LOCATION REQUIRED</span></div>
-      <div style="font-size:13px;color:#0f172a;font-weight:600;margin-bottom:12px;">${escapeHtml(explanation)}</div>
-      <div style="font-size:11.5px;color:#6d28d9;background:#f3e8ff;padding:10px 12px;border-radius:8px;margin-bottom:12px;line-height:1.6;">📌 Within 100m of BM Group campus.</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-purple btn-sm" onclick="shareLocationForRequest('${opId}')">📍 Share Location</button>
-        <button class="btn btn-outline btn-sm" onclick="document.getElementById('${opId}').remove(); pendingLocationRequest = null;">❌ Cancel</button>
-      </div>
-    </div>`;
+  div.innerHTML = `<div class="bubble" style="border-left:4px solid #6d28d9;background:linear-gradient(135deg,#fff,#f3e8ff);max-width:95%;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span style="background:#6d28d9;color:#fff;padding:4px 11px;border-radius:7px;font-size:10.5px;font-weight:800;">📍 LOCATION REQUIRED</span></div><div style="font-size:13px;color:#0f172a;font-weight:600;margin-bottom:12px;">${escapeHtml(explanation)}</div><div style="font-size:11.5px;color:#6d28d9;background:#f3e8ff;padding:10px 12px;border-radius:8px;margin-bottom:12px;line-height:1.6;">📌 Within 100m of BM Group campus.</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-purple btn-sm" onclick="shareLocationForRequest('${opId}')">📍 Share Location</button><button class="btn btn-outline btn-sm" onclick="document.getElementById('${opId}').remove(); pendingLocationRequest = null;">❌ Cancel</button></div></div>`;
   $('chatMsgs').appendChild(div); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
 }
 async function shareLocationForRequest(opId){
@@ -2982,39 +2722,22 @@ async function shareLocationForRequest(opId){
     const loc = await getBrowserLocation();
     reqDiv.remove();
     const typing = createAIThinkingIndicator('Verifying…');
-    $('chatMsgs').appendChild(typing); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
-    startThinkingTimer(typing);
+    $('chatMsgs').appendChild(typing); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight; startThinkingTimer(typing);
     const res = await fetch(`${API}/api/ai/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: pendingLocationRequest?.originalMessage || 'mark today\'s attendance', rollNo: currentUser.rollNo, role: currentUser.role, name: currentUser.name, branch: currentUser.branch, threadId: currentThreadId, skipGreeting: true, useContext: useContextMode, useDatabase: true, location: { latitude: loc.latitude, longitude: loc.longitude } }) });
     let d; try { d = await res.json(); } catch(_) { d = {}; }
     const tSec = stopThinkingTimer(); typing.remove();
     if (d.threadId) { currentThreadId = d.threadId; fetchChatHistory(); }
-    if (d.reply) {
-      appendChat('bot', d.reply, true, false, tSec, 'location verified');
-      if (/marked|success|ho gaya|done|✅/i.test(d.reply)) {
-        sendPushNotification('✅ Attendance Marked', 'Chatbot marked attendance', { type: 'chat_mark' });
-      }
-    }
+    if (d.reply) { appendChat('bot', d.reply, true, false, tSec, 'location verified'); if (/marked|success|ho gaya|done|✅/i.test(d.reply)) sendPushNotification('✅ Attendance Marked', 'Chatbot marked attendance', { type: 'chat_mark' }); }
     else appendChat('bot', '❌ ' + (d.error || 'Failed.'));
     pendingLocationRequest = null;
     if (currentUser.role === 'student') fetchHistory();
-  } catch(e) {
-    if (btn) { btn.disabled = false; btn.textContent = '📍 Share Location'; }
-    toast('Location error: ' + e.message, 'error');
-  }
+  } catch(e) { if (btn) { btn.disabled = false; btn.textContent = '📍 Share Location'; } toast('Location error: ' + e.message, 'error'); }
 }
 function renderDbConfirmation(op, explanation) {
   const div = document.createElement('div'); div.className = 'msg bot';
   const opType = (op.action || 'db_op').toString().toUpperCase().replace('DB_', '');
   const opId = 'dbconfirm_' + Date.now(); div.id = opId;
-  div.innerHTML = `
-    <div class="bubble" style="border-left:4px solid #1e40af;background:#fff;max-width:95%;">
-      <div style="margin-bottom:10px;"><span style="background:#1e40af;color:#fff;padding:4px 11px;border-radius:7px;font-size:10.5px;font-weight:800;">⚠️ ${escapeHtml(opType)}</span></div>
-      <div style="font-size:13px;font-weight:600;margin-bottom:12px;">${escapeHtml(explanation || 'Confirm?')}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-danger btn-sm" onclick='confirmDbOp(${JSON.stringify(op).replace(/'/g, "&apos;")}, this)'>✅ Confirm</button>
-        <button class="btn btn-outline btn-sm" onclick="document.getElementById('${opId}').remove()">❌ Cancel</button>
-      </div>
-    </div>`;
+  div.innerHTML = `<div class="bubble" style="border-left:4px solid #1e40af;background:#fff;max-width:95%;"><div style="margin-bottom:10px;"><span style="background:#1e40af;color:#fff;padding:4px 11px;border-radius:7px;font-size:10.5px;font-weight:800;">⚠️ ${escapeHtml(opType)}</span></div><div style="font-size:13px;font-weight:600;margin-bottom:12px;">${escapeHtml(explanation || 'Confirm?')}</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-danger btn-sm" onclick='confirmDbOp(${JSON.stringify(op).replace(/'/g, "&apos;")}, this)'>✅ Confirm</button><button class="btn btn-outline btn-sm" onclick="document.getElementById('${opId}').remove()">❌ Cancel</button></div></div>`;
   $('chatMsgs').appendChild(div); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
 }
 async function confirmDbOp(op, btnEl) {
@@ -3023,10 +2746,7 @@ async function confirmDbOp(op, btnEl) {
     const res = await fetch(`${API}/api/ai/chat/confirm-db`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ operation: op, rollNo: currentUser.rollNo }) });
     const d = await res.json();
     const m = btnEl ? btnEl.closest('.msg') : null; if (m) m.remove();
-    if (res.ok && d.reply) {
-      appendChat('bot', d.reply, true, false, 2, op.explanation || 'DB op');
-      sendPushNotification('✅ Command Executed', op.action || 'Database operation complete', { type: 'db_op' });
-    }
+    if (res.ok && d.reply) { appendChat('bot', d.reply, true, false, 2, op.explanation || 'DB op'); sendPushNotification('✅ Command Executed', op.action || 'Database operation complete', { type: 'db_op' }); }
     else appendChat('bot', '❌ ' + (d.error || 'Failed'));
   } catch(e) { if (btnEl) { btnEl.disabled = false; btnEl.textContent = '✅ Confirm'; } toast('Failed: ' + e.message, 'error'); }
 }
@@ -3041,11 +2761,8 @@ function appendChat(role, text, renderMD, showDL, tSec, umsg){
     const stepsHtml = steps.map(s => `<span class="tb-step">${escapeHtml(s)}</span>`).join('');
     thoughtHtml = `<div class="thought-badge" onclick="this.classList.toggle('expanded')"><div class="tb-head"><svg class="tb-icon" viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-6.88 17.24c.42.38.68.93.68 1.5V22h12.4v-1.26c0-.57.26-1.12.68-1.5A10 10 0 0 0 12 2z"/></svg><span class="tb-text">Thought for <b>${tSec}</b>s</span><svg class="tb-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div><div class="tb-body">${stepsHtml}</div></div>`;
   }
-  if (role === 'bot') {
-    actions = `<div class="msg-actions"><button class="msg-action-btn" onclick="copyMessageText(this, '${id}')"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy</button>`;
-    if (showDL) actions += `<button class="msg-action-btn download-btn" onclick="toggleDownloadMenu(event, '${id}')"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download</button><div class="dl-menu" id="dlmenu_${id}"><div class="dl-menu-title">Download as</div><button onclick="downloadMessagePDF('${id}')">PDF</button><button onclick="downloadMessageTXT('${id}')">Text File</button><button onclick="downloadMessageExcel('${id}')">Excel</button></div>`;
-    actions += `</div>`;
-  } else if (role === 'user') actions = `<div class="msg-actions"><button class="msg-action-btn" onclick="copyMessageText(this, '${id}')"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy</button></div>`;
+  if (role === 'bot') { actions = `<div class="msg-actions"><button class="msg-action-btn" onclick="copyMessageText(this, '${id}')"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy</button>`; if (showDL) actions += `<button class="msg-action-btn download-btn" onclick="toggleDownloadMenu(event, '${id}')"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download</button><div class="dl-menu" id="dlmenu_${id}"><div class="dl-menu-title">Download as</div><button onclick="downloadMessagePDF('${id}')">PDF</button><button onclick="downloadMessageTXT('${id}')">Text File</button><button onclick="downloadMessageExcel('${id}')">Excel</button></div>`; actions += `</div>`; }
+  else if (role === 'user') actions = `<div class="msg-actions"><button class="msg-action-btn" onclick="copyMessageText(this, '${id}')"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy</button></div>`;
   div.innerHTML = `${thoughtHtml}<div class="bubble" id="${id}" data-raw="${encodeURIComponent(text)}">${content}<span class="time">${time}</span></div>${actions}`;
   $('chatMsgs').appendChild(div); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
 }
@@ -3054,33 +2771,19 @@ function toggleDownloadMenu(e, msgId){ if (e && e.stopPropagation) e.stopPropaga
 function getMessageText(msgId){ const el = document.getElementById(msgId); if (!el) return ''; return decodeURIComponent(el.dataset.raw || ''); }
 function downloadMessagePDF(msgId){
   try {
-    const text = getMessageText(msgId);
-    if (!text) return toast('Nothing to download','error');
-    const JsPDF = ensureJsPDF();
-    if (!JsPDF) return;
+    const text = getMessageText(msgId); if (!text) return toast('Nothing to download','error');
+    const JsPDF = ensureJsPDF(); if (!JsPDF) return;
     const doc = new JsPDF();
-    doc.setFillColor(37, 99, 235);
-    doc.rect(0, 0, 210, 22, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(15);
-    doc.setFont(undefined, 'bold');
+    doc.setFillColor(37, 99, 235); doc.rect(0, 0, 210, 22, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFontSize(15); doc.setFont(undefined, 'bold');
     doc.text('BM Group · BM Bot', 105, 14, { align: 'center' });
-    doc.setTextColor(15, 23, 42);
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'normal');
-    const lines = doc.splitTextToSize(text, 182);
-    let y = 32;
+    doc.setTextColor(15, 23, 42); doc.setFontSize(10); doc.setFont(undefined, 'normal');
+    const lines = doc.splitTextToSize(text, 182); let y = 32;
     const pageH = doc.internal.pageSize.height;
-    lines.forEach(line => {
-      if (y > pageH - 15) { doc.addPage(); y = 20; }
-      doc.text(line, 14, y);
-      y += 5.5;
-    });
+    lines.forEach(line => { if (y > pageH - 15) { doc.addPage(); y = 20; } doc.text(line, 14, y); y += 5.5; });
     const blob = doc.output('blob');
     universalDownload(blob, `bm-bot-${Date.now()}.pdf`);
-    const menu = document.getElementById('dlmenu_' + msgId);
-    if (menu) menu.classList.remove('open');
-    openDownloadMenuId = null;
+    const menu = document.getElementById('dlmenu_' + msgId); if (menu) menu.classList.remove('open'); openDownloadMenuId = null;
   } catch(e) { toast('Failed: ' + e.message, 'error'); }
 }
 function downloadMessageTXT(msgId){ try { const text = getMessageText(msgId); if (!text) return toast('Nothing','error'); const blob = new Blob([text], { type: 'text/plain;charset=utf-8' }); universalDownload(blob, `bm-bot-${Date.now()}.txt`); const m = document.getElementById('dlmenu_' + msgId); if (m) m.classList.remove('open'); openDownloadMenuId = null; } catch(e){ toast('Failed','error'); } }
@@ -3096,116 +2799,49 @@ function getRangeForSelection(range, month){ let s, e; if (range === 'FULL_SEMES
 /* ============================================================
    FCM PUSH NOTIFICATIONS
    ============================================================ */
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyBBD3V20eKCo8S9Smi6LY--klDj-pBVXYQ",
-  authDomain: "bm-attedance.firebaseapp.com",
-  projectId: "bm-attedance",
-  storageBucket: "bm-attedance.firebasestorage.app",
-  messagingSenderId: "760728083416",
-  appId: "1:760728083416:web:0ff3d79ac1b5d89ab5f0ad"
-};
+const FIREBASE_CONFIG = { apiKey: "AIzaSyBBD3V20eKCo8S9Smi6LY--klDj-pBVXYQ", authDomain: "bm-attedance.firebaseapp.com", projectId: "bm-attedance", storageBucket: "bm-attedance.firebasestorage.app", messagingSenderId: "760728083416", appId: "1:760728083416:web:0ff3d79ac1b5d89ab5f0ad" };
 const VAPID_PUBLIC_KEY = "BPgV9AtuPSDUJWdIb-nu-MvD38XngpQXVj7cyrhZGGHxaL6upFPfxth6l_e1gYXOwL9bU1pnmxPYj0AzYX1jYlM";
 let firebaseApp = null, firebaseMessaging = null;
 
-async function initFirebase(){
-  if (firebaseApp) return firebaseApp;
-  try {
-    if (isMedianApp()) { console.log('[FCM] In Median app — skipping web Firebase init'); return null; }
-    if (!window.firebase || !firebase.messaging) { console.warn('[FCM] Firebase SDK not loaded'); return null; }
-    if (!firebase.apps || !firebase.apps.length) firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
-    else firebaseApp = firebase.app();
-    try { firebaseMessaging = firebase.messaging(); } catch(e) { console.warn('[FCM] messaging init failed:', e.message); return null; }
-    return firebaseApp;
-  } catch(e) { console.warn('[FCM] init error:', e.message); return null; }
-}
-async function registerServiceWorker(){
-  if (!('serviceWorker' in navigator)) return null;
-  try { const basePath = window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, ''); const swPath = `${basePath}/firebase-messaging-sw.js`; const reg = await navigator.serviceWorker.register(swPath, { scope: `${basePath}/` }); console.log('[FCM] SW registered at:', reg.scope); return reg; } catch(e) { console.warn('[FCM] SW registration failed:', e.message); return null; }
-}
-async function enableNotifications(){
-  const btn = $('notifBtn');
-  if (btn) { btn.disabled = true; }
-  try {
-    toast('Setting up notifications…', 'info');
-    if (isMedianApp() && window.median.firebaseMessaging) { console.log('[FCM] Median app mode'); await enableMedianNotifications(); if (btn) btn.disabled = false; return; }
-    console.log('[FCM] Browser Web Push mode');
-    await enableBrowserNotifications();
-  } catch(e) { console.error('[FCM] Enable error:', e); showFeedback('error', 'Setup Failed', e.message || 'Could not enable notifications.'); }
-  finally { if (btn) btn.disabled = false; }
-}
+async function initFirebase(){ if (firebaseApp) return firebaseApp; try { if (isMedianApp()) { console.log('[FCM] In Median app — skipping web Firebase init'); return null; } if (!window.firebase || !firebase.messaging) { console.warn('[FCM] Firebase SDK not loaded'); return null; } if (!firebase.apps || !firebase.apps.length) firebaseApp = firebase.initializeApp(FIREBASE_CONFIG); else firebaseApp = firebase.app(); try { firebaseMessaging = firebase.messaging(); } catch(e) { console.warn('[FCM] messaging init failed:', e.message); return null; } return firebaseApp; } catch(e) { console.warn('[FCM] init error:', e.message); return null; } }
+async function registerServiceWorker(){ if (!('serviceWorker' in navigator)) return null; try { const basePath = window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, ''); const swPath = `${basePath}/firebase-messaging-sw.js`; const reg = await navigator.serviceWorker.register(swPath, { scope: `${basePath}/` }); console.log('[FCM] SW registered at:', reg.scope); return reg; } catch(e) { console.warn('[FCM] SW registration failed:', e.message); return null; } }
+async function enableNotifications(){ const btn = $('notifBtn'); if (btn) { btn.disabled = true; } try { toast('Setting up notifications…', 'info'); if (isMedianApp() && window.median.firebaseMessaging) { console.log('[FCM] Median app mode'); await enableMedianNotifications(); if (btn) btn.disabled = false; return; } console.log('[FCM] Browser Web Push mode'); await enableBrowserNotifications(); } catch(e) { console.error('[FCM] Enable error:', e); showFeedback('error', 'Setup Failed', e.message || 'Could not enable notifications.'); } finally { if (btn) btn.disabled = false; } }
 async function enableMedianNotifications(){
   const fcm = window.median.firebaseMessaging;
-  const permResult = await new Promise((resolve) => {
-    try { fcm.requestPermission({ callback: function(result) { console.log('[FCM] Permission result:', result); resolve(result || { granted: false }); } }); setTimeout(() => resolve({ granted: false, timeout: true }), 15000); }
-    catch(e) { console.warn('[FCM] requestPermission error:', e); resolve({ granted: false, error: e.message }); }
-  });
+  const permResult = await new Promise((resolve) => { try { fcm.requestPermission({ callback: function(result) { console.log('[FCM] Permission result:', result); resolve(result || { granted: false }); } }); setTimeout(() => resolve({ granted: false, timeout: true }), 15000); } catch(e) { console.warn('[FCM] requestPermission error:', e); resolve({ granted: false, error: e.message }); } });
   if (!permResult || !permResult.granted) { showFeedback('warning', 'Permission Denied', 'Please allow notifications in your phone settings to receive attendance alerts.'); return; }
   await new Promise((resolve) => { try { fcm.register({ callback: function(result) { console.log('[FCM] Register result:', result); resolve(result); } }); setTimeout(() => resolve(null), 10000); } catch(e) { console.warn('[FCM] register error:', e); resolve(null); } });
   const tokenResult = await new Promise((resolve) => { try { fcm.getToken({ callback: function(result) { console.log('[FCM] Token result:', result); resolve(result); } }); setTimeout(() => resolve(null), 10000); } catch(e) { console.warn('[FCM] getToken error:', e); resolve(null); } });
   const token = tokenResult?.token;
   if (!token || token.length < 20) { showFeedback('error', 'Token Error', 'FCM token could not be generated. Please try again or restart the app.'); return; }
   await saveFCMTokenToBackend(token);
-  localStorage.setItem('BM_FCM_ENABLED', '1');
-  updateNotifBtn(true);
+  localStorage.setItem('BM_FCM_ENABLED', '1'); updateNotifBtn(true);
   try { if (typeof fcm.enableForegroundBanners === 'function') fcm.enableForegroundBanners(); } catch(e) { console.warn('[FCM] enableForegroundBanners:', e); }
   try { if (typeof fcm.createChannel === 'function') { fcm.createChannel({ channelId: 'attendance_alerts', channelName: 'Attendance Alerts', importance: 'high', callback: function(r) { console.log('[FCM] Channel created:', r); } }); } } catch(e) { console.warn('[FCM] createChannel:', e); }
   setupMedianFCMListeners(fcm);
   showFeedback('success', 'Notifications Enabled', 'You will now receive:\n\n• Passcode publish alerts\n• Notice broadcasts\n• Request updates\n• Daily attendance reminders');
 }
 async function enableBrowserNotifications(){
-  const app = await initFirebase();
-  if (!app || !firebaseMessaging) { toast('Notifications not supported on this browser', 'error'); return; }
+  const app = await initFirebase(); if (!app || !firebaseMessaging) { toast('Notifications not supported on this browser', 'error'); return; }
   if (typeof Notification === 'undefined') { toast('Notifications not supported here', 'error'); return; }
-  const perm = await Notification.requestPermission();
-  if (perm !== 'granted') { showFeedback('warning', 'Permission Denied', 'Please allow notifications in your browser settings.'); return; }
-  const reg = await registerServiceWorker();
-  if (!reg) { toast('Service worker registration failed', 'error'); return; }
+  const perm = await Notification.requestPermission(); if (perm !== 'granted') { showFeedback('warning', 'Permission Denied', 'Please allow notifications in your browser settings.'); return; }
+  const reg = await registerServiceWorker(); if (!reg) { toast('Service worker registration failed', 'error'); return; }
   const token = await firebaseMessaging.getToken({ vapidKey: VAPID_PUBLIC_KEY, serviceWorkerRegistration: reg });
   if (!token) { toast('Could not get FCM token', 'error'); return; }
   await saveFCMTokenToBackend(token);
-  localStorage.setItem('BM_FCM_ENABLED', '1');
-  updateNotifBtn(true);
+  localStorage.setItem('BM_FCM_ENABLED', '1'); updateNotifBtn(true);
   showFeedback('success', 'Notifications Enabled', 'You will now receive attendance reminders and alerts.');
 }
-function setupMedianFCMListeners(fcm) {
-  try {
-    if (window._medianFCMListenersSet) return;
-    window._medianFCMListenersSet = true;
-    if (fcm.notificationReceived && fcm.notificationReceived.addListener) {
-      fcm.notificationReceived.addListener((data) => { console.log('[FCM] Foreground notification:', data); const title = data?.notification?.title || data?.title || 'BM Attendance'; const body = data?.notification?.body || data?.body || ''; toast(`${title}${body ? ': ' + body : ''}`, 'info'); });
-    }
-    if (fcm.notificationClicked && fcm.notificationClicked.addListener) {
-      fcm.notificationClicked.addListener((data) => { console.log('[FCM] Notification clicked:', data); if (typeof fetchHistory === 'function' && currentUser?.role === 'student') { fetchHistory().catch(() => {}); } });
-    }
-  } catch(e) { console.warn('[FCM] Listener setup error:', e.message); }
-}
-async function saveFCMTokenToBackend(token) {
-  try {
-    const res = await fetch(`${API}/api/user/save-fcm-token`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: currentUser.rollNo, fcmToken: token }) });
-    const d = await res.json().catch(() => ({}));
-    if (!res.ok) { console.warn('[FCM] Backend save failed:', d.error || res.status); localStorage.setItem('BM_FCM_TOKEN', token); return false; }
-    console.log('[FCM] Token saved to backend');
-    localStorage.setItem('BM_FCM_TOKEN', token);
-    return true;
-  } catch(e) { console.warn('[FCM] saveFCMTokenToBackend error:', e.message); localStorage.setItem('BM_FCM_TOKEN', token); return false; }
-}
+function setupMedianFCMListeners(fcm) { try { if (window._medianFCMListenersSet) return; window._medianFCMListenersSet = true; if (fcm.notificationReceived && fcm.notificationReceived.addListener) { fcm.notificationReceived.addListener((data) => { console.log('[FCM] Foreground notification:', data); const title = data?.notification?.title || data?.title || 'BM Attendance'; const body = data?.notification?.body || data?.body || ''; toast(`${title}${body ? ': ' + body : ''}`, 'info'); }); } if (fcm.notificationClicked && fcm.notificationClicked.addListener) { fcm.notificationClicked.addListener((data) => { console.log('[FCM] Notification clicked:', data); if (typeof fetchHistory === 'function' && currentUser?.role === 'student') { fetchHistory().catch(() => {}); } }); } } catch(e) { console.warn('[FCM] Listener setup error:', e.message); } }
+async function saveFCMTokenToBackend(token) { try { const res = await fetch(`${API}/api/user/save-fcm-token`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: currentUser.rollNo, fcmToken: token }) }); const d = await res.json().catch(() => ({})); if (!res.ok) { console.warn('[FCM] Backend save failed:', d.error || res.status); localStorage.setItem('BM_FCM_TOKEN', token); return false; } console.log('[FCM] Token saved to backend'); localStorage.setItem('BM_FCM_TOKEN', token); return true; } catch(e) { console.warn('[FCM] saveFCMTokenToBackend error:', e.message); localStorage.setItem('BM_FCM_TOKEN', token); return false; } }
 function updateNotifBtn(enabled){ const btn = $('notifBtn'); if (!btn) return; if (enabled) { btn.classList.add('notif-on'); btn.setAttribute('title', 'Notifications enabled'); btn.setAttribute('data-tip', 'Notifications ON'); } else { btn.classList.remove('notif-on'); btn.setAttribute('title', 'Enable Notifications'); btn.setAttribute('data-tip', 'Notifications'); } }
 async function autoInitFCM(){
   if (!currentUser || !currentUser.rollNo) return;
   if (localStorage.getItem('BM_FCM_ENABLED') !== '1') return;
   try {
-    if (isMedianApp() && window.median.firebaseMessaging) {
-      const fcm = window.median.firebaseMessaging;
-      setupMedianFCMListeners(fcm);
-      const tokenResult = await new Promise((resolve) => { try { fcm.getToken({ callback: (result) => resolve(result) }); setTimeout(() => resolve(null), 8000); } catch(e) { resolve(null); } });
-      const token = tokenResult?.token;
-      if (token && token.length > 20) { const saved = localStorage.getItem('BM_FCM_TOKEN'); if (saved !== token) await saveFCMTokenToBackend(token); updateNotifBtn(true); }
-      return;
-    }
-    const app = await initFirebase();
-    if (!app || !firebaseMessaging) return;
-    const reg = await registerServiceWorker();
-    if (!reg) return;
+    if (isMedianApp() && window.median.firebaseMessaging) { const fcm = window.median.firebaseMessaging; setupMedianFCMListeners(fcm); const tokenResult = await new Promise((resolve) => { try { fcm.getToken({ callback: (result) => resolve(result) }); setTimeout(() => resolve(null), 8000); } catch(e) { resolve(null); } }); const token = tokenResult?.token; if (token && token.length > 20) { const saved = localStorage.getItem('BM_FCM_TOKEN'); if (saved !== token) await saveFCMTokenToBackend(token); updateNotifBtn(true); } return; }
+    const app = await initFirebase(); if (!app || !firebaseMessaging) return;
+    const reg = await registerServiceWorker(); if (!reg) return;
     const token = await firebaseMessaging.getToken({ vapidKey: VAPID_PUBLIC_KEY, serviceWorkerRegistration: reg });
     if (!token) return;
     const saved = localStorage.getItem('BM_FCM_TOKEN');
@@ -3214,14 +2850,10 @@ async function autoInitFCM(){
     updateNotifBtn(true);
   } catch(e) { console.warn('[FCM] autoInit:', e.message); }
 }
-try {
-  if (window.firebase && firebase.messaging && !isMedianApp()) {
-    setTimeout(() => { try { const m = firebase.messaging(); m.onMessage((payload) => { console.log('[FCM] Foreground:', payload); const t = payload.notification?.title || 'BM Attendance'; const b = payload.notification?.body || ''; sendPushNotification(t, b, { type: 'fcm_foreground' }); }); } catch(e){} }, 1500);
-  }
-} catch(e){}
+try { if (window.firebase && firebase.messaging && !isMedianApp()) { setTimeout(() => { try { const m = firebase.messaging(); m.onMessage((payload) => { console.log('[FCM] Foreground:', payload); const t = payload.notification?.title || 'BM Attendance'; const b = payload.notification?.body || ''; sendPushNotification(t, b, { type: 'fcm_foreground' }); }); } catch(e){} }, 1500); } } catch(e){}
 
 /* ============================================================
-   PREMIUM INIT (desktop only)
+   PREMIUM INIT
    ============================================================ */
 function initScrollProgress(){ if (!isDesktop()) return; const bar = document.getElementById('scrollProgress'); if (!bar) return; const update = () => { const h = document.documentElement; const total = h.scrollHeight - h.clientHeight; bar.style.width = total > 0 ? (h.scrollTop / total) * 100 + '%' : '0%'; }; if (bar._bound) return; bar._bound = true; window.addEventListener('scroll', update, { passive: true }); window.addEventListener('resize', update); update(); }
 function initSpotlight(){ if (!isDesktop()) return; const targets = document.querySelectorAll('.card, .stat, .chart-wrap, .portal, .passcode-card, .collapsible-card, .advisor, .attendance-actions-card, .working-days-cta, .approved-banner'); targets.forEach(el => { if (el.dataset.spotlight === '1') return; el.dataset.spotlight = '1'; el.classList.add('spotlight-enabled'); el.addEventListener('mousemove', (e) => { const r = el.getBoundingClientRect(); el.style.setProperty('--mx', (e.clientX - r.left) + 'px'); el.style.setProperty('--my', (e.clientY - r.top) + 'px'); }); }); }
@@ -3234,30 +2866,21 @@ function runPremiumInit(){ if (!isDesktop()) return; initScrollProgress(); initS
 let _premiumResizeDebounce = null;
 window.addEventListener('resize', () => { if (_premiumResizeDebounce) clearTimeout(_premiumResizeDebounce); _premiumResizeDebounce = setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 200); }, { passive: true });
 
-document.addEventListener('click', (e) => {
-  if (e.target && e.target.classList && e.target.classList.contains('modal-backdrop') && e.target.classList.contains('open')) { e.target.classList.remove('open'); }
-  if (openDownloadMenuId && !e.target.closest('.dl-menu') && !e.target.closest('.download-btn')) { const menu = document.getElementById(openDownloadMenuId); if (menu) menu.classList.remove('open'); openDownloadMenuId = null; }
-}, true);
+document.addEventListener('click', (e) => { if (e.target && e.target.classList && e.target.classList.contains('modal-backdrop') && e.target.classList.contains('open')) { e.target.classList.remove('open'); } if (openDownloadMenuId && !e.target.closest('.dl-menu') && !e.target.closest('.download-btn')) { const menu = document.getElementById(openDownloadMenuId); if (menu) menu.classList.remove('open'); openDownloadMenuId = null; } }, true);
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { document.querySelectorAll('.modal-backdrop.open').forEach(m => m.classList.remove('open')); closeStudentMenu(); closeAdminMenu(); if (openDownloadMenuId) { const m = document.getElementById(openDownloadMenuId); if (m) m.classList.remove('open'); openDownloadMenuId = null; } } });
 
 document.addEventListener('DOMContentLoaded', () => {
   handleScrollFab();
-  const pdfRange = $('pdfRangeSelect');
-  if (pdfRange) pdfRange.onchange = function(){ $('pdfMonthSelect').style.display = this.value === 'SELECTED_MONTH' ? 'block' : 'none'; };
-  const adminRepRange = $('adminReportRange');
-  if (adminRepRange) adminRepRange.onchange = toggleAdminReportRange;
-  const lt = $('reqLectureType');
-  if (lt) lt.onchange = function(){ $('reqSubjectGroup').style.display = (this.value === 'single_lecture') ? 'block' : 'none'; loadRequestSubjects(); };
+  const pdfRange = $('pdfRangeSelect'); if (pdfRange) pdfRange.onchange = function(){ $('pdfMonthSelect').style.display = this.value === 'SELECTED_MONTH' ? 'block' : 'none'; };
+  const adminRepRange = $('adminReportRange'); if (adminRepRange) adminRepRange.onchange = toggleAdminReportRange;
+  const lt = $('reqLectureType'); if (lt) lt.onchange = function(){ $('reqSubjectGroup').style.display = (this.value === 'single_lecture') ? 'block' : 'none'; loadRequestSubjects(); };
   setTimeout(runPremiumInit, 120);
   if (localStorage.getItem('token')) loadDashboard();
   if (isMedianApp()) { console.log('[FCM] Median app detected — bridge ready'); if (typeof window.median_library_ready === 'function') { window.median_library_ready(); } }
 });
 if (document.readyState !== 'loading') { setTimeout(() => handleScrollFab(), 50); setTimeout(runPremiumInit, 200); }
 
-window.median_library_ready = function() {
-  console.log('[FCM] Median JS Bridge ready');
-  if (isMedianApp() && currentUser && localStorage.getItem('BM_FCM_ENABLED') === '1') { autoInitFCM().catch(() => {}); }
-};
+window.median_library_ready = function() { console.log('[FCM] Median JS Bridge ready'); if (isMedianApp() && currentUser && localStorage.getItem('BM_FCM_ENABLED') === '1') { autoInitFCM().catch(() => {}); } };
 </script>
 </body>
 </html>
