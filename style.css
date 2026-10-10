@@ -1,7 +1,7 @@
 /* ============================================================
    BM GROUP ERP · style.css
    Premium Smooth Edition — 60fps Optimized
-   Version 1.2 — Clean Sticky Header + Polished Mobile
+   Frosted Glass + GPU Animations + Solid Menu Drawers
    ============================================================ */
 
 /* ---------- RESET ---------- */
@@ -59,7 +59,7 @@ body{
   overflow-x:hidden;position:relative;isolation:isolate;
 }
 
-/* ★ TOP BLUE STRIP — status bar visibility */
+/* ★ TOP BLUE STRIP — status bar visible */
 body::before{
   content:'';
   position:fixed;
@@ -71,13 +71,23 @@ body::before{
   display:none;
 }
 
-/* ---------- INTERACTIVE BASE ---------- */
+/* ---------- INTERACTIVE BASE (GPU-optimized) ---------- */
 button,.btn,.tab,.subnav-item,.portal,.chip,.icon-btn,.mini-btn,.send-btn,.msg-action-btn,
 .chat-close-btn,.chat-sidebar-toggle,.modal-close,.chat-fab,.working-days-cta,.ctx-toggle,
 .db-toggle,.menu-trigger-btn,.student-menu-item,.auth-link,.holiday-row,.bulk-select-item,
 .collapsible-header,.req-tab,.wd-cell,.present-row,.branch-label{
   -webkit-tap-highlight-color:transparent;
   touch-action:manipulation;
+  transition:transform var(--dur) var(--ease-out),
+             background-color var(--dur) var(--ease),
+             border-color var(--dur) var(--ease),
+             box-shadow var(--dur) var(--ease),
+             color var(--dur) var(--ease);
+}
+
+/* ★ SPRING MICRO-INTERACTIONS — native app feel */
+button,.btn,.tab,.subnav-item,.portal,.icon-btn,.mini-btn,.send-btn,.chat-fab,
+.menu-trigger-btn,.student-menu-item,.auth-link,.req-tab,.working-days-cta{
   transition:transform .25s cubic-bezier(.34,1.56,.64,1),
              background-color .2s ease,
              border-color .2s ease,
@@ -91,8 +101,13 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
   transform:scale(.95) translateZ(0);
 }
 
-/* ---------- GLASS ---------- */
+/* ============================================================
+   LITE GLASS — Only modals & chat get backdrop blur
+   (keeps GPU cool on low-end phones)
+   ============================================================ */
 .glass-modal,.glass-chat{-webkit-backdrop-filter:blur(12px) saturate(160%);backdrop-filter:blur(12px) saturate(160%);}
+
+/* ★ FROSTED GLASS CARDS — for floating premium cards only */
 .glass-card-pro{
   background:rgba(255,255,255,.82);
   -webkit-backdrop-filter:blur(12px) saturate(160%);
@@ -102,9 +117,11 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
   transform:translateZ(0);
   will-change:transform;
 }
+
 .glass,.glass-card,.glass-header,.glass-app{background:#fff;border:1px solid var(--slate-200);box-shadow:var(--shadow-sm);}
 .glass-app{background:#fff;box-shadow:var(--shadow-md);}
 .glass-header{background:#fff;}
+
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))){
   .glass-modal,.glass-chat,.glass-card-pro{background:rgba(255,255,255,.98);}
 }
@@ -116,7 +133,7 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
 ::-webkit-scrollbar-thumb:hover{background:var(--slate-400);}
 
 /* ============================================================
-   ANIMATIONS
+   ANIMATIONS — GPU-accelerated only (transform + opacity)
    ============================================================ */
 @keyframes appIn{from{opacity:0;transform:translateY(20px) scale(.98);}to{opacity:1;transform:translateY(0) scale(1);}}
 @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
@@ -150,12 +167,33 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
 @keyframes chatFabFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-5px);}}
 @keyframes plbPulse{0%{box-shadow:0 0 0 0 rgba(16,185,129,.65);}70%{box-shadow:0 0 0 10px rgba(16,185,129,0);}100%{box-shadow:0 0 0 0 rgba(16,185,129,0);}}
 @keyframes marquee{0%{transform:translateX(0);}100%{transform:translateX(-100%);}}
-@keyframes smoothCardIn{0%{opacity:0;transform:translateY(16px) scale(.98);}100%{opacity:1;transform:translateY(0) scale(1);}}
-@keyframes shimmerWave{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
-@keyframes softGlowPulse{0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.4);}50%{box-shadow:0 0 0 10px rgba(16,185,129,0);}}
+
+/* ★ NEW: smooth card entrance */
+@keyframes smoothCardIn{
+  0%{opacity:0;transform:translateY(16px) scale(.98);}
+  100%{opacity:1;transform:translateY(0) scale(1);}
+}
+
+/* ★ NEW: shimmer wave for skeleton loaders */
+@keyframes shimmerWave{
+  0%{background-position:-200% 0;}
+  100%{background-position:200% 0;}
+}
+
+/* ★ NEW: soft glow pulse for live passcodes */
+@keyframes softGlowPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.4);}
+  50%{box-shadow:0 0 0 10px rgba(16,185,129,0);}
+}
 
 /* ---------- SCROLL PROGRESS ---------- */
-.scroll-progress{display:none;position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,#3b82f6,#8b5cf6,#06b6d4);z-index:99999;border-radius:0 3px 3px 0;box-shadow:0 0 14px rgba(59,130,246,.55);transition:width .08s linear;will-change:width;}
+.scroll-progress{
+  display:none;position:fixed;top:0;left:0;height:3px;width:0;
+  background:linear-gradient(90deg,#3b82f6,#8b5cf6,#06b6d4);
+  z-index:99999;border-radius:0 3px 3px 0;
+  box-shadow:0 0 14px rgba(59,130,246,.55);
+  transition:width .08s linear;will-change:width;
+}
 
 /* ---------- BG BLOBS ---------- */
 .bg-blobs{display:none;position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
@@ -183,9 +221,8 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
   padding:16px 20px;background:#fff;
   border-bottom:1px solid var(--slate-200);
   position:relative;z-index:10;
-  gap:12px;
 }
-.brand{display:flex;align-items:center;gap:12px;min-width:0;flex:1;}
+.brand{display:flex;align-items:center;gap:12px;}
 .brand-mark{
   width:42px;height:42px;border-radius:12px;
   background:linear-gradient(135deg,var(--brand-600),var(--brand-900));
@@ -195,10 +232,9 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
   transition:transform var(--dur) var(--ease-spring);
 }
 .brand-mark:hover{transform:rotate(-6deg) scale(1.06);}
-.brand-text{min-width:0;flex:1;}
-.brand-text h1{font-size:15px;font-weight:800;letter-spacing:-.025em;color:var(--slate-900);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.brand-text p{font-size:10.5px;color:var(--slate-500);font-weight:500;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.header-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.brand-text h1{font-size:15px;font-weight:800;letter-spacing:-.025em;color:var(--slate-900);line-height:1.2;}
+.brand-text p{font-size:10.5px;color:var(--slate-500);font-weight:500;margin-top:2px;}
+.header-right{display:flex;align-items:center;gap:8px;}
 
 /* ---------- ICON BUTTONS ---------- */
 .icon-btn{
@@ -206,7 +242,7 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
   border:1px solid var(--slate-200);background:#fff;
   color:var(--slate-600);
   display:flex;align-items:center;justify-content:center;
-  cursor:pointer;position:relative;overflow:hidden;flex-shrink:0;
+  cursor:pointer;position:relative;overflow:hidden;
 }
 .icon-btn:hover{background:var(--brand-50);border-color:var(--brand-200);color:var(--brand-700);transform:translateY(-2px);box-shadow:0 6px 14px rgba(37,99,235,.14);}
 .icon-btn svg,.btn svg,.portal svg,.advisor svg,.closed-banner svg,.mini-btn svg,.send-btn svg,.msg-action-btn svg,.dl-menu svg{
@@ -294,7 +330,7 @@ input:focus,select:focus,textarea:focus{
 .eye-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;}
 
 /* ============================================================
-   CARDS + STATS
+   CARDS + STATS — Staggered smooth entrance
    ============================================================ */
 .card{
   background:#fff;
@@ -390,7 +426,7 @@ input:focus,select:focus,textarea:focus{
 .pill.role-student{background:var(--emerald-50);color:var(--emerald-700);}
 
 /* ============================================================
-   STATS
+   STATS — Staggered smooth entrance
    ============================================================ */
 .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px;}
 @media(min-width:640px){.stats-grid.cols-4{grid-template-columns:repeat(4,1fr);}}
@@ -462,7 +498,10 @@ input:focus,select:focus,textarea:focus{
   border-radius:12px;padding:14px 16px;margin:12px 0 0;
   transition:all var(--dur) var(--ease-out);
 }
-.passcode-live-box:not(.inactive){animation:softGlowPulse 2.5s infinite ease-in-out;}
+/* ★ Soft glow pulse on live (active) passcode */
+.passcode-live-box:not(.inactive){
+  animation:softGlowPulse 2.5s infinite ease-in-out;
+}
 .passcode-live-box.inactive{background:linear-gradient(135deg,#f8fafc,#fff);border-color:var(--slate-200);border-style:dashed;}
 .passcode-live-box.inactive .plb-head{color:var(--slate-500);}
 .passcode-live-box.inactive .plb-head svg{stroke:var(--slate-500);}
@@ -533,7 +572,7 @@ input:focus,select:focus,textarea:focus{
 .chart-controls select{width:auto;padding:6px 12px;font-size:10.5px;}
 .chart-canvas-wrap{height:280px;position:relative;touch-action:pan-y;animation:fadeIn .6s var(--ease-out);}
 
-/* ---------- PORTALS ---------- */
+/* ---------- PORTALS — Staggered entrance ---------- */
 .portal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
 .portal{
   background:#fff;
@@ -617,6 +656,7 @@ tbody tr:hover{background:var(--brand-50);}
 .empty{text-align:center;padding:36px 20px;color:var(--slate-400);font-size:12.5px;font-weight:500;animation:fadeIn .4s var(--ease-out);}
 .section-title{font-size:11px;font-weight:700;color:var(--slate-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;}
 
+/* ★ SKELETON LOADER — shimmer effect */
 .skeleton-loader{
   background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%);
   background-size:200% 100%;
@@ -674,7 +714,7 @@ tbody tr:hover{background:var(--brand-50);}
 }
 
 /* ============================================================
-   DRAWER — SOLID WHITE
+   DRAWER — SOLID WHITE for ALL ROLES (Student, Admin, Faculty)
    ============================================================ */
 .student-menu-backdrop{
   position:fixed;inset:0;
@@ -821,6 +861,7 @@ tbody tr:hover{background:var(--brand-50);}
 .wd-legend-dot.absent{background:#ffe4e6;border:1px solid #fda4af;}
 .wd-legend-dot.holiday{background:#fef3c7;border:1px solid #fcd34d;}
 .wd-legend-dot.weekend{background:#e2e8f0;border:1px solid #cbd5e1;}
+
 .wd-month{margin-bottom:22px;}
 .wd-month-title{font-size:13.5px;font-weight:800;color:var(--slate-900);margin-bottom:10px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;}
 .wd-month-title .wd-month-stats{font-size:10.5px;font-weight:600;color:var(--slate-500);}
@@ -880,6 +921,7 @@ tbody tr:hover{background:var(--brand-50);}
 .bulk-select-item input[type="checkbox"]{width:16px;height:16px;accent-color:var(--brand-600);cursor:pointer;flex-shrink:0;}
 .bulk-select-item .bulk-roll{font-weight:800;color:var(--slate-900);font-variant-numeric:tabular-nums;flex-shrink:0;}
 .bulk-select-item .bulk-name{color:var(--slate-600);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;}
+
 .faculty-fields{display:none;margin-top:12px;padding:12px;background:var(--slate-50);border-radius:var(--radius-sm);border:1px solid var(--slate-200);animation:slideIn .3s var(--ease-out);}
 
 /* ---------- TOAST ---------- */
@@ -939,6 +981,7 @@ tbody tr:hover{background:var(--brand-50);}
 .chat-sidebar-item .del-chat{color:var(--slate-400);font-size:12px;padding:4px 8px;cursor:pointer;}
 .chat-sidebar-item .del-chat:hover{color:var(--rose-600);}
 .chat-main{flex:1;display:flex;flex-direction:column;min-width:0;position:relative;}
+
 .chat-head{padding:10px 12px;border-bottom:1px solid var(--slate-200);background:#fff;flex-shrink:0;display:flex;flex-direction:column;gap:8px;}
 .chat-head-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
 .chat-head h4{font-size:13.5px;font-weight:800;color:var(--slate-900);display:flex;align-items:center;gap:8px;pointer-events:none;flex:1;min-width:0;}
@@ -952,12 +995,14 @@ tbody tr:hover{background:var(--brand-50);}
 .chat-sidebar-toggle{background:transparent;border:1px solid var(--slate-200);cursor:pointer;color:var(--slate-500);padding:6px 11px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;height:30px;}
 .chat-sidebar-toggle:hover{background:var(--slate-100);color:var(--slate-800);}
 .chat-sidebar-toggle svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;pointer-events:none;}
+
 .ctx-toggle,.db-toggle{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;font-size:10px;font-weight:700;border-radius:var(--radius-full);border:1.5px solid var(--slate-300);background:#fff;color:var(--slate-500);cursor:pointer;font-family:inherit;white-space:nowrap;line-height:1;height:30px;flex-shrink:0;}
 .ctx-toggle svg,.db-toggle svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.5;pointer-events:none;}
 .ctx-toggle:hover{border-color:#34d399;color:#059669;background:var(--emerald-50);}
 .ctx-toggle.active{background:linear-gradient(135deg,var(--emerald-500),var(--emerald-700));border-color:transparent;color:#fff;box-shadow:0 4px 12px rgba(16,185,129,.28);}
 .db-toggle:hover{border-color:#a78bfa;color:#7c3aed;background:var(--purple-50);}
 .db-toggle.active{background:linear-gradient(135deg,var(--purple-500),var(--purple-700));border-color:transparent;color:#fff;box-shadow:0 4px 12px rgba(124,58,237,.28);}
+
 .chat-msgs{flex:1;overflow-y:auto;padding:16px 18px;background:var(--slate-50);display:flex;flex-direction:column;gap:12px;min-height:0;scroll-behavior:smooth;overscroll-behavior:contain;}
 .chat-msgs::-webkit-scrollbar{width:5px;}
 .chat-msgs::-webkit-scrollbar-thumb{background:var(--slate-300);border-radius:3px;}
@@ -978,6 +1023,7 @@ tbody tr:hover{background:var(--brand-50);}
 .msg-action-btn:hover{background:var(--brand-50);border-color:var(--brand-300);color:var(--brand-700);transform:translateY(-1px);}
 .msg-action-btn.copied{background:var(--emerald-50);border-color:#a7f3d0;color:var(--emerald-700);}
 .msg-action-btn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;pointer-events:none;}
+
 .thought-badge{display:flex;flex-direction:column;background:linear-gradient(135deg,#eef2ff,#e0e7ff);border:1px solid #c7d2fe;border-radius:14px;padding:10px 16px;margin-bottom:10px;max-width:85%;cursor:pointer;user-select:none;font-size:11.5px;color:#4338ca;overflow:hidden;}
 .thought-badge:hover{background:linear-gradient(135deg,#e0e7ff,#c7d2fe);border-color:#a5b4fc;transform:translateY(-1px);}
 .thought-badge .tb-head{display:flex;align-items:center;gap:9px;font-weight:700;line-height:1.3;}
@@ -989,11 +1035,13 @@ tbody tr:hover{background:var(--brand-50);}
 .thought-badge.expanded .tb-body{display:block;animation:fadeIn .3s var(--ease-out);}
 .thought-badge .tb-step{display:block;padding:4px 0 4px 16px;position:relative;}
 .thought-badge .tb-step::before{content:'';position:absolute;left:4px;top:11px;width:5px;height:5px;border-radius:50%;background:#6366f1;}
+
 .dl-menu{position:fixed;background:#fff;border:1px solid var(--slate-200);border-radius:14px;box-shadow:0 24px 48px rgba(15,23,42,.22);padding:8px;z-index:10000;display:none;min-width:190px;animation:menuIn .22s var(--ease-spring);}
 .dl-menu.open{display:block;}
 .dl-menu button{display:flex;width:100%;align-items:center;gap:12px;padding:11px 16px;font-size:12.5px;font-weight:600;color:var(--slate-700);background:transparent;border:none;border-radius:9px;cursor:pointer;font-family:inherit;text-align:left;}
 .dl-menu button:hover{background:var(--brand-50);color:var(--brand-700);transform:translateX(2px);}
 .dl-menu .dl-menu-title{font-size:9.5px;font-weight:700;color:var(--slate-400);text-transform:uppercase;letter-spacing:.06em;padding:7px 16px 5px;pointer-events:none;}
+
 .ai-thinking-bubble{background:linear-gradient(135deg,#f0f7ff,#fff) !important;border:1px solid #bfdbfe !important;padding:14px 18px !important;display:flex !important;align-items:center;gap:14px;min-width:230px;position:relative;overflow:hidden;}
 .ai-thinking-bubble::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(37,99,235,.06),transparent);animation:aiShimmer 2.2s infinite;pointer-events:none;}
 .ai-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#1e40af);display:flex;align-items:center;justify-content:center;flex-shrink:0;animation:aiFloat 2.4s ease-in-out infinite,aiPulseRing 2s ease-out infinite;position:relative;z-index:1;}
@@ -1008,10 +1056,12 @@ tbody tr:hover{background:var(--brand-50);}
 .ai-dots span:nth-child(3){animation-delay:.36s;}
 .ai-progress-bar{width:100%;height:3px;background:#dbeafe;border-radius:2px;overflow:hidden;margin-top:3px;position:relative;}
 .ai-progress-bar::after{content:'';position:absolute;top:0;left:0;height:100%;width:40%;background:linear-gradient(90deg,#3b82f6,#1e40af,#3b82f6);border-radius:2px;animation:aiProgress 1.8s ease-in-out infinite;}
+
 .chat-welcome{text-align:center;padding:24px 18px;color:var(--slate-500);font-size:12.5px;line-height:1.9;animation:slideIn .5s var(--ease-out);}
 .chat-welcome .greeting-emoji{width:52px;height:52px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:50%;animation:wave 2s ease-in-out infinite;transform-origin:70% 70%;box-shadow:0 8px 20px rgba(217,119,6,.18);}
 .chat-welcome .greeting-emoji svg{width:30px;height:30px;stroke:#d97706;fill:none;stroke-width:2;}
 .chat-welcome b{color:var(--slate-900);}
+
 .chat-input{display:flex;gap:10px;padding:14px 16px;border-top:1px solid var(--slate-200);background:#fff;flex-shrink:0;align-items:flex-end;}
 .chat-input-wrap{flex:1;display:flex;align-items:flex-end;gap:8px;background:var(--slate-50);border:1.5px solid var(--slate-200);border-radius:24px;padding:8px 10px;min-width:0;}
 .chat-input-wrap:focus-within{border-color:var(--brand-500);box-shadow:0 0 0 4px var(--brand-100);background:#fff;}
@@ -1029,99 +1079,20 @@ tbody tr:hover{background:var(--brand-50);}
 .chat-file-preview button{background:transparent;border:none;color:var(--rose-600);cursor:pointer;font-size:15px;padding:4px 8px;font-weight:800;border-radius:6px;}
 .voice-indicator{font-size:11px;color:var(--rose-600);font-weight:700;padding:5px 12px;background:var(--rose-50);border-radius:14px;display:none;align-items:center;gap:5px;position:absolute;top:62px;right:18px;z-index:5;}
 .voice-indicator.show{display:inline-flex;animation:popIn .3s var(--ease-spring);}
+
 .animate-on-scroll{opacity:0;transform:translateY(24px);transition:opacity .65s var(--ease-out),transform .65s var(--ease-out);}
 .animate-on-scroll.visible{opacity:1;transform:translateY(0);}
+
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[role="button"]:focus-visible,a:focus-visible{outline:2.5px solid var(--brand-500);outline-offset:2px;border-radius:8px;}
 
 /* ============================================================
-   ★★★ MOBILE — STICKY HEADER (professional, clean)
-   Header blue strip ke neeche chipka rahega. Refresh ke baad
-   bhi saare buttons (refresh / chat / notif / logout / menu)
-   visible + clickable rahenge.
+   MOBILE — Safe area + Performance
    ============================================================ */
 @media(max-width:640px){
-
-  /* Block rubber-band overscroll so content never bounces up */
-  html, body { overscroll-behavior-y: contain; }
-
-  /* Blue strip visible */
   body::before{display:block;}
-
-  /* Body: top padding reserves space for blue strip */
-  body{
-    padding: calc(52px + var(--sat)) 12px calc(20px + var(--sab));
-  }
-
-  /* ⭐ Enable sticky header without losing rounded look:
-     keep .app border-radius, only release overflow */
-  .app {
-    overflow: visible !important;
-  }
-
-  /* Rounded bottom corners for auth/dash (since .app no longer clips) */
-  #auth-box,
-  #dash-box {
-    border-bottom-left-radius: var(--radius-lg);
-    border-bottom-right-radius: var(--radius-lg);
-    overflow: hidden;
-  }
-
-  /* ⭐ STICKY HEADER — sticks right below blue strip.
-     top = 52px (blue strip) + safe-area (notch devices) */
-  .app-header {
-    position: sticky;
-    top: calc(52px + var(--sat));
-    z-index: 50;
-    background: #ffffff;
-    border-top-left-radius: var(--radius-lg);
-    border-top-right-radius: var(--radius-lg);
-    /* Crisp bottom border always visible as separation */
-    border-bottom: 1px solid var(--slate-200);
-    /* Subtle elevation only for stuck state */
-    box-shadow: 0 4px 14px rgba(15, 23, 42, .05);
-    /* Ensure clean padding even while stuck */
-    padding: 14px 16px;
-    gap: 10px;
-  }
-
-  /* Brand typography — tighter so it fits on one line */
-  .brand-text h1{
-    font-size: 13.5px;
-    line-height: 1.25;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .brand-text p{
-    font-size: 10px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  /* Slightly smaller icon buttons so 4 fit cleanly next to brand */
-  .app-header .icon-btn{
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
-  }
-  .app-header .icon-btn svg{
-    width: 16px;
-    height: 16px;
-  }
-  .app-header .user-avatar{
-    width: 34px;
-    height: 34px;
-    font-size: 11px;
-  }
-  .header-right { gap: 6px; }
-  .brand { gap: 10px; }
-  .brand-mark { width: 38px; height: 38px; font-size: 13.5px; border-radius: 11px; }
-
-  /* App body & inner spacing */
+  body{padding:calc(52px + var(--sat)) 12px calc(20px + var(--sab));}
   .app-body{padding:16px;}
-
-  /* Rest of the original mobile tweaks */
+  .app-header{padding:14px 16px;}
   .stat .stat-value{font-size:22px;}
   .stat{padding:14px;}
   .welcome h2{font-size:18px;}
@@ -1152,7 +1123,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   .auth-title{font-size:22px;}
   .toast-wrap{top:calc(60px + var(--sat));}
 
-  /* DRAWER crop + solid white */
+  /* ★ DRAWER CROP + SOLID WHITE — applies to Student, Admin, Faculty */
   .student-menu-drawer{
     top: calc(52px + var(--sat)) !important;
     height: calc(100vh - 52px - var(--sat)) !important;
@@ -1163,12 +1134,15 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     border-bottom-left-radius: 20px;
   }
   .student-menu-backdrop{top: calc(52px + var(--sat));}
-  .student-menu-header{padding-top: 16px; border-top-left-radius: 20px;}
+  .student-menu-header{
+    padding-top: 16px;
+    border-top-left-radius: 20px;
+  }
   .student-menu-header.safe-top{padding-top: 16px !important;}
   .student-menu-list{background:#ffffff !important;background-color:#ffffff !important;}
   .student-menu-footer{background:#f8fafc !important;background-color:#f8fafc !important;}
 
-  /* Reduced backdrop blur on mobile */
+  /* ★ Reduced backdrop-filter blur on low-end to prevent GPU overheat */
   .glass-card-pro{-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
 }
 
