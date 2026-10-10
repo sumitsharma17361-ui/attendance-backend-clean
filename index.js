@@ -1,4 +1,4 @@
-// ================= index.js v4.1 — Full Backend (FIXED) =================
+// ================= index.js v4.3 — Full Backend (Dynamic Advisor + Full FCM/Median Push) =================
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -33,19 +33,70 @@ try {
   }
 } catch (e) { console.error('❌ Firebase Admin init failed:', e.message); fcmReady = false; }
 
+// ★★★ FIXED: Full FCM send with Android (Median.co) + Web Push support ★★★
 async function sendPushNotification(fcmToken, title, body, data = {}) {
   if (!fcmReady || !fcmToken) return { ok: false, reason: !fcmReady ? 'not-ready' : 'no-token' };
   try {
+    // Stringify all data values (FCM requires strings)
+    const stringData = Object.fromEntries(
+      Object.entries(Object.assign({ title, body, icon: '/icon-192.png' }, data))
+        .map(([k, v]) => [k, String(v)])
+    );
     const message = {
       token: fcmToken,
-      data: Object.assign({ title, body, icon: '/icon-192.png' }, Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)]))),
-      webpush: { headers: { Urgency: 'high', TTL: '86400' }, notification: { title, body, vibrate: [200, 100, 200], requireInteraction: true }, fcmOptions: { link: '/' } },
-      android: { priority: 'high', ttl: 86400000 }
+      data: stringData,
+      // Web push (browser + PWA)
+      webpush: {
+        headers: { Urgency: 'high', TTL: '86400' },
+        notification: {
+          title,
+          body,
+          icon: '/icon-192.png',
+          badge: '/icon-192.png',
+          vibrate: [200, 100, 200],
+          requireInteraction: true,
+          tag: stringData.type || 'bm-notification'
+        },
+        fcmOptions: { link: '/' }
+      },
+      // ★ Android native (Median.co app)
+      android: {
+        priority: 'high',
+        ttl: 86400000,
+        notification: {
+          title,
+          body,
+          icon: 'notification_icon',
+          color: '#2563eb',
+          sound: 'default',
+          channelId: 'attendance_alerts',
+          priority: 'high',
+          visibility: 'public',
+          defaultVibrateTimings: true,
+          defaultSound: true
+        }
+      },
+      // ★ APNs (iOS — Median)
+      apns: {
+        headers: { 'apns-priority': '10', 'apns-push-type': 'alert' },
+        payload: {
+          aps: {
+            alert: { title, body },
+            sound: 'default',
+            badge: 1,
+            'content-available': 1,
+            'mutable-content': 1
+          }
+        }
+      }
     };
     const resp = await admin.messaging().send(message);
+    console.log(`✅ [FCM-SINGLE] "${title}" → ${resp.substring(0, 20)}...`);
     return { ok: true, messageId: resp };
   } catch (e) {
-    if (e.code === 'messaging/registration-token-not-registered' || e.code === 'messaging/invalid-registration-token') return { ok: false, reason: 'invalid-token', code: e.code };
+    if (e.code === 'messaging/registration-token-not-registered' || e.code === 'messaging/invalid-registration-token') {
+      return { ok: false, reason: 'invalid-token', code: e.code };
+    }
     console.warn('⚠️ FCM send failed:', e.message);
     return { ok: false, reason: e.message };
   }
@@ -56,11 +107,40 @@ async function sendPushToMany(tokens, title, body, data = {}) {
   const valid = tokens.filter(t => t && typeof t === 'string' && t.length > 20);
   if (!valid.length) return { ok: false, sent: 0, failed: 0 };
   try {
+    const stringData = Object.fromEntries(
+      Object.entries(Object.assign({ title, body, icon: '/icon-192.png' }, data))
+        .map(([k, v]) => [k, String(v)])
+    );
     const message = {
       tokens: valid,
-      data: Object.assign({ title, body, icon: '/icon-192.png' }, Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)]))),
-      webpush: { headers: { Urgency: 'high', TTL: '86400' }, notification: { title, body, vibrate: [200, 100, 200], requireInteraction: true }, fcmOptions: { link: '/' } },
-      android: { priority: 'high', ttl: 86400000 }
+      data: stringData,
+      webpush: {
+        headers: { Urgency: 'high', TTL: '86400' },
+        notification: {
+          title, body,
+          icon: '/icon-192.png', badge: '/icon-192.png',
+          vibrate: [200, 100, 200], requireInteraction: true,
+          tag: stringData.type || 'bm-notification'
+        },
+        fcmOptions: { link: '/' }
+      },
+      android: {
+        priority: 'high',
+        ttl: 86400000,
+        notification: {
+          title, body,
+          icon: 'notification_icon',
+          color: '#2563eb',
+          sound: 'default',
+          channelId: 'attendance_alerts',
+          priority: 'high',
+          visibility: 'public'
+        }
+      },
+      apns: {
+        headers: { 'apns-priority': '10', 'apns-push-type': 'alert' },
+        payload: { aps: { alert: { title, body }, sound: 'default', badge: 1 } }
+      }
     };
     const resp = await admin.messaging().sendEachForMulticast(message);
     console.log(`📤 [FCM-BULK] "${title}" → sent=${resp.successCount} failed=${resp.failureCount}`);
@@ -183,10 +263,6 @@ function getISTDateString(dateObj) { const istDate = new Date(dateObj.getTime() 
 function getISTHour(dateObj) { const istDate = new Date(dateObj.getTime() + (5.5 * 60 * 60 * 1000)); return istDate.getUTCHours(); }
 function getISTMinutes(dateObj) { const istDate = new Date(dateObj.getTime() + (5.5 * 60 * 60 * 1000)); return istDate.getUTCHours() * 60 + istDate.getUTCMinutes(); }
 
-// ============================================================
-//  ★★★ FIX #2 — BRANCH AUTO-DETECTION HELPER ★★★
-//  Roll pattern: 24AIDS* → AIDS ; 24CSE* → CSE
-// ============================================================
 function getBranchFromRoll(rollNo) {
   if (!rollNo) return null;
   const r = String(rollNo).trim().toUpperCase();
@@ -248,7 +324,7 @@ function languageInstruction(lang) {
 }
 
 // ============================================================
-//  TIMETABLE — ★ FIX #1: AIDS Monday duplicate PA removed ★
+//  TIMETABLE
 // ============================================================
 const CSE_TIME_TABLE = {
   Monday: [{ subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'DAA - Design & Analysis of Algorithm', faculty: 'Ms. Rashmi' }, { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' }, { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }, { subject: 'CN - Computer Network', faculty: 'Mr. Chhetrapal' }, { subject: 'Sports', faculty: 'Sports Dept' }],
@@ -260,7 +336,6 @@ const CSE_TIME_TABLE = {
 };
 
 const AIDS_TIME_TABLE = {
-  // ★★★ FIX #1: Duplicate PA removed — sirf ek PA hai ab Monday ko ★★★
   Monday: [{ subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'LIB - Library', faculty: 'Library Staff' }, { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' }, { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }, { subject: 'PA - Predictive Analysis', faculty: 'Ms. Pooja' }, { subject: 'Sports', faculty: 'Sports Dept' }],
   Tuesday: [{ subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'PA - Predictive Analysis', faculty: 'Ms. Pooja' }, { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' }, { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }, { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'ML - Machine Learning', faculty: 'Mr. Harsh' }],
   Wednesday: [{ subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' }, { subject: 'Sports / Project', faculty: 'Sports Dept' }, { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' }, { subject: 'PA LAB - Predictive Analysis Lab', faculty: 'Ms. Pooja' }],
@@ -599,8 +674,7 @@ const EmergencyAlert = mongoose.model('EmergencyAlert', emergencyAlertSchema);
 Attendance.createIndexes().catch(err => console.error('Index error:', err));
 
 // ============================================================
-//  ★★★ FIX #2 MIGRATION — Branch auto-correct on server start ★★★
-//  Runs once on startup. Fixes any student whose branch is wrong.
+//  BRANCH MIGRATION
 // ============================================================
 async function runBranchMigration() {
   try {
@@ -627,7 +701,6 @@ async function getStudentSummary(rollNo) {
   try {
     const user = await User.findOne({ rollNo });
     if (!user) return null;
-    // ★ SAFETY: derive branch from rollNo (avoid wrong stored branch)
     const branch = getBranchFromRoll(rollNo) || user.branch || 'CSE';
     const timetable = getTimetableForBranch(branch);
     const allRecords = await Attendance.find({ rollNo }).lean();
@@ -645,7 +718,6 @@ async function getStudentSummary(rollNo) {
       const dayName = dayNameMap[d];
       const subs = timetable[dayName] || [];
       const acad = subs.filter(e => !e.subject.includes("LIB") && !e.subject.includes("Library") && !e.subject.includes("Sports"));
-      // ★ DEDUP in case timetable still has accidental duplicates
       dayAcad[dayName] = [...new Set(acad.map(e => mapToCanonical(e.subject)))];
     }
     while (current <= today) {
@@ -688,20 +760,92 @@ async function getStudentSummary(rollNo) {
   } catch (e) { console.error('getStudentSummary error:', e); return null; }
 }
 
+// ============================================================
+//  ★★★ FIX #1: DYNAMIC ADVISOR — no fixed 75% for those who can't reach ★★★
+// ============================================================
 async function getBunkAdvisor(rollNo) {
   const summary = await getStudentSummary(rollNo);
   if (!summary) return null;
+
   const { totalAcademicLectures: attended, totalConductedLectures: total, attendancePercentage: pct } = summary;
-  const target = 0.75;
-  const canBunkLectures = total > 0 ? Math.max(0, Math.floor((attended - target * total) / target)) : 0;
-  const lecturesNeeded = pct >= 75 ? 0 : Math.max(0, Math.ceil((target * total - attended) / (1 - target)));
+  const TARGET_PCT = 75;
+  const target = TARGET_PCT / 100;
+
+  // Remaining semester analysis
+  const today = new Date();
+  const semesterEnd = new Date('2026-12-31T23:59:59+05:30');
+  const remainingWorkingDays = await getWorkingDays(today, semesterEnd);
+
+  // Branch-specific avg lectures per day (AIDS ≈ 5.4, CSE ≈ 5.8)
+  const user = await User.findOne({ rollNo }).select('branch').lean();
+  const branch = getBranchFromRoll(rollNo) || (user && user.branch) || 'CSE';
+  const avgLecturesPerDay = (branch === 'AIDS') ? 5.4 : 5.8;
+  const remainingLectures = Math.round(remainingWorkingDays * avgLecturesPerDay);
+
+  // Semester total (already + remaining)
+  const totalSemesterLectures = total + remainingLectures;
+
+  // Max possible if attend ALL remaining
+  const maxAttended = attended + remainingLectures;
+  const maxTotal = total + remainingLectures;
+  const maxPossiblePct = maxTotal > 0 ? Math.round((maxAttended / maxTotal) * 100) : 0;
+
+  // Min possible if attend NONE (all remaining considered absent)
+  const minPossiblePct = maxTotal > 0 ? Math.round((attended / maxTotal) * 100) : 0;
+
+  // Lectures needed to reach 75% (if achievable)
+  // Solve: (attended + x) / (total + x) = 0.75
+  // 0.25x = 0.75*total - attended
+  // x = (0.75*total - attended) / 0.25
+  let lecturesFor75 = 0;
+  let canReach75 = false;
+  if (pct >= 75) {
+    canReach75 = true;
+  } else {
+    const x = Math.ceil((target * total - attended) / (1 - target));
+    if (x <= remainingLectures) {
+      lecturesFor75 = Math.max(0, x);
+      canReach75 = true;
+    }
+  }
+
+  // Safe skips if already above 75
+  const safeSkips = pct >= 75 ? Math.max(0, Math.floor((attended - target * total) / target)) : 0;
+
+  // ★★★ DYNAMIC MESSAGE — realistic, based on student's actual situation ★★★
+  let message = '';
+  let status = '';
+  let lecturesNeeded = 0;
+
+  if (pct >= 75) {
+    status = 'SAFE';
+    lecturesNeeded = 0;
+    message = `✅ Safe zone (${pct}%). You can skip ~${safeSkips} lecture(s) safely. Semester max possible: ${maxPossiblePct}%.`;
+  } else if (canReach75) {
+    status = 'DANGER';
+    lecturesNeeded = lecturesFor75;
+    message = `⚠️ You are at ${pct}% (${attended}/${total}). Attend ${lecturesFor75} more lecture(s) to reach 75%. Semester max possible: ${maxPossiblePct}%.`;
+  } else {
+    // Can't reach 75% — show realistic target
+    status = 'CRITICAL';
+    lecturesNeeded = remainingLectures;
+    message = `⚠️ You are at ${pct}% (${attended}/${total}). 75% is NOT achievable this semester. Attend ALL ${remainingLectures} remaining lectures to reach max possible ${maxPossiblePct}%.`;
+  }
+
   return {
-    totalAttended: attended, totalConducted: total, percentage: pct,
-    canBunkLectures, lecturesNeeded,
-    status: pct >= 75 ? 'SAFE' : 'DANGER',
-    message: pct >= 75
-      ? `✅ You are at ${pct}% (${attended}/${total}). You can skip about ${canBunkLectures} lecture(s) and still stay at ≥75%.`
-      : `⚠️ You are at ${pct}% (${attended}/${total}) — BELOW 75%. You need to attend ${lecturesNeeded} more lecture(s) to reach 75%.`
+    totalAttended: attended,
+    totalConducted: total,
+    percentage: pct,
+    canBunkLectures: safeSkips,
+    lecturesNeeded,
+    maxPossiblePct,
+    minPossiblePct,
+    remainingLectures,
+    remainingWorkingDays,
+    totalSemesterLectures,
+    canReach75,
+    status,
+    message
   };
 }
 
@@ -905,7 +1049,7 @@ function generatePDFBuffer({ title, subtitle, sections = [], footer = null }) {
 }
 
 // ============================================================
-//  HEALTH & FCM
+//  HEALTH & FCM ROUTES
 // ============================================================
 app.get('/', (req, res) => res.send('BM Group ERP Active!'));
 app.get('/health', (req, res) => res.json({
@@ -932,6 +1076,7 @@ app.post('/api/user/save-fcm-token', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
     user.fcmToken = fcmToken;
     await user.save();
+    console.log(`📱 [FCM-SAVE] ${cr} → ${fcmToken.substring(0, 20)}...`);
     res.json({ message: 'FCM token saved', fcmReady });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -942,6 +1087,19 @@ app.post('/api/user/remove-fcm-token', async (req, res) => {
     if (!rollNo) return res.status(400).json({ error: 'rollNo required' });
     await User.updateOne({ rollNo: rollNo.trim().toUpperCase() }, { $set: { fcmToken: null } });
     res.json({ message: 'FCM token removed' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ★★★ NEW: /api/user/send-notification — frontend calls this for download/attendance marks ★★★
+app.post('/api/user/send-notification', async (req, res) => {
+  try {
+    const { rollNo, title, body, data } = req.body || {};
+    if (!rollNo || !title) return res.status(400).json({ error: 'rollNo and title required' });
+    if (!fcmReady) return res.status(503).json({ error: 'FCM not configured on server' });
+    const cr = String(rollNo).trim().toUpperCase();
+    const result = await sendPushToRollNo(cr, title, body || '', data || {});
+    if (result.ok) return res.json({ success: true, messageId: result.messageId });
+    return res.json({ success: false, reason: result.reason || 'unknown' });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -956,9 +1114,6 @@ app.post('/api/user/test-push', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ============================================================
-//  ★★★ NEW: BRANCH MIGRATION ENDPOINTS (manual fix) ★★★
-// ============================================================
 app.get('/api/admin/fix-branches/:requesterRollNo', async (req, res) => {
   try {
     const req1 = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
@@ -991,6 +1146,7 @@ app.post('/api/admin/fee/add', async (req, res) => {
     const fee = await Fee.create({ rollNo: cr, amount: parseInt(amount), dueDate, description: description || 'Semester Fee', academicYear: academicYear || '2026-27' });
     user.feeStatus = 'Pending'; user.feeDueDate = dueDate; user.feeAmount = parseInt(amount);
     await user.save();
+    sendPushToRollNo(cr, '💰 New Fee Added', `₹${amount} due on ${dueDate}`, { type: 'fee_added', feeId: fee._id.toString() }).catch(() => {});
     res.status(201).json({ message: `Fee added for ${cr}`, fee });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -1009,6 +1165,7 @@ app.post('/api/admin/fee/bulk-add', async (req, res) => {
       if (existing) continue;
       await Fee.create({ rollNo: s.rollNo, amount: parseInt(amount), dueDate, description: description || 'Semester Fee', academicYear: academicYear || '2026-27' });
       await User.updateOne({ rollNo: s.rollNo }, { feeStatus: 'Pending', feeDueDate: dueDate, feeAmount: parseInt(amount) });
+      sendPushToRollNo(s.rollNo, '💰 New Fee Added', `₹${amount} due on ${dueDate}`, { type: 'fee_added' }).catch(() => {});
       added++;
     }
     res.json({ message: `Fee added for ${added} student(s)`, totalStudents: students.length });
@@ -1043,12 +1200,13 @@ app.post('/api/admin/fee/mark-paid/:feeId', async (req, res) => {
     fee.paidDate = getISTDateString(new Date());
     await fee.save();
     if (fee.status === 'Paid') await User.updateOne({ rollNo: fee.rollNo }, { feeStatus: 'Paid' });
+    sendPushToRollNo(fee.rollNo, '✅ Fee Marked Paid', `₹${fee.paidAmount} received. Status: ${fee.status}`, { type: 'fee_paid' }).catch(() => {});
     res.json({ message: 'Fee marked', fee });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ============================================================
-//  ASSIGNMENT / EXAM / LIBRARY / RESULT / ANNOUNCEMENT / EMERGENCY
+//  ASSIGNMENT / EXAM / LIBRARY / RESULT / ANNOUNCEMENT
 // ============================================================
 app.post('/api/faculty/assignment/create', async (req, res) => {
   try {
@@ -1192,7 +1350,7 @@ app.post('/api/faculty/announcement', async (req, res) => {
 });
 
 // ============================================================
-//  AUTH — ★ FIX: branch auto-corrected from rollNo ★
+//  AUTH ROUTES
 // ============================================================
 app.post('/api/auth/register', async (req, res) => {
   try {
@@ -1208,7 +1366,6 @@ app.post('/api/auth/register', async (req, res) => {
     let user = await User.findOne({ rollNo: cleanRoll });
     if (user) return res.status(400).json({ error: 'ID already registered!' });
     const hashedPassword = await bcrypt.hash(password, 10);
-    // ★ FIX: branch derived from rollNo (not just includes('AIDS'))
     let branch = 'CSE';
     if (role === 'student') {
       const derived = getBranchFromRoll(cleanRoll);
@@ -1233,7 +1390,6 @@ app.post('/api/auth/register-request', async (req, res) => {
     if (await User.findOne({ rollNo: cleanRoll })) return res.status(400).json({ error: 'Roll already registered. Sign in.' });
     if (await RegistrationRequest.findOne({ rollNo: cleanRoll, status: 'Pending' })) return res.status(400).json({ error: 'Pending approval already.' });
     const hashed = await bcrypt.hash(password, 10);
-    // ★ FIX: derived from rollNo
     const branch = getBranchFromRoll(cleanRoll) || (cleanRoll.includes('AIDS') ? 'AIDS' : 'CSE');
     const newReq = await RegistrationRequest.create({ name: name.trim(), rollNo: cleanRoll, password: hashed, deviceId: deviceId || null, branch });
     sendPushToRole('admin', '📝 New Registration Request', `${newReq.name} (${newReq.rollNo}) — ${newReq.branch}`, { type: 'registration', rollNo: newReq.rollNo }).catch(() => {});
@@ -1275,7 +1431,6 @@ app.post('/api/admin/registration-requests/review/:id', async (req, res) => {
     if (action === 'Approved') {
       const dup = await User.findOne({ rollNo: r.rollNo });
       if (dup) { r.status = 'Rejected'; r.adminNote = (r.adminNote ? r.adminNote + ' · ' : '') + 'User exists'; await r.save(); return res.status(400).json({ error: 'User exists.' }); }
-      // ★ FIX: derive branch from rollNo (avoid stale r.branch)
       const correctBranch = getBranchFromRoll(r.rollNo) || r.branch || 'CSE';
       const newUser = await User.create({ name: r.name, rollNo: r.rollNo, password: r.password, role: 'student', branch: correctBranch, boundDeviceId: r.deviceId || null });
       r.approvedUserRollNo = newUser.rollNo;
@@ -1312,13 +1467,9 @@ app.post('/api/auth/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ error: 'Invalid password!' });
     user.failedAttempts = 0; user.blockUntil = null;
-    // ★★★ FIX #2 — Auto-correct branch on login ★★★
     if (user.role === 'student') {
       const correctBranch = getBranchFromRoll(cleanRoll);
-      if (correctBranch && user.branch !== correctBranch) {
-        console.log(`🔧 [AUTO-FIX-LOGIN] ${cleanRoll}: branch ${user.branch} → ${correctBranch}`);
-        user.branch = correctBranch;
-      }
+      if (correctBranch && user.branch !== correctBranch) user.branch = correctBranch;
     }
     const prevDevice = user.boundDeviceId;
     if (user.role === 'student') {
@@ -1529,7 +1680,6 @@ app.post('/api/admin/update-rollno', async (req, res) => {
     const o = oldRoll.trim().toUpperCase(), n = newRoll.trim().toUpperCase();
     await User.findOneAndUpdate({ rollNo: o }, { rollNo: n });
     await Attendance.updateMany({ rollNo: o }, { rollNo: n });
-    // ★ Auto-fix branch if roll changed
     const newBranch = getBranchFromRoll(n);
     if (newBranch) await User.updateOne({ rollNo: n }, { $set: { branch: newBranch } });
     res.json({ message: 'Updated!' });
@@ -1561,7 +1711,7 @@ app.post('/api/admin/login-as-student', async (req, res) => {
 });
 
 // ============================================================
-//  ATTENDANCE REQUEST
+//  ATTENDANCE REQUESTS
 // ============================================================
 app.post('/api/requests/submit', async (req, res) => {
   try {
@@ -1590,7 +1740,7 @@ app.post('/api/requests/submit', async (req, res) => {
 });
 
 // ============================================================
-//  LIVE MARKING
+//  LIVE MARKING — ★ NOW SENDS PUSH ON SUCCESS ★
 // ============================================================
 app.post('/api/attendance/mark-live', async (req, res) => {
   try {
@@ -1600,7 +1750,6 @@ app.post('/api/attendance/mark-live', async (req, res) => {
     const cr = rollNo.trim().toUpperCase();
     const user = await User.findOne({ rollNo: cr });
     if (!user) return res.status(404).json({ error: 'Student not found.' });
-    // ★ FIX: derived branch from rollNo
     const branch = getBranchFromRoll(cr) || user.branch || 'CSE';
     const todayStr = getISTDateString(new Date());
     const ds = await checkDateStatus(todayStr);
@@ -1633,6 +1782,8 @@ app.post('/api/attendance/mark-live', async (req, res) => {
       user.failedAttempts = 0; user.blockUntil = null; await user.save();
       if (marked === 0) return res.status(400).json({ error: `Already marked.` });
       checkAttendanceMilestone(cr).catch(() => {});
+      // ★ Push notification on full day mark
+      sendPushToRollNo(cr, '✅ Attendance Marked', `Full day attendance marked (${marked} lectures) · ${lc.distance}m from campus`, { type: 'attendance_marked', date: todayStr, lectureType: 'full_day' }).catch(() => {});
       return res.status(201).json({ message: `✅ ${marked} marked (${skipped} already). ${lc.distance}m.`, marked, skipped });
     }
     const period = getCurrentPeriod(branch);
@@ -1643,10 +1794,15 @@ app.post('/api/attendance/mark-live', async (req, res) => {
     user.lastAttendanceTime = new Date(); user.lastAttendanceLocation = { latitude, longitude };
     user.failedAttempts = 0; user.blockUntil = null; await user.save();
     checkAttendanceMilestone(cr).catch(() => {});
+    // ★ Push notification on single lecture mark
+    sendPushToRollNo(cr, '✅ Lecture Marked', `${activeSubj} attendance marked · ${lc.distance}m from campus`, { type: 'attendance_marked', date: todayStr, lectureType: 'single_lecture', subject: activeSubj }).catch(() => {});
     res.status(201).json({ message: `✅ ${activeSubj} marked. ${lc.distance}m.`, subject: activeSubj });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ============================================================
+//  REQUESTS VIEW/REVIEW
+// ============================================================
 app.get('/api/requests/my/:rollNo', async (req, res) => {
   try { res.json(await AttendanceRequest.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ createdAt: -1 }).limit(50)); }
   catch (err) { res.status(500).json({ error: err.message }); }
@@ -1796,6 +1952,7 @@ app.post('/api/admin/assign-subject', async (req, res) => {
     const canon = mapToCanonical(subject);
     if (await TeacherSubject.findOne({ teacherRollNo: ct, subject: canon })) return res.status(400).json({ error: 'Already assigned.' });
     await TeacherSubject.create({ teacherRollNo: ct, subject: canon, assignedBy: requesterRollNo });
+    sendPushToRollNo(ct, '📚 New Subject Assigned', `You have been assigned: ${canon}`, { type: 'subject_assigned' }).catch(() => {});
     res.json({ message: `Assigned to ${ct}` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -1835,6 +1992,8 @@ app.get('/api/teacher/class-average/:rollNo', async (req, res) => {
     res.json({ average: records.length > 0 ? Math.round((present / records.length) * 100) : 0 });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
+
+// ★ Faculty mark attendance — sends push to student
 app.post('/api/teacher/mark-attendance', async (req, res) => {
   try {
     const { rollNo, subject, latitude, longitude, studentRollNo } = req.body;
@@ -1856,9 +2015,12 @@ app.post('/api/teacher/mark-attendance', async (req, res) => {
     const b = getBranchFromRoll(cs) || su.branch || 'CSE';
     await new Attendance({ rollNo: cs, studentName: su.name, subject: subj, date: todayDate, status: 'Present', location: { latitude, longitude }, ipAddress: req.ip, isVerified: true, branch: b, markedBy: cr }).save();
     checkAttendanceMilestone(cs).catch(() => {});
+    sendPushToRollNo(cs, '✅ Marked Present', `${teacher.name} marked you present for ${subj}`, { type: 'faculty_mark', subject: subj, markedBy: teacher.name }).catch(() => {});
     res.status(201).json({ message: `✅ Marked ${su.name}` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
+
+// ★ Faculty bulk mark — sends push to all affected students
 app.post('/api/teacher/bulk-mark-attendance', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNos, dates, status } = req.body;
@@ -1888,6 +2050,9 @@ app.post('/api/teacher/bulk-mark-attendance', async (req, res) => {
       }
       results.push({ rollNo: s.rollNo, branch: b, marked: mk, skipped: sk });
       totalMarked += mk; totalSkipped += sk;
+      if (mk > 0) {
+        sendPushToRollNo(s.rollNo, '✅ Bulk Attendance Marked', `${req1.name} marked you for ${mk} lecture(s)`, { type: 'faculty_bulk_mark', markedBy: req1.name }).catch(() => {});
+      }
     }
     res.json({ message: `✅ ${totalMarked} new, ${totalSkipped} skipped.`, results });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -1906,6 +2071,7 @@ app.delete('/api/teacher/bulk-delete-attendance', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ★ Passcode generate — push to students when published
 app.post('/api/admin/generate-passcode', async (req, res) => {
   try {
     const { requesterRollNo, type, force, publish, durationMinutes, isPublic } = req.body;
@@ -1996,6 +2162,7 @@ app.get('/api/passcode/public/:type', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ★★★ Legacy mark-lecture — now sends push ★★★
 app.post('/api/attendance/mark-lecture', async (req, res) => {
   try {
     const { rollNo, subject, latitude, longitude, passcode } = req.body;
@@ -2023,9 +2190,12 @@ app.post('/api/attendance/mark-lecture', async (req, res) => {
     user.lastAttendanceTime = new Date(); user.lastAttendanceLocation = { latitude, longitude };
     user.failedAttempts = 0; user.blockUntil = null; await user.save();
     checkAttendanceMilestone(cr).catch(() => {});
+    sendPushToRollNo(cr, '✅ Lecture Marked', `${ns} marked · ${lc.distance}m from campus`, { type: 'attendance_marked', subject: ns }).catch(() => {});
     res.status(201).json({ message: `✅ Marked ${subject}!` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
+
+// ★★★ Legacy mark-fullday — now sends push ★★★
 app.post('/api/attendance/mark-fullday', async (req, res) => {
   try {
     const { rollNo, name, latitude, longitude, passcode } = req.body;
@@ -2059,10 +2229,14 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     if (marked === 0 && skipped > 0) return res.status(400).json({ error: `All ${skipped} already marked today.` });
     if (marked === 0) return res.status(400).json({ error: 'No academic subjects today.' });
     checkAttendanceMilestone(cr).catch(() => {});
+    sendPushToRollNo(cr, '✅ Full Day Marked', `${marked} lectures marked · ${lc.distance}m from campus`, { type: 'attendance_marked', lectureType: 'full_day' }).catch(() => {});
     res.status(201).json({ message: `✅ Marked ${marked} new (${skipped} already).` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ============================================================
+//  NOTICES / HOLIDAYS
+// ============================================================
 app.get('/api/notices', async (req, res) => {
   try { res.json(await Notice.find().sort({ date: -1 }).limit(10)); } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -2112,6 +2286,9 @@ app.get('/api/date-status/:date', async (req, res) => {
   try { res.json(await checkDateStatus(req.params.date)); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ============================================================
+//  CALENDAR DAY INFO
+// ============================================================
 app.get('/api/calendar/day/:rollNo/:date', async (req, res) => {
   try {
     const cr = (req.params.rollNo || '').trim().toUpperCase();
@@ -2149,12 +2326,14 @@ app.get('/api/calendar/day/:rollNo/:date', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ============================================================
+//  TREND / DASHBOARD / ALL USERS
+// ============================================================
 app.get('/api/student/trend/:rollNo', async (req, res) => {
   try {
     const cr = (req.params.rollNo || '').trim().toUpperCase();
     const user = await User.findOne({ rollNo: cr });
     if (!user) return res.status(404).json({ error: 'Not found' });
-    // ★ FIX: derived branch
     const branch = getBranchFromRoll(cr) || user.branch || 'CSE';
     const tt = getTimetableForBranch(branch);
     const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -2164,7 +2343,7 @@ app.get('/api/student/trend/:rollNo', async (req, res) => {
     const mode = (req.query.mode || 'monthly').toLowerCase();
     async function computeDay(dateStr, dayName) {
       const rawAcad = (tt[dayName] || []).map(e => mapToCanonical(e.subject)).filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports'));
-      const acad = [...new Set(rawAcad)];   // ★ dedup
+      const acad = [...new Set(rawAcad)];
       const conducted = acad.length;
       if (conducted === 0) return { attended: 0, conducted: 0 };
       const recs = await Attendance.find({ rollNo: cr, date: dateStr, status: { $in: ['Present', 'Duty Leave'] } }).lean();
@@ -2283,6 +2462,7 @@ app.delete('/api/attendance/delete/:id/:requesterRollNo', async (req, res) => {
     if (!rec) return res.status(404).json({ error: 'Not found' });
     if (isT) { const subs = await TeacherSubject.find({ teacherRollNo: rrn }).distinct('subject'); if (!subs.includes(mapToCanonical(rec.subject))) return res.status(403).json({ error: 'Not authorized.' }); }
     await Attendance.findByIdAndDelete(req.params.id);
+    if (isA) sendPushToRollNo(rec.rollNo, '⚠️ Attendance Deleted', `Your ${rec.subject} attendance on ${rec.date} was removed by admin.`, { type: 'attendance_deleted' }).catch(() => {});
     res.json({ message: 'Deleted!' });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -2297,6 +2477,7 @@ app.put('/api/attendance/update/:id', async (req, res) => {
     if (!rec) return res.status(404).json({ error: 'Not found' });
     if (isT) { const subs = await TeacherSubject.find({ teacherRollNo: requesterRollNo.trim().toUpperCase() }).distinct('subject'); if (!subs.includes(mapToCanonical(rec.subject))) return res.status(403).json({ error: 'Not authorized.' }); }
     rec.status = status; await rec.save();
+    sendPushToRollNo(rec.rollNo, '⚠️ Attendance Updated', `${rec.subject} on ${rec.date} → ${status}`, { type: 'attendance_updated' }).catch(() => {});
     res.json({ message: 'Updated!' });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -2312,6 +2493,7 @@ app.delete('/api/attendance/delete-day/:rollNo/:date/:requesterRollNo', async (r
     if (isT) { const subs = await TeacherSubject.find({ teacherRollNo: requesterRollNo.trim().toUpperCase() }).distinct('subject'); q.subject = { $in: subs }; }
     const result = await Attendance.deleteMany(q);
     if (result.deletedCount === 0) return res.status(404).json({ error: 'No records.' });
+    if (isA) sendPushToRollNo(cr, '⚠️ Attendance Cleared', `All attendance records for ${cd} were removed by admin.`, { type: 'attendance_deleted', date: cd }).catch(() => {});
     res.json({ message: `Deleted ${result.deletedCount}.` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -2378,6 +2560,7 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ★ Admin manual mark — now sends push to student
 app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNo, date, subjects, status } = req.body;
@@ -2409,6 +2592,9 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
     }
     let msg = `✅ Marked ${marked} for ${user.name} on ${date}`;
     if (already.length > 0) msg += `. Already: ${already.join(', ')}`;
+    if (marked > 0) {
+      sendPushToRollNo(tr, '✅ Attendance Marked by Admin', `${req1.name} marked you for ${marked} subject(s) on ${date}`, { type: 'admin_manual_mark', date, markedBy: req1.name }).catch(() => {});
+    }
     res.status(201).json({ message: msg, markedSubjects: markedSubs, alreadyMarked: already, total: marked });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -2455,6 +2641,9 @@ app.get('/api/student/bunk-advisor/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ============================================================
+//  EXPORT
+// ============================================================
 app.get('/api/export/google-sheets/:requesterRollNo', async (req, res) => {
   try {
     const req1 = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
@@ -2501,6 +2690,9 @@ app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ============================================================
+//  TIMETABLE / CLASS REPORT / BULK
+// ============================================================
 app.get('/api/timetable/subjects', async (req, res) => {
   try {
     const set = new Set();
@@ -2591,6 +2783,9 @@ app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
       }
       results.push({ rollNo: s.rollNo, branch: b, marked: mk, skipped: sk });
       tMarked += mk; tSkipped += sk;
+      if (mk > 0) {
+        sendPushToRollNo(s.rollNo, '✅ Bulk Marked by Admin', `${req1.name} marked you for ${mk} lecture(s)`, { type: 'admin_bulk_mark', markedBy: req1.name }).catch(() => {});
+      }
     }
     res.json({ message: `✅ ${tMarked} new, ${tSkipped} skipped.`, results });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -2608,6 +2803,9 @@ app.delete('/api/admin/bulk-delete-attendance', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ============================================================
+//  CHAT
+// ============================================================
 app.get('/api/chats/:rollNo', async (req, res) => {
   try { res.json(await Chat.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ updatedAt: -1 })); }
   catch (err) { res.status(500).json({ error: err.message }); }
@@ -2649,6 +2847,9 @@ app.post('/api/chats/clear-all', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ============================================================
+//  LEAVE
+// ============================================================
 app.post('/api/leave/apply', async (req, res) => {
   try {
     const { rollNo, fromDate, toDate, reason, leaveType } = req.body;
@@ -2718,6 +2919,9 @@ app.post('/api/admin/clear-leaves', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ============================================================
+//  DEFAULTERS
+// ============================================================
 app.get('/api/admin/defaulters/:requesterRollNo', async (req, res) => {
   try {
     const req1 = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
@@ -2747,6 +2951,9 @@ app.get('/api/admin/defaulters/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ============================================================
+//  HELPERS
+// ============================================================
 async function getSystemHealth() {
   const uptime = Date.now() - SERVER_START_TIME;
   const uptimeHrs = (uptime / (1000 * 60 * 60)).toFixed(2);
@@ -3007,7 +3214,7 @@ async function executeDbAction(intent, userContext, threadId = null) {
     if (!summary) return { error: 'No data.' };
     const advisor = await getBunkAdvisor(userContext.rollNo);
     let txt = `📊 **Your Attendance Summary**\n\n• Working Days: **${summary.workingDaysSoFar}**\n• Days Present: **${summary.daysPresent}**\n• Lectures: **${summary.totalAcademicLectures}/${summary.totalConductedLectures}**\n• Percentage: **${summary.attendancePercentage}%**\n\n`;
-    if (advisor) txt += advisor.status === 'SAFE' ? `✅ Safe. You can skip ~**${advisor.canBunkLectures}** lecture(s).` : `⚠️ Need **${advisor.lecturesNeeded}** more lecture(s) to reach 75%.`;
+    if (advisor) txt += advisor.status === 'SAFE' ? `✅ Safe. You can skip ~**${advisor.canBunkLectures}** lecture(s).` : (advisor.canReach75 ? `⚠️ Need **${advisor.lecturesNeeded}** more lecture(s) to reach 75%.` : `⚠️ 75% not achievable. Max possible: ${advisor.maxPossiblePct}%.`);
     return { reply: txt, isReply: true };
   }
   if (action === 'db_my_leave') {
@@ -3051,6 +3258,7 @@ async function executeDbAction(intent, userContext, threadId = null) {
       if (existing) return { error: `Already marked for ${d.rollNo} on ${date}.` };
       const b = getBranchFromRoll(stu.rollNo) || stu.branch || 'CSE';
       await Attendance.create({ rollNo: stu.rollNo, studentName: stu.name, subject: subj, date, status: 'Present', location: null, ipAddress: 'chat-faculty-mark', isVerified: false, branch: b });
+      sendPushToRollNo(stu.rollNo, '✅ Marked Present', `${userContext.name} marked you present for ${subj}`, { type: 'faculty_mark', subject: subj }).catch(() => {});
       return { reply: `✅ Marked **${stu.rollNo}** (${stu.name}) as **Present** for **${subj}** on ${date}.`, isReply: true };
     } catch (e) { return { error: e.message }; }
   }
@@ -3170,7 +3378,6 @@ async function executeDbAction(intent, userContext, threadId = null) {
     if (dup) return { error: 'Roll already exists.' };
     const pass = d.password || '123456';
     const hashed = await bcrypt.hash(pass, 10);
-    // ★ FIX: derive branch
     const branch = role === 'student' ? (getBranchFromRoll(cleanRoll) || 'CSE') : 'CSE';
     await User.create({ name: d.name, rollNo: cleanRoll, password: hashed, role, branch, facultySubject: role === 'faculty' ? (d.subject || null) : null });
     if (role === 'faculty' && d.subject) await TeacherSubject.create({ teacherRollNo: cleanRoll, subject: mapToCanonical(d.subject), assignedBy: userContext.rollNo });
@@ -3524,7 +3731,7 @@ async function executeDbAction(intent, userContext, threadId = null) {
     const advisor = await getBunkAdvisor(userContext.rollNo);
     if (!advisor) return { error: 'Not found.' };
     let txt = `📊 **Bunk Advisor (Lectures)**\n\n📈 Overall: **${advisor.totalAttended}/${advisor.totalConducted}** (${advisor.percentage}%)\n\n`;
-    txt += advisor.status === 'SAFE' ? `✅ **SAFE** — can bunk **${advisor.canBunkLectures} lecture(s)**.` : `⚠️ **DANGER** — Need **${advisor.lecturesNeeded} lecture(s)** more to reach 75%.`;
+    txt += advisor.status === 'SAFE' ? `✅ **SAFE** — can bunk **${advisor.canBunkLectures} lecture(s)**.` : (advisor.canReach75 ? `⚠️ **DANGER** — Need **${advisor.lecturesNeeded} lecture(s)** more to reach 75%.` : `⚠️ **CRITICAL** — 75% not achievable. Max possible: **${advisor.maxPossiblePct}%**.`);
     return { reply: txt, isReply: true };
   }
   if (action === 'db_geofence_guide') {
@@ -3573,6 +3780,9 @@ function L(lang, key) {
   return row ? (row[lang] || row.english) : key;
 }
 
+// ============================================================
+//  AI CHAT
+// ============================================================
 app.post('/api/ai/chat', async (req, res) => {
   try {
     const { message, rollNo, role, name, branch, threadId, skipGreeting, useContext, useDatabase, location, passcode } = req.body;
@@ -3648,6 +3858,7 @@ app.post('/api/ai/chat', async (req, res) => {
             await clearPending(cr);
             thinkingCtx.flags.locationVerified = true; thinkingCtx.flags.attendanceMarked = true;
             checkAttendanceMilestone(cr).catch(() => {});
+            sendPushToRollNo(cr, '✅ Attendance Marked via Chat', `${lectureType === 'full_day' ? 'Full day' : 'Single lecture'} marked · ${lc.distance}m`, { type: 'chat_mark', lectureType }).catch(() => {});
             if (cr !== 'guest') {
               const nt = existingChat || await Chat.create({ rollNo: cr, threadId: `chat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`, title: 'Attendance', messages: [] });
               nt.messages.push({ role: 'user', content: `[marked] ${lectureType}` });
@@ -3708,7 +3919,7 @@ app.post('/api/ai/chat', async (req, res) => {
       lines.push(getStrictTimetableResponse(todayStr, userBranch));
       if (userData.role === 'student') {
         const summary = await getStudentSummary(userData.rollNo);
-        if (summary) { lines.push(`Attendance: ${summary.totalAcademicLectures}/${summary.totalConductedLectures} (${summary.attendancePercentage}%)`); const advisor = await getBunkAdvisor(userData.rollNo); if (advisor) lines.push(`Bunk Advisor: ${advisor.message}`); }
+        if (summary) { lines.push(`Attendance: ${summary.totalAcademicLectures}/${summary.totalConductedLectures} (${summary.attendancePercentage}%)`); const advisor = await getBunkAdvisor(userData.rollNo); if (advisor) lines.push(`Advisor: ${advisor.message}`); }
       }
       contextStr = lines.join('\n');
     }
@@ -3879,7 +4090,6 @@ app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
         if (seen.has(key)) { await Attendance.deleteOne({ _id: rec._id }); totalDeduplicated++; }
         else seen.set(key, rec._id);
       }
-      // ★ Also fix branch
       const correct = getBranchFromRoll(s.rollNo);
       if (correct && s.branch !== correct) { await User.updateOne({ _id: s._id }, { $set: { branch: correct } }); totalBranchFixed++; }
     }
@@ -3887,6 +4097,9 @@ app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ============================================================
+//  CRON JOBS
+// ============================================================
 const _cronFlags = { dailySummary: null, shortageWeekly: null, weeklyReport: null, monthlyProgress: null, birthday: null, pendingAdmin: null, pendingStudent: null, systemHealth: null };
 function MONTH_NAME(m) { return ['January','February','March','April','May','June','July','August','September','October','November','December'][m]; }
 
@@ -4214,7 +4427,6 @@ app.listen(PORT, async () => {
   console.log(`🚀 Port ${PORT}`);
   console.log(`🤖 AI: Groq(${GROQ_API_KEYS.length} keys) → Gemini(${GEMINI_API_KEYS.length} keys)`);
   console.log(`🔥 FCM: ${fcmReady ? 'READY ✅' : 'DISABLED ⚠️'}`);
-  console.log(`📦 Version: 4.1 (Branch auto-fix + PA duplicate removed)`);
-  // ★★★ Run branch migration after server starts ★★★
+  console.log(`📦 Version: 4.3 (Dynamic Advisor + Full FCM/Median Push)`);
   setTimeout(runBranchMigration, 3000);
 });
