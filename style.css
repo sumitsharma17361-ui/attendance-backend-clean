@@ -1521,3 +1521,37 @@ button:active, .btn:active, .portal:active, .student-menu-item:active{
   .bg-blob{display:none;}
   body::after{display:none;}
 }
+/* ============================================================
+   ★ FACULTY/ADMIN — Hide student-only dashboard sections
+   ============================================================ */
+/* When role is admin or faculty, these sections are already
+   hidden by JS via style="display:none". But we also want
+   to make sure they don't take up animation slot / space. */
+#sec-chart[style*="display: none"],
+#sec-timetable[style*="display: none"],
+#sec-calendar[style*="display: none"],
+#sec-reports[style*="display: none"],
+#sec-logs[style*="display: none"] {
+  animation: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* ============================================================
+   ★ FACULTY STUDENT LOOKUP — Result card
+   ============================================================ */
+#facLookupResult {
+  animation: slideIn .35s var(--ease-out);
+}
+#facLookupResult .chip.good,
+#facLookupResult .chip.bad {
+  font-weight: 700;
+  letter-spacing: .01em;
+}
+#facLookupResult .stat-value {
+  line-height: 1;
+}
+#facLookupResult .stat-value.good { color: var(--emerald-600); }
+#facLookupResult .stat-value.bad { color: var(--rose-600); }
