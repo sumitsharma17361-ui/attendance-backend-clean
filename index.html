@@ -17,17 +17,23 @@
   body { overflow-y: auto; overflow-x: hidden; }
   body.body-locked { overflow: hidden !important; }
   
-  /* ★ Refresh button spin animation */
   @keyframes spinRefresh {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
   }
-  .icon-btn.refreshing svg {
-    animation: spinRefresh 0.8s linear infinite;
-  }
-  .icon-btn.refreshing {
-    pointer-events: none;
-    opacity: 0.7;
+  .icon-btn.refreshing svg { animation: spinRefresh 0.8s linear infinite; }
+  .icon-btn.refreshing { pointer-events: none; opacity: 0.7; }
+
+  @media (max-width: 640px) {
+    html { scroll-padding-top: calc(52px + env(safe-area-inset-top, 0px)); }
+    body::before { z-index: 0 !important; }
+    .app { position: relative; z-index: 1; }
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: #fff;
+    }
   }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -109,7 +115,6 @@
       <div class="brand-text"><h1>BM Group of Institutions</h1><p>B.Tech CSE / AIDS · 5th Semester</p></div>
     </div>
     <div class="header-right">
-      <!-- ★ REFRESH BUTTON -->
       <button class="icon-btn" id="refreshBtn" onclick="refreshPage()" title="Refresh" data-tip="Refresh" style="display:none;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="23 4 23 10 17 10"/>
@@ -712,6 +717,18 @@
           <div class="stat"><div class="stat-value" id="facTotalStudents">0</div><div class="stat-label">My Students</div></div>
         </div>
         <div class="card"><div class="card-title">Today's Present Students</div><div id="facPresentList" class="text-sm text-muted">Loading…</div></div>
+
+        <!-- ★★★ NEW: Student Lookup for Faculty (Fix #5) ★★★ -->
+        <div class="card" style="border-color:var(--brand-200);background:linear-gradient(135deg,#fff,#f8fafc);">
+          <div class="card-title" style="color:var(--brand-700);">🔍 Student Lookup</div>
+          <p class="text-xs text-muted" style="margin-bottom:12px;line-height:1.6;">Enter any roll number to view full attendance summary (subject-wise %).</p>
+          <div class="row mb-2">
+            <input type="text" id="facLookupRoll" placeholder="e.g. 24CSE48" onkeydown="if(event.key==='Enter')facLookupStudent()" />
+            <button class="btn btn-primary btn-sm" onclick="facLookupStudent()" style="flex:0 0 auto;">Lookup</button>
+          </div>
+          <div id="facLookupResult"></div>
+        </div>
+
         <div class="card">
           <div class="card-title">Single Lecture Passcode</div>
           <div class="passcode-display" id="facPasscodeDisplay">
@@ -1003,6 +1020,11 @@
 </div>
 
 <script>
+/* ★ FIX: disable browser scroll restoration so refresh always starts at top */
+if ('scrollRestoration' in history) {
+  history.scrollRestoration = 'manual';
+}
+
 /* ============================================================
    GLOBAL CONFIG
    ============================================================ */
@@ -1072,22 +1094,21 @@ let clockIntervalId = null, dashboardIntervalId = null, periodIntervalId = null,
 let passcodeCountdownInterval = null;
 
 /* ============================================================
-   ★ PAGE REFRESH FUNCTION
+   ★ PAGE REFRESH
    ============================================================ */
 function refreshPage() {
   const btn = $('refreshBtn');
   if (btn) btn.classList.add('refreshing');
   showDL('Refreshing…');
-  setTimeout(() => {
-    // Clean up any locks before reloading
-    document.body.classList.remove('body-locked');
-    document.body.style.overflow = '';
-    location.reload();
-  }, 300);
+  document.body.classList.remove('body-locked');
+  document.body.style.overflow = '';
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  setTimeout(() => { location.reload(); }, 250);
 }
 
 /* ============================================================
-   SCROLL LOCK — only for chat panel
+   SCROLL LOCK
    ============================================================ */
 function lockBodyScroll(lock) {
   if (lock) document.body.classList.add('body-locked');
@@ -1106,7 +1127,6 @@ function ensureScrollUnlocked() {
    ============================================================ */
 async function sendPushNotification(title, body, data = {}) {
   try { toast(`${title}${body ? ' — ' + body : ''}`, 'info'); } catch(e){}
-  // Backend push (FCM server-side)
   try {
     if (currentUser && currentUser.rollNo) {
       await fetch(`${API}/api/user/send-notification`, {
@@ -1116,7 +1136,6 @@ async function sendPushNotification(title, body, data = {}) {
       });
     }
   } catch(e) { console.warn('[Push] Backend push failed:', e.message); }
-  // Browser notification fallback (only when tab is backgrounded)
   try {
     if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && document.visibilityState === 'hidden') {
       const iconSvg = 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#2563eb"/><text x="50" y="66" font-size="44" text-anchor="middle" fill="white" font-family="Arial,sans-serif" font-weight="900">BM</text></svg>`);
@@ -1163,7 +1182,6 @@ function showFeedback(type, title, message, opts = {}){
   overlay.querySelector('#fbOkBtn').onclick = () => { close(); opts.onClose && opts.onClose(); };
   overlay.addEventListener('click', (e) => { if (e.target === overlay) { close(); opts.onClose && opts.onClose(); } });
 }
-
 function showDL(msg){ if ($('dlMsg')) $('dlMsg').textContent = msg; $('dlProgress')?.classList.add('show'); }
 function hideDL(){ $('dlProgress')?.classList.remove('show'); }
 function closeModal(id){ const m = $(id); if (m) m.classList.remove('open'); }
@@ -1174,13 +1192,6 @@ function sanitizeRoll(r){return r ? r.toUpperCase().replace(/[^A-Z0-9]/g,'') : '
 function isValidStudentRoll(r){return /^24(CSE|AIDS)\d{2}$/.test(r);}
 function togglePassword(){const p = $('password');p.type = p.type === 'password' ? 'text' : 'password';}
 function escapeHtml(t){ const d = document.createElement('div'); d.textContent = String(t==null?'':t); return d.innerHTML; }
-function getFileTypeLabel(mimeType){
-  if (!mimeType) return 'file';
-  if (mimeType.startsWith('image/')) return 'image';
-  if (mimeType === 'application/pdf') return 'PDF';
-  if (mimeType === 'text/plain') return 'text file';
-  return 'file';
-}
 function isDesktop(){ return window.innerWidth >= 641; }
 function isMedianApp(){ return typeof window.median !== 'undefined' && window.median !== null; }
 
@@ -1218,7 +1229,7 @@ function fallbackBlobDownload(blob, filename, opts = {}){
 }
 
 /* ============================================================
-   PDF GENERATION
+   PDF
    ============================================================ */
 function ensureJsPDF(){
   if (!window.jspdf || !window.jspdf.jsPDF) { toast('PDF library not loaded', 'error'); return null; }
@@ -1370,7 +1381,6 @@ document.addEventListener('click', function(e){
    ============================================================ */
 function insideChatPanel(el){ const cp = document.getElementById('chatPanel'); if (!cp) return false; return cp.contains(el); }
 function insideModal(el){ return !!(el && el.closest && el.closest('.modal-backdrop.open')); }
-
 (function initSwipeGesture(){
   const SCROLL_CLASSES = ['tabs','subnav','chat-head-bottom','req-tabs','chips','table-wrap','bulk-select-list','present-list-wrap','wd-grid','row','chart-canvas-wrap'];
   function insideScrollable(el){
@@ -1526,7 +1536,6 @@ async function reviewRegistration(id, action){
     else showFeedback('error', 'Failed', d.error || 'Could not process');
   } catch(e){ showFeedback('error', 'Network Error', e.message); }
 }
-
 function openCheckStatus(){ openModal('checkStatusModal'); const r = $('csRoll'); if (r) r.value = ''; const res = $('csResult'); if (res) res.innerHTML = ''; }
 async function checkRequestStatus(){
   const roll = sanitizeRoll($('csRoll').value.trim());
@@ -1755,7 +1764,6 @@ function switchBack(){
   localStorage.removeItem('BM_ORIG_TOKEN'); localStorage.removeItem('BM_ORIG_USER');
   location.reload();
 }
-
 function openForgotPassword(){ openModal('forgotPassModal'); }
 function openSetNewPassword(){ openModal('setNewPassModal'); }
 function openDeviceReset(){ openModal('deviceResetModal'); }
@@ -1824,7 +1832,7 @@ function loadDashboard(){
   const cf = $('chatFab'); if (cf) cf.style.display = 'flex';
   const ua = $('userAvatar'); if (ua) ua.style.display = 'flex';
   const nb = $('notifBtn'); if (nb) nb.style.display = 'flex';
-  const rb2 = $('refreshBtn'); if (rb2) rb2.style.display = 'flex'; // ★ show refresh button
+  const rb2 = $('refreshBtn'); if (rb2) rb2.style.display = 'flex';
   if (localStorage.getItem('BM_FCM_ENABLED') === '1') updateNotifBtn(true);
   if ($('userName')) $('userName').textContent = currentUser.name;
   if (ua) ua.textContent = currentUser.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
@@ -1873,6 +1881,13 @@ function loadDashboard(){
     populateAdminMenu();
   }
 
+  /* ★★★ FIX #2/#3/#4 — Hide student-only sections for Admin/Faculty ★★★ */
+  if (currentUser.role === 'admin' || currentUser.role === 'faculty') {
+    ['sec-chart','sec-timetable','sec-calendar','sec-reports','sec-logs'].forEach(id => {
+      const e = $(id); if (e) e.style.display = 'none';
+    });
+  }
+
   if (mt) mt.style.display = 'flex';
   switchTab('tab-mark');
 
@@ -1897,6 +1912,7 @@ function loadDashboard(){
     initAdmin();
   } else if (currentUser.role === 'faculty') {
     const el = $('tabBtnFaculty'); if (el) el.style.display = 'block';
+    // ★ Faculty keeps studentStatsGrid + College Working Days CTA visible
     initFaculty();
   } else {
     const el = $('tabBtnLeave'); if (el) el.style.display = 'block';
@@ -2119,6 +2135,13 @@ async function loadDashboardStats(){
     }
   } catch(e){}
 }
+
+/* ============================================================
+   ★★★ FIX #1 — WORKING DAYS MODAL (compact mode) ★★★
+   showDayInfo(dateStr, mode)
+   mode = 'compact' → sirf Attended/Conducted boxes (Working Days modal)
+   mode = 'full'    → full timetable + attendance (Attendance Calendar)
+   ============================================================ */
 async function openWorkingDays(){ openModal('wdModal'); $('wdCalendar').innerHTML = '<div class="empty">Loading calendar…</div>'; try { renderWorkingDays(await ensureHolidays() || []); } catch(e){ $('wdCalendar').innerHTML = '<div class="empty">Failed to load.</div>'; } }
 function renderWorkingDays(holidays){
   const hMap = {}; (holidays || []).forEach(h => { const k = (h.date||'').split('T')[0]; if (k) hMap[k] = h.reason || 'Holiday'; });
@@ -2143,7 +2166,8 @@ function renderWorkingDays(holidays){
       else if (hMap[ds]) { cls = 'holiday'; mH++; tH++; }
       else { mW++; tW++; }
       if (ds === tStr) cls += ' today';
-      cells += `<div class="wd-cell ${cls} tappable" onclick="showDayInfo('${ds}')">${d}</div>`;
+      // ★ FIX: 'compact' mode for Working Days modal
+      cells += `<div class="wd-cell ${cls} tappable" onclick="showDayInfo('${ds}', 'compact')">${d}</div>`;
     }
     const headCells = DAY_NAMES.map(d => `<div class="wd-day-head">${d}</div>`).join('');
     html += `<div class="wd-month"><div class="wd-month-title"><span>${MONTH_NAMES[m]} ${y}</span><span class="wd-month-stats">${mW} working · ${mH} holidays</span></div><div class="wd-grid">${headCells}${cells}</div></div>`;
@@ -2155,10 +2179,14 @@ function renderWorkingDays(holidays){
   if ($('wdCalendar')) $('wdCalendar').innerHTML = html;
 }
 
-async function showDayInfo(dateStr){
+async function showDayInfo(dateStr, mode){
+  /* ★ mode = 'compact' (Working Days — sirf Attended/Conducted)
+     ★ mode = 'full'    (Attendance Calendar — full timetable bhi) */
+  mode = mode || 'full';
   openModal('dayInfoModal');
   const t = $('dayInfoTitle'), s = $('dayInfoSub'), b = $('dayInfoBody');
-  t.textContent = 'Loading…'; s.textContent = fmtDatePretty(dateStr); b.innerHTML = '<div class="empty"><div class="spinner" style="margin:0 auto 8px;"></div>Loading…</div>';
+  t.textContent = 'Loading…'; s.textContent = fmtDatePretty(dateStr);
+  b.innerHTML = '<div class="empty"><div class="spinner" style="margin:0 auto 8px;"></div>Loading…</div>';
   try {
     const roll = currentUser?.rollNo || 'guest';
     const res = await fetch(`${API}/api/calendar/day/${roll}/${dateStr}`);
@@ -2181,21 +2209,39 @@ async function showDayInfo(dateStr){
     else if (d.isFuture) html += `<div style="padding:14px;background:#dbeafe;border-radius:11px;margin-bottom:12px;border:1px solid #93c5fd;"><div style="font-size:12.5px;color:#1e40af;font-weight:600;">🔮 Future date — details will appear soon.</div></div>`;
     else if (d.isBeforeSemester) html += `<div style="padding:14px;background:#f1f5f9;border-radius:11px;margin-bottom:12px;border:1px solid #cbd5e1;"><div style="font-size:12.5px;color:#64748b;font-weight:600;">⏪ Semester started on 15 Jul 2026.</div></div>`;
     if (!d.isWeekend && !d.isHoliday && !d.isFuture && !d.isBeforeSemester) {
+      // Attended / Conducted — HAMESHA dikhega
       html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-        <div style="padding:12px;background:#fff;border-radius:11px;border:1px solid var(--slate-200);text-align:center;"><div style="font-size:22px;font-weight:800;color:var(--brand-700);">${d.attended}</div><div style="font-size:10px;color:var(--slate-500);text-transform:uppercase;font-weight:700;margin-top:2px;">Attended</div></div>
-        <div style="padding:12px;background:#fff;border-radius:11px;border:1px solid var(--slate-200);text-align:center;"><div style="font-size:22px;font-weight:800;color:var(--slate-700);">${d.conducted}</div><div style="font-size:10px;color:var(--slate-500);text-transform:uppercase;font-weight:700;margin-top:2px;">Conducted</div></div>
+        <div style="padding:14px;background:#fff;border-radius:11px;border:1px solid var(--slate-200);text-align:center;">
+          <div style="font-size:24px;font-weight:800;color:var(--brand-700);">${d.attended}</div>
+          <div style="font-size:10px;color:var(--slate-500);text-transform:uppercase;font-weight:700;margin-top:2px;">Attended</div>
+        </div>
+        <div style="padding:14px;background:#fff;border-radius:11px;border:1px solid var(--slate-200);text-align:center;">
+          <div style="font-size:24px;font-weight:800;color:var(--slate-700);">${d.conducted}</div>
+          <div style="font-size:10px;color:var(--slate-500);text-transform:uppercase;font-weight:700;margin-top:2px;">Conducted</div>
+        </div>
       </div>`;
-      if (d.scheduledLectures && d.scheduledLectures.length) {
-        html += '<div class="section-title" style="margin-top:8px;">📚 Scheduled Lectures</div>';
-        html += d.scheduledLectures.map(sl => {
-          const rec = (d.records || []).find(r => r.subject === sl.subject);
-          const statusBadge = rec ? (rec.status === 'Present' || rec.status === 'Duty Leave' ? '<span class="badge badge-success">✅ Present</span>' : `<span class="badge badge-danger">${rec.status}</span>`) : '<span class="badge badge-neutral">— Not Marked</span>';
-          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#fff;border-radius:9px;margin-bottom:6px;border:1px solid var(--slate-200);gap:10px;">
-            <div style="min-width:0;flex:1;"><div style="font-size:11px;color:var(--slate-500);font-weight:700;">${sl.period} · ${sl.start}–${sl.end}</div><div style="font-size:12.5px;font-weight:700;color:var(--slate-900);margin-top:2px;">${escapeHtml(sl.subject)}</div><div style="font-size:10.5px;color:var(--slate-500);margin-top:1px;">👨‍🏫 ${escapeHtml(sl.faculty || '—')}</div></div>
-            <div style="flex-shrink:0;">${statusBadge}</div>
-          </div>`;
-        }).join('');
-      } else html += '<div class="empty" style="padding:14px 0;">No lectures scheduled.</div>';
+      // ★ Scheduled Lectures — SIRF 'full' mode mein
+      if (mode === 'full') {
+        if (d.scheduledLectures && d.scheduledLectures.length) {
+          html += '<div class="section-title" style="margin-top:8px;">📚 Scheduled Lectures</div>';
+          html += d.scheduledLectures.map(sl => {
+            const rec = (d.records || []).find(r => r.subject === sl.subject);
+            const statusBadge = rec
+              ? (rec.status === 'Present' || rec.status === 'Duty Leave'
+                  ? '<span class="badge badge-success">✅ Present</span>'
+                  : `<span class="badge badge-danger">${rec.status}</span>`)
+              : '<span class="badge badge-neutral">— Not Marked</span>';
+            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#fff;border-radius:9px;margin-bottom:6px;border:1px solid var(--slate-200);gap:10px;">
+              <div style="min-width:0;flex:1;">
+                <div style="font-size:11px;color:var(--slate-500);font-weight:700;">${sl.period} · ${sl.start}–${sl.end}</div>
+                <div style="font-size:12.5px;font-weight:700;color:var(--slate-900);margin-top:2px;">${escapeHtml(sl.subject)}</div>
+                <div style="font-size:10.5px;color:var(--slate-500);margin-top:1px;">👨‍🏫 ${escapeHtml(sl.faculty || '—')}</div>
+              </div>
+              <div style="flex-shrink:0;">${statusBadge}</div>
+            </div>`;
+          }).join('');
+        } else html += '<div class="empty" style="padding:14px 0;">No lectures scheduled.</div>';
+      }
     }
     b.innerHTML = html;
   } catch(e) { t.textContent = 'Day Info'; b.innerHTML = `<div class="empty">Network error: ${escapeHtml(e.message)}</div>`; }
@@ -2314,12 +2360,13 @@ function renderAttendanceCalendar(){
     for (let d = 1; d <= dim; d++) {
       const dt = new Date(y, mo, d); dt.setHours(0,0,0,0);
       const ds = fmtDate(dt); const dow = dt.getDay();
-      if (dt < SEMESTER_START) { cells += `<div class="wd-cell before tappable" onclick="showDayInfo('${ds}')">${d}</div>`; continue; }
-      if (dt > today) { cells += `<div class="wd-cell future tappable" onclick="showDayInfo('${ds}')">${d}</div>`; continue; }
-      if (dow === 0 || dow === 6) { cells += `<div class="wd-cell weekend tappable" onclick="showDayInfo('${ds}')">${d}</div>`; continue; }
-      if (hS.has(ds)) { cells += `<div class="wd-cell holiday tappable" onclick="showDayInfo('${ds}')">${d}</div>`; continue; }
-      if (aD.has(ds)) cells += `<div class="wd-cell present tappable" onclick="showDayInfo('${ds}')">${d}</div>`;
-      else cells += `<div class="wd-cell absent tappable" onclick="showDayInfo('${ds}')">${d}</div>`;
+      // ★ FIX: 'full' mode for Attendance Calendar
+      if (dt < SEMESTER_START) { cells += `<div class="wd-cell before tappable" onclick="showDayInfo('${ds}', 'full')">${d}</div>`; continue; }
+      if (dt > today) { cells += `<div class="wd-cell future tappable" onclick="showDayInfo('${ds}', 'full')">${d}</div>`; continue; }
+      if (dow === 0 || dow === 6) { cells += `<div class="wd-cell weekend tappable" onclick="showDayInfo('${ds}', 'full')">${d}</div>`; continue; }
+      if (hS.has(ds)) { cells += `<div class="wd-cell holiday tappable" onclick="showDayInfo('${ds}', 'full')">${d}</div>`; continue; }
+      if (aD.has(ds)) cells += `<div class="wd-cell present tappable" onclick="showDayInfo('${ds}', 'full')">${d}</div>`;
+      else cells += `<div class="wd-cell absent tappable" onclick="showDayInfo('${ds}', 'full')">${d}</div>`;
     }
     const headCells = DAY_NAMES.map(d => `<div class="wd-day-head">${d}</div>`).join('');
     html += `<div class="wd-month" style="margin-bottom:16px;"><div class="wd-month-title"><span>${MONTH_NAMES[mo]} ${y}</span></div><div class="wd-grid">${headCells}${cells}</div></div>`;
@@ -2557,6 +2604,10 @@ async function impersonate(){ const r = $('impRollInput').value.trim().toUpperCa
 async function loadLeaveRequests(){ try { const data = await fetch(`${API}/api/leave/requests/${currentUser.rollNo}`).then(x=>x.json()); const el = $('leaveRequestsList'); if (!data || !data.length) return el.innerHTML = '<div class="empty">No requests</div>'; el.innerHTML = data.map(l => `<div style="padding:12px 0;border-bottom:1px solid var(--slate-100);"><div style="display:flex;justify-content:space-between;align-items:center;"><b>${l.studentName}</b> <span class="badge ${l.status==='Approved'?'badge-success':l.status==='Rejected'?'badge-danger':'badge-warning'}">${l.status}</span></div><div class="text-xs text-muted" style="margin-top:4px;">${l.rollNo} · ${fmtDatePretty(l.fromDate)} → ${fmtDatePretty(l.toDate)}</div><div class="text-xs mt-1">${l.reason}</div>${l.status === 'Pending' ? `<div class="row mt-1"><button class="btn btn-success btn-xs" onclick="reviewLeave('${l._id}','Approved')">Approve</button><button class="btn btn-danger btn-xs" onclick="reviewLeave('${l._id}','Rejected')">Reject</button></div>` : ''}</div>`).join(''); } catch(e){} observeNewContent(); }
 async function reviewLeave(id, action){ const n = prompt(`Note for ${action}:`) || ''; try { const res = await fetch(`${API}/api/leave/action/${id}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, action, adminNote: n})}); if (res.ok) { toast('Done','success'); loadLeaveRequests(); } } catch(e){} }
 async function loadDefaulters(){ const t = $('defThreshold').value || 75; try { const data = await fetch(`${API}/api/admin/defaulters/${currentUser.rollNo}?threshold=${t}`).then(x=>x.json()); const el = $('defaulterList'); if (!data.defaulters || !data.defaulters.length) return el.innerHTML = '<div class="empty">None below threshold</div>'; el.innerHTML = data.defaulters.map(s => `<div style="padding:10px 0;border-bottom:1px solid var(--slate-100);"><b>${s.rollNo}</b> · ${s.name} · ${s.branch} · <span class="badge badge-danger">${s.pct}%</span></div>`).join(''); } catch(e){} observeNewContent(); }
+
+/* ============================================================
+   ★★★ FACULTY MODULE (with Student Lookup — Fix #5) ★★★
+   ============================================================ */
 async function initFaculty(){ await loadFacultySubjects(); await fetchTeacherStudents(); await loadFacultyRecent(); await loadFacultyPasscode(); setInterval(fetchTeacherStudents, 60000); }
 async function loadFacultySubjects(){ try { const subs = await fetch(`${API}/api/teacher/subjects/${currentUser.rollNo}`).then(x=>x.json()); window._facSubs = subs || []; $('facMarkSubject').innerHTML = '<option value="">Select Subject…</option>' + (subs||[]).map(s=>`<option value="${s}">${s}</option>`).join(''); } catch(e){} }
 async function loadFacultyRecent(){ try { const data = await fetch(`${API}/api/attendance/all/${currentUser.rollNo}`).then(x=>x.json()); const tb = $('facRecentBody'); if (!data || !data.length) return tb.innerHTML = '<tr><td colspan="3" class="empty">No records</td></tr>'; tb.innerHTML = data.slice(0,15).map(r => `<tr><td>${fmtDatePretty(r.date)}</td><td>${r.studentName}</td><td>${r.subject}</td></tr>`).join(''); } catch(e){} observeNewContent(); }
@@ -2584,13 +2635,53 @@ async function fetchTeacherStudents(){
   } catch(e){}
   observeNewContent();
 }
+
+/* ★★★ FIX #5 — FACULTY STUDENT LOOKUP ★★★ */
+async function facLookupStudent(){
+  const roll = ($('facLookupRoll').value || '').trim().toUpperCase();
+  const out = $('facLookupResult');
+  if (!roll) return toast('Enter roll no', 'error');
+  out.innerHTML = '<div class="empty"><div class="spinner" style="margin:0 auto 8px;"></div>Loading…</div>';
+  try {
+    const res = await fetch(`${API}/api/student/summary/${roll}`);
+    const d = await res.json();
+    if (!res.ok) { out.innerHTML = `<div class="empty">${escapeHtml(d.error || 'Student not found')}</div>`; return; }
+    const subjRows = Object.entries(d.subjectStats || {}).map(([s, st]) => {
+      const cls = st.percentage >= 75 ? 'good' : 'bad';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--slate-50);border-radius:8px;margin-bottom:4px;font-size:12px;gap:8px;">
+        <span style="font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.substring(0, 24))}</span>
+        <span class="chip ${cls}" style="padding:2px 8px;font-size:10px;flex-shrink:0;">${st.percentage}% (${st.present}/${st.total})</span>
+      </div>`;
+    }).join('');
+    const pctCls = d.attendancePercentage >= 75 ? 'good' : 'bad';
+    out.innerHTML = `
+      <div style="padding:14px;border:1px solid var(--slate-200);border-radius:12px;background:#fff;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;">
+          <div style="font-weight:800;font-size:14px;">${escapeHtml(roll)}</div>
+          <div class="stat-value ${pctCls}" style="font-size:22px;">${d.attendancePercentage}%</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;font-size:11.5px;color:var(--slate-600);">
+          <div>Attended: <b style="color:var(--slate-900);">${d.totalAcademicLectures || 0}</b></div>
+          <div>Conducted: <b style="color:var(--slate-900);">${d.totalConductedLectures || 0}</b></div>
+          <div>Days Present: <b style="color:var(--slate-900);">${d.daysPresent || 0}</b></div>
+          <div>Working Days: <b style="color:var(--slate-900);">${d.workingDaysSoFar || 0}</b></div>
+        </div>
+        <div class="section-title" style="font-size:10px;margin-top:10px;">📚 Subject-wise</div>
+        ${subjRows || '<div class="text-xs text-muted">No subject data</div>'}
+      </div>`;
+  } catch(e) {
+    out.innerHTML = `<div class="empty">Network error: ${escapeHtml(e.message)}</div>`;
+  }
+  observeNewContent();
+}
+
 async function genTeacherPass(force){ const today = fmtDate(new Date()); const st = await checkDateStatus(today); if (st.isBlocked) return toast('College closed','error'); if (force && !confirm('Change Lecture Passcode?')) return; try { const res = await fetch(`${API}/api/admin/generate-passcode`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, type:'single_lecture', force: !!force})}); const d = await res.json(); if (res.ok) { setPasscodeCache('single_lecture', d.passcode, d.expiresAt); $('facPasscode').textContent = d.passcode; $('facPasscode').classList.remove('empty'); $('facPasscodeDisplay').classList.add('valid'); toast(force ? 'Changed!' : 'Generated!', 'success'); } else toast(d.error,'error'); } catch(e){} }
 async function facMark(){ const s = $('facMarkStudent').value, sub = $('facMarkSubject').value; if (!s || !sub) return toast('Select student & subject','error'); showDL('Getting location…'); navigator.geolocation.getCurrentPosition(async (pos) => { showDL('Marking…'); const res = await fetch(`${API}/api/teacher/mark-attendance`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo, name: currentUser.name, subject: sub, latitude: pos.coords.latitude, longitude: pos.coords.longitude, studentRollNo: s})}); const d = await res.json(); hideDL(); if (res.ok) { showFeedback('success','Marked',d.message || 'Attendance marked.'); sendPushNotification('✅ Marked', `${s} — ${sub}`, { type: 'faculty_mark' }); fetchTeacherStudents(); loadFacultyRecent(); } else showFeedback('error','Failed',d.error||'Could not mark'); }, () => { hideDL(); showFeedback('error','Location Error','Location permission is required.'); }, { enableHighAccuracy: true, timeout: 15000 }); }
 function facAddBulkDate(){ const d = $('facBulkDate').value; if (!d) return toast('Select date','error'); if (facSelectedBulkDates.includes(d)) return toast('Already added','error'); facSelectedBulkDates.push(d); renderFacBulkDates(); }
 function renderFacBulkDates(){ if ($('facBulkDates')) $('facBulkDates').innerHTML = facSelectedBulkDates.map(d => `<span class="chip">${fmtDatePretty(d)} <span onclick="removeFacBulkDate('${d}')" style="cursor:pointer;color:var(--rose-600);font-weight:800;">×</span></span>`).join(''); }
 function removeFacBulkDate(d){ facSelectedBulkDates = facSelectedBulkDates.filter(x=>x!==d); renderFacBulkDates(); }
-async function facBulkMark(){ const students = Array.from(document.querySelectorAll('.fac-bulk-stu:checked')).map(cb => cb.value); if (!students.length) return toast('Select students','error'); if (!facSelectedBulkDates.length) return toast('Add dates','error'); const status = $('facBulkStatus').value; if (!confirm(`Mark ${status} for ${students.length} students × ${facSelectedBulkDates.length} dates?`)) return; showDL('Marking bulk…'); try { const res = await fetch(`${API}/api/teacher/bulk-mark-attendance`, {method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, studentRollNos: students, dates: facSelectedBulkDates, status }) }); const d = await res.json(); hideDL(); if (res.ok) { showFeedback('success','Bulk Marked',d.message || 'Attendance marked.'); sendPushNotification('✅ Bulk Marked', `${students.length} students × ${facSelectedBulkDates.length} dates`, { type: 'fac_bulk' }); facSelectedBulkDates = []; renderFacBulkDates(); fetchTeacherStudents(); loadFacultyRecent(); } else showFeedback('error','Failed',d.error || 'Could not mark'); } catch(e){ hideDL(); showFeedback('error','Network Error',e.message); } }
-async function facBulkDelete(){ const students = Array.from(document.querySelectorAll('.fac-bulk-stu:checked')).map(cb => cb.value); if (!students.length) return toast('Select students','error'); if (!facSelectedBulkDates.length) return toast('Add dates','error'); if (!confirm(`Delete ${students.length} students × ${facSelectedBulkDates.length} dates?`)) return; showDL('Deleting…'); try { const res = await fetch(`${API}/api/teacher/bulk-delete-attendance`, {method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, studentRollNos: students, dates: facSelectedBulkDates }) }); const d = await res.json(); hideDL(); if (res.ok) { showFeedback('success','Deleted',d.message || 'Records deleted.'); facSelectedBulkDates = []; renderFacBulkDates(); fetchTeacherStudents(); loadFacultyRecent(); } else showFeedback('error','Failed',d.error || 'Could not delete'); } catch(e){ hideDL(); showFeedback('error','Network Error',e.message); } }
+async function facBulkMark(){ const students = Array.from(document.querySelectorAll('.fac-bulk-stu:checked')).map(cb => cb.value); if (!students.length) return toast('Select students','error'); if (!facSelectedBulkDates.length) return toast('Add dates','error'); const status = $('facBulkStatus').value; if (!confirm(`Mark ${status} for ${students.length} students × ${facSelectedBulkDates.length} dates?`)) return; showDL('Marking bulk…'); try { const res = await fetch(`${API}/api/teacher/bulk-mark-attendance`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, studentRollNos: students, dates: facSelectedBulkDates, status }) }); const d = await res.json(); hideDL(); if (res.ok) { showFeedback('success','Bulk Marked',d.message || 'Attendance marked.'); sendPushNotification('✅ Bulk Marked', `${students.length} students × ${facSelectedBulkDates.length} dates`, { type: 'fac_bulk' }); facSelectedBulkDates = []; renderFacBulkDates(); fetchTeacherStudents(); loadFacultyRecent(); } else showFeedback('error','Failed',d.error || 'Could not mark'); } catch(e){ hideDL(); showFeedback('error','Network Error',e.message); } }
+async function facBulkDelete(){ const students = Array.from(document.querySelectorAll('.fac-bulk-stu:checked')).map(cb => cb.value); if (!students.length) return toast('Select students','error'); if (!facSelectedBulkDates.length) return toast('Add dates','error'); if (!confirm(`Delete ${students.length} students × ${facSelectedBulkDates.length} dates?`)) return; showDL('Deleting…'); try { const res = await fetch(`${API}/api/teacher/bulk-delete-attendance`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, studentRollNos: students, dates: facSelectedBulkDates }) }); const d = await res.json(); hideDL(); if (res.ok) { showFeedback('success','Deleted',d.message || 'Records deleted.'); facSelectedBulkDates = []; renderFacBulkDates(); fetchTeacherStudents(); loadFacultyRecent(); } else showFeedback('error','Failed',d.error || 'Could not delete'); } catch(e){ hideDL(); showFeedback('error','Network Error',e.message); } }
 function toggleFacMonth(){ const v = $('facReportRange').value; $('facReportMonth').style.display = v === 'SELECTED_MONTH' ? 'block' : 'none'; $('facCustomRangeRow').style.display = v === 'CUSTOM' ? 'flex' : 'none'; }
 async function facReport(fmt){ const roll = $('facReportStudent').value; if (!roll) return toast('Select student','error'); const range = $('facReportRange').value; showDL('Generating…'); try { const records = await fetch(`${API}/api/attendance/student/${roll}/${currentUser.rollNo}`).then(r=>r.json()); const subs = window._facSubs || []; let filtered = records.filter(r => subs.includes(r.subject)); let startStr, endStr; if (range === 'FULL_SEMESTER') { startStr = '2026-07-15'; endStr = '2026-12-31'; } else if (range === 'CURRENT_MONTH') { const r = getCurrentMonthRangeStrings(); startStr = r.start; endStr = r.end; } else if (range === 'SELECTED_MONTH') { const r = getMonthRangeStrings(parseInt($('facReportMonth').value)); startStr = r.start; endStr = r.end; } else { const s = $('facReportStart').value, e = $('facReportEnd').value; if (!s || !e) { hideDL(); return toast('Pick dates','error'); } startStr = s; endStr = e; } const todayStr = fmtDate(new Date()); if (endStr > todayStr) endStr = todayStr; filtered = filtered.filter(r => r.date >= startStr && r.date <= endStr); if (filtered.length === 0) { hideDL(); return toast('No records in range','error'); } if (fmt === 'pdf') { const blob = generatePDFBlob('Teacher Report', `${roll} · ${currentUser.name}`, [`Range: ${startStr} → ${endStr}`], ['Date','Subject','Status'], filtered.map(r => [fmtDatePretty(r.date), r.subject, r.status]), null); hideDL(); if (!blob) return toast('PDF library failed','error'); universalDownload(blob, `teacher_report_${roll}_${Date.now()}.pdf`); } else { let csv = `Teacher Report\nStudent: ${roll}\nTeacher: ${currentUser.name}\nRange: ${startStr} to ${endStr}\n\nDate,Subject,Status\n`; filtered.forEach(r => { csv += `${r.date},${r.subject},${r.status}\n`; }); download(csv, `teacher_report_${roll}.csv`); hideDL(); } } catch(e){ hideDL(); toast('Failed: ' + e.message,'error'); } }
 async function applyLeave(){ const f = $('leaveFrom').value, t = $('leaveTo').value, r = $('leaveReason').value.trim(); if (!f || !t || !r) return showFeedback('warning','Missing Fields','Dates and reason are required.'); try { const res = await fetch(`${API}/api/leave/apply`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo, fromDate:f, toDate:t, reason:r, leaveType:$('leaveType').value})}); const d = await res.json(); if (res.ok) { $('leaveReason').value = ''; loadMyLeaves(); showFeedback('success','Leave Applied',`${fmtDatePretty(f)} → ${fmtDatePretty(t)}\n\nDuty leave will be marked after admin approval.`); } else showFeedback('error','Failed',d.error||'Could not apply'); } catch(e){ showFeedback('error','Network Error',e.message); } }
@@ -2601,7 +2692,6 @@ async function loadMyLeaves(){ try { const data = await fetch(`${API}/api/leave/
    ============================================================ */
 function toggleContext(){ useContextMode = !useContextMode; const b = $('ctxToggle'); if (b) { b.classList.toggle('active', useContextMode); const l = b.querySelector('.ctx-label'); if (l) l.textContent = useContextMode ? 'Context On' : 'Context'; } toast(useContextMode ? 'Context ON' : 'Context OFF', useContextMode ? 'success' : 'info'); if ($('chatPanel').classList.contains('open')) { const m = $('chatMsgs'); if (!m.querySelector('.msg')) renderChatWelcome(); } }
 function toggleDatabase(){ useDatabaseMode = !useDatabaseMode; const b = $('dbToggle'); if (b) { b.classList.toggle('active', useDatabaseMode); const l = b.querySelector('.db-label'); if (l) l.textContent = useDatabaseMode ? 'Database On' : 'Database'; } toast(useDatabaseMode ? 'Database ON' : 'Database OFF', useDatabaseMode ? 'success' : 'info'); if ($('chatPanel').classList.contains('open')) { const m = $('chatMsgs'); if (!m.querySelector('.msg')) renderChatWelcome(); } }
-
 function toggleChat(){
   const p = $('chatPanel');
   if (!p) return;
@@ -2610,7 +2700,6 @@ function toggleChat(){
   else { lockBodyScroll(false); if (openDownloadMenuId) { const m = document.getElementById(openDownloadMenuId); if (m) m.classList.remove('open'); openDownloadMenuId = null; } const sb = $('chatSidebar'); if (sb) sb.classList.remove('open'); }
 }
 function toggleChatSidebar(){ const s = $('chatSidebar'); if (s) s.classList.toggle('open'); }
-
 document.addEventListener('click', (e) => {
   const sidebar = $('chatSidebar'); const panel = $('chatPanel');
   if (!sidebar || !panel) return;
@@ -2620,7 +2709,6 @@ document.addEventListener('click', (e) => {
   if (toggleBtn && toggleBtn.contains(e.target)) return;
   sidebar.classList.remove('open');
 }, true);
-
 function renderChatWelcome(){
   const el = $('chatMsgs'); if (!el) return;
   const now = new Date(); const hour = now.getHours();
@@ -2671,7 +2759,7 @@ async function sendChat(){
   const w = $('chatMsgs').querySelector('.chat-welcome'); if (w) w.remove();
   const userWantsDL = DOWNLOAD_KEYWORDS.some(k => msg.toLowerCase().includes(k));
   if (pendingChatFile) {
-    const fd = pendingChatFile; const isImage = fd.mimeType.startsWith('image/'); const fileLabel = isImage ? 'image' : getFileTypeLabel(fd.mimeType);
+    const fd = pendingChatFile; const isImage = fd.mimeType.startsWith('image/'); const fileLabel = isImage ? 'image' : (fd.mimeType === 'application/pdf' ? 'PDF' : 'file');
     appendChat('user', `[${fd.name}]${msg ? ' — ' + msg : ''}`); clearChatFile();
     const typing = createAIThinkingIndicator(isImage ? 'Analyzing image' : `Reading ${fileLabel}`);
     $('chatMsgs').appendChild(typing); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight; startThinkingTimer(typing);
@@ -2750,7 +2838,7 @@ async function confirmDbOp(op, btnEl) {
     else appendChat('bot', '❌ ' + (d.error || 'Failed'));
   } catch(e) { if (btnEl) { btnEl.disabled = false; btnEl.textContent = '✅ Confirm'; } toast('Failed: ' + e.message, 'error'); }
 }
-function appendChat(role, text, renderMD, showDL, tSec, umsg){
+function appendChat(role, text, renderMD, showDL2, tSec, umsg){
   const time = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
   const div = document.createElement('div'); div.className = 'msg ' + role;
   const id = 'msg_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
@@ -2761,7 +2849,7 @@ function appendChat(role, text, renderMD, showDL, tSec, umsg){
     const stepsHtml = steps.map(s => `<span class="tb-step">${escapeHtml(s)}</span>`).join('');
     thoughtHtml = `<div class="thought-badge" onclick="this.classList.toggle('expanded')"><div class="tb-head"><svg class="tb-icon" viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-6.88 17.24c.42.38.68.93.68 1.5V22h12.4v-1.26c0-.57.26-1.12.68-1.5A10 10 0 0 0 12 2z"/></svg><span class="tb-text">Thought for <b>${tSec}</b>s</span><svg class="tb-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div><div class="tb-body">${stepsHtml}</div></div>`;
   }
-  if (role === 'bot') { actions = `<div class="msg-actions"><button class="msg-action-btn" onclick="copyMessageText(this, '${id}')"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy</button>`; if (showDL) actions += `<button class="msg-action-btn download-btn" onclick="toggleDownloadMenu(event, '${id}')"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download</button><div class="dl-menu" id="dlmenu_${id}"><div class="dl-menu-title">Download as</div><button onclick="downloadMessagePDF('${id}')">PDF</button><button onclick="downloadMessageTXT('${id}')">Text File</button><button onclick="downloadMessageExcel('${id}')">Excel</button></div>`; actions += `</div>`; }
+  if (role === 'bot') { actions = `<div class="msg-actions"><button class="msg-action-btn" onclick="copyMessageText(this, '${id}')"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy</button>`; if (showDL2) actions += `<button class="msg-action-btn download-btn" onclick="toggleDownloadMenu(event, '${id}')"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download</button><div class="dl-menu" id="dlmenu_${id}"><div class="dl-menu-title">Download as</div><button onclick="downloadMessagePDF('${id}')">PDF</button><button onclick="downloadMessageTXT('${id}')">Text File</button><button onclick="downloadMessageExcel('${id}')">Excel</button></div>`; actions += `</div>`; }
   else if (role === 'user') actions = `<div class="msg-actions"><button class="msg-action-btn" onclick="copyMessageText(this, '${id}')"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy</button></div>`;
   div.innerHTML = `${thoughtHtml}<div class="bubble" id="${id}" data-raw="${encodeURIComponent(text)}">${content}<span class="time">${time}</span></div>${actions}`;
   $('chatMsgs').appendChild(div); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
@@ -2881,6 +2969,18 @@ document.addEventListener('DOMContentLoaded', () => {
 if (document.readyState !== 'loading') { setTimeout(() => handleScrollFab(), 50); setTimeout(runPremiumInit, 200); }
 
 window.median_library_ready = function() { console.log('[FCM] Median JS Bridge ready'); if (isMedianApp() && currentUser && localStorage.getItem('BM_FCM_ENABLED') === '1') { autoInitFCM().catch(() => {}); } };
+
+/* ★ FIX: always land on scrollY = 0 */
+window.addEventListener('pageshow', () => {
+  window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+});
+window.addEventListener('load', () => {
+  window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+});
 </script>
 </body>
 </html>
