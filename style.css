@@ -2,6 +2,7 @@
    BM GROUP ERP · style.css
    Premium Smooth Edition — 60fps Optimized
    Frosted Glass + GPU Animations + Solid Menu Drawers
+   Version 1.1 — Sticky Header Fix
    ============================================================ */
 
 /* ---------- RESET ---------- */
@@ -168,19 +169,19 @@ button:active,.btn:active,.tab:active,.subnav-item:active,.portal:active,.chip:a
 @keyframes plbPulse{0%{box-shadow:0 0 0 0 rgba(16,185,129,.65);}70%{box-shadow:0 0 0 10px rgba(16,185,129,0);}100%{box-shadow:0 0 0 0 rgba(16,185,129,0);}}
 @keyframes marquee{0%{transform:translateX(0);}100%{transform:translateX(-100%);}}
 
-/* ★ NEW: smooth card entrance */
+/* ★ smooth card entrance */
 @keyframes smoothCardIn{
   0%{opacity:0;transform:translateY(16px) scale(.98);}
   100%{opacity:1;transform:translateY(0) scale(1);}
 }
 
-/* ★ NEW: shimmer wave for skeleton loaders */
+/* ★ shimmer wave for skeleton loaders */
 @keyframes shimmerWave{
   0%{background-position:-200% 0;}
   100%{background-position:200% 0;}
 }
 
-/* ★ NEW: soft glow pulse for live passcodes */
+/* ★ soft glow pulse for live passcodes */
 @keyframes softGlowPulse{
   0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.4);}
   50%{box-shadow:0 0 0 10px rgba(16,185,129,0);}
@@ -1221,4 +1222,59 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   body::after{display:none;}
   .passcode-live-box{animation:none !important;}
   .skeleton-loader{animation:none !important;background:#f1f5f9 !important;}
+}
+
+/* ============================================================
+   ★★★ v1.1 FIX — STICKY HEADER
+   Blue strip ke NEECHE header chipka rahega. Refresh ke baad
+   bhi Refresh / Chat / Notif / Logout / Menu buttons always
+   visible + clickable rahenge. Content kabhi upar nahi jayega.
+   ============================================================ */
+@media (max-width: 640px) {
+
+  /* 1) Rubber-band overscroll band — content upar nahi khinchega */
+  html, body {
+    overscroll-behavior-y: contain;
+  }
+
+  /* 2) .app ka overflow: hidden hata — warna position:sticky kaam nahi karta.
+        Rounded look manually preserve kar rahe hain (#auth-box / #dash-box par). */
+  .app {
+    overflow: visible !important;
+    border-radius: 0 !important;
+    z-index: 1;
+  }
+
+  /* 3) Blue strip hamesha peeche rahe */
+  body::before {
+    z-index: 0 !important;
+  }
+
+  /* 4) ⭐ MAIN FIX — Header blue strip ke exactly neeche sticky ho gaya.
+        top = 52px (blue strip height) + safe-area (notch devices). */
+  .app-header {
+    position: sticky;
+    top: calc(52px + var(--sat));
+    z-index: 50;
+    background: #ffffff !important;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+    will-change: transform;
+  }
+
+  /* 5) App ke bottom rounded corners preserve karo
+        (kyunki .app se border-radius hata diya) */
+  #auth-box,
+  #dash-box {
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+    overflow: hidden;
+  }
+
+  /* 6) Overlays ki z-index waisi hi rahe */
+  .modal-backdrop        { z-index: 9000 !important; }
+  .student-menu-backdrop { z-index: 9400 !important; }
+  .student-menu-drawer   { z-index: 9500 !important; }
+
 }
