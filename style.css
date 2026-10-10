@@ -1,6 +1,7 @@
 /* ============================================================
    BM GROUP ERP · style.css
    Smooth Edition — Solid menu, crop for all roles
+   Version 2.0 — Pro 60fps Enhancements
    ============================================================ */
 
 /* ---------- RESET ---------- */
@@ -1367,6 +1368,144 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   .stagger-list > *:nth-child(9){animation-delay:.18s;}
   .stagger-list > *:nth-child(10){animation-delay:.20s;}
   .stagger-list > *:nth-child(n+11){animation-delay:.22s;}
+}
+
+/* ============================================================
+   ★★★ PRO ENHANCEMENTS v2.0 — Ultra-Smooth 60fps Edition ★★★
+   All effects GPU-accelerated (transform + opacity only)
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   1. ULTRA-SMOOTH FROSTED GLASSMORPHISM & DEPTH CARDS
+   ------------------------------------------------------------ */
+.card,
+.stat,
+.chart-wrap,
+.passcode-card,
+.collapsible-card{
+  background: rgba(255, 255, 255, 0.88);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 12px 36px 0 rgba(15, 23, 42, 0.06),
+              0 2px 8px 0 rgba(15, 23, 42, 0.03);
+  transform: translateZ(0);
+  will-change: transform, backdrop-filter;
+  transition: transform .3s cubic-bezier(.22,1,.36,1),
+              box-shadow .3s ease,
+              border-color .3s ease;
+}
+.card:hover,
+.stat:hover,
+.chart-wrap:hover{
+  transform: translateY(-3px) translateZ(0);
+  box-shadow: 0 20px 48px 0 rgba(37, 99, 235, 0.12),
+              0 4px 12px 0 rgba(15, 23, 42, 0.05);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+/* ------------------------------------------------------------
+   2. DYNAMIC SHIMMER SKELETON LOADERS
+   ------------------------------------------------------------ */
+@keyframes proShimmer{
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+.pro-skeleton{
+  background: linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: proShimmer 1.5s infinite linear;
+  border-radius: var(--radius-sm);
+  will-change: background-position;
+}
+
+/* ------------------------------------------------------------
+   3. SILK-SMOOTH SPRING MICRO-INTERACTIONS
+   ------------------------------------------------------------ */
+button, .btn, .portal, .subnav-item, .student-menu-item,
+.chip, .icon-btn{
+  transition: transform .25s cubic-bezier(.34,1.56,.64,1),
+              background-color .2s ease,
+              color .2s ease,
+              box-shadow .2s ease;
+  will-change: transform;
+}
+button:active, .btn:active, .portal:active, .student-menu-item:active{
+  transform: scale(.95) translateZ(0) !important;
+}
+
+/* ------------------------------------------------------------
+   4. GLOWING NEON PULSE FOR LIVE PASSCODES & BADGES
+   ------------------------------------------------------------ */
+@keyframes softNeonPulse{
+  0%,100%{ box-shadow: 0 0 0 0 rgba(16,185,129,.45); }
+  50%    { box-shadow: 0 0 0 12px rgba(16,185,129,0); }
+}
+.passcode-live-box:not(.inactive),
+.badge-success{
+  animation: softNeonPulse 2.4s infinite cubic-bezier(.4,0,.6,1);
+  will-change: box-shadow;
+}
+
+/* ------------------------------------------------------------
+   5. STAGGERED FADE & SLIDE-IN FOR DASHBOARD SECTIONS
+   ------------------------------------------------------------ */
+@keyframes widgetStaggerIn{
+  0%  { opacity:0; transform: translateY(18px) scale(.97) translateZ(0); }
+  100%{ opacity:1; transform: translateY(0)   scale(1)    translateZ(0); }
+}
+.app-body > *{
+  animation: widgetStaggerIn .5s cubic-bezier(.16,1,.3,1) backwards;
+  will-change: transform, opacity;
+}
+.app-body > *:nth-child(1){ animation-delay: .03s; }
+.app-body > *:nth-child(2){ animation-delay: .06s; }
+.app-body > *:nth-child(3){ animation-delay: .09s; }
+.app-body > *:nth-child(4){ animation-delay: .12s; }
+.app-body > *:nth-child(5){ animation-delay: .15s; }
+.app-body > *:nth-child(n+6){ animation-delay: .18s; }
+
+/* ------------------------------------------------------------
+   6. FLOATING AMBIENT BACKGROUND BLOBS (GPU Optimized)
+   ------------------------------------------------------------ */
+@keyframes ambientFloat{
+  0%,100%{ transform: translate(0,0) scale(1) translateZ(0); }
+  33%    { transform: translate(30px,-25px) scale(1.08) translateZ(0); }
+  66%    { transform: translate(-20px,20px) scale(.95) translateZ(0); }
+}
+.bg-blob{
+  animation: ambientFloat 18s ease-in-out infinite;
+  will-change: transform;
+}
+.bg-blob:nth-child(1){ animation-delay: 0s; }
+.bg-blob:nth-child(2){ animation-delay: -6s; }
+.bg-blob:nth-child(3){ animation-delay: -12s; }
+
+/* ------------------------------------------------------------
+   7. PROFESSIONAL BOTTOM SHEET & DRAWER SLIDE PHYSICS
+   ------------------------------------------------------------ */
+.student-menu-drawer{
+  transition: transform .4s cubic-bezier(.16,1,.3,1) !important;
+  will-change: transform;
+}
+.student-menu-backdrop{
+  transition: opacity .35s ease !important;
+  will-change: opacity;
+}
+
+/* ------------------------------------------------------------
+   ★ MOBILE SAFETY — Reduce backdrop blur to save GPU
+   ------------------------------------------------------------ */
+@media (max-width: 640px){
+  .card,
+  .stat,
+  .chart-wrap,
+  .passcode-card,
+  .collapsible-card{
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    background: rgba(255, 255, 255, 0.92);
+  }
 }
 
 /* ============================================================
