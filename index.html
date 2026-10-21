@@ -24,6 +24,16 @@
     .app { position: relative; z-index: 1; }
     .app-header { position: sticky; top: 0; z-index: 5; background: #fff; }
   }
+
+  /* ★ Fix: Menu Items Bigger & No Passcode Box Space */
+  .student-menu-list {
+    padding-top: 16px !important;
+  }
+  .student-menu-item {
+    padding: 14px 16px !important;
+    font-size: 14px !important;
+    border-radius: 12px !important;
+  }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -48,7 +58,7 @@
   <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
 </button>
 
-<!-- STUDENT MENU -->
+<!-- STUDENT MENU (Passcode box removed, starts directly from Home) -->
 <div class="student-menu-backdrop" id="studentMenuBackdrop"></div>
 <div class="student-menu-drawer" id="studentMenuDrawer">
   <div class="student-menu-header safe-top">
@@ -59,23 +69,6 @@
         <div class="menu-user-roll" id="menuUserRoll">—</div>
       </div>
     </div>
-  </div>
-  <div class="passcode-live-box inactive" id="menuPasscodeBox">
-    <div class="plb-head">
-      <span class="plb-live-dot"></span>
-      <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-      <span id="menuPasscodeStatus">Passcode</span>
-    </div>
-    <div class="plb-type" id="menuPasscodeType">Not available</div>
-    <div class="plb-row">
-      <div class="plb-value" id="menuPasscodeValue" style="display:none;">— — — —</div>
-      <div class="plb-empty-msg" id="menuPasscodeEmpty">No passcode published yet.</div>
-      <button class="plb-copy" id="menuPasscodeCopy" onclick="copyPasscode()" style="display:none;">
-        <svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-        Copy
-      </button>
-    </div>
-    <div class="plb-meta" id="menuPasscodeMeta" style="display:none;">—</div>
   </div>
   <div class="student-menu-list" id="studentMenuList"></div>
   <div class="student-menu-footer">BM ERP · v3.1</div>
@@ -319,44 +312,26 @@
           <div class="cta-arrow">›</div>
         </button>
 
-        <!-- ★ NEW: Notes & Documents (Student) -->
+        <!-- Notes & Documents (Student) -->
         <div class="card" id="sec-notes" style="display:none;">
-          <div class="card-title"><span>📚 Notes & Documents</span><button class="btn btn-primary btn-xs" onclick="openDocRequestModal()">📤 Request Upload</button></div>
-          <p class="text-xs text-muted mb-2" style="line-height:1.65;">Files shared by admin are visible here. Request admin to upload new documents.</p>
+          <div class="card-title"><span>📚 Notes & Documents</span><button class="btn btn-primary btn-xs" onclick="openDocRequestModal()">📤 Upload Document</button></div>
+          <p class="text-xs text-muted mb-2" style="line-height:1.65;">Files shared by admin or approved students are visible here. You can upload documents for approval.</p>
           <div id="studentNotesList"><div class="empty" style="padding:14px 0;">Loading…</div></div>
         </div>
 
-        <!-- ★ NEW: My Fees (Student) -->
-        <div class="card" id="sec-fees" style="display:none;">
-          <div class="card-title"><span>💰 My Fees</span><button class="btn btn-outline btn-xs" onclick="loadStudentFees()">Refresh</button></div>
-          <div id="studentFeesList"><div class="empty" style="padding:14px 0;">Loading…</div></div>
-        </div>
-
-        <!-- ★ NEW: Library (Student) -->
-        <div class="card" id="sec-library" style="display:none;">
-          <div class="card-title"><span>📖 Library Books</span><button class="btn btn-outline btn-xs" onclick="loadStudentLibrary()">Refresh</button></div>
-          <div id="studentLibraryList"><div class="empty" style="padding:14px 0;">Loading…</div></div>
-        </div>
-
-        <!-- ★ NEW: Results (Student) -->
-        <div class="card" id="sec-results" style="display:none;">
-          <div class="card-title"><span>📊 My Results</span><button class="btn btn-outline btn-xs" onclick="loadStudentResults()">Refresh</button></div>
-          <div id="studentResultsList"><div class="empty" style="padding:14px 0;">Loading…</div></div>
-        </div>
-
-        <!-- ★ NEW: Assignments (Student) -->
+        <!-- Assignments (Student) -->
         <div class="card" id="sec-assignments" style="display:none;">
           <div class="card-title"><span>📝 Assignments</span><button class="btn btn-outline btn-xs" onclick="loadStudentAssignments()">Refresh</button></div>
           <div id="studentAssignmentsList"><div class="empty" style="padding:14px 0;">Loading…</div></div>
         </div>
 
-        <!-- ★ NEW: Exams (Student) -->
+        <!-- Exams (Student) -->
         <div class="card" id="sec-exams" style="display:none;">
           <div class="card-title"><span>📅 Upcoming Exams</span><button class="btn btn-outline btn-xs" onclick="loadStudentExams()">Refresh</button></div>
           <div id="studentExamsList"><div class="empty" style="padding:14px 0;">Loading…</div></div>
         </div>
 
-        <!-- ★ NEW: Announcements (Student) -->
+        <!-- Announcements (Student) -->
         <div class="card" id="sec-announcements" style="display:none;">
           <div class="card-title"><span>📢 Announcements</span><button class="btn btn-outline btn-xs" onclick="loadStudentAnnouncements()">Refresh</button></div>
           <div id="studentAnnouncementsList"><div class="empty" style="padding:14px 0;">Loading…</div></div>
@@ -678,7 +653,6 @@
           </div>
         </div>
 
-        <!-- ★ NEW: Notes Management -->
         <div id="a-notes" style="display:none;">
           <div class="card">
             <div class="card-title"><span>📚 Upload Notes / Documents</span></div>
@@ -688,7 +662,9 @@
             <div class="form-group"><label class="form-label">Branch</label>
               <select id="noteBranch"><option value="ALL">All Branches</option><option value="CSE">CSE</option><option value="AIDS">AIDS</option></select>
             </div>
-            <div class="form-group"><label class="form-label">File</label><input type="file" id="noteFile" accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.png,.jpg,.jpeg" /></div>
+            <div class="form-group"><label class="form-label">File</label>
+              <input type="file" id="noteFile" accept=".pdf, .doc, .docx, .ppt, .pptx, .txt, .xls, .xlsx, .csv, image/*" />
+            </div>
             <button class="btn btn-primary btn-block" onclick="uploadNote()">📤 Upload</button>
           </div>
           <div class="card">
@@ -702,7 +678,6 @@
           </div>
         </div>
 
-        <!-- ★ NEW: Fees Management -->
         <div id="a-fees" style="display:none;">
           <div class="card">
             <div class="card-title"><span>💰 Add Fee (Single Student)</span></div>
@@ -733,7 +708,6 @@
           </div>
         </div>
 
-        <!-- ★ NEW: Library Management -->
         <div id="a-library" style="display:none;">
           <div class="card">
             <div class="card-title"><span>📖 Issue Book</span></div>
@@ -749,7 +723,6 @@
           </div>
         </div>
 
-        <!-- ★ NEW: Results Publishing -->
         <div id="a-results" style="display:none;">
           <div class="card">
             <div class="card-title"><span>📊 Publish Result</span></div>
@@ -772,7 +745,6 @@
           </div>
         </div>
 
-        <!-- ★ NEW: Exams -->
         <div id="a-exams" style="display:none;">
           <div class="card">
             <div class="card-title"><span>📅 Schedule Exam</span></div>
@@ -796,7 +768,6 @@
           </div>
         </div>
 
-        <!-- ★ NEW: Emergency Alerts -->
         <div id="a-alerts" style="display:none;">
           <div class="card" style="border-color:#fecdd3;background:linear-gradient(135deg,#fff,#fff1f2);">
             <div class="card-title" style="color:#be123c;">🚨 Broadcast Emergency Alert</div>
@@ -815,7 +786,6 @@
         </div>
 
         <div id="a-tools" style="display:none;">
-          <!-- ★ NEW: Student Lookup -->
           <div class="card" style="border-color:var(--brand-200);background:linear-gradient(135deg,#fff,#f8fafc);">
             <div class="card-title" style="color:var(--brand-700);">🔍 Student Lookup</div>
             <p class="text-xs text-muted" style="margin-bottom:12px;line-height:1.6;">Enter any roll number to view full attendance summary (subject-wise %).</p>
@@ -851,7 +821,6 @@
             </div>
           </div>
 
-          <!-- ★ NEW: Bulk Device Reset -->
           <div class="card" style="border-color:#fcd34d;background:linear-gradient(135deg,#fff,#fffbeb);">
             <div class="card-title" style="color:#b45309;">📱 Bulk Device Reset</div>
             <p class="text-xs text-muted mb-2" style="line-height:1.6;color:#92400e;">Reset device binding for all or selected students. They'll need to login fresh.</p>
@@ -1155,24 +1124,26 @@
   </div>
 </div>
 
-<!-- ★ NEW MODAL: Student Document Request -->
+<!-- Document Request Modal (Updated: Now supports Upload) -->
 <div class="modal-backdrop safe-top-modal" id="docRequestModal">
   <div class="modal" style="max-width:440px;">
-    <div class="modal-header"><h3>📤 Request Document Upload</h3><button type="button" class="modal-close" onclick="closeModal('docRequestModal')">✕</button></div>
+    <div class="modal-header"><h3>📤 Upload Document (Needs Approval)</h3><button type="button" class="modal-close" onclick="closeModal('docRequestModal')">✕</button></div>
     <div class="modal-body">
-      <p class="text-xs text-muted" style="margin-bottom:16px;line-height:1.65;">Request admin to upload a document. After approval, it will be visible to all roles.</p>
+      <p class="text-xs text-muted" style="margin-bottom:16px;line-height:1.65;">Upload a document (PDF, DOC, TXT, etc.). After admin approves it, it will be visible to all roles.</p>
       <div class="form-group"><label class="form-label">Title</label><input type="text" id="docReqTitle" placeholder="e.g. BDA Unit 4 Notes" /></div>
       <div class="form-group"><label class="form-label">Subject</label><input type="text" id="docReqSubject" placeholder="e.g. BDA" /></div>
       <div class="form-group"><label class="form-label">Reason / Description</label><input type="text" id="docReqReason" placeholder="Why is this needed?" /></div>
+      <div class="form-group"><label class="form-label">Select File</label>
+        <input type="file" id="docReqFile" accept=".pdf, .doc, .docx, .ppt, .pptx, .txt, .xls, .xlsx, .csv, image/*" />
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline btn-sm" onclick="closeModal('docRequestModal')">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="submitDocRequest()">Send Request</button>
+      <button class="btn btn-primary btn-sm" onclick="submitDocRequest()">Submit Upload</button>
     </div>
   </div>
 </div>
 
-<!-- ★ NEW MODAL: Undo Approval -->
 <div class="modal-backdrop safe-top-modal" id="undoApprovalModal">
   <div class="modal" style="max-width:420px;">
     <div class="modal-header"><h3>↩️ Undo Approval</h3><button type="button" class="modal-close" onclick="closeModal('undoApprovalModal')">✕</button></div>
@@ -1268,9 +1239,6 @@ const STUDENT_MENU_ITEMS = [
   { key: 'home', label: 'Home', icon: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
   { key: 'request', label: 'Request Attendance', icon: '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>' },
   { key: 'notes', label: 'Notes & Documents', icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>' },
-  { key: 'fees', label: 'My Fees', icon: '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>' },
-  { key: 'library', label: 'Library', icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>' },
-  { key: 'results', label: 'Results', icon: '<line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/>' },
   { key: 'assignments', label: 'Assignments', icon: '<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/>' },
   { key: 'exams', label: 'Exams', icon: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>' },
   { key: 'announcements', label: 'Announcements', icon: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>' },
@@ -1337,7 +1305,7 @@ let pendingUndoApprovalId = null;
 let sessionCheckInterval = null;
 
 /* ============================================================
-   DEVICE INFO DETECTION (Feature #3)
+   DEVICE INFO DETECTION
    ============================================================ */
 function getDeviceInfo() {
   const ua = navigator.userAgent;
@@ -1366,7 +1334,7 @@ function getOrCreateDeviceId() {
 }
 
 /* ============================================================
-   SESSION CHECK (Feature #2 - Auto logout on new device login)
+   SESSION CHECK
    ============================================================ */
 function startSessionCheck() {
   if (sessionCheckInterval) clearInterval(sessionCheckInterval);
@@ -1384,7 +1352,7 @@ function startSessionCheck() {
         showFeedback('warning', 'Session Expired', d.error || 'You have been logged out because you signed in on another device.', { onClose: () => { localStorage.clear(); location.reload(); } });
       }
     } catch (e) {}
-  }, 60000); // Check every 60s
+  }, 60000);
 }
 
 function refreshPage() {
@@ -1572,9 +1540,6 @@ function navigateStudentMenu(key){
       case 'home': targetId = 'sec-home'; break;
       case 'request': targetId = 'sec-request'; break;
       case 'notes': targetId = 'sec-notes'; loadStudentNotes(); break;
-      case 'fees': targetId = 'sec-fees'; loadStudentFees(); break;
-      case 'library': targetId = 'sec-library'; loadStudentLibrary(); break;
-      case 'results': targetId = 'sec-results'; loadStudentResults(); break;
       case 'assignments': targetId = 'sec-assignments'; loadStudentAssignments(); break;
       case 'exams': targetId = 'sec-exams'; loadStudentExams(); break;
       case 'announcements': targetId = 'sec-announcements'; loadStudentAnnouncements(); break;
@@ -1589,7 +1554,7 @@ function navigateStudentMenu(key){
     if (action === 'workingdays') { openWorkingDays(); return; }
     const el = document.getElementById(targetId);
     if (el) {
-      if (el.style.display === 'none' && ['reports', 'portals', 'notes', 'fees', 'library', 'results', 'assignments', 'exams', 'announcements'].includes(key)) el.style.display = 'block';
+      if (el.style.display === 'none' && ['reports', 'portals', 'notes', 'assignments', 'exams', 'announcements'].includes(key)) el.style.display = 'block';
       const rect = el.getBoundingClientRect();
       const top = window.pageYOffset + rect.top - 80;
       window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
@@ -2139,7 +2104,7 @@ function loadDashboard(){
   }
 
   if (currentUser.role === 'admin' || currentUser.role === 'faculty') {
-    ['sec-chart','sec-timetable','sec-calendar','sec-reports','sec-logs','sec-notes','sec-fees','sec-library','sec-results','sec-assignments','sec-exams','sec-announcements'].forEach(id => {
+    ['sec-chart','sec-timetable','sec-calendar','sec-reports','sec-logs','sec-notes','sec-assignments','sec-exams','sec-announcements'].forEach(id => {
       const e = $(id); if (e) e.style.display = 'none';
     });
   }
@@ -2197,7 +2162,7 @@ function switchTab(id){
   ['tab-mark','tab-admin','tab-faculty','tab-leave'].forEach(t => { const el = $(t); if (el) el.style.display = 'none'; });
   const el = $(id); if (el) { el.style.display = 'block'; el.style.animation = 'tabFadeIn .4s ease'; }
   if (id === 'tab-leave') { activeStudentMenuKey = 'leave'; populateStudentMenu(); }
-  else if (id === 'tab-mark' && currentUser && currentUser.role === 'student' && !['request','notes','fees','library','results','assignments','exams','announcements','timetable','calendar','subjects','workingdays','reports','logs','portals'].includes(activeStudentMenuKey)) { activeStudentMenuKey = 'home'; populateStudentMenu(); }
+  else if (id === 'tab-mark' && currentUser && currentUser.role === 'student' && !['request','notes','assignments','exams','announcements','timetable','calendar','subjects','workingdays','reports','logs','portals'].includes(activeStudentMenuKey)) { activeStudentMenuKey = 'home'; populateStudentMenu(); }
   observeNewContent();
   setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 60);
 }
@@ -3021,40 +2986,171 @@ async function loadStudentNotes() {
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
             ${n.fileUrl ? `<a href="${escapeHtml(n.fileUrl)}" target="_blank" class="btn btn-success btn-xs">📥 Download</a>` : ''}
-            <button class="btn btn-outline btn-xs" onclick="requestDocFor('${escapeHtml(n.subject || '')}')">📤 Request Update</button>
+            <button class="btn btn-outline btn-xs" onclick="openDocRequestModal()">📤 Upload Document</button>
           </div>
         </div>
       </div>
     `).join('');
   } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
 }
-function openDocRequestModal() { openModal('docRequestModal'); }
-function requestDocFor(subject) {
-  openModal('docRequestModal');
-  const s = $('docReqSubject'); if (s) s.value = subject || '';
+function openDocRequestModal() { 
+  openModal('docRequestModal'); 
+  $('docReqTitle').value = ''; $('docReqSubject').value = ''; $('docReqReason').value = ''; $('docReqFile').value = '';
 }
 async function submitDocRequest() {
   const title = $('docReqTitle').value.trim();
   const subject = $('docReqSubject').value.trim();
   const reason = $('docReqReason').value.trim();
+  const fileInput = $('docReqFile');
+  const file = fileInput.files[0];
+
   if (!title) return toast('Enter title', 'error');
   if (!subject) return toast('Enter subject', 'error');
-  showDL('Submitting…');
+  if (!file) return toast('Select a file', 'error');
+  if (file.size > 10 * 1024 * 1024) return toast('File too large (max 10MB)', 'error');
+
+  showDL('Uploading…');
   try {
-    const res = await fetch(`${API}/api/notes/request`, {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const base64 = reader.result.split(',')[1];
+        const res = await fetch(`${API}/api/notes/request`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            rollNo: currentUser.rollNo,
+            title, subject, reason,
+            branch: currentUser.branch || 'CSE',
+            fileBase64: base64,
+            fileName: file.name,
+            mimeType: file.type || 'application/octet-stream'
+          })
+        });
+        const d = await res.json();
+        hideDL();
+        if (res.ok) {
+          closeModal('docRequestModal');
+          showFeedback('success', 'Upload Sent', 'Your document has been sent to admin for approval. It will be visible once approved.');
+          loadStudentNotes();
+        } else showFeedback('error', 'Failed', d.error || 'Could not submit');
+      } catch (e) { hideDL(); showFeedback('error', 'Upload Error', e.message); }
+    };
+    reader.readAsDataURL(file);
+  } catch (e) { hideDL(); showFeedback('error', 'File Error', e.message); }
+}
+
+async function loadAdminNotes() {
+  const el = $('adminNotesList'); if (!el) return;
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const res = await fetch(`${API}/api/admin/notes/${currentUser.rollNo}`);
+    const data = await res.json();
+    if (!res.ok) return el.innerHTML = `<div class="empty">${escapeHtml(data.error || 'Failed')}</div>`;
+    const notes = Array.isArray(data) ? data : (data.notes || []);
+    if (!notes.length) return el.innerHTML = '<div class="empty">No notes uploaded yet</div>';
+    el.innerHTML = notes.map(n => `
+      <div style="padding:10px;border:1px solid var(--slate-200);border-radius:9px;margin-bottom:8px;background:#fff;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+        <div style="min-width:0;flex:1;">
+          <div style="font-weight:700;font-size:12.5px;">${escapeHtml(n.title)}</div>
+          <div style="font-size:11px;color:var(--slate-500);">${escapeHtml(n.subject)} · ${escapeHtml(n.branch)} · ${new Date(n.createdAt).toLocaleDateString('en-IN')}</div>
+        </div>
+        <button class="btn btn-danger btn-xs" onclick="deleteNote('${n._id}')">🗑️</button>
+      </div>
+    `).join('');
+  } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
+}
+async function deleteNote(id) {
+  if (!confirm('Delete this note?')) return;
+  try {
+    const res = await fetch(`${API}/api/admin/notes/${id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requesterRollNo: currentUser.rollNo })
+    });
+    if (res.ok) { toast('Deleted', 'success'); loadAdminNotes(); } else toast('Failed', 'error');
+  } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function loadDocRequests() {
+  const el = $('docRequestsList'); if (!el) return;
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const res = await fetch(`${API}/api/admin/notes/requests/${currentUser.rollNo}`);
+    const data = await res.json();
+    if (!res.ok) return el.innerHTML = `<div class="empty">${escapeHtml(data.error || 'Failed')}</div>`;
+    const reqs = Array.isArray(data) ? data : (data.requests || []);
+    if (!reqs.length) return el.innerHTML = '<div class="empty">No pending requests</div>';
+    
+    el.innerHTML = reqs.map(r => {
+      // File download button (if exists)
+      const fileHtml = r.fileName 
+        ? `<div style="margin-top:6px;"><button class="btn btn-success btn-xs" onclick="downloadDocReqFile('${r._id}')">📥 Download File</button> <span style="font-size:10px;color:var(--slate-500);margin-left:4px;">${escapeHtml(r.fileName)}</span></div>` 
+        : '';
+      
+      return `
+      <div style="padding:12px;border:1px solid var(--slate-200);border-radius:10px;margin-bottom:8px;background:#fff;">
+        <div style="font-weight:800;font-size:12.5px;">${escapeHtml(r.title)}</div>
+        <div style="font-size:11px;color:var(--slate-500);margin-top:3px;">${escapeHtml(r.rollNo)} · ${escapeHtml(r.subject)}</div>
+        ${r.reason ? `<div style="font-size:11px;color:var(--slate-600);margin-top:5px;">Reason: ${escapeHtml(r.reason)}</div>` : ''}
+        ${fileHtml}
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn btn-success btn-xs" onclick="approveDocRequest('${r._id}')">✅ Fulfil</button>
+          <button class="btn btn-danger btn-xs" onclick="rejectDocRequest('${r._id}')">❌ Reject</button>
+        </div>
+      </div>
+    `;
+    }).join('');
+  } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
+}
+
+async function downloadDocReqFile(reqId) {
+  showDL('Downloading…');
+  try {
+    const res = await fetch(`${API}/api/notes/request-file/${reqId}`);
+    const data = await res.json();
+    hideDL();
+    if (!res.ok || !data.fileBase64) return toast(data.error || 'File not found', 'error');
+    
+    const byteCharacters = atob(data.fileBase64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], {type: data.mimeType || 'application/octet-stream'});
+    
+    universalDownload(blob, data.fileName || 'document.pdf');
+  } catch (e) {
+    hideDL();
+    toast('Download failed: ' + e.message, 'error');
+  }
+}
+
+async function approveDocRequest(id) {
+  showDL('Processing…');
+  try {
+    const res = await fetch(`${API}/api/admin/notes/requests/approve/${id}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rollNo: currentUser.rollNo, title, subject, reason, branch: currentUser.branch || 'CSE' })
+      body: JSON.stringify({ requesterRollNo: currentUser.rollNo })
     });
     const d = await res.json();
     hideDL();
-    if (res.ok) {
-      closeModal('docRequestModal');
-      $('docReqTitle').value = ''; $('docReqSubject').value = ''; $('docReqReason').value = '';
-      showFeedback('success', 'Request Sent', 'Your document upload request has been sent to admin.');
-    } else showFeedback('error', 'Failed', d.error || 'Could not submit');
-  } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
+    if (res.ok) { showFeedback('success', 'Approved', 'Request fulfilled and student notified.'); loadDocRequests(); }
+    else showFeedback('error', 'Failed', d.error || 'Could not approve');
+  } catch(e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
 }
+async function rejectDocRequest(id) {
+  const note = prompt('Rejection note (optional):') || '';
+  try {
+    const res = await fetch(`${API}/api/admin/notes/requests/reject/${id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requesterRollNo: currentUser.rollNo, note })
+    });
+    if (res.ok) { toast('Rejected', 'success'); loadDocRequests(); } else toast('Failed', 'error');
+  } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
 async function uploadNote() {
   const title = $('noteTitle').value.trim();
   const subject = $('noteSubject').value.trim();
@@ -3094,344 +3190,6 @@ async function uploadNote() {
     };
     reader.readAsDataURL(file);
   } catch (e) { hideDL(); showFeedback('error', 'File Error', e.message); }
-}
-async function loadAdminNotes() {
-  const el = $('adminNotesList'); if (!el) return;
-  el.innerHTML = '<div class="empty">Loading…</div>';
-  try {
-    const res = await fetch(`${API}/api/admin/notes/${currentUser.rollNo}`);
-    const data = await res.json();
-    if (!res.ok) return el.innerHTML = `<div class="empty">${escapeHtml(data.error || 'Failed')}</div>`;
-    const notes = Array.isArray(data) ? data : (data.notes || []);
-    if (!notes.length) return el.innerHTML = '<div class="empty">No notes uploaded yet</div>';
-    el.innerHTML = notes.map(n => `
-      <div style="padding:10px;border:1px solid var(--slate-200);border-radius:9px;margin-bottom:8px;background:#fff;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-        <div style="min-width:0;flex:1;">
-          <div style="font-weight:700;font-size:12.5px;">${escapeHtml(n.title)}</div>
-          <div style="font-size:11px;color:var(--slate-500);">${escapeHtml(n.subject)} · ${escapeHtml(n.branch)} · ${new Date(n.createdAt).toLocaleDateString('en-IN')}</div>
-        </div>
-        <button class="btn btn-danger btn-xs" onclick="deleteNote('${n._id}')">🗑️</button>
-      </div>
-    `).join('');
-  } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
-}
-async function deleteNote(id) {
-  if (!confirm('Delete this note?')) return;
-  try {
-    const res = await fetch(`${API}/api/admin/notes/${id}`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requesterRollNo: currentUser.rollNo })
-    });
-    if (res.ok) { toast('Deleted', 'success'); loadAdminNotes(); } else toast('Failed', 'error');
-  } catch (e) { toast('Error: ' + e.message, 'error'); }
-}
-async function loadDocRequests() {
-  const el = $('docRequestsList'); if (!el) return;
-  el.innerHTML = '<div class="empty">Loading…</div>';
-  try {
-    const res = await fetch(`${API}/api/admin/notes/requests/${currentUser.rollNo}`);
-    const data = await res.json();
-    if (!res.ok) return el.innerHTML = `<div class="empty">${escapeHtml(data.error || 'Failed')}</div>`;
-    const reqs = Array.isArray(data) ? data : (data.requests || []);
-    if (!reqs.length) return el.innerHTML = '<div class="empty">No pending requests</div>';
-    el.innerHTML = reqs.map(r => `
-      <div style="padding:12px;border:1px solid var(--slate-200);border-radius:10px;margin-bottom:8px;background:#fff;">
-        <div style="font-weight:800;font-size:12.5px;">${escapeHtml(r.title)}</div>
-        <div style="font-size:11px;color:var(--slate-500);margin-top:3px;">${escapeHtml(r.rollNo)} · ${escapeHtml(r.subject)}</div>
-        ${r.reason ? `<div style="font-size:11px;color:var(--slate-600);margin-top:5px;">Reason: ${escapeHtml(r.reason)}</div>` : ''}
-        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
-          <button class="btn btn-success btn-xs" onclick="approveDocRequest('${r._id}')">✅ Fulfil</button>
-          <button class="btn btn-danger btn-xs" onclick="rejectDocRequest('${r._id}')">❌ Reject</button>
-        </div>
-      </div>
-    `).join('');
-  } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
-}
-async function approveDocRequest(id) {
-  showDL('Processing…');
-  try {
-    const res = await fetch(`${API}/api/admin/notes/requests/approve/${id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requesterRollNo: currentUser.rollNo })
-    });
-    const d = await res.json();
-    hideDL();
-    if (res.ok) { showFeedback('success', 'Approved', 'Request fulfilled and student notified.'); loadDocRequests(); }
-    else showFeedback('error', 'Failed', d.error || 'Could not approve');
-  } catch(e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
-}
-async function rejectDocRequest(id) {
-  const note = prompt('Rejection note (optional):') || '';
-  try {
-    const res = await fetch(`${API}/api/admin/notes/requests/reject/${id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requesterRollNo: currentUser.rollNo, note })
-    });
-    if (res.ok) { toast('Rejected', 'success'); loadDocRequests(); } else toast('Failed', 'error');
-  } catch (e) { toast('Error: ' + e.message, 'error'); }
-}
-
-/* ============================================================
-   ★★★ NEW: FEES (Feature #6) ★★★
-   ============================================================ */
-async function loadStudentFees() {
-  const el = $('studentFeesList'); if (!el) return;
-  el.innerHTML = '<div class="empty">Loading…</div>';
-  try {
-    const res = await fetch(`${API}/api/student/fees/${currentUser.rollNo}`);
-    const data = await res.json();
-    if (!res.ok) return el.innerHTML = `<div class="empty">${escapeHtml(data.error || 'Failed')}</div>`;
-    const fees = Array.isArray(data) ? data : [];
-    if (!fees.length) return el.innerHTML = '<div class="empty">No fee records</div>';
-    const total = fees.reduce((s, f) => s + (f.amount || 0), 0);
-    const paid = fees.reduce((s, f) => s + (f.paidAmount || 0), 0);
-    const pending = total - paid;
-    el.innerHTML = `
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
-        <div class="stat" style="padding:12px;"><div class="stat-value" style="font-size:18px;">₹${total}</div><div class="stat-label">Total</div></div>
-        <div class="stat" style="padding:12px;"><div class="stat-value good" style="font-size:18px;">₹${paid}</div><div class="stat-label">Paid</div></div>
-        <div class="stat" style="padding:12px;"><div class="stat-value bad" style="font-size:18px;">₹${pending}</div><div class="stat-label">Pending</div></div>
-      </div>
-      ${fees.map(f => `
-        <div style="padding:12px;border:1px solid var(--slate-200);border-radius:10px;margin-bottom:8px;background:#fff;">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
-            <div style="min-width:0;flex:1;">
-              <div style="font-weight:800;font-size:13px;">₹${f.amount} — ${escapeHtml(f.description || 'Fee')}</div>
-              <div style="font-size:11px;color:var(--slate-500);margin-top:3px;">Due: ${fmtDatePretty(f.dueDate)} · ${escapeHtml(f.academicYear || '')}</div>
-            </div>
-            <span class="badge ${f.status === 'Paid' ? 'badge-success' : f.status === 'Partial' ? 'badge-info' : f.status === 'Overdue' ? 'badge-danger' : 'badge-warning'}">${f.status}</span>
-          </div>
-          ${f.paidAmount > 0 ? `<div style="font-size:11px;color:#047857;margin-top:5px;font-weight:600;">Paid: ₹${f.paidAmount}${f.paidDate ? ' on ' + fmtDatePretty(f.paidDate) : ''}</div>` : ''}
-        </div>
-      `).join('')}
-    `;
-  } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
-}
-async function loadAllFees() {
-  const el = $('adminFeesList'); if (!el) return;
-  el.innerHTML = '<div class="empty">Loading…</div>';
-  try {
-    const status = $('feeFilterStatus')?.value || '';
-    const res = await fetch(`${API}/api/admin/fees/${currentUser.rollNo}${status ? '?status=' + status : ''}`);
-    const data = await res.json();
-    if (!res.ok) return el.innerHTML = `<div class="empty">${escapeHtml(data.error || 'Failed')}</div>`;
-    const fees = data.fees || [];
-    if (!fees.length) return el.innerHTML = '<div class="empty">No fee records</div>';
-    el.innerHTML = fees.map(f => `
-      <div style="padding:10px;border:1px solid var(--slate-200);border-radius:9px;margin-bottom:6px;background:#fff;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-        <div style="min-width:0;flex:1;">
-          <div style="font-weight:800;font-size:12.5px;">${escapeHtml(f.rollNo)} — ₹${f.amount}</div>
-          <div style="font-size:11px;color:var(--slate-500);">${escapeHtml(f.description || 'Fee')} · Due: ${fmtDatePretty(f.dueDate)}</div>
-        </div>
-        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-          <span class="badge ${f.status === 'Paid' ? 'badge-success' : f.status === 'Partial' ? 'badge-info' : 'badge-warning'}">${f.status}</span>
-          ${f.status !== 'Paid' ? `<button class="btn btn-success btn-xs" onclick="markFeePaid('${f._id}', ${f.amount})">Mark Paid</button>` : ''}
-        </div>
-      </div>
-    `).join('');
-  } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
-}
-async function addFee() {
-  const rollNo = $('feeRollNo').value.trim().toUpperCase();
-  const amount = parseInt($('feeAmount').value);
-  const dueDate = $('feeDueDate').value;
-  const description = $('feeDescription').value.trim() || 'Semester Fee';
-  if (!rollNo || !amount || !dueDate) return toast('Fill all fields', 'error');
-  showDL('Adding…');
-  try {
-    const res = await fetch(`${API}/api/admin/fee/add`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requesterRollNo: currentUser.rollNo, rollNo, amount, dueDate, description })
-    });
-    const d = await res.json();
-    hideDL();
-    if (res.ok) {
-      showFeedback('success', 'Fee Added', `Fee ₹${amount} added for ${rollNo}`);
-      $('feeRollNo').value = ''; $('feeAmount').value = ''; $('feeDueDate').value = ''; $('feeDescription').value = '';
-      loadAllFees();
-    } else showFeedback('error', 'Failed', d.error || 'Could not add');
-  } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
-}
-async function bulkAddFee() {
-  const branch = $('feeBulkBranch').value;
-  const amount = parseInt($('feeBulkAmount').value);
-  const dueDate = $('feeBulkDueDate').value;
-  const description = $('feeBulkDescription').value.trim() || 'Semester Fee';
-  if (!amount || !dueDate) return toast('Fill all fields', 'error');
-  if (!confirm(`Add ₹${amount} fee to all ${branch === 'ALL' ? '' : branch + ' '}students?`)) return;
-  showDL('Adding bulk…');
-  try {
-    const res = await fetch(`${API}/api/admin/fee/bulk-add`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requesterRollNo: currentUser.rollNo, amount, dueDate, description, branch })
-    });
-    const d = await res.json();
-    hideDL();
-    if (res.ok) { showFeedback('success', 'Bulk Fee Added', d.message || 'Fees added'); loadAllFees(); }
-    else showFeedback('error', 'Failed', d.error || 'Could not add');
-  } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
-}
-async function markFeePaid(feeId, amount) {
-  const paidStr = prompt(`Enter paid amount (default ₹${amount}):`, amount);
-  if (paidStr === null) return;
-  const paid = parseInt(paidStr) || amount;
-  showDL('Marking paid…');
-  try {
-    const res = await fetch(`${API}/api/admin/fee/mark-paid/${feeId}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requesterRollNo: currentUser.rollNo, paidAmount: paid })
-    });
-    const d = await res.json();
-    hideDL();
-    if (res.ok) { showFeedback('success', 'Marked Paid', `₹${paid} recorded`); loadAllFees(); }
-    else showFeedback('error', 'Failed', d.error || 'Could not mark paid');
-  } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
-}
-
-/* ============================================================
-   ★★★ NEW: LIBRARY (Feature #6) ★★★
-   ============================================================ */
-async function loadStudentLibrary() {
-  const el = $('studentLibraryList'); if (!el) return;
-  el.innerHTML = '<div class="empty">Loading…</div>';
-  try {
-    const res = await fetch(`${API}/api/student/library/${currentUser.rollNo}`);
-    const data = await res.json();
-    if (!res.ok) return el.innerHTML = `<div class="empty">${escapeHtml(data.error || 'Failed')}</div>`;
-    const books = Array.isArray(data) ? data : [];
-    if (!books.length) return el.innerHTML = '<div class="empty">No books issued</div>';
-    el.innerHTML = books.map(b => `
-      <div style="padding:12px;border:1px solid var(--slate-200);border-radius:10px;margin-bottom:8px;background:#fff;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
-          <div style="min-width:0;flex:1;">
-            <div style="font-weight:800;font-size:13px;">"${escapeHtml(b.bookTitle)}"</div>
-            <div style="font-size:11px;color:var(--slate-500);margin-top:3px;">by ${escapeHtml(b.bookAuthor || 'Unknown')}</div>
-            <div style="font-size:11px;color:var(--slate-600);margin-top:4px;">Issued: ${fmtDatePretty(b.issueDate)} · Due: ${fmtDatePretty(b.dueDate)}</div>
-          </div>
-          <span class="badge ${b.status === 'Returned' ? 'badge-success' : b.status === 'Overdue' ? 'badge-danger' : 'badge-warning'}">${b.status}</span>
-        </div>
-      </div>
-    `).join('');
-  } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
-}
-async function loadAllLibrary() {
-  const el = $('adminLibraryList'); if (!el) return;
-  el.innerHTML = '<div class="empty">Loading…</div>';
-  try {
-    const res = await fetch(`${API}/api/admin/library/all/${currentUser.rollNo}`);
-    const data = await res.json();
-    if (!res.ok) return el.innerHTML = `<div class="empty">${escapeHtml(data.error || 'Failed')}</div>`;
-    const books = Array.isArray(data) ? data : [];
-    if (!books.length) return el.innerHTML = '<div class="empty">No records</div>';
-    el.innerHTML = books.map(b => `
-      <div style="padding:10px;border:1px solid var(--slate-200);border-radius:9px;margin-bottom:6px;background:#fff;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-        <div style="min-width:0;flex:1;">
-          <div style="font-weight:800;font-size:12.5px;">"${escapeHtml(b.bookTitle)}"</div>
-          <div style="font-size:11px;color:var(--slate-500);">${escapeHtml(b.rollNo)} · ${escapeHtml(b.studentName)} · Due: ${fmtDatePretty(b.dueDate)}</div>
-        </div>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <span class="badge ${b.status === 'Returned' ? 'badge-success' : b.status === 'Overdue' ? 'badge-danger' : 'badge-warning'}">${b.status}</span>
-          ${b.status === 'Issued' ? `<button class="btn btn-success btn-xs" onclick="returnBook('${b._id}')">Return</button>` : ''}
-        </div>
-      </div>
-    `).join('');
-  } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
-}
-async function issueBook() {
-  const rollNo = $('libIssueRoll').value.trim().toUpperCase();
-  const bookTitle = $('libBookTitle').value.trim();
-  const bookAuthor = $('libBookAuthor').value.trim();
-  const dueDate = $('libDueDate').value;
-  if (!rollNo || !bookTitle || !dueDate) return toast('Fill required fields', 'error');
-  showDL('Issuing…');
-  try {
-    const res = await fetch(`${API}/api/admin/library/issue`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requesterRollNo: currentUser.rollNo, rollNo, bookTitle, bookAuthor, dueDate })
-    });
-    const d = await res.json();
-    hideDL();
-    if (res.ok) {
-      showFeedback('success', 'Book Issued', `"${bookTitle}" issued to ${rollNo}`);
-      $('libIssueRoll').value = ''; $('libBookTitle').value = ''; $('libBookAuthor').value = ''; $('libDueDate').value = '';
-      loadAllLibrary();
-    } else showFeedback('error', 'Failed', d.error || 'Could not issue');
-  } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
-}
-async function returnBook(bookId) {
-  if (!confirm('Mark this book as returned?')) return;
-  try {
-    const res = await fetch(`${API}/api/admin/library/return/${bookId}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requesterRollNo: currentUser.rollNo })
-    });
-    if (res.ok) { toast('Returned', 'success'); loadAllLibrary(); } else toast('Failed', 'error');
-  } catch (e) { toast('Error: ' + e.message, 'error'); }
-}
-
-/* ============================================================
-   ★★★ NEW: RESULTS (Feature #6) ★★★
-   ============================================================ */
-async function loadStudentResults() {
-  const el = $('studentResultsList'); if (!el) return;
-  el.innerHTML = '<div class="empty">Loading…</div>';
-  try {
-    const res = await fetch(`${API}/api/student/results/${currentUser.rollNo}`);
-    const data = await res.json();
-    if (!res.ok) return el.innerHTML = `<div class="empty">${escapeHtml(data.error || 'Failed')}</div>`;
-    const results = Array.isArray(data) ? data : [];
-    if (!results.length) return el.innerHTML = '<div class="empty">No results published</div>';
-    el.innerHTML = results.map(r => `
-      <div style="padding:12px;border:1px solid var(--slate-200);border-radius:10px;margin-bottom:8px;background:#fff;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
-          <div style="min-width:0;flex:1;">
-            <div style="font-weight:800;font-size:13px;">${escapeHtml(r.subject)}</div>
-            <div style="font-size:11px;color:var(--slate-500);margin-top:3px;">${escapeHtml(r.examType)}</div>
-          </div>
-          <div style="text-align:right;">
-            <div style="font-size:18px;font-weight:800;color:var(--brand-700);">${r.marksObtained}/${r.totalMarks}</div>
-            ${r.grade ? `<div class="badge badge-success">${escapeHtml(r.grade)}</div>` : ''}
-          </div>
-        </div>
-      </div>
-    `).join('');
-  } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
-}
-async function loadAdminResults() {
-  const el = $('adminResultsList'); if (!el) return;
-  el.innerHTML = '<div class="empty">Refresh to see latest results</div>';
-}
-async function publishResult() {
-  const rollNo = $('resRollNo').value.trim().toUpperCase();
-  const subject = $('resSubject').value.trim();
-  const examType = $('resExamType').value;
-  const marks = parseInt($('resMarks').value);
-  const total = parseInt($('resTotal').value) || 100;
-  const grade = $('resGrade').value.trim();
-  if (!rollNo || !subject || !marks) return toast('Fill required fields', 'error');
-  showDL('Publishing…');
-  try {
-    const res = await fetch(`${API}/api/admin/result/publish`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requesterRollNo: currentUser.rollNo, rollNo, subject, examType, marksObtained: marks, totalMarks: total, grade })
-    });
-    const d = await res.json();
-    hideDL();
-    if (res.ok) {
-      showFeedback('success', 'Result Published', `${rollNo} — ${subject}: ${marks}/${total}`);
-      $('resRollNo').value = ''; $('resSubject').value = ''; $('resMarks').value = ''; $('resGrade').value = '';
-      loadAdminResults();
-    } else showFeedback('error', 'Failed', d.error || 'Could not publish');
-  } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
 }
 
 /* ============================================================
