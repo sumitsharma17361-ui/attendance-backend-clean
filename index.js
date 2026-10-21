@@ -1,4 +1,4 @@
-// ================= index.js v4.3 — Full Backend (Dynamic Advisor + Full FCM/Median Push) =================
+// ================= index.js v4.4 — Full Backend (Notes/Docs + Bulk Device Reset + Undo Approval + Auto Logout + All Features) =================
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -33,11 +33,9 @@ try {
   }
 } catch (e) { console.error('❌ Firebase Admin init failed:', e.message); fcmReady = false; }
 
-// ★★★ FIXED: Full FCM send with Android (Median.co) + Web Push support ★★★
 async function sendPushNotification(fcmToken, title, body, data = {}) {
   if (!fcmReady || !fcmToken) return { ok: false, reason: !fcmReady ? 'not-ready' : 'no-token' };
   try {
-    // Stringify all data values (FCM requires strings)
     const stringData = Object.fromEntries(
       Object.entries(Object.assign({ title, body, icon: '/icon-192.png' }, data))
         .map(([k, v]) => [k, String(v)])
@@ -45,27 +43,21 @@ async function sendPushNotification(fcmToken, title, body, data = {}) {
     const message = {
       token: fcmToken,
       data: stringData,
-      // Web push (browser + PWA)
       webpush: {
         headers: { Urgency: 'high', TTL: '86400' },
         notification: {
-          title,
-          body,
-          icon: '/icon-192.png',
-          badge: '/icon-192.png',
-          vibrate: [200, 100, 200],
-          requireInteraction: true,
+          title, body,
+          icon: '/icon-192.png', badge: '/icon-192.png',
+          vibrate: [200, 100, 200], requireInteraction: true,
           tag: stringData.type || 'bm-notification'
         },
         fcmOptions: { link: '/' }
       },
-      // ★ Android native (Median.co app)
       android: {
         priority: 'high',
         ttl: 86400000,
         notification: {
-          title,
-          body,
+          title, body,
           icon: 'notification_icon',
           color: '#2563eb',
           sound: 'default',
@@ -76,7 +68,6 @@ async function sendPushNotification(fcmToken, title, body, data = {}) {
           defaultSound: true
         }
       },
-      // ★ APNs (iOS — Median)
       apns: {
         headers: { 'apns-priority': '10', 'apns-push-type': 'alert' },
         payload: {
@@ -256,6 +247,7 @@ const COLLEGE_RADIUS = 100;
 const COLLEGE_CLOSE_HOUR = 15;
 const SEMESTER_START = new Date('2026-07-15T00:00:00+05:30');
 const SEMESTER_END = new Date('2026-12-31T23:59:59+05:30');
+const UNDO_WINDOW_MS = 5 * 60 * 1000; // 5 minutes for undo approval
 
 if (!MONGO_URI) { console.error('❌ MONGO_URI missing'); process.exit(1); }
 
@@ -271,13 +263,13 @@ function getBranchFromRoll(rollNo) {
   return null;
 }
 
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { error: 'Too many attempts.' } });
-const apiLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 200, message: { error: 'Too many requests.' } });
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 60, message: { error: 'Too many attempts.' } });
+const apiLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 300, message: { error: 'Too many requests.' } });
 app.use('/api/auth/', authLimiter);
 app.use('/api/', apiLimiter);
 
-const registerSchema = z.object({ name: z.string().min(2).max(50), rollNo: z.string().min(3), password: z.string().min(6), deviceId: z.string().optional(), role: z.enum(['student', 'faculty', 'admin']).default('student'), subject: z.string().optional().nullable() });
-const loginSchema = z.object({ rollNo: z.string().min(1), password: z.string().min(1), deviceId: z.string().optional() });
+const registerSchema = z.object({ name: z.string().min(2).max(50), rollNo: z.string().min(3), password: z.string().min(6), deviceId: z.string().optional(), deviceName: z.string().optional(), role: z.enum(['student', 'faculty', 'admin']).default('student'), subject: z.string().optional().nullable() });
+const loginSchema = z.object({ rollNo: z.string().min(1), password: z.string().min(1), deviceId: z.string().optional(), deviceName: z.string().optional() });
 
 function normalizeSubject(s) { return s ? s.replace(/\s+/g, ' ').trim() : ''; }
 const SUBJECT_ALIAS_MAP = {
@@ -491,6 +483,7 @@ const userSchema = new mongoose.Schema({
   phone: { type: String, default: null },
   role: { type: String, enum: ['student', 'faculty', 'admin'], default: 'student' },
   boundDeviceId: { type: String, default: null },
+  boundDeviceName: { type: String, default: null },  // ★ NEW: Feature #3
   lastAttendanceTime: { type: Date, default: null },
   lastAttendanceLocation: { latitude: Number, longitude: Number },
   failedAttempts: { type: Number, default: 0 },
@@ -521,9 +514,11 @@ const attendanceSchema = new mongoose.Schema({
   ipAddress: { type: String, default: null },
   isVerified: { type: Boolean, default: false },
   branch: { type: String, default: 'CSE' },
-  markedBy: { type: String, default: null }
+  markedBy: { type: String, default: null },
+  markedByRequestId: { type: String, default: null }  // ★ NEW: Feature #4 — tracks which attendance request created this record (for undo)
 }, { timestamps: true });
 attendanceSchema.index({ rollNo: 1, subject: 1, date: 1 }, { unique: true });
+attendanceSchema.index({ markedByRequestId: 1 });  // ★ NEW: fast undo lookup
 
 const holidaySchema = new mongoose.Schema({ date: { type: String, required: true, unique: true }, reason: { type: String, default: 'Holiday' } }, { timestamps: true });
 const noticeSchema = new mongoose.Schema({ title: String, message: String, date: { type: Date, default: Date.now }, postedBy: String });
@@ -571,7 +566,7 @@ const attendanceRequestSchema = new mongoose.Schema({
   locationVerified: { type: Boolean, default: false }, isPastDate: { type: Boolean, default: false },
   status: { type: String, enum: ['Pending', 'Approved', 'Rejected', 'Partially Approved'], default: 'Pending' },
   reviewedBy: { type: String, default: null }, adminNote: { type: String, default: '' },
-  reviewHistory: [{ action: { type: String, enum: ['Approved', 'Rejected'] }, by: String, at: { type: Date, default: Date.now }, note: { type: String, default: '' }, reviewedSubjects: [String] }]
+  reviewHistory: [{ action: { type: String, enum: ['Approved', 'Rejected', 'Undone'] }, by: String, at: { type: Date, default: Date.now }, note: { type: String, default: '' }, reviewedSubjects: [String] }]
 }, { timestamps: true });
 
 const accountRequestSchema = new mongoose.Schema({
@@ -585,6 +580,7 @@ const accountRequestSchema = new mongoose.Schema({
 const registrationRequestSchema = new mongoose.Schema({
   name: { type: String, required: true }, rollNo: { type: String, required: true },
   password: { type: String, required: true }, deviceId: { type: String, default: null },
+  deviceName: { type: String, default: null },  // ★ NEW
   branch: { type: String, default: 'CSE' }, role: { type: String, enum: ['student'], default: 'student' },
   status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
   reviewedBy: { type: String, default: null }, adminNote: { type: String, default: '' },
@@ -651,6 +647,41 @@ const emergencyAlertSchema = new mongoose.Schema({
   postedBy: { type: String, required: true }, active: { type: Boolean, default: true }
 }, { timestamps: true });
 
+// ★★★ NEW SCHEMAS for Feature #1 (Notes/Documents) ★★★
+const noteSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  subject: { type: String, required: true },
+  branch: { type: String, default: 'ALL' },
+  fileName: { type: String, required: true },
+  mimeType: { type: String, required: true },
+  size: { type: Number, default: 0 },
+  uploadedBy: { type: String, required: true },
+  uploadedByName: { type: String, default: '' }
+}, { timestamps: true });
+noteSchema.index({ branch: 1, createdAt: -1 });
+
+const notesFileSchema = new mongoose.Schema({
+  noteId: { type: mongoose.Schema.Types.ObjectId, required: true, unique: true, index: true },
+  data: { type: Buffer, required: true },
+  fileName: { type: String, required: true },
+  mimeType: { type: String, required: true },
+  size: { type: Number, default: 0 }
+}, { timestamps: true });
+
+const docRequestSchema = new mongoose.Schema({
+  rollNo: { type: String, required: true },
+  studentName: { type: String, default: '' },
+  title: { type: String, required: true },
+  subject: { type: String, required: true },
+  reason: { type: String, default: '' },
+  branch: { type: String, default: 'CSE' },
+  status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
+  reviewedBy: { type: String, default: null },
+  reviewedAt: { type: Date, default: null },
+  adminNote: { type: String, default: '' }
+}, { timestamps: true });
+docRequestSchema.index({ status: 1, createdAt: -1 });
+
 const User = mongoose.model('User', userSchema);
 const Attendance = mongoose.model('Attendance', attendanceSchema);
 const Holiday = mongoose.model('Holiday', holidaySchema);
@@ -670,6 +701,9 @@ const LibraryBook = mongoose.model('LibraryBook', libraryBookSchema);
 const Result = mongoose.model('Result', resultSchema);
 const Announcement = mongoose.model('Announcement', announcementSchema);
 const EmergencyAlert = mongoose.model('EmergencyAlert', emergencyAlertSchema);
+const Note = mongoose.model('Note', noteSchema);
+const NotesFile = mongoose.model('NotesFile', notesFileSchema);
+const DocRequest = mongoose.model('DocRequest', docRequestSchema);
 
 Attendance.createIndexes().catch(err => console.error('Index error:', err));
 
@@ -760,9 +794,6 @@ async function getStudentSummary(rollNo) {
   } catch (e) { console.error('getStudentSummary error:', e); return null; }
 }
 
-// ============================================================
-//  ★★★ FIX #1: DYNAMIC ADVISOR — no fixed 75% for those who can't reach ★★★
-// ============================================================
 async function getBunkAdvisor(rollNo) {
   const summary = await getStudentSummary(rollNo);
   if (!summary) return null;
@@ -771,32 +802,21 @@ async function getBunkAdvisor(rollNo) {
   const TARGET_PCT = 75;
   const target = TARGET_PCT / 100;
 
-  // Remaining semester analysis
   const today = new Date();
   const semesterEnd = new Date('2026-12-31T23:59:59+05:30');
   const remainingWorkingDays = await getWorkingDays(today, semesterEnd);
 
-  // Branch-specific avg lectures per day (AIDS ≈ 5.4, CSE ≈ 5.8)
   const user = await User.findOne({ rollNo }).select('branch').lean();
   const branch = getBranchFromRoll(rollNo) || (user && user.branch) || 'CSE';
   const avgLecturesPerDay = (branch === 'AIDS') ? 5.4 : 5.8;
   const remainingLectures = Math.round(remainingWorkingDays * avgLecturesPerDay);
 
-  // Semester total (already + remaining)
   const totalSemesterLectures = total + remainingLectures;
-
-  // Max possible if attend ALL remaining
   const maxAttended = attended + remainingLectures;
   const maxTotal = total + remainingLectures;
   const maxPossiblePct = maxTotal > 0 ? Math.round((maxAttended / maxTotal) * 100) : 0;
-
-  // Min possible if attend NONE (all remaining considered absent)
   const minPossiblePct = maxTotal > 0 ? Math.round((attended / maxTotal) * 100) : 0;
 
-  // Lectures needed to reach 75% (if achievable)
-  // Solve: (attended + x) / (total + x) = 0.75
-  // 0.25x = 0.75*total - attended
-  // x = (0.75*total - attended) / 0.25
   let lecturesFor75 = 0;
   let canReach75 = false;
   if (pct >= 75) {
@@ -809,10 +829,8 @@ async function getBunkAdvisor(rollNo) {
     }
   }
 
-  // Safe skips if already above 75
   const safeSkips = pct >= 75 ? Math.max(0, Math.floor((attended - target * total) / target)) : 0;
 
-  // ★★★ DYNAMIC MESSAGE — realistic, based on student's actual situation ★★★
   let message = '';
   let status = '';
   let lecturesNeeded = 0;
@@ -826,7 +844,6 @@ async function getBunkAdvisor(rollNo) {
     lecturesNeeded = lecturesFor75;
     message = `⚠️ You are at ${pct}% (${attended}/${total}). Attend ${lecturesFor75} more lecture(s) to reach 75%. Semester max possible: ${maxPossiblePct}%.`;
   } else {
-    // Can't reach 75% — show realistic target
     status = 'CRITICAL';
     lecturesNeeded = remainingLectures;
     message = `⚠️ You are at ${pct}% (${attended}/${total}). 75% is NOT achievable this semester. Attend ALL ${remainingLectures} remaining lectures to reach max possible ${maxPossiblePct}%.`;
@@ -1056,6 +1073,7 @@ app.get('/health', (req, res) => res.json({
   status: 'ok',
   ai: { primary: { provider: 'groq', model: GROQ_MODEL, keys: GROQ_API_KEYS.length }, fallback: { provider: 'gemini', model: GEMINI_MODEL, keys: GEMINI_API_KEYS.length, discovered: _geminiModelsCache.list.length } },
   fcm: { ready: fcmReady, projectId: process.env.FIREBASE_PROJECT_ID || null },
+  version: '4.4',
   timestamp: new Date().toISOString()
 }));
 
@@ -1090,7 +1108,6 @@ app.post('/api/user/remove-fcm-token', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ★★★ NEW: /api/user/send-notification — frontend calls this for download/attendance marks ★★★
 app.post('/api/user/send-notification', async (req, res) => {
   try {
     const { rollNo, title, body, data } = req.body || {};
@@ -1128,6 +1145,251 @@ app.get('/api/admin/fix-branches/:requesterRollNo', async (req, res) => {
       }
     }
     res.json({ message: `Fixed ${fixes.length} student(s)`, fixes });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ============================================================
+//  ★★★ NEW: BULK DEVICE RESET (Feature #2) ★★★
+// ============================================================
+app.post('/api/admin/bulk-reset-device', async (req, res) => {
+  try {
+    const { requesterRollNo, scope, rollNos } = req.body;
+    const adminUser = await User.findOne({ rollNo: (requesterRollNo || '').trim().toUpperCase() });
+    if (!adminUser || adminUser.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+
+    if (!scope || !['ALL', 'CSE', 'AIDS', 'SELECTED'].includes(scope)) {
+      return res.status(400).json({ error: 'Invalid scope. Use ALL / CSE / AIDS / SELECTED.' });
+    }
+
+    let query = { role: 'student' };
+    if (scope === 'CSE') query.branch = 'CSE';
+    else if (scope === 'AIDS') query.branch = 'AIDS';
+    else if (scope === 'SELECTED') {
+      if (!Array.isArray(rollNos) || !rollNos.length) {
+        return res.status(400).json({ error: 'rollNos required for SELECTED scope.' });
+      }
+      query.rollNo = { $in: rollNos.map(r => String(r).trim().toUpperCase()) };
+    }
+
+    const students = await User.find(query).select('rollNo name').lean();
+    if (!students.length) return res.status(404).json({ error: 'No matching students found.' });
+
+    const result = await User.updateMany(query, {
+      $set: { boundDeviceId: null, boundDeviceName: null, activeSession: null }
+    });
+
+    // Notify each student
+    for (const s of students) {
+      sendPushToRollNo(s.rollNo, '📱 Device Reset', 'Your device binding was reset by admin. Please login again from any device.', { type: 'device_reset' }).catch(() => {});
+    }
+
+    console.log(`📱 [BULK RESET] ${result.modifiedCount} students reset (scope: ${scope})`);
+    res.json({
+      message: `Reset complete. ${result.modifiedCount} student(s) unlocked.`,
+      resetCount: result.modifiedCount,
+      students: students.map(s => s.rollNo)
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ============================================================
+//  ★★★ NEW: NOTES & DOCUMENTS (Feature #1) ★★★
+// ============================================================
+
+// GET /api/notes/:branch — student/faculty view notes visible to their branch
+app.get('/api/notes/:branch', async (req, res) => {
+  try {
+    const branch = (req.params.branch || 'CSE').toUpperCase();
+    const notes = await Note.find({
+      $or: [{ branch: 'ALL' }, { branch }]
+    }).sort({ createdAt: -1 }).limit(100).lean();
+    const result = notes.map(n => ({
+      _id: n._id,
+      title: n.title,
+      subject: n.subject,
+      branch: n.branch,
+      fileName: n.fileName,
+      mimeType: n.mimeType,
+      size: n.size,
+      uploadedBy: n.uploadedBy,
+      uploadedByName: n.uploadedByName,
+      createdAt: n.createdAt,
+      fileUrl: `/api/notes/file/${n._id}`
+    }));
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/admin/notes/upload — admin uploads a note
+app.post('/api/admin/notes/upload', async (req, res) => {
+  try {
+    const { requesterRollNo, title, subject, branch, fileBase64, fileName, mimeType } = req.body;
+    const user = await User.findOne({ rollNo: (requesterRollNo || '').trim().toUpperCase() });
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+
+    if (!title || !subject) return res.status(400).json({ error: 'title and subject are required.' });
+    if (!fileBase64 || !fileName || !mimeType) return res.status(400).json({ error: 'File data required.' });
+
+    let buffer;
+    try { buffer = Buffer.from(fileBase64, 'base64'); }
+    catch (e) { return res.status(400).json({ error: 'Invalid base64 file data.' }); }
+
+    if (buffer.length > 10 * 1024 * 1024) {
+      return res.status(400).json({ error: 'File too large. Max 10MB.' });
+    }
+
+    const finalBranch = (branch || 'ALL').toUpperCase();
+    const note = await Note.create({
+      title, subject,
+      branch: finalBranch,
+      fileName, mimeType, size: buffer.length,
+      uploadedBy: user.rollNo, uploadedByName: user.name
+    });
+
+    await NotesFile.create({
+      noteId: note._id,
+      data: buffer,
+      fileName, mimeType,
+      size: buffer.length
+    });
+
+    // Notify students
+    const msg = `📚 New Note: ${title} — ${subject}`;
+    if (finalBranch === 'ALL') {
+      sendPushToAllStudents('📚 New Note Uploaded', msg, { type: 'note_added', noteId: note._id.toString() }).catch(() => {});
+    } else {
+      sendPushToBranch(finalBranch, '📚 New Note Uploaded', msg, { type: 'note_added', noteId: note._id.toString() }).catch(() => {});
+    }
+
+    res.status(201).json({
+      message: 'Note uploaded successfully.',
+      note: { _id: note._id, title, subject, branch: finalBranch, fileName, fileUrl: `/api/notes/file/${note._id}` }
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/admin/notes/:rollNo — admin lists all notes
+app.get('/api/admin/notes/:rollNo', async (req, res) => {
+  try {
+    const user = await User.findOne({ rollNo: req.params.rollNo.trim().toUpperCase() });
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    const notes = await Note.find({}).sort({ createdAt: -1 }).limit(200).lean();
+    const result = notes.map(n => ({
+      ...n,
+      fileUrl: `/api/notes/file/${n._id}`
+    }));
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// DELETE /api/admin/notes/:id — delete a note
+app.delete('/api/admin/notes/:id', async (req, res) => {
+  try {
+    const { requesterRollNo } = req.body;
+    const user = await User.findOne({ rollNo: (requesterRollNo || '').trim().toUpperCase() });
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    const note = await Note.findByIdAndDelete(req.params.id);
+    if (!note) return res.status(404).json({ error: 'Note not found' });
+    await NotesFile.deleteOne({ noteId: note._id });
+    res.json({ message: 'Note deleted successfully.' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/notes/file/:noteId — download file
+app.get('/api/notes/file/:noteId', async (req, res) => {
+  try {
+    const file = await NotesFile.findOne({ noteId: req.params.noteId });
+    if (!file) return res.status(404).json({ error: 'File not found' });
+    res.setHeader('Content-Type', file.mimeType || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.fileName)}"`);
+    res.setHeader('Content-Length', file.data.length);
+    res.send(file.data);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/notes/request — student requests a document upload
+app.post('/api/notes/request', async (req, res) => {
+  try {
+    const { rollNo, title, subject, reason, branch } = req.body;
+    if (!rollNo || !title || !subject) return res.status(400).json({ error: 'rollNo, title, subject required.' });
+    const cr = rollNo.trim().toUpperCase();
+    const user = await User.findOne({ rollNo: cr, role: 'student' });
+    if (!user) return res.status(404).json({ error: 'Student not found' });
+
+    const docReq = await DocRequest.create({
+      rollNo: cr, studentName: user.name,
+      title, subject,
+      reason: reason || '',
+      branch: (branch || user.branch || 'CSE').toUpperCase(),
+      status: 'Pending'
+    });
+
+    sendPushToRole('admin', '📤 Document Upload Request', `${user.name} (${cr}) — ${title} (${subject})`, { type: 'doc_request', requestId: docReq._id.toString() }).catch(() => {});
+    res.status(201).json({ message: 'Request submitted. Admin will review shortly.', request: docReq });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/admin/notes/requests/:rollNo — list pending doc requests
+app.get('/api/admin/notes/requests/:rollNo', async (req, res) => {
+  try {
+    const user = await User.findOne({ rollNo: req.params.rollNo.trim().toUpperCase() });
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    const requests = await DocRequest.find({ status: 'Pending' }).sort({ createdAt: -1 }).limit(100).lean();
+    res.json(requests);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/admin/notes/requests/approve/:id
+app.post('/api/admin/notes/requests/approve/:id', async (req, res) => {
+  try {
+    const { requesterRollNo } = req.body;
+    const adminUser = await User.findOne({ rollNo: (requesterRollNo || '').trim().toUpperCase() });
+    if (!adminUser || adminUser.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    const docReq = await DocRequest.findById(req.params.id);
+    if (!docReq) return res.status(404).json({ error: 'Request not found' });
+    if (docReq.status !== 'Pending') return res.status(400).json({ error: `Already ${docReq.status}.` });
+
+    docReq.status = 'Approved';
+    docReq.reviewedBy = adminUser.rollNo;
+    docReq.reviewedAt = new Date();
+    await docReq.save();
+
+    sendPushToRollNo(docReq.rollNo, '✅ Document Request Fulfilled', `Your request for "${docReq.title}" (${docReq.subject}) has been completed. Check Notes section.`, { type: 'doc_approved', requestId: docReq._id.toString() }).catch(() => {});
+    res.json({ message: 'Request approved and student notified.', request: docReq });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/admin/notes/requests/reject/:id
+app.post('/api/admin/notes/requests/reject/:id', async (req, res) => {
+  try {
+    const { requesterRollNo, note } = req.body;
+    const adminUser = await User.findOne({ rollNo: (requesterRollNo || '').trim().toUpperCase() });
+    if (!adminUser || adminUser.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    const docReq = await DocRequest.findById(req.params.id);
+    if (!docReq) return res.status(404).json({ error: 'Request not found' });
+    if (docReq.status !== 'Pending') return res.status(400).json({ error: `Already ${docReq.status}.` });
+
+    docReq.status = 'Rejected';
+    docReq.reviewedBy = adminUser.rollNo;
+    docReq.reviewedAt = new Date();
+    docReq.adminNote = note || '';
+    await docReq.save();
+
+    sendPushToRollNo(docReq.rollNo, '❌ Document Request Rejected', `Your request for "${docReq.title}" was rejected.${note ? ' Note: ' + note : ''}`, { type: 'doc_rejected', requestId: docReq._id.toString() }).catch(() => {});
+    res.json({ message: 'Request rejected.', request: docReq });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ============================================================
+//  ★★★ NEW: ANNOUNCEMENTS GET (Feature #6) ★★★
+// ============================================================
+app.get('/api/announcements/:branch', async (req, res) => {
+  try {
+    const branch = (req.params.branch || 'CSE').toUpperCase();
+    const announcements = await Announcement.find({
+      $or: [{ branch: 'ALL' }, { branch }]
+    }).sort({ createdAt: -1 }).limit(50).lean();
+    res.json(announcements);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -1381,7 +1643,7 @@ app.post('/api/auth/register', async (req, res) => {
 
 app.post('/api/auth/register-request', async (req, res) => {
   try {
-    const { name, rollNo, password, deviceId } = req.body || {};
+    const { name, rollNo, password, deviceId, deviceName } = req.body || {};
     if (!name || name.trim().length < 2) return res.status(400).json({ error: 'Name required (min 2 chars).' });
     if (!rollNo) return res.status(400).json({ error: 'Roll number required.' });
     if (!password || password.length < 6) return res.status(400).json({ error: 'Password must be 6+ chars.' });
@@ -1391,7 +1653,7 @@ app.post('/api/auth/register-request', async (req, res) => {
     if (await RegistrationRequest.findOne({ rollNo: cleanRoll, status: 'Pending' })) return res.status(400).json({ error: 'Pending approval already.' });
     const hashed = await bcrypt.hash(password, 10);
     const branch = getBranchFromRoll(cleanRoll) || (cleanRoll.includes('AIDS') ? 'AIDS' : 'CSE');
-    const newReq = await RegistrationRequest.create({ name: name.trim(), rollNo: cleanRoll, password: hashed, deviceId: deviceId || null, branch });
+    const newReq = await RegistrationRequest.create({ name: name.trim(), rollNo: cleanRoll, password: hashed, deviceId: deviceId || null, deviceName: deviceName || null, branch });
     sendPushToRole('admin', '📝 New Registration Request', `${newReq.name} (${newReq.rollNo}) — ${newReq.branch}`, { type: 'registration', rollNo: newReq.rollNo }).catch(() => {});
     res.status(201).json({ message: '✅ Request submitted. Wait for admin approval.', request: { _id: newReq._id, name: newReq.name, rollNo: newReq.rollNo, branch: newReq.branch, status: newReq.status, createdAt: newReq.createdAt } });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -1432,7 +1694,7 @@ app.post('/api/admin/registration-requests/review/:id', async (req, res) => {
       const dup = await User.findOne({ rollNo: r.rollNo });
       if (dup) { r.status = 'Rejected'; r.adminNote = (r.adminNote ? r.adminNote + ' · ' : '') + 'User exists'; await r.save(); return res.status(400).json({ error: 'User exists.' }); }
       const correctBranch = getBranchFromRoll(r.rollNo) || r.branch || 'CSE';
-      const newUser = await User.create({ name: r.name, rollNo: r.rollNo, password: r.password, role: 'student', branch: correctBranch, boundDeviceId: r.deviceId || null });
+      const newUser = await User.create({ name: r.name, rollNo: r.rollNo, password: r.password, role: 'student', branch: correctBranch, boundDeviceId: r.deviceId || null, boundDeviceName: r.deviceName || null });
       r.approvedUserRollNo = newUser.rollNo;
     }
     await r.save();
@@ -1450,11 +1712,12 @@ app.post('/api/admin/clear-registrations', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ★★★ MODIFIED: login now accepts deviceName, always updates device, no "Unauthorized device" block ★★★
 app.post('/api/auth/login', async (req, res) => {
   try {
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.errors[0].message });
-    const { rollNo, password, deviceId } = parsed.data;
+    const { rollNo, password, deviceId, deviceName } = parsed.data;
     const cleanRoll = rollNo.trim().toUpperCase();
     const user = await User.findOne({ rollNo: cleanRoll });
     if (!user) {
@@ -1471,20 +1734,64 @@ app.post('/api/auth/login', async (req, res) => {
       const correctBranch = getBranchFromRoll(cleanRoll);
       if (correctBranch && user.branch !== correctBranch) user.branch = correctBranch;
     }
-    const prevDevice = user.boundDeviceId;
+
+    // ★ NEW BEHAVIOR: Always update device binding, auto-logout old device
+    let newDeviceLogin = false;
+    const prevDeviceId = user.boundDeviceId;
     if (user.role === 'student') {
-      if (!user.boundDeviceId && deviceId) { user.boundDeviceId = deviceId; }
-      else if (user.boundDeviceId && user.boundDeviceId !== deviceId) return res.status(403).json({ error: 'Unauthorized device!' });
+      if (prevDeviceId && deviceId && prevDeviceId !== deviceId) {
+        newDeviceLogin = true;
+      }
+      if (deviceId) user.boundDeviceId = deviceId;
+      if (deviceName) user.boundDeviceName = deviceName;
     }
+
     user.lastLoginIP = req.ip;
     user.lastLoginDevice = deviceId || 'unknown';
     user.lastLoginAt = new Date();
     const token = jwt.sign({ id: user._id, rollNo: user.rollNo, name: user.name, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     user.activeSession = token; await user.save();
-    if (user.role === 'student' && prevDevice && deviceId && prevDevice !== deviceId) {
-      sendPushToRollNo(cleanRoll, '🔐 New Device Login', `New login from a different device. If not you, contact admin.`, { type: 'new_device_login' }).catch(() => {});
+
+    // ★ Send "New device login" alert (to OLD FCM token, BEFORE new one is saved)
+    if (newDeviceLogin) {
+      sendPushToRollNo(cleanRoll, '🔐 New Device Login', `Your account was logged in from a new device (${deviceName || 'Unknown'}). If this wasn't you, contact admin immediately.`, { type: 'new_device_login' }).catch(() => {});
+      console.log(`🔐 [NEW-DEVICE] ${cleanRoll}: old=${prevDeviceId?.substring(0,15)} new=${deviceId?.substring(0,15)}`);
     }
+
     res.json({ message: 'Login successful!', token, user: { name: user.name, rollNo: user.rollNo, role: user.role, branch: user.branch } });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ★★★ NEW: VERIFY SESSION — detects auto-logout (Feature #2) ★★★
+app.post('/api/auth/verify-session', async (req, res) => {
+  try {
+    const { rollNo, token } = req.body;
+    if (!rollNo || !token) return res.status(400).json({ error: 'rollNo and token required' });
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (e) {
+      return res.status(401).json({ sessionInvalid: true, error: 'Invalid or expired token.' });
+    }
+
+    // Impersonation tokens bypass the session check
+    if (decoded.impersonated) {
+      return res.json({ valid: true, impersonated: true });
+    }
+
+    if (decoded.rollNo !== rollNo.trim().toUpperCase()) {
+      return res.status(401).json({ sessionInvalid: true, error: 'Token does not match user.' });
+    }
+
+    const user = await User.findOne({ rollNo: decoded.rollNo });
+    if (!user) return res.status(401).json({ sessionInvalid: true, error: 'User not found.' });
+
+    if (user.activeSession !== token) {
+      return res.status(401).json({ sessionInvalid: true, error: 'You were logged out because you signed in on another device.' });
+    }
+
+    res.json({ valid: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -1590,7 +1897,9 @@ app.post('/api/admin/account-requests/review/:id', async (req, res) => {
     if (!r) return res.status(404).json({ error: 'Not found' });
     r.status = action; r.reviewedBy = adminUser.rollNo; r.adminNote = note || '';
     await r.save();
-    if (action === 'Approved' && r.type === 'device_reset') await User.updateOne({ rollNo: r.rollNo }, { $set: { boundDeviceId: null } });
+    if (action === 'Approved' && r.type === 'device_reset') {
+      await User.updateOne({ rollNo: r.rollNo }, { $set: { boundDeviceId: null, boundDeviceName: null, activeSession: null } });
+    }
     if (action === 'Approved') {
       const msg = r.type === 'forgot_password' ? 'Your password reset request was approved. Set new password now.' : 'Your device reset request was approved. Try logging in again.';
       sendPushToRollNo(r.rollNo, '✅ Request Approved', msg, { type: 'account_approved' }).catch(() => {});
@@ -1667,7 +1976,7 @@ app.post('/api/admin/reset-device', async (req, res) => {
     if (!req1 || req1.role !== 'admin') return res.status(403).json({ error: 'Admin only!' });
     const user = await User.findOne({ rollNo: targetRollNo.trim().toUpperCase() });
     if (!user) return res.status(404).json({ error: 'Not found!' });
-    user.boundDeviceId = null; await user.save();
+    user.boundDeviceId = null; user.boundDeviceName = null; user.activeSession = null; await user.save();
     sendPushToRollNo(targetRollNo, '📱 Device Reset', 'Your device binding was reset. You can login from a new phone.', { type: 'device_reset' }).catch(() => {});
     res.json({ message: `Reset for ${targetRollNo}` });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -1705,7 +2014,8 @@ app.post('/api/admin/login-as-student', async (req, res) => {
     if (!req1 || req1.role !== 'admin') return res.status(403).json({ error: 'Admin only!' });
     const student = await User.findOne({ rollNo: targetRollNo.trim().toUpperCase() });
     if (!student) return res.status(404).json({ error: 'Not found!' });
-    const token = jwt.sign({ id: student._id, rollNo: student.rollNo, name: student.name, role: 'student' }, JWT_SECRET, { expiresIn: '1h' });
+    // ★ NEW: impersonated flag so session check doesn't kick them out
+    const token = jwt.sign({ id: student._id, rollNo: student.rollNo, name: student.name, role: 'student', impersonated: true, impersonatedBy: req1.rollNo }, JWT_SECRET, { expiresIn: '1h' });
     res.json({ message: `As ${student.name}`, token, user: { name: student.name, rollNo: student.rollNo, role: 'student', branch: student.branch }, isImpersonating: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -1740,7 +2050,7 @@ app.post('/api/requests/submit', async (req, res) => {
 });
 
 // ============================================================
-//  LIVE MARKING — ★ NOW SENDS PUSH ON SUCCESS ★
+//  LIVE MARKING
 // ============================================================
 app.post('/api/attendance/mark-live', async (req, res) => {
   try {
@@ -1782,7 +2092,6 @@ app.post('/api/attendance/mark-live', async (req, res) => {
       user.failedAttempts = 0; user.blockUntil = null; await user.save();
       if (marked === 0) return res.status(400).json({ error: `Already marked.` });
       checkAttendanceMilestone(cr).catch(() => {});
-      // ★ Push notification on full day mark
       sendPushToRollNo(cr, '✅ Attendance Marked', `Full day attendance marked (${marked} lectures) · ${lc.distance}m from campus`, { type: 'attendance_marked', date: todayStr, lectureType: 'full_day' }).catch(() => {});
       return res.status(201).json({ message: `✅ ${marked} marked (${skipped} already). ${lc.distance}m.`, marked, skipped });
     }
@@ -1794,7 +2103,6 @@ app.post('/api/attendance/mark-live', async (req, res) => {
     user.lastAttendanceTime = new Date(); user.lastAttendanceLocation = { latitude, longitude };
     user.failedAttempts = 0; user.blockUntil = null; await user.save();
     checkAttendanceMilestone(cr).catch(() => {});
-    // ★ Push notification on single lecture mark
     sendPushToRollNo(cr, '✅ Lecture Marked', `${activeSubj} attendance marked · ${lc.distance}m from campus`, { type: 'attendance_marked', date: todayStr, lectureType: 'single_lecture', subject: activeSubj }).catch(() => {});
     res.status(201).json({ message: `✅ ${activeSubj} marked. ${lc.distance}m.`, subject: activeSubj });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -1830,6 +2138,8 @@ app.get('/api/requests/pending/:requesterRollNo', async (req, res) => {
     res.json({ count: await AttendanceRequest.countDocuments(filter), requests: await AttendanceRequest.find(filter).sort({ createdAt: -1 }).limit(200) });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
+
+// ★★★ MODIFIED: Now records markedByRequestId for undo tracking (Feature #4) ★★★
 app.post('/api/requests/review/:id', async (req, res) => {
   try {
     const { requesterRollNo, action, note, approvedSubjects } = req.body;
@@ -1851,15 +2161,32 @@ app.post('/api/requests/review/:id', async (req, res) => {
       let markedCount = 0;
       const markedSubjects = [];
       for (const sub of subjectsToMark) {
-        try { const exists = await Attendance.findOne({ rollNo: request.rollNo, subject: sub, date: request.date }); if (!exists) { await Attendance.create({ rollNo: request.rollNo, studentName: request.studentName, subject: sub, date: request.date, status: 'Present', location: null, ipAddress: 'request-approved', isVerified: false, branch: b }); markedCount++; markedSubjects.push(sub); } }
-        catch (e) { if (e.code !== 11000) console.warn(e.message); }
+        try {
+          const exists = await Attendance.findOne({ rollNo: request.rollNo, subject: sub, date: request.date });
+          if (!exists) {
+            await Attendance.create({
+              rollNo: request.rollNo,
+              studentName: request.studentName,
+              subject: sub,
+              date: request.date,
+              status: 'Present',
+              location: null,
+              ipAddress: 'request-approved',
+              isVerified: false,
+              branch: b,
+              markedByRequestId: request._id.toString()  // ★ NEW
+            });
+            markedCount++;
+            markedSubjects.push(sub);
+          }
+        } catch (e) { if (e.code !== 11000) console.warn(e.message); }
       }
       request.status = markedSubjects.length === subjectsToMark.length ? 'Approved' : 'Partially Approved';
       request.reviewedBy = req1.rollNo; request.adminNote = note || '';
       request.reviewHistory.push({ action: 'Approved', by: req1.rollNo, at: new Date(), note: note || '', reviewedSubjects: markedSubjects });
       await request.save();
       sendPushToRollNo(request.rollNo, '✅ Attendance Request Approved', `${request.date} — ${markedCount} lecture(s) marked.`, { type: 'request_approved' }).catch(() => {});
-      res.json({ message: `✅ Approved. ${markedCount} marked.`, request, markedCount, markedSubjects, totalRequested: subjectsToMark.length });
+      res.json({ message: `✅ Approved. ${markedCount} marked.`, request, markedCount, markedSubjects, totalRequested: subjectsToMark.length, undoWindowSeconds: 300 });
     } else {
       request.status = 'Rejected'; request.reviewedBy = req1.rollNo; request.adminNote = note || '';
       request.reviewHistory.push({ action: 'Rejected', by: req1.rollNo, at: new Date(), note: note || '' });
@@ -1869,6 +2196,53 @@ app.post('/api/requests/review/:id', async (req, res) => {
     }
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
+
+// ★★★ NEW: UNDO APPROVAL (Feature #4) ★★★
+app.post('/api/requests/undo/:id', async (req, res) => {
+  try {
+    const { requesterRollNo } = req.body;
+    const adminUser = await User.findOne({ rollNo: (requesterRollNo || '').trim().toUpperCase() });
+    if (!adminUser || adminUser.role !== 'admin') return res.status(403).json({ error: 'Admin only.' });
+
+    const request = await AttendanceRequest.findById(req.params.id);
+    if (!request) return res.status(404).json({ error: 'Request not found.' });
+
+    if (request.status !== 'Approved' && request.status !== 'Partially Approved') {
+      return res.status(400).json({ error: `Cannot undo — current status is "${request.status}".` });
+    }
+
+    const elapsedMs = Date.now() - new Date(request.updatedAt).getTime();
+    if (elapsedMs > UNDO_WINDOW_MS) {
+      return res.status(400).json({ error: `Undo window expired (${Math.round(elapsedMs/60000)} min ago). Max ${UNDO_WINDOW_MS/60000} minutes.` });
+    }
+
+    // Delete auto-marked attendance records created by this approval
+    const delResult = await Attendance.deleteMany({ markedByRequestId: request._id.toString() });
+
+    // Revert request status to Pending
+    request.status = 'Pending';
+    request.reviewedBy = null;
+    request.adminNote = '';
+    request.reviewHistory.push({
+      action: 'Undone',
+      by: adminUser.rollNo,
+      at: new Date(),
+      note: `Approval undone — ${delResult.deletedCount} attendance record(s) removed.`
+    });
+    await request.save();
+
+    sendPushToRollNo(request.rollNo, '↩️ Approval Revoked', `Your attendance request for ${request.date} has been reverted to Pending by admin.`, { type: 'request_undone' }).catch(() => {});
+
+    console.log(`↩️ [UNDO] Request ${request._id} reverted by ${adminUser.rollNo} — ${delResult.deletedCount} records removed.`);
+    res.json({
+      message: `Approval undone. ${delResult.deletedCount} attendance record(s) removed.`,
+      deletedCount: delResult.deletedCount,
+      request
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ★★★ MODIFIED: bulk-review also tracks markedByRequestId ★★★
 app.post('/api/requests/bulk-review', async (req, res) => {
   try {
     const { requesterRollNo, requestIds, action, note } = req.body;
@@ -1894,7 +2268,26 @@ app.post('/api/requests/bulk-review', async (req, res) => {
           if (request.lectureType === 'full_day') subjectsToMark = [...new Set(schedule.schedule.filter(s => !s.subject.includes('LIB') && !s.subject.includes('Sports') && s.period !== 'LUNCH').map(s => mapToCanonical(s.subject)))];
           else if (request.lectureType === 'single_lecture' && request.subject) subjectsToMark = [mapToCanonical(request.subject)];
           let marked = 0;
-          for (const sub of subjectsToMark) { try { const ex = await Attendance.findOne({ rollNo: request.rollNo, subject: sub, date: request.date }); if (!ex) { await Attendance.create({ rollNo: request.rollNo, studentName: request.studentName, subject: sub, date: request.date, status: 'Present', location: null, ipAddress: 'bulk-approve', isVerified: false, branch: b }); marked++; } } catch (e) {} }
+          for (const sub of subjectsToMark) {
+            try {
+              const ex = await Attendance.findOne({ rollNo: request.rollNo, subject: sub, date: request.date });
+              if (!ex) {
+                await Attendance.create({
+                  rollNo: request.rollNo,
+                  studentName: request.studentName,
+                  subject: sub,
+                  date: request.date,
+                  status: 'Present',
+                  location: null,
+                  ipAddress: 'bulk-approve',
+                  isVerified: false,
+                  branch: b,
+                  markedByRequestId: request._id.toString()  // ★ NEW
+                });
+                marked++;
+              }
+            } catch (e) {}
+          }
           request.status = 'Approved'; request.reviewedBy = req1.rollNo; request.adminNote = note || '';
           request.reviewHistory.push({ action: 'Approved', by: req1.rollNo, at: new Date(), note: note || '', reviewedSubjects: subjectsToMark });
           await request.save();
@@ -1993,7 +2386,6 @@ app.get('/api/teacher/class-average/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ★ Faculty mark attendance — sends push to student
 app.post('/api/teacher/mark-attendance', async (req, res) => {
   try {
     const { rollNo, subject, latitude, longitude, studentRollNo } = req.body;
@@ -2020,7 +2412,6 @@ app.post('/api/teacher/mark-attendance', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ★ Faculty bulk mark — sends push to all affected students
 app.post('/api/teacher/bulk-mark-attendance', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNos, dates, status } = req.body;
@@ -2071,7 +2462,6 @@ app.delete('/api/teacher/bulk-delete-attendance', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ★ Passcode generate — push to students when published
 app.post('/api/admin/generate-passcode', async (req, res) => {
   try {
     const { requesterRollNo, type, force, publish, durationMinutes, isPublic } = req.body;
@@ -2162,7 +2552,6 @@ app.get('/api/passcode/public/:type', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ★★★ Legacy mark-lecture — now sends push ★★★
 app.post('/api/attendance/mark-lecture', async (req, res) => {
   try {
     const { rollNo, subject, latitude, longitude, passcode } = req.body;
@@ -2195,7 +2584,6 @@ app.post('/api/attendance/mark-lecture', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ★★★ Legacy mark-fullday — now sends push ★★★
 app.post('/api/attendance/mark-fullday', async (req, res) => {
   try {
     const { rollNo, name, latitude, longitude, passcode } = req.body;
@@ -2426,7 +2814,8 @@ app.get('/api/admin/all-users/:requesterRollNo', async (req, res) => {
   try {
     const req1 = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
     if (!req1 || req1.role !== 'admin') return res.status(403).json({ error: 'Admin only!' });
-    res.json(await User.find().select('name rollNo role boundDeviceId email phone semester branch profilePic facultySubject dateOfBirth').sort({ rollNo: 1 }));
+    // ★ NEW: includes boundDeviceName
+    res.json(await User.find().select('name rollNo role boundDeviceId boundDeviceName email phone semester branch profilePic facultySubject dateOfBirth').sort({ rollNo: 1 }));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 app.get('/api/admin/faculty/:requesterRollNo', async (req, res) => {
@@ -2560,7 +2949,6 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ★ Admin manual mark — now sends push to student
 app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
   try {
     const { requesterRollNo, studentRollNo, date, subjects, status } = req.body;
@@ -3051,7 +3439,7 @@ async function getImpersonationData(targetRollNo) {
   const advisor = await getBunkAdvisor(targetRollNo);
   const recentRecords = await Attendance.find({ rollNo: targetRollNo.toUpperCase() }).sort({ date: -1 }).limit(10).lean();
   const requests = await AttendanceRequest.find({ rollNo: targetRollNo.toUpperCase() }).sort({ createdAt: -1 }).limit(5).lean();
-  return { student: { rollNo: target.rollNo, name: target.name, branch: summary?.resolvedBranch || target.branch, semester: target.semester, deviceBound: !!target.boundDeviceId, lastAttendance: target.lastAttendanceTime }, summary: summary ? { percentage: summary.attendancePercentage, attended: summary.totalAcademicLectures, conducted: summary.totalConductedLectures, daysPresent: summary.daysPresent, workingDaysSoFar: summary.workingDaysSoFar, subjectStats: summary.subjectStats } : null, advisor: advisor ? { status: advisor.status, canBunkLectures: advisor.canBunkLectures, lecturesNeeded: advisor.lecturesNeeded, message: advisor.message } : null, recentRecords: recentRecords.map(r => ({ date: r.date, subject: mapToCanonical(r.subject), status: r.status })), recentRequests: requests.map(r => ({ date: r.date, type: r.lectureType, status: r.status })) };
+  return { student: { rollNo: target.rollNo, name: target.name, branch: summary?.resolvedBranch || target.branch, semester: target.semester, deviceBound: !!target.boundDeviceId, deviceName: target.boundDeviceName, lastAttendance: target.lastAttendanceTime }, summary: summary ? { percentage: summary.attendancePercentage, attended: summary.totalAcademicLectures, conducted: summary.totalConductedLectures, daysPresent: summary.daysPresent, workingDaysSoFar: summary.workingDaysSoFar, subjectStats: summary.subjectStats } : null, advisor: advisor ? { status: advisor.status, canBunkLectures: advisor.canBunkLectures, lecturesNeeded: advisor.lecturesNeeded, message: advisor.message } : null, recentRecords: recentRecords.map(r => ({ date: r.date, subject: mapToCanonical(r.subject), status: r.status })), recentRequests: requests.map(r => ({ date: r.date, type: r.lectureType, status: r.status })) };
 }
 
 async function getGeofenceGuide(userContext) {
@@ -3360,7 +3748,15 @@ async function executeDbAction(intent, userContext, threadId = null) {
     if (reqDoc.lectureType === 'full_day') subs = [...new Set(schedule.schedule.filter(s => !s.subject.includes('LIB') && !s.subject.includes('Sports') && s.period !== 'LUNCH').map(s => mapToCanonical(s.subject)))];
     else if (reqDoc.subject) subs = [mapToCanonical(reqDoc.subject)];
     let marked = 0;
-    for (const sub of subs) { try { const ex = await Attendance.findOne({ rollNo: reqDoc.rollNo, subject: sub, date: reqDoc.date }); if (!ex) { await Attendance.create({ rollNo: reqDoc.rollNo, studentName: reqDoc.studentName, subject: sub, date: reqDoc.date, status: 'Present', location: null, ipAddress: 'chat-review', isVerified: false, branch: b }); marked++; } } catch (e) {} }
+    for (const sub of subs) {
+      try {
+        const ex = await Attendance.findOne({ rollNo: reqDoc.rollNo, subject: sub, date: reqDoc.date });
+        if (!ex) {
+          await Attendance.create({ rollNo: reqDoc.rollNo, studentName: reqDoc.studentName, subject: sub, date: reqDoc.date, status: 'Present', location: null, ipAddress: 'chat-review', isVerified: false, branch: b, markedByRequestId: reqDoc._id.toString() });
+          marked++;
+        }
+      } catch (e) {}
+    }
     reqDoc.status = 'Approved'; reqDoc.reviewedBy = userContext.rollNo; reqDoc.adminNote = d.note || '';
     reqDoc.reviewHistory.push({ action: 'Approved', by: userContext.rollNo, at: new Date(), note: d.note || '', reviewedSubjects: subs });
     await reqDoc.save();
@@ -3406,7 +3802,7 @@ async function executeDbAction(intent, userContext, threadId = null) {
   if (action === 'db_reset_device') {
     if (!isAdmin) return { error: 'Admin only.' };
     if (!data?.rollNo) return { error: 'rollNo required.' };
-    const u = await User.findOneAndUpdate({ rollNo: data.rollNo.toUpperCase() }, { boundDeviceId: null });
+    const u = await User.findOneAndUpdate({ rollNo: data.rollNo.toUpperCase() }, { boundDeviceId: null, boundDeviceName: null, activeSession: null });
     if (!u) return { error: 'User not found.' };
     return { reply: `✅ Device reset for **${data.rollNo}**. They can now log in from a new phone.`, isReply: true };
   }
@@ -3515,7 +3911,15 @@ async function executeDbAction(intent, userContext, threadId = null) {
         if (r.lectureType === 'full_day') subs = [...new Set(schedule.schedule.filter(s => !s.subject.includes('LIB') && !s.subject.includes('Sports') && s.period !== 'LUNCH').map(s => mapToCanonical(s.subject)))];
         else if (r.subject) subs = [mapToCanonical(r.subject)];
         let mk = 0;
-        for (const sub of subs) { try { const ex = await Attendance.findOne({ rollNo: r.rollNo, subject: sub, date: r.date }); if (!ex) { await Attendance.create({ rollNo: r.rollNo, studentName: r.studentName, subject: sub, date: r.date, status: 'Present', location: null, ipAddress: 'bulk-review', isVerified: false, branch: b }); mk++; } } catch (e) {} }
+        for (const sub of subs) {
+          try {
+            const ex = await Attendance.findOne({ rollNo: r.rollNo, subject: sub, date: r.date });
+            if (!ex) {
+              await Attendance.create({ rollNo: r.rollNo, studentName: r.studentName, subject: sub, date: r.date, status: 'Present', location: null, ipAddress: 'bulk-review', isVerified: false, branch: b, markedByRequestId: r._id.toString() });
+              mk++;
+            }
+          } catch (e) {}
+        }
         r.status = 'Approved'; r.reviewedBy = userContext.rollNo; r.reviewHistory.push({ action: 'Approved', by: userContext.rollNo, at: new Date(), reviewedSubjects: subs }); await r.save();
         totalMarked += mk;
         sendPushToRollNo(r.rollNo, '✅ Request Approved', `${r.date} — ${mk} marked.`, { type: 'request_approved' }).catch(() => {});
@@ -3543,7 +3947,7 @@ async function executeDbAction(intent, userContext, threadId = null) {
     const r = await RegistrationRequest.findOne({ rollNo: d.rollNo.toUpperCase(), status: 'Pending' }).sort({ createdAt: -1 });
     if (!r) return { error: 'No pending registration found.' };
     r.status = d.decision; r.reviewedBy = userContext.rollNo; r.adminNote = d.note || '';
-    if (d.decision === 'Approved') { const dup = await User.findOne({ rollNo: r.rollNo }); if (dup) { r.status = 'Rejected'; r.adminNote += ' User exists'; await r.save(); return { error: 'User exists.' }; } const cb = getBranchFromRoll(r.rollNo) || r.branch || 'CSE'; await User.create({ name: r.name, rollNo: r.rollNo, password: r.password, role: 'student', branch: cb, boundDeviceId: r.deviceId || null }); r.approvedUserRollNo = r.rollNo; }
+    if (d.decision === 'Approved') { const dup = await User.findOne({ rollNo: r.rollNo }); if (dup) { r.status = 'Rejected'; r.adminNote += ' User exists'; await r.save(); return { error: 'User exists.' }; } const cb = getBranchFromRoll(r.rollNo) || r.branch || 'CSE'; await User.create({ name: r.name, rollNo: r.rollNo, password: r.password, role: 'student', branch: cb, boundDeviceId: r.deviceId || null, boundDeviceName: r.deviceName || null }); r.approvedUserRollNo = r.rollNo; }
     await r.save();
     return { reply: `${d.decision === 'Approved' ? '✅' : '❌'} Registration **${d.decision}** for ${r.rollNo} (${r.name}).`, isReply: true };
   }
@@ -3567,7 +3971,7 @@ async function executeDbAction(intent, userContext, threadId = null) {
     r.status = d.decision === 'Rejected' ? 'Rejected' : 'Approved';
     r.reviewedBy = userContext.rollNo; r.adminNote = d.note || '';
     await r.save();
-    if (r.status === 'Approved' && r.type === 'device_reset') await User.updateOne({ rollNo: r.rollNo }, { $set: { boundDeviceId: null } });
+    if (r.status === 'Approved' && r.type === 'device_reset') await User.updateOne({ rollNo: r.rollNo }, { $set: { boundDeviceId: null, boundDeviceName: null, activeSession: null } });
     return { reply: `${r.status === 'Approved' ? '✅' : '❌'} Account request **${r.status}**.`, isReply: true };
   }
   if (action === 'db_clear_account_requests') {
@@ -4373,7 +4777,8 @@ function schedulePendingAdminReminder() {
       const pending = await AttendanceRequest.countDocuments({ status: 'Pending', createdAt: { $lt: cutoff } });
       const leaves = await Leave.countDocuments({ status: 'Pending', createdAt: { $lt: cutoff } });
       const regs = await RegistrationRequest.countDocuments({ status: 'Pending', createdAt: { $lt: cutoff } });
-      const total = pending + leaves + regs;
+      const docReqs = await DocRequest.countDocuments({ status: 'Pending', createdAt: { $lt: cutoff } });
+      const total = pending + leaves + regs + docReqs;
       if (total > 0) await sendPushToRole('admin', '⏰ Pending Requests', `${total} request(s) pending for 24+ hours. Review needed.`, { type: 'pending_admin_reminder' });
     } catch (e) {}
   }, 60 * 1000);
@@ -4427,6 +4832,6 @@ app.listen(PORT, async () => {
   console.log(`🚀 Port ${PORT}`);
   console.log(`🤖 AI: Groq(${GROQ_API_KEYS.length} keys) → Gemini(${GEMINI_API_KEYS.length} keys)`);
   console.log(`🔥 FCM: ${fcmReady ? 'READY ✅' : 'DISABLED ⚠️'}`);
-  console.log(`📦 Version: 4.3 (Dynamic Advisor + Full FCM/Median Push)`);
+  console.log(`📦 Version: 4.4 (Notes/Docs + Bulk Device Reset + Undo Approval + Auto Logout + All Features)`);
   setTimeout(runBranchMigration, 3000);
 });
