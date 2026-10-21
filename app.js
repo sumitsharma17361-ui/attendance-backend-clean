@@ -1,0 +1,2482 @@
+/* ★ FIX: disable browser scroll restoration so refresh always starts at top */
+if ('scrollRestoration' in history) {
+  history.scrollRestoration = 'manual';
+}
+
+/* ============================================================
+   GLOBAL CONFIG
+   ============================================================ */
+const API = "https://attendance-backend-clean-l2bu.onrender.com";
+const SEMESTER_START = new Date(2026, 6, 15);
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const FULL_DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const FACULTY_NAME_MAP = {'BDA - Big Data Analytics':'Ms. Geeta','ECO - Economics for Engineers':'Ms. Sakshi Yadav','DAA - Design & Analysis of Algorithm':'Ms. Rashmi','FLA - Formal Language & Automata':'Ms. Nisha Yadav','HRM - Human Resource Mgmt':'Mr. Lokesh','CN - Computer Network':'Mr. Chhetrapal','WT - Web Technology':'Mr. Avish Yadav','Internet Lab (Ms. Geeta)':'Ms. Geeta','CN LAB - Computer Network Lab':'Mr. Chhetrapal','DAA LAB - Algorithm Lab':'Ms. Rashmi','WT LAB - Web Technology Lab':'Mr. Avish Yadav','PA - Predictive Analysis':'Ms. Pooja','ML - Machine Learning':'Mr. Harsh','PA LAB - Predictive Analysis Lab':'Ms. Pooja','ML LAB - Machine Learning Lab':'Mr. Harsh','BDA LAB - Big Data Analytics Lab':'Ms. Geeta'};
+const DOWNLOAD_KEYWORDS = ['pdf','download','excel','file','save','print','xlsx','txt','document','report','export','banao','bana do','chahiye','bana','generate'];
+
+const STUDENT_MENU_ITEMS = [
+  { key: 'home', label: 'Home', icon: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
+  { key: 'request', label: 'Request Attendance', icon: '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>' },
+  { key: 'notes', label: 'Notes & Documents', icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>' },
+  { key: 'assignments', label: 'Assignments', icon: '<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/>' },
+  { key: 'exams', label: 'Exams', icon: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>' },
+  { key: 'announcements', label: 'Announcements', icon: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>' },
+  { key: 'timetable', label: "Today's Timetable", icon: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>' },
+  { key: 'calendar', label: 'Attendance Calendar', icon: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="m9 16 2 2 4-4"/>' },
+  { key: 'subjects', label: 'Subject-wise', icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>' },
+  { key: 'workingdays', label: 'Working Days', icon: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="m9 16 2 2 4-4"/>' },
+  { key: 'reports', label: 'My Reports', icon: '<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>' },
+  { key: 'leave', label: 'Leave', icon: '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>' },
+  { key: 'portals', label: 'Quick Portals', icon: '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>' },
+  { key: 'divider', divider: true },
+  { key: 'changepassword', label: 'Change Password', icon: '<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>' }
+];
+
+const ADMIN_MENU_ITEMS = [
+  { key: 'home', label: 'Home', icon: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
+  { key: 'a-directory', label: 'Directory', icon: '<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>' },
+  { key: 'a-attendance', label: 'All Attendance', icon: '<rect x="3" y="4" width="18" height="18" rx="2"/>' },
+  { key: 'a-requests', label: 'Attendance Requests', icon: '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>' },
+  { key: 'a-registrations', label: 'Registrations', icon: '<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/>' },
+  { key: 'a-account', label: 'Account Requests', icon: '<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>' },
+  { key: 'a-reports', label: 'Reports', icon: '<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>' },
+  { key: 'a-entry', label: 'Entry', icon: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>' },
+  { key: 'a-holiday', label: 'Holidays', icon: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="m9 16 2 2 4-4"/>' },
+  { key: 'a-passcode', label: 'Passcode', icon: '<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>' },
+  { key: 'a-notes', label: 'Notes', icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>' },
+  { key: 'a-fees', label: 'Fees', icon: '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>' },
+  { key: 'a-library', label: 'Library', icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>' },
+  { key: 'a-results', label: 'Results', icon: '<line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/>' },
+  { key: 'a-exams', label: 'Exams', icon: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>' },
+  { key: 'a-alerts', label: 'Emergency Alerts', icon: '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>' },
+  { key: 'a-tools', label: 'Tools', icon: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>' },
+  { key: 'a-leave', label: 'Leave Requests', icon: '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/>' },
+  { key: 'a-defaulters', label: 'Defaulters', icon: '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>' },
+  { key: 'divider', divider: true },
+  { key: 'changepassword', label: 'Change Password', icon: '<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>' }
+];
+
+const FACULTY_MENU_ITEMS = [
+  { key: 'fac-home', label: 'Home', icon: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
+  { key: 'fac-mark', label: 'Mark Student', icon: '<polyline points="20 6 9 17 4 12"/>' },
+  { key: 'fac-bulk', label: 'Bulk Actions', icon: '<rect x="3" y="4" width="18" height="18" rx="2"/>' },
+  { key: 'fac-students', label: 'My Students', icon: '<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/>' },
+  { key: 'fac-passcode', label: 'Passcode', icon: '<rect width="18" height="11" x="3" y="11" rx="2"/>' },
+  { key: 'fac-recent', label: 'Recent Marks', icon: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>' },
+  { key: 'fac-reports', label: 'Reports', icon: '<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>' },
+  { key: 'divider', divider: true },
+  { key: 'changepassword', label: 'Change Password', icon: '<rect width="18" height="11" x="3" y="11" rx="2"/>' }
+];
+
+let currentUser = null, globalHistory = [], globalHolidays = [], trendChart = null, isRegistering = false, currentManualBranch = 'CSE', chatGreeted = false, currentThreadId = null, selectedBulkDates = [], facSelectedBulkDates = [], pendingBulkAction = null, chatHistory = [], selectedHolidayDates = new Set(), subjectBreakdownOpen = false, pendingChatFile = null, recognition = null, openDownloadMenuId = null;
+let thinkingTimerId = null, thinkingStartTime = 0;
+let useContextMode = false, useDatabaseMode = false;
+let activeStudentMenuKey = 'home';
+let activeAdminMenuKey = 'home';
+let activeFacultyMenuKey = 'fac-home';
+let reqBulkDates = [];
+let currentPasscodeData = null;
+let pendingLocationRequest = null;
+let clockIntervalId = null, dashboardIntervalId = null, periodIntervalId = null, passcodeIntervalId = null;
+let passcodeCountdownInterval = null;
+let pendingUndoApprovalId = null;
+let sessionCheckInterval = null;
+
+/* ============================================================
+   DEVICE INFO DETECTION
+   ============================================================ */
+function getDeviceInfo() {
+  const ua = navigator.userAgent;
+  let name = 'Unknown Device';
+  if (/iPhone/.test(ua)) name = 'iPhone';
+  else if (/iPad/.test(ua)) name = 'iPad';
+  else if (/Android/.test(ua)) {
+    const m = ua.match(/\(Linux; Android [\d.]+;\s*([^)]+)\)/);
+    name = m ? m[1].trim() : 'Android Device';
+    if (name.length > 40) name = name.substring(0, 40);
+  }
+  else if (/Windows NT/.test(ua)) name = 'Windows PC';
+  else if (/Macintosh|Mac OS X/.test(ua)) name = 'Mac';
+  else if (/Linux/.test(ua)) name = 'Linux PC';
+  const screenInfo = `${window.screen.width}x${window.screen.height}`;
+  return { name: `${name} (${screenInfo})`, ua, screen: screenInfo };
+}
+
+function getOrCreateDeviceId() {
+  let id = localStorage.getItem('BM_DEVICE_ID');
+  if (!id) {
+    id = 'DEV_' + Date.now() + '_' + Math.random().toString(36).slice(2,10);
+    localStorage.setItem('BM_DEVICE_ID', id);
+  }
+  return id;
+}
+
+/* ============================================================
+   SESSION CHECK
+   ============================================================ */
+function startSessionCheck() {
+  if (sessionCheckInterval) clearInterval(sessionCheckInterval);
+  sessionCheckInterval = setInterval(async () => {
+    if (!currentUser || !localStorage.getItem('token')) return;
+    try {
+      const res = await fetch(`${API}/api/auth/verify-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rollNo: currentUser.rollNo, token: localStorage.getItem('token') })
+      });
+      const d = await res.json();
+      if (res.status === 401 && d.sessionInvalid) {
+        clearInterval(sessionCheckInterval);
+        showFeedback('warning', 'Session Expired', d.error || 'You have been logged out because you signed in on another device.', { onClose: () => { localStorage.clear(); location.reload(); } });
+      }
+    } catch (e) {}
+  }, 60000);
+}
+
+function refreshPage() {
+  const btn = $('refreshBtn');
+  if (btn) btn.classList.add('refreshing');
+  showDL('Refreshing…');
+  document.body.classList.remove('body-locked');
+  document.body.style.overflow = '';
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  setTimeout(() => { location.reload(); }, 250);
+}
+
+function lockBodyScroll(lock) {
+  if (lock) document.body.classList.add('body-locked');
+  else document.body.classList.remove('body-locked');
+}
+function ensureScrollUnlocked() {
+  const chatOpen = document.getElementById('chatPanel')?.classList.contains('open');
+  if (!chatOpen) {
+    document.body.classList.remove('body-locked');
+    document.body.style.overflow = '';
+  }
+}
+
+async function sendPushNotification(title, body, data = {}) {
+  try { toast(`${title}${body ? ' — ' + body : ''}`, 'info'); } catch(e){}
+  try {
+    if (currentUser && currentUser.rollNo) {
+      await fetch(`${API}/api/user/send-notification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rollNo: currentUser.rollNo, title: title, body: body, data: data })
+      });
+    }
+  } catch(e) { console.warn('[Push] Backend push failed:', e.message); }
+  try {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && document.visibilityState === 'hidden') {
+      const iconSvg = 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#2563eb"/><text x="50" y="66" font-size="44" text-anchor="middle" fill="white" font-family="Arial,sans-serif" font-weight="900">BM</text></svg>`);
+      new Notification(title, { body: body, icon: iconSvg, tag: 'bm-ntf-' + (data.tag || Date.now()) });
+    }
+  } catch(e) { console.warn('[Push] Browser notification failed:', e.message); }
+}
+
+function $(id){return document.getElementById(id);}
+function toast(msg, type='info'){
+  const el = $('toast'); if (!el) return;
+  const icon = $('toastIcon');
+  if ($('toastMsg')) $('toastMsg').textContent = msg;
+  el.className = 'toast ' + type;
+  if (type === 'success') icon.innerHTML = '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>';
+  else if (type === 'error') icon.innerHTML = '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>';
+  else icon.innerHTML = '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>';
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 4000);
+}
+function showFeedback(type, title, message, opts = {}){
+  const overlay = document.createElement('div');
+  overlay.className = 'feedback-overlay';
+  const iconMap = {
+    success: '<svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+    error: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+    info: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+    warning: '<svg viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+  };
+  const btnClass = type === 'success' ? 'btn-success' : type === 'error' ? 'btn-danger' : type === 'warning' ? 'btn-warning' : 'btn-primary';
+  overlay.innerHTML = `
+    <div class="feedback-card fb-${type}">
+      <div class="fb-icon">${iconMap[type] || iconMap.info}</div>
+      <div class="fb-title">${escapeHtml(title)}</div>
+      <div class="fb-message">${escapeHtml(message)}</div>
+      <button class="btn ${btnClass} btn-block mt-3" style="margin-top:18px;" id="fbOkBtn">${escapeHtml(opts.buttonText || 'OK')}</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  const close = () => { overlay.style.opacity = '0'; overlay.style.transition = 'opacity .2s ease'; setTimeout(() => overlay.remove(), 200); };
+  overlay.querySelector('#fbOkBtn').onclick = () => { close(); opts.onClose && opts.onClose(); };
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) { close(); opts.onClose && opts.onClose(); } });
+}
+function showDL(msg){ if ($('dlMsg')) $('dlMsg').textContent = msg; $('dlProgress')?.classList.add('show'); }
+function hideDL(){ $('dlProgress')?.classList.remove('show'); }
+function closeModal(id){ const m = $(id); if (m) m.classList.remove('open'); }
+function openModal(id){ const m = $(id); if (m) m.classList.add('open'); }
+function fmtDate(d){const y=d.getFullYear();const m=String(d.getMonth()+1).padStart(2,'0');const day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`;}
+function fmtDatePretty(s){if(!s)return '—';const p=s.split('T')[0].split('-');if(p.length<3)return s;return `${p[2]}/${p[1]}/${p[0]}`;}
+function sanitizeRoll(r){return r ? r.toUpperCase().replace(/[^A-Z0-9]/g,'') : '';}
+function isValidStudentRoll(r){return /^24(CSE|AIDS)\d{2}$/.test(r);}
+function togglePassword(){const p = $('password');p.type = p.type === 'password' ? 'text' : 'password';}
+function escapeHtml(t){ const d = document.createElement('div'); d.textContent = String(t==null?'':t); return d.innerHTML; }
+function isDesktop(){ return window.innerWidth >= 641; }
+function isMedianApp(){ return typeof window.median !== 'undefined' && window.median !== null; }
+
+function universalDownload(blob, filename, opts = {}){
+  try {
+    if (isMedianApp() && window.median && typeof window.median.downloadFile === 'function') {
+      try {
+        const reader = new FileReader();
+        reader.onload = function() {
+          try {
+            const base64 = reader.result.split(',')[1];
+            window.median.downloadFile({ base64: base64, filename: filename, mimeType: blob.type || 'application/octet-stream' });
+            toast('Downloaded: ' + filename, 'success');
+            if (opts.notify !== false) sendPushNotification('📥 Download Complete', filename, { type: 'download', filename });
+          } catch(e) { toast('Median download failed, trying fallback…', 'info'); fallbackBlobDownload(blob, filename, opts); }
+        };
+        reader.readAsDataURL(blob);
+        return;
+      } catch(e) { console.warn('Median download error:', e); }
+    }
+    fallbackBlobDownload(blob, filename, opts);
+  } catch(e) { console.error('universalDownload failed:', e); toast('Download failed: ' + e.message, 'error'); }
+}
+function fallbackBlobDownload(blob, filename, opts = {}){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.style.display = 'none';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { try { document.body.removeChild(a); } catch(e){} URL.revokeObjectURL(url); }, 3000);
+  toast('Downloaded: ' + filename, 'success');
+  if (opts.notify !== false) sendPushNotification('📥 Download Complete', filename, { type: 'download', filename });
+}
+
+function ensureJsPDF(){
+  if (!window.jspdf || !window.jspdf.jsPDF) { toast('PDF library not loaded', 'error'); return null; }
+  return window.jspdf.jsPDF;
+}
+function generatePDFBlob(title, subtitle, metaLines, tableHeaders, tableRows, summaryLines){
+  const JsPDF = ensureJsPDF();
+  if (!JsPDF) return null;
+  const doc = new JsPDF();
+  doc.setFillColor(37, 99, 235); doc.rect(0, 0, 210, 24, 'F');
+  doc.setTextColor(255, 255, 255); doc.setFontSize(16); doc.setFont(undefined, 'bold');
+  doc.text('BM Group of Institutions', 105, 11, { align: 'center' });
+  doc.setFontSize(10); doc.setFont(undefined, 'normal'); doc.text(title, 105, 19, { align: 'center' });
+  let y = 32;
+  doc.setTextColor(15, 23, 42); doc.setFontSize(11); doc.setFont(undefined, 'bold');
+  if (subtitle) { doc.text(subtitle, 14, y); y += 6; }
+  doc.setFontSize(9); doc.setFont(undefined, 'normal'); doc.setTextColor(100, 116, 139);
+  (metaLines || []).forEach(line => { doc.text(line, 14, y); y += 5; });
+  y += 3;
+  if (summaryLines && summaryLines.length) {
+    doc.setTextColor(15, 23, 42); doc.setFontSize(10); doc.setFont(undefined, 'bold');
+    summaryLines.forEach(line => { doc.text(line, 14, y); y += 5; });
+    y += 3;
+  }
+  if (tableHeaders && tableRows) {
+    doc.autoTable({ startY: y, head: [tableHeaders], body: tableRows, theme: 'grid', styles: { fontSize: 8.5, cellPadding: 3 }, headStyles: { fillColor: [219, 234, 254], textColor: [30, 64, 175], fontStyle: 'bold' }, alternateRowStyles: { fillColor: [248, 250, 252] } });
+  }
+  return doc.output('blob');
+}
+
+/* ============================================================
+   STUDENT MENU
+   ============================================================ */
+function openStudentMenu(){
+  const drawer = $('studentMenuDrawer'); const backdrop = $('studentMenuBackdrop');
+  if (!drawer || !backdrop) return;
+  populateStudentMenu(); drawer.classList.add('open'); backdrop.classList.add('open');
+  loadLivePasscodes();
+}
+function closeStudentMenu(){
+  const drawer = $('studentMenuDrawer'); const backdrop = $('studentMenuBackdrop');
+  if (drawer) { drawer.classList.remove('open'); drawer.style.transform = ''; }
+  if (backdrop) backdrop.classList.remove('open');
+}
+function populateStudentMenu(){
+  const list = $('studentMenuList'); if (!list) return;
+  list.innerHTML = STUDENT_MENU_ITEMS.map(item => {
+    if (item.divider) return '<div class="student-menu-divider"></div>';
+    return `<button class="student-menu-item ${activeStudentMenuKey === item.key ? 'active' : ''}" onclick="navigateStudentMenu('${item.key}')">
+      <svg viewBox="0 0 24 24">${item.icon}</svg>
+      <span class="menu-label">${item.label}</span>
+    </button>`;
+  }).join('');
+}
+function navigateStudentMenu(key){
+  activeStudentMenuKey = key;
+  closeStudentMenu();
+  setTimeout(() => {
+    if (key === 'changepassword') { openModal('changePassModal'); return; }
+    if (key === 'leave') { switchTab('tab-leave'); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+    switchTab('tab-mark');
+    let targetId = 'sec-home', action = null;
+    switch (key) {
+      case 'home': targetId = 'sec-home'; break;
+      case 'request': targetId = 'sec-request'; break;
+      case 'notes': targetId = 'sec-notes'; loadStudentNotes(); break;
+      case 'assignments': targetId = 'sec-assignments'; loadStudentAssignments(); break;
+      case 'exams': targetId = 'sec-exams'; loadStudentExams(); break;
+      case 'announcements': targetId = 'sec-announcements'; loadStudentAnnouncements(); break;
+      case 'timetable': targetId = 'sec-timetable'; break;
+      case 'calendar': targetId = 'sec-calendar'; break;
+      case 'subjects': targetId = 'subjectBreakdownCard'; if (!subjectBreakdownOpen) toggleSubjectBreakdown(); break;
+      case 'workingdays': action = 'workingdays'; break;
+      case 'reports': targetId = 'sec-reports'; break;
+      case 'portals': targetId = 'quickPortalsCard'; break;
+    }
+    if (action === 'workingdays') { openWorkingDays(); return; }
+    const el = document.getElementById(targetId);
+    if (el) {
+      if (el.style.display === 'none' && ['reports', 'portals', 'notes', 'assignments', 'exams', 'announcements'].includes(key)) el.style.display = 'block';
+      const rect = el.getBoundingClientRect();
+      const top = window.pageYOffset + rect.top - 80;
+      window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    }
+    populateStudentMenu();
+  }, 220);
+}
+
+/* ============================================================
+   ADMIN / FACULTY MENU
+   ============================================================ */
+function openAdminMenu(){
+  const drawer = $('adminMenuDrawer'); const backdrop = $('adminMenuBackdrop');
+  if (!drawer || !backdrop) return;
+  populateAdminMenu(); drawer.classList.add('open'); backdrop.classList.add('open');
+}
+function closeAdminMenu(){
+  const drawer = $('adminMenuDrawer'); const backdrop = $('adminMenuBackdrop');
+  if (drawer) { drawer.classList.remove('open'); drawer.style.transform = ''; }
+  if (backdrop) backdrop.classList.remove('open');
+}
+function populateAdminMenu(){
+  const list = $('adminMenuList'); if (!list) return;
+  const items = (currentUser && currentUser.role === 'faculty') ? FACULTY_MENU_ITEMS : ADMIN_MENU_ITEMS;
+  const activeKey = (currentUser && currentUser.role === 'faculty') ? activeFacultyMenuKey : activeAdminMenuKey;
+  list.innerHTML = items.map(item => {
+    if (item.divider) return '<div class="student-menu-divider"></div>';
+    return `<button class="student-menu-item ${activeKey === item.key ? 'active' : ''}" onclick="navigateAdminMenu('${item.key}')">
+      <svg viewBox="0 0 24 24">${item.icon}</svg>
+      <span class="menu-label">${item.label}</span>
+    </button>`;
+  }).join('');
+}
+function navigateAdminMenu(key){
+  closeAdminMenu();
+  if (key === 'changepassword') { setTimeout(() => openModal('changePassModal'), 200); return; }
+  if (key === 'home') { setTimeout(() => { switchTab('tab-mark'); window.scrollTo({ top: 0, behavior: 'smooth' }); }, 200); return; }
+  if (key.startsWith('fac-')) {
+    if (currentUser && currentUser.role !== 'faculty') return;
+    activeFacultyMenuKey = key;
+    setTimeout(() => {
+      switchTab('tab-faculty');
+      let targetId = null;
+      switch (key) {
+        case 'fac-home': window.scrollTo({ top: 0, behavior: 'smooth' }); return;
+        case 'fac-mark': targetId = 'facMarkStudent'; break;
+        case 'fac-bulk': targetId = 'facBulkStudents'; break;
+        case 'fac-students': targetId = 'facStudentsBody'; break;
+        case 'fac-passcode': targetId = 'facPasscodeDisplay'; break;
+        case 'fac-recent': targetId = 'facRecentBody'; break;
+        case 'fac-reports': targetId = 'facReportStudent'; break;
+      }
+      if (targetId) {
+        const el = document.getElementById(targetId);
+        if (el) { const rect = el.getBoundingClientRect(); const top = window.pageYOffset + rect.top - 90; window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' }); }
+      }
+      populateAdminMenu();
+    }, 220);
+    return;
+  }
+  activeAdminMenuKey = key;
+  setTimeout(() => { switchTab('tab-admin'); showAdmin(key); populateAdminMenu(); }, 220);
+}
+
+document.addEventListener('click', function(e){
+  if (e.target.closest && e.target.closest('#studentMenuBackdrop')) { e.preventDefault(); closeStudentMenu(); }
+  if (e.target.closest && e.target.closest('#adminMenuBackdrop')) { e.preventDefault(); closeAdminMenu(); }
+}, true);
+
+function insideChatPanel(el){ const cp = document.getElementById('chatPanel'); if (!cp) return false; return cp.contains(el); }
+function insideModal(el){ return !!(el && el.closest && el.closest('.modal-backdrop.open')); }
+(function initSwipeGesture(){
+  const SCROLL_CLASSES = ['tabs','subnav','chat-head-bottom','req-tabs','chips','table-wrap','bulk-select-list','present-list-wrap','wd-grid','row','chart-canvas-wrap'];
+  function insideScrollable(el){
+    while (el && el !== document.body){
+      if (el.classList && SCROLL_CLASSES.some(c => el.classList.contains(c))) return true;
+      el = el.parentElement;
+    }
+    return false;
+  }
+  let sx = 0, sy = 0, st = 0, tracking = false, mode = null, activeDrawer = null;
+  const studentDrawer = () => $('studentMenuDrawer');
+  const adminDrawer = () => $('adminMenuDrawer');
+  function roleOk(){ return !!(currentUser && (currentUser.role === 'student' || currentUser.role === 'admin' || currentUser.role === 'faculty')); }
+  document.addEventListener('touchstart', (e) => {
+    if (!e.touches || !e.touches[0]) return;
+    const sd = studentDrawer(); const ad = adminDrawer();
+    if (!sd || !ad) return;
+    const sOpen = sd.classList.contains('open');
+    const aOpen = ad.classList.contains('open');
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY; st = Date.now();
+    if (sOpen) { if (sd.contains(e.target)) { mode = 'close'; tracking = true; activeDrawer = sd; } else { mode = null; tracking = false; activeDrawer = null; } }
+    else if (aOpen) { if (ad.contains(e.target)) { mode = 'close'; tracking = true; activeDrawer = ad; } else { mode = null; tracking = false; activeDrawer = null; } }
+    else {
+      if (!roleOk()) { mode = null; tracking = false; return; }
+      if (insideScrollable(e.target)) { mode = null; tracking = false; return; }
+      if (insideChatPanel(e.target)) { mode = null; tracking = false; return; }
+      if (insideModal(e.target)) { mode = null; tracking = false; return; }
+      mode = 'open'; tracking = true;
+      activeDrawer = (currentUser && currentUser.role === 'student') ? sd : ad;
+    }
+  }, { passive: true });
+  document.addEventListener('touchmove', (e) => {
+    if (!tracking || !mode || !activeDrawer) return;
+    const t = e.touches[0]; if (!t) return;
+    const dx = t.clientX - sx, dy = t.clientY - sy;
+    if (Math.abs(dy) > Math.abs(dx) * 0.9) return;
+    const w = activeDrawer.offsetWidth || 300;
+    if (mode === 'open' && dx < 0) {
+      if (e.cancelable && Math.abs(dx) > 10) e.preventDefault();
+      activeDrawer.style.transition = 'none';
+      activeDrawer.style.transform = `translateX(${Math.max(0, w + dx)}px)`;
+      if (dx < -6) { activeDrawer.classList.add('open'); const bd = activeDrawer === studentDrawer() ? $('studentMenuBackdrop') : $('adminMenuBackdrop'); if (bd) bd.classList.add('open'); }
+    } else if (mode === 'close' && dx > 0) {
+      if (e.cancelable && Math.abs(dx) > 10) e.preventDefault();
+      const t2 = Math.max(0, Math.min(w, dx));
+      activeDrawer.style.transition = 'none';
+      activeDrawer.style.transform = `translateX(${t2}px)`;
+    }
+  }, { passive: false });
+  document.addEventListener('touchend', (e) => {
+    if (!tracking || !mode || !activeDrawer) { tracking = false; mode = null; activeDrawer = null; return; }
+    const t = e.changedTouches[0]; if (!t) { tracking = false; mode = null; activeDrawer = null; return; }
+    const dx = t.clientX - sx, dy = t.clientY - sy;
+    const dt = Date.now() - st;
+    activeDrawer.style.transition = ''; activeDrawer.style.transform = '';
+    if (dt > 900 || Math.abs(dy) > Math.abs(dx) * 0.9) { tracking = false; mode = null; activeDrawer = null; return; }
+    const isStudent = activeDrawer === studentDrawer();
+    if (mode === 'open') {
+      if (dx < -90 || (dt < 300 && dx < -50)) { if (isStudent) openStudentMenu(); else openAdminMenu(); }
+      else { if (isStudent) closeStudentMenu(); else closeAdminMenu(); }
+    } else if (mode === 'close') {
+      if (dx > 60 || (dt < 300 && dx > 40)) { if (isStudent) closeStudentMenu(); else closeAdminMenu(); }
+      else { activeDrawer.classList.add('open'); const bd = isStudent ? $('studentMenuBackdrop') : $('adminMenuBackdrop'); if (bd) bd.classList.add('open'); }
+    }
+    tracking = false; mode = null; activeDrawer = null;
+  }, { passive: true });
+})();
+
+function openRegStatusCheck(){ openModal('regStatusModal'); const r = $('regStatusRoll'); if (r) r.value = ''; const res = $('regStatusResult'); if (res) res.innerHTML = ''; }
+async function checkRegStatus(){
+  const roll = sanitizeRoll($('regStatusRoll').value.trim());
+  if (!roll) return toast('Enter roll no','error');
+  const res = $('regStatusResult');
+  res.innerHTML = '<div class="empty" style="padding:14px 0;"><div class="spinner" style="margin:0 auto 8px;"></div>Checking…</div>';
+  try {
+    const r = await fetch(`${API}/api/auth/register-request/check/${roll}`);
+    const d = await r.json();
+    if (!r.ok) { res.innerHTML = `<div class="empty">${escapeHtml(d.error || 'Failed')}</div>`; return; }
+    const reqs = d.requests || [];
+    if (!reqs.length) { res.innerHTML = '<div class="empty" style="padding:14px 0;">No registration request found.</div>'; return; }
+    res.innerHTML = reqs.map(x => {
+      const statusClass = x.status === 'Approved' ? 'badge-success' : x.status === 'Rejected' ? 'badge-danger' : 'badge-warning';
+      const statusEmoji = x.status === 'Approved' ? '✅' : x.status === 'Rejected' ? '❌' : '⏳';
+      let info = '';
+      if (x.status === 'Approved') info = '<div style="margin-top:10px;font-size:11px;color:#047857;font-weight:600;">Approved! You can sign in now.</div>';
+      else if (x.status === 'Rejected') info = `<div style="margin-top:10px;font-size:11px;color:#be123c;font-weight:600;">Rejected${x.adminNote ? ' — ' + escapeHtml(x.adminNote) : ''}.</div>`;
+      else info = '<div style="margin-top:10px;font-size:11px;color:#b45309;font-weight:600;">Waiting for admin approval.</div>';
+      return `<div style="padding:14px;border:1px solid var(--slate-200);border-radius:11px;margin-bottom:10px;background:#fff;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+          <div style="font-weight:800;font-size:13px;">${escapeHtml(x.rollNo)} — ${escapeHtml(x.name)}</div>
+          <span class="badge ${statusClass}">${statusEmoji} ${x.status}</span>
+        </div>
+        <div style="margin-top:6px;font-size:10.5px;color:var(--slate-400);">${new Date(x.createdAt).toLocaleString('en-IN')}</div>
+        ${info}
+      </div>`;
+    }).join('');
+  } catch(e) { res.innerHTML = '<div class="empty">Network error: ' + escapeHtml(e.message) + '</div>'; }
+}
+async function loadRegistrationRequests(){
+  const status = $('regFilterStatus')?.value || 'Pending';
+  const el = $('registrationRequestsList'); if (!el) return;
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const res = await fetch(`${API}/api/admin/registration-requests/${currentUser.rollNo}?status=${status}`);
+    const data = await res.json();
+    if (!res.ok) return el.innerHTML = `<div class="empty">${escapeHtml(data.error || 'Failed')}</div>`;
+    const reqs = data.requests || (Array.isArray(data) ? data : []);
+    if (!reqs.length) return el.innerHTML = '<div class="empty">No registration requests</div>';
+    el.innerHTML = reqs.map(r => {
+      const isPending = r.status === 'Pending';
+      const sc = r.status === 'Approved' ? 'badge-success' : r.status === 'Rejected' ? 'badge-danger' : 'badge-warning';
+      return `<div style="padding:14px;border:1px solid var(--slate-200);border-radius:11px;margin-bottom:10px;background:#fff;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
+          <div style="min-width:0;flex:1;"><div style="font-weight:800;font-size:13px;">${escapeHtml(r.rollNo)} <span class="badge badge-neutral">${escapeHtml(r.branch || '')}</span></div><div style="font-size:11.5px;color:var(--slate-600);margin-top:3px;">${escapeHtml(r.name)}</div></div>
+          <span class="badge ${sc}">${escapeHtml(r.status)}</span>
+        </div>
+        <div style="margin-top:6px;font-size:10.5px;color:var(--slate-400);">${new Date(r.createdAt).toLocaleString('en-IN')}</div>
+        ${isPending ? `<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-success btn-xs" onclick="reviewRegistration('${r._id}','Approved')">✅ Approve</button>
+          <button class="btn btn-danger btn-xs" onclick="reviewRegistration('${r._id}','Rejected')">❌ Reject</button>
+        </div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e){ el.innerHTML = '<div class="empty">Network error</div>'; }
+}
+async function reviewRegistration(id, action){
+  const note = prompt(`Note for ${action} (optional):`) || '';
+  try {
+    const res = await fetch(`${API}/api/admin/registration-requests/review/${id}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, action, note})});
+    const d = await res.json();
+    if (res.ok) { showFeedback(action === 'Approved' ? 'success' : 'info', action === 'Approved' ? 'Registration Approved' : 'Registration Rejected', action === 'Approved' ? 'Account created successfully. Student can sign in now.' : 'Request has been rejected.'); loadRegistrationRequests(); }
+    else showFeedback('error', 'Failed', d.error || 'Could not process');
+  } catch(e){ showFeedback('error', 'Network Error', e.message); }
+}
+function openCheckStatus(){ openModal('checkStatusModal'); const r = $('csRoll'); if (r) r.value = ''; const res = $('csResult'); if (res) res.innerHTML = ''; }
+async function checkRequestStatus(){
+  const roll = sanitizeRoll($('csRoll').value.trim());
+  if (!roll) return toast('Enter roll no','error');
+  const res = $('csResult');
+  res.innerHTML = '<div class="empty" style="padding:14px 0;"><div class="spinner" style="margin:0 auto 8px;"></div>Checking…</div>';
+  try {
+    const r = await fetch(`${API}/api/auth/account-requests/check/${roll}`);
+    const d = await r.json();
+    if (!r.ok) { res.innerHTML = `<div class="empty">${escapeHtml(d.error || 'Failed')}</div>`; return; }
+    const reqs = d.requests || [];
+    if (!reqs.length) { res.innerHTML = '<div class="empty" style="padding:14px 0;">No requests found.</div>'; return; }
+    res.innerHTML = reqs.map(r => {
+      const type = r.type === 'forgot_password' ? '🔑 Forgot Password' : '📱 Device Reset';
+      const statusClass = r.status === 'Approved' ? 'badge-success' : r.status === 'Rejected' ? 'badge-danger' : r.status === 'Used' ? 'badge-info' : 'badge-warning';
+      const statusEmoji = r.status === 'Approved' ? '✅' : r.status === 'Rejected' ? '❌' : r.status === 'Used' ? '✨' : '⏳';
+      let action = '';
+      if (r.status === 'Approved' && r.type === 'forgot_password') action = `<button class="btn btn-success btn-xs" style="margin-top:10px;" onclick="closeModal('checkStatusModal');openSetNewPassword();document.getElementById('snpRoll').value='${r.rollNo}';">Set New Password →</button>`;
+      else if (r.status === 'Approved' && r.type === 'device_reset') action = `<div style="margin-top:10px;font-size:11px;color:#047857;font-weight:600;">Device unlocked — try logging in from new phone.</div>`;
+      else if (r.status === 'Rejected') action = `<div style="margin-top:10px;font-size:11px;color:#be123c;font-weight:600;">Contact admin for details.</div>`;
+      else action = `<div style="margin-top:10px;font-size:11px;color:#b45309;font-weight:600;">Waiting for admin approval.</div>`;
+      return `<div style="padding:14px;border:1px solid var(--slate-200);border-radius:11px;margin-bottom:10px;background:#fff;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+          <div style="font-weight:800;font-size:13px;">${type}</div>
+          <span class="badge ${statusClass}">${statusEmoji} ${r.status}</span>
+        </div>
+        ${r.reason ? `<div style="margin-top:8px;font-size:11.5px;color:var(--slate-500);">Reason: ${escapeHtml(r.reason)}</div>` : ''}
+        <div style="margin-top:6px;font-size:10.5px;color:var(--slate-400);">${new Date(r.createdAt).toLocaleString('en-IN')}</div>
+        ${action}
+      </div>`;
+    }).join('');
+  } catch(e) { res.innerHTML = '<div class="empty">Network error: ' + escapeHtml(e.message) + '</div>'; }
+}
+async function loadApprovedBanner(){
+  if (!currentUser || currentUser.role !== 'student') return;
+  const banner = $('approvedRequestBanner'); if (!banner) return;
+  try {
+    const r = await fetch(`${API}/api/auth/account-requests/check/${currentUser.rollNo}`);
+    const d = await r.json();
+    if (!r.ok) { banner.classList.remove('show'); return; }
+    const reqs = (d.requests || []).filter(x => x.status === 'Approved' || x.status === 'Pending');
+    if (!reqs.length) { banner.classList.remove('show'); return; }
+    const approvedFP = reqs.find(x => x.status === 'Approved' && x.type === 'forgot_password');
+    const approvedDR = reqs.find(x => x.status === 'Approved' && x.type === 'device_reset');
+    const pending = reqs.find(x => x.status === 'Pending');
+    if (approvedDR && !approvedFP && !pending) { banner.classList.remove('show'); return; }
+    let cls = '', icon = '', head = '', text = '', actions = '';
+    if (approvedFP) {
+      cls = 'forgot'; icon = '✅'; head = 'Forgot Password Approved';
+      text = 'Your password reset request has been approved. Click "Set New Password" to create a new password.';
+      actions = `<button class="btn btn-success btn-sm" onclick="openSetNewPassword();document.getElementById('snpRoll').value=currentUser.rollNo;">Set New Password →</button>`;
+    } else if (pending) {
+      cls = 'pending'; icon = '⏳';
+      const typeName = pending.type === 'forgot_password' ? 'Forgot Password' : 'Device Reset';
+      head = 'Request Pending';
+      text = `Your ${typeName} request is pending admin approval.`;
+    } else { banner.classList.remove('show'); return; }
+    banner.className = `approved-banner ${cls} show`;
+    banner.innerHTML = `
+      <div class="ab-head">
+        <svg viewBox="0 0 24 24">${cls === 'forgot' ? '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>' : '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'}</svg>
+        ${icon} ${head}
+      </div>
+      <div class="ab-text">${text}</div>
+      <div class="ab-actions">${actions}</div>
+    `;
+  } catch(e) { banner.classList.remove('show'); }
+}
+
+async function loadLivePasscodes(){
+  try {
+    const [fd, sl] = await Promise.all([
+      fetch(`${API}/api/passcode/public/full_day`).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch(`${API}/api/passcode/public/single_lecture`).then(r => r.ok ? r.json() : null).catch(() => null)
+    ]);
+    let active = null, typeLabel = '';
+    if (sl && sl.passcode) { active = sl; typeLabel = '📖 Single Lecture Passcode'; }
+    else if (fd && fd.passcode) { active = fd; typeLabel = '📅 Full Day Passcode'; }
+    if (!active) { currentPasscodeData = null; updatePasscodeBoxes(null, null); return; }
+    currentPasscodeData = active;
+    const exp = active.expiresAt ? new Date(active.expiresAt) : null;
+    const now = new Date();
+    const isExpired = exp && exp < now;
+    let metaText = '';
+    if (exp) {
+      const remainMs = exp - now;
+      if (remainMs > 0) { const m = Math.floor(remainMs / 60000); const s = Math.floor((remainMs % 60000) / 1000); metaText = `⏱ Expires in ${m}m ${s}s`; }
+      else metaText = `⌛ Expired at ${exp.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`;
+    }
+    updatePasscodeBoxes(active, { typeLabel, metaText, isExpired });
+    startPasscodeCountdown();
+  } catch(e) { currentPasscodeData = null; updatePasscodeBoxes(null, null); }
+}
+function startPasscodeCountdown(){
+  if (passcodeCountdownInterval) clearInterval(passcodeCountdownInterval);
+  passcodeCountdownInterval = setInterval(() => {
+    if (!currentPasscodeData || !currentPasscodeData.expiresAt) return;
+    const exp = new Date(currentPasscodeData.expiresAt);
+    const now = new Date();
+    const remainMs = exp - now;
+    if (remainMs <= 0) { loadLivePasscodes(); clearInterval(passcodeCountdownInterval); return; }
+    const m = Math.floor(remainMs / 60000);
+    const s = Math.floor((remainMs % 60000) / 1000);
+    const metaText = `⏱ Expires in ${m}m ${s}s`;
+    document.querySelectorAll('.plb-meta').forEach(el => { if (el.style.display !== 'none') el.textContent = metaText; });
+  }, 1000);
+}
+function updatePasscodeBoxes(active, meta){
+  document.querySelectorAll('.passcode-live-box').forEach(box => {
+    const isMenu = box.id === 'menuPasscodeBox';
+    const prefix = isMenu ? 'menu' : 'main';
+    const statusEl = $(prefix + 'PasscodeStatus');
+    const typeEl = $(prefix + 'PasscodeType');
+    const valueEl = $(prefix + 'PasscodeValue');
+    const emptyEl = $(prefix + 'PasscodeEmpty');
+    const copyEl = $(prefix + 'PasscodeCopy');
+    const metaEl = $(prefix + 'PasscodeMeta');
+    if (!active) {
+      box.classList.add('inactive'); box.classList.remove('expired');
+      if (statusEl) statusEl.textContent = 'Passcode';
+      if (typeEl) typeEl.textContent = 'Not available';
+      if (valueEl) { valueEl.style.display = 'none'; valueEl.textContent = '— — — —'; }
+      if (emptyEl) { emptyEl.style.display = 'block'; emptyEl.textContent = isMenu ? 'No passcode published yet.' : 'No passcode has been published by admin yet. Please wait.'; }
+      if (copyEl) copyEl.style.display = 'none';
+      if (metaEl) { metaEl.style.display = 'none'; metaEl.textContent = '—'; }
+      if (passcodeCountdownInterval) { clearInterval(passcodeCountdownInterval); passcodeCountdownInterval = null; }
+    } else {
+      box.classList.remove('inactive');
+      box.classList.toggle('expired', !!meta.isExpired);
+      if (statusEl) statusEl.textContent = meta.isExpired ? 'Expired Passcode' : 'Live Passcode';
+      if (typeEl) typeEl.textContent = meta.typeLabel;
+      if (valueEl) { valueEl.style.display = 'block'; valueEl.textContent = active.passcode; }
+      if (emptyEl) emptyEl.style.display = 'none';
+      if (copyEl) copyEl.style.display = 'inline-flex';
+      if (metaEl) { metaEl.style.display = 'block'; metaEl.textContent = meta.metaText; }
+    }
+  });
+}
+function copyPasscode(){
+  if (!currentPasscodeData || !currentPasscodeData.passcode) return toast('No passcode active','error');
+  const code = currentPasscodeData.passcode;
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(() => toast('Copied: ' + code, 'success')).catch(() => fallbackCopyPass(code));
+  else fallbackCopyPass(code);
+}
+function fallbackCopyPass(code){
+  const ta = document.createElement('textarea'); ta.value = code; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); toast('Copied: ' + code, 'success'); } catch(e) { toast('Copy failed','error'); }
+  document.body.removeChild(ta);
+}
+
+function scrollToTop(){ window.scrollTo({ top: 0, behavior: 'smooth' }); }
+function handleScrollFab(){ const f = $('scrollTopFab'); if (!f) return; if (window.scrollY > 300) f.classList.add('show'); else f.classList.remove('show'); }
+window.addEventListener('scroll', handleScrollFab, { passive: true });
+
+function initScrollAnimations(){
+  const targets = document.querySelectorAll('.stat, .card, .working-days-cta, .chart-wrap, .advisor, .passcode-card, .collapsible-card, .attendance-actions-card, .approved-banner, .welcome, .portal-grid .portal, .subject-summary-line');
+  targets.forEach(el => { if (!el.classList.contains('animate-on-scroll')) el.classList.add('animate-on-scroll'); });
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('visible'); observer.unobserve(entry.target); } });
+  }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+  document.querySelectorAll('.animate-on-scroll:not(.visible)').forEach(el => observer.observe(el));
+}
+function observeNewContent(){
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('visible'); observer.unobserve(entry.target); } });
+  }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+  document.querySelectorAll('.animate-on-scroll:not(.visible)').forEach(el => observer.observe(el));
+}
+
+/* ============================================================
+   AUTH
+   ============================================================ */
+function toggleAuthMode(){
+  isRegistering = !isRegistering;
+  $('regNameGroup').style.display = isRegistering ? 'block' : 'none';
+  $('authBtn').textContent = isRegistering ? 'Submit Registration Request' : 'Sign In';
+  $('toggleLink').textContent = isRegistering ? 'Already Registered? Sign In' : 'New Student? Register';
+  $('loginRole').parentElement.style.display = isRegistering ? 'none' : 'block';
+}
+async function handleAuth(){
+  const roll = sanitizeRoll($('rollNo').value.trim());
+  const password = $('password').value.trim();
+  if (!roll) return showFeedback('error', 'Missing Roll No', 'Please enter a valid roll number.');
+  if (!password) return showFeedback('error', 'Missing Password', 'Please enter your password.');
+  const deviceInfo = getDeviceInfo();
+  const deviceId = getOrCreateDeviceId();
+  try {
+    if (isRegistering) {
+      const name = $('regName').value.trim();
+      if (!name) return showFeedback('error', 'Missing Name', 'Please enter your full name.');
+      if (!isValidStudentRoll(roll)) return showFeedback('error', 'Invalid Roll Format', 'Use 24CSE01 or 24AIDS01 format.');
+      showDL('Submitting request…');
+      const res = await fetch(`${API}/api/auth/register-request`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name, rollNo: roll, password, deviceId, deviceName: deviceInfo.name})});
+      const data = await res.json();
+      hideDL();
+      if (!res.ok) return showFeedback('error', 'Request Failed', data.error || 'Could not submit registration request.');
+      showFeedback('success', 'Request Submitted', 'Your registration request has been sent to the admin.\nYou can sign in after approval.\n\nRoll No: ' + roll);
+      toggleAuthMode();
+      $('password').value = '';
+    } else {
+      const selectedRole = $('loginRole').value;
+      showDL('Signing in…');
+      const res = await fetch(`${API}/api/auth/login`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: roll, password, deviceId, deviceName: deviceInfo.name})});
+      const data = await res.json();
+      hideDL();
+      if (!res.ok) return showFeedback('error', 'Sign-in Failed', data.error || 'Invalid credentials.');
+      if (data.user.role !== selectedRole) return showFeedback('error', 'Role Mismatch', `Registered as ${data.user.role}, not ${selectedRole}.`);
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      loadDashboard();
+    }
+  } catch(e){ hideDL(); showFeedback('error', 'Network Error', e.message); }
+}
+function logout(){
+  const oT = localStorage.getItem('BM_ORIG_TOKEN'), oU = localStorage.getItem('BM_ORIG_USER');
+  if (oT && oU) { localStorage.setItem('token', oT); localStorage.setItem('user', oU); localStorage.removeItem('BM_ORIG_TOKEN'); localStorage.removeItem('BM_ORIG_USER'); location.reload(); return; }
+  localStorage.clear(); location.reload();
+}
+function switchBack(){
+  const oT = localStorage.getItem('BM_ORIG_TOKEN'), oU = localStorage.getItem('BM_ORIG_USER');
+  if (!oT || !oU) return;
+  localStorage.setItem('token', oT); localStorage.setItem('user', oU);
+  localStorage.removeItem('BM_ORIG_TOKEN'); localStorage.removeItem('BM_ORIG_USER');
+  location.reload();
+}
+function openForgotPassword(){ openModal('forgotPassModal'); }
+function openSetNewPassword(){ openModal('setNewPassModal'); }
+function openDeviceReset(){ openModal('deviceResetModal'); }
+async function submitForgotPassword(){
+  const roll = sanitizeRoll($('fpRoll').value.trim());
+  const reason = $('fpReason').value.trim() || 'Forgot password';
+  if (!roll) return toast('Enter roll no','error');
+  if (!isValidStudentRoll(roll)) return toast('Invalid roll format','error');
+  try {
+    const res = await fetch(`${API}/api/auth/forgot-password-request`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: roll, reason})});
+    const d = await res.json();
+    if (res.ok) { closeModal('forgotPassModal'); $('fpRoll').value=''; $('fpReason').value=''; showFeedback('success', 'Request Sent', 'Your forgot-password request has been sent to the admin.\nAfter approval, use "Set New Password" to create a new password.'); }
+    else showFeedback('error', 'Failed', d.error || 'Could not send request');
+  } catch(e){ showFeedback('error', 'Network Error', e.message); }
+}
+async function submitSetNewPassword(){
+  const roll = sanitizeRoll($('snpRoll').value.trim());
+  const nw = $('snpNew').value, cf = $('snpConfirm').value;
+  if (!roll) return toast('Enter roll no','error');
+  if (!nw || nw.length < 6) return toast('Password must be 6+ chars','error');
+  if (nw !== cf) return toast('Passwords do not match','error');
+  try {
+    const res = await fetch(`${API}/api/auth/change-password-direct`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: roll, newPassword: nw})});
+    const d = await res.json();
+    if (res.ok) { closeModal('setNewPassModal'); $('snpRoll').value=''; $('snpNew').value=''; $('snpConfirm').value=''; showFeedback('success', 'Password Updated', 'Your new password has been set. You can sign in now.'); }
+    else showFeedback('warning', 'Not Approved Yet', d.error || 'Please wait for admin approval.');
+  } catch(e){ showFeedback('error', 'Network Error', e.message); }
+}
+async function submitDeviceReset(){
+  const roll = sanitizeRoll($('drRoll').value.trim());
+  const reason = $('drReason').value.trim() || 'Device reset';
+  if (!roll) return toast('Enter roll no','error');
+  if (!isValidStudentRoll(roll)) return toast('Invalid roll format','error');
+  try {
+    const res = await fetch(`${API}/api/auth/device-reset-request`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: roll, reason})});
+    const d = await res.json();
+    if (res.ok) { closeModal('deviceResetModal'); $('drRoll').value=''; $('drReason').value=''; showFeedback('success', 'Request Sent', 'Your device reset request has been sent to the admin.\nAfter approval, you can log in from a new phone.'); }
+    else showFeedback('error', 'Failed', d.error || 'Could not send request');
+  } catch(e){ showFeedback('error', 'Network Error', e.message); }
+}
+async function submitChangePassword(){
+  const cur = $('cpCurrent').value, nw = $('cpNew').value, cf = $('cpConfirm').value;
+  if (!cur) return toast('Enter current password','error');
+  if (!nw || nw.length < 6) return toast('New password must be 6+ chars','error');
+  if (nw !== cf) return toast('Passwords do not match','error');
+  try {
+    const res = await fetch(`${API}/api/auth/change-password`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo, currentPassword: cur, newPassword: nw})});
+    const d = await res.json();
+    if (res.ok) { closeModal('changePassModal'); $('cpCurrent').value=''; $('cpNew').value=''; $('cpConfirm').value=''; showFeedback('success', 'Password Changed', 'Your password has been updated successfully.'); }
+    else showFeedback('error', 'Failed', d.error || 'Could not change password');
+  } catch(e){ showFeedback('error', 'Network Error', e.message); }
+}
+
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
+function loadDashboard(){
+  const userStr = localStorage.getItem('user'); if (!userStr) return;
+  currentUser = JSON.parse(userStr);
+  document.body.classList.remove('body-locked');
+  document.body.style.overflow = '';
+  const ab = $('auth-box'); if (ab) ab.style.display = 'none';
+  const db = $('dash-box'); if (db) db.style.display = 'block';
+  const lb = $('logoutBtn'); if (lb) lb.style.display = 'flex';
+  const cb = $('chatBtn'); if (cb) cb.style.display = 'flex';
+  const cf = $('chatFab'); if (cf) cf.style.display = 'flex';
+  const ua = $('userAvatar'); if (ua) ua.style.display = 'flex';
+  const nb = $('notifBtn'); if (nb) nb.style.display = 'flex';
+  const rb2 = $('refreshBtn'); if (rb2) rb2.style.display = 'flex';
+  if (localStorage.getItem('BM_FCM_ENABLED') === '1') updateNotifBtn(true);
+  if ($('userName')) $('userName').textContent = currentUser.name;
+  if (ua) ua.textContent = currentUser.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
+  const roleIcons = {admin:'<svg viewBox="0 0 24 24"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"/><path d="M5 20h14"/></svg>',faculty:'<svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>',student:'<svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>'};
+  const rb = $('roleBadge');
+  if (rb) { rb.innerHTML = (roleIcons[currentUser.role] || '') + (currentUser.role === 'admin' ? 'Admin' : currentUser.role === 'faculty' ? 'Faculty' : 'Student'); rb.className = 'pill role-' + currentUser.role; }
+  if ($('branchBadge')) $('branchBadge').textContent = currentUser.branch || 'CSE';
+
+  const studentMenuBtn = $('studentMenuBtn');
+  const adminMenuBtn = $('adminMenuBtn');
+  const mt = $('mainTabs');
+  const reqSec = $('sec-request');
+  const advBox = $('advisorBox');
+  const sbCard = $('subjectBreakdownCard');
+  const repSec = $('sec-reports');
+  const qpCard = $('quickPortalsCard');
+  const aaCard = $('attendanceActionsCard');
+
+  if ($('adminMenuName')) $('adminMenuName').textContent = currentUser.name;
+  if ($('adminMenuRoll')) $('adminMenuRoll').textContent = (currentUser.rollNo || '') + ' · ' + (currentUser.role === 'admin' ? 'Admin' : 'Faculty');
+  if ($('adminMenuAvatar')) $('adminMenuAvatar').textContent = currentUser.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
+
+  if (currentUser.role === 'student') {
+    if (studentMenuBtn) studentMenuBtn.style.display = 'flex';
+    if (adminMenuBtn) adminMenuBtn.style.display = 'none';
+    if ($('menuUserName')) $('menuUserName').textContent = currentUser.name;
+    if ($('menuUserRoll')) $('menuUserRoll').textContent = (currentUser.rollNo || '') + ' · ' + (currentUser.branch || 'CSE');
+    populateStudentMenu();
+    if (reqSec) reqSec.style.display = 'block';
+    if (advBox) advBox.style.display = 'flex';
+    if (sbCard) sbCard.style.display = 'block';
+    if (repSec) repSec.style.display = 'block';
+    if (qpCard) qpCard.style.display = 'block';
+    if (aaCard) aaCard.style.display = 'block';
+    loadLivePasscodes(); loadApprovedBanner();
+    if (passcodeIntervalId) clearInterval(passcodeIntervalId);
+    passcodeIntervalId = setInterval(loadLivePasscodes, 30000);
+  } else {
+    if (studentMenuBtn) studentMenuBtn.style.display = 'none';
+    if (adminMenuBtn) adminMenuBtn.style.display = 'flex';
+    if (reqSec) reqSec.style.display = 'none';
+    if (advBox) advBox.style.display = 'none';
+    if (sbCard) sbCard.style.display = 'none';
+    if (qpCard) qpCard.style.display = 'none';
+    if (aaCard) aaCard.style.display = 'none';
+    populateAdminMenu();
+  }
+
+  if (currentUser.role === 'admin' || currentUser.role === 'faculty') {
+    ['sec-chart','sec-timetable','sec-calendar','sec-reports','sec-notes','sec-assignments','sec-exams','sec-announcements'].forEach(id => {
+      const e = $(id); if (e) e.style.display = 'none';
+    });
+  }
+
+  if (mt) mt.style.display = 'flex';
+  switchTab('tab-mark');
+
+  const oT = localStorage.getItem('BM_ORIG_TOKEN'), oU = localStorage.getItem('BM_ORIG_USER');
+  if (oT && oU) { const ib = $('impersonationBanner'); if (ib) ib.style.display = 'flex'; if ($('impName')) $('impName').textContent = currentUser.name; if ($('impRoll')) $('impRoll').textContent = currentUser.rollNo; }
+  else { const ib = $('impersonationBanner'); if (ib) ib.style.display = 'none'; }
+
+  const now = new Date();
+  const pdfMS = $('pdfMonthSelect'); if (pdfMS && now.getMonth() >= 6 && now.getMonth() <= 11) pdfMS.value = now.getMonth().toString();
+  const sf = $('subjectMonthFilter'); if (sf && now.getMonth() >= 6 && now.getMonth() <= 11) sf.value = now.getMonth().toString();
+  const aRM = $('adminReportMonth'); if (aRM && now.getMonth() >= 6 && now.getMonth() <= 11) aRM.value = now.getMonth().toString();
+  const cSM = $('calendarSelectedMonth'); if (cSM && now.getMonth() >= 6 && now.getMonth() <= 11) cSM.value = now.getMonth().toString();
+  ensureHolidays();
+
+  if (currentUser.role === 'admin') {
+    const el = $('tabBtnAdmin'); if (el) el.style.display = 'block';
+    const ad = $('adminLiveDashboard'); if (ad) ad.style.display = 'block';
+    const ss = $('studentStatsGrid'); if (ss) ss.style.display = 'none';
+    loadDashboardStats();
+    if (dashboardIntervalId) clearInterval(dashboardIntervalId);
+    dashboardIntervalId = setInterval(loadDashboardStats, 60000);
+    initAdmin();
+  } else if (currentUser.role === 'faculty') {
+    const el = $('tabBtnFaculty'); if (el) el.style.display = 'block';
+    initFaculty();
+  } else {
+    const el = $('tabBtnLeave'); if (el) el.style.display = 'block';
+    initStudent(); loadMyRequests();
+  }
+
+  updateClock();
+  if (clockIntervalId) clearInterval(clockIntervalId);
+  clockIntervalId = setInterval(updateClock, 1000);
+  fetchNotices(); fetchChatHistory();
+  setTimeout(initScrollAnimations, 100);
+  setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 250);
+  setTimeout(() => { autoInitFCM().catch(()=>{}); }, 2000);
+  setTimeout(ensureScrollUnlocked, 500);
+  startSessionCheck();
+}
+function updateClock(){
+  const n = new Date();
+  if ($('currentTime')) $('currentTime').textContent = n.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
+  if ($('currentDate')) $('currentDate').textContent = n.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+}
+async function fetchNotices(){
+  try { const res = await fetch(`${API}/api/notices`); const data = await res.json(); if (data && data.length) { if ($('noticeText')) $('noticeText').textContent = data[data.length-1].message || 'No new notices'; const nb = $('noticeBanner'); if (nb) nb.style.display = 'flex'; } } catch(e){}
+}
+function switchTab(id){
+  document.querySelectorAll('#mainTabs .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === id));
+  ['tab-mark','tab-admin','tab-faculty','tab-leave'].forEach(t => { const el = $(t); if (el) el.style.display = 'none'; });
+  const el = $(id); if (el) { el.style.display = 'block'; el.style.animation = 'tabFadeIn .4s ease'; }
+  if (id === 'tab-leave') { activeStudentMenuKey = 'leave'; populateStudentMenu(); }
+  else if (id === 'tab-mark' && currentUser && currentUser.role === 'student' && !['request','notes','assignments','exams','announcements','timetable','calendar','subjects','workingdays','reports','logs','portals'].includes(activeStudentMenuKey)) { activeStudentMenuKey = 'home'; populateStudentMenu(); }
+  observeNewContent();
+  setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 60);
+}
+function showAdmin(id){
+  document.querySelectorAll('.subnav-item').forEach(b => b.classList.toggle('active', b.getAttribute('onclick').includes(id)));
+  ['a-directory','a-attendance','a-requests','a-registrations','a-account','a-reports','a-entry','a-holiday','a-passcode','a-notes','a-fees','a-library','a-results','a-exams','a-alerts','a-tools','a-leave','a-defaulters'].forEach(x => { const el = $(x); if (el) el.style.display = 'none'; });
+  const el = $(id); if (el) { el.style.display = 'block'; el.style.animation = 'tabFadeIn .35s ease'; }
+  if (id === 'a-directory') fetchUsers();
+  if (id === 'a-attendance') loadAllAttendance();
+  if (id === 'a-requests') loadAdminRequests();
+  if (id === 'a-registrations') loadRegistrationRequests();
+  if (id === 'a-account') loadAccountRequests();
+  if (id === 'a-reports') initReports();
+  if (id === 'a-entry') initEntry();
+  if (id === 'a-holiday') loadHolidays();
+  if (id === 'a-passcode') loadPasscodes();
+  if (id === 'a-notes') { loadAdminNotes(); loadDocRequests(); }
+  if (id === 'a-fees') loadAllFees();
+  if (id === 'a-library') loadAllLibrary();
+  if (id === 'a-results') loadAdminResults();
+  if (id === 'a-exams') loadAdminExams();
+  if (id === 'a-alerts') {}
+  if (id === 'a-tools') initTools();
+  if (id === 'a-leave') loadLeaveRequests();
+  observeNewContent();
+  setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 60);
+}
+
+async function clearAllRequests(){ if (!confirm('Delete ALL attendance requests? This cannot be undone.')) return; try { const res = await fetch(`${API}/api/admin/clear-requests`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})}); const d = await res.json(); if (res.ok) { showFeedback('success','Cleared', d.message || 'All attendance requests have been deleted.'); loadAdminRequests(); } else showFeedback('error','Failed', d.error || 'Could not clear requests'); } catch(e){ showFeedback('error','Network Error', e.message); } }
+async function clearAllRegistrations(){ if (!confirm('Delete ALL registration requests? This cannot be undone.')) return; try { const res = await fetch(`${API}/api/admin/clear-registrations`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})}); const d = await res.json(); if (res.ok) { showFeedback('success','Cleared', d.message || 'All registration requests have been deleted.'); loadRegistrationRequests(); } else showFeedback('error','Failed', d.error || 'Could not clear registrations'); } catch(e){ showFeedback('error','Network Error', e.message); } }
+async function clearAllAccountRequests(){ if (!confirm('Delete ALL account requests? This cannot be undone.')) return; try { const res = await fetch(`${API}/api/admin/clear-account-requests`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})}); const d = await res.json(); if (res.ok) { showFeedback('success','Cleared', d.message || 'All account requests have been deleted.'); loadAccountRequests(); } else showFeedback('error','Failed', d.error || 'Could not clear account requests'); } catch(e){ showFeedback('error','Network Error', e.message); } }
+async function clearAllLeaves(){ if (!confirm('Delete ALL leave requests? This cannot be undone.')) return; try { const res = await fetch(`${API}/api/admin/clear-leaves`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})}); const d = await res.json(); if (res.ok) { showFeedback('success','Cleared', d.message || 'All leave requests have been deleted.'); loadLeaveRequests(); } else showFeedback('error','Failed', d.error || 'Could not clear leaves'); } catch(e){ showFeedback('error','Network Error', e.message); } }
+async function clearAllChats(){ if (!confirm('Delete ALL your chat history? This cannot be undone.')) return; try { const res = await fetch(`${API}/api/chats/clear-all`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo})}); const d = await res.json(); if (res.ok) { showFeedback('success','Chats Cleared', d.message || 'All chat history has been deleted.'); chatHistory = []; currentThreadId = null; renderChatHistory(); newChat(); } else showFeedback('error','Failed', d.error || 'Could not clear chats'); } catch(e){ showFeedback('error','Network Error', e.message); } }
+
+async function loadAccountRequests(){
+  const el = $('accountRequestsList'); if (!el) return;
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const res = await fetch(`${API}/api/admin/account-requests/${currentUser.rollNo}`);
+    const data = await res.json();
+    if (!res.ok) return el.innerHTML = `<div class="empty">${escapeHtml(data.error || 'Failed')}</div>`;
+    const reqs = data.requests || (Array.isArray(data) ? data : []);
+    if (!reqs.length) return el.innerHTML = '<div class="empty">No requests</div>';
+    el.innerHTML = reqs.map(r => {
+      const isPending = r.status === 'Pending';
+      const type = r.type === 'forgot_password' ? '🔑 Forgot Password' : '📱 Device Reset';
+      return `<div style="padding:14px;border:1px solid var(--slate-200);border-radius:11px;margin-bottom:10px;background:#fff;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
+          <div style="min-width:0;flex:1;"><div style="font-weight:800;font-size:13px;">${escapeHtml(r.rollNo)}</div><div style="font-size:11px;color:var(--slate-500);margin-top:3px;">${type}</div></div>
+          <span class="badge ${r.status==='Approved'?'badge-success':r.status==='Rejected'?'badge-danger':r.status==='Used'?'badge-info':'badge-warning'}">${r.status}</span>
+        </div>
+        <div style="margin-top:8px;font-size:11.5px;color:var(--slate-600);">Reason: ${escapeHtml(r.reason || '—')}</div>
+        <div style="margin-top:6px;font-size:10.5px;color:var(--slate-400);">${new Date(r.createdAt).toLocaleString('en-IN')}</div>
+        ${isPending ? `<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-success btn-xs" onclick="reviewAccountRequest('${r._id}','Approved')">✅ Approve</button>
+          <button class="btn btn-danger btn-xs" onclick="reviewAccountRequest('${r._id}','Rejected')">❌ Reject</button>
+        </div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e){ el.innerHTML = '<div class="empty">Network error</div>'; }
+  observeNewContent();
+}
+async function reviewAccountRequest(id, action){ const note = prompt(`Note for ${action} (optional):`) || ''; try { const res = await fetch(`${API}/api/admin/account-requests/review/${id}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, action, note})}); const d = await res.json(); if (res.ok) { toast(d.message || 'Done','success'); loadAccountRequests(); } else toast(d.error || 'Failed','error'); } catch(e){ toast('Network error','error'); } }
+function switchReqTab(tab){ document.querySelectorAll('.req-tab').forEach(t => t.classList.toggle('active', t.dataset.reqtab === tab)); const sp = $('reqSinglePane'); if (sp) sp.style.display = tab === 'single' ? 'block' : 'none'; const bp = $('reqBulkPane'); if (bp) bp.style.display = tab === 'bulk' ? 'block' : 'none'; }
+function addReqBulkDate(){ const d = $('reqBulkDate').value; if (!d) return toast('Select date','error'); const t = fmtDate(new Date()); if (d > t) return toast('Future date not allowed','error'); if (reqBulkDates.includes(d)) return toast('Already added','error'); reqBulkDates.push(d); renderReqBulkDates(); $('reqBulkDate').value = ''; }
+function renderReqBulkDates(){ if ($('reqBulkDates')) $('reqBulkDates').innerHTML = reqBulkDates.map(d => `<span class="chip">${fmtDatePretty(d)} <span onclick="removeReqBulkDate('${d}')" style="cursor:pointer;color:var(--rose-600);font-weight:800;">×</span></span>`).join(''); }
+function removeReqBulkDate(d){ reqBulkDates = reqBulkDates.filter(x=>x!==d); renderReqBulkDates(); }
+function getBrowserLocation(){ return new Promise((resolve, reject) => { if (!navigator.geolocation) return reject(new Error('Geolocation not supported.')); navigator.geolocation.getCurrentPosition(pos => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }), err => reject(new Error(err.code === 1 ? 'Location permission denied.' : 'Failed to get location.')), { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }); }); }
+async function submitAttendanceRequest(){
+  const date = $('reqDate').value, lt = $('reqLectureType').value, sub = $('reqSubject').value, reason = $('reqReason').value.trim();
+  if (!date) return showFeedback('warning','Select a Date','Please pick a date to request attendance.');
+  if ((lt === 'single_lecture') && !sub) return showFeedback('warning','Select Subject','Please choose a subject for a single lecture request.');
+  showDL('Submitting…');
+  try {
+    const res = await fetch(`${API}/api/requests/submit`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: currentUser.rollNo, date, lectureType: lt, subject: sub || null, reason: reason || 'Attendance request' }) });
+    const d = await res.json(); hideDL();
+    if (res.ok) { $('reqDate').value = ''; $('reqSubject').value = ''; $('reqReason').value = ''; loadMyRequests(); showFeedback('success','Request Submitted',`Your attendance request has been sent to the admin.\n\n📅 Date: ${fmtDatePretty(date)}\n📖 Type: ${lt === 'full_day' ? 'Full Day' : 'Single Lecture'}${sub ? '\n📚 Subject: ' + sub : ''}`); }
+    else showFeedback('error','Request Failed', d.error || 'Could not submit request.');
+  } catch(e) { hideDL(); showFeedback('error','Network Error', e.message); }
+}
+async function submitBulkAttendanceRequests(){
+  if (!reqBulkDates.length) return showFeedback('warning','No Dates Added','Add at least one date to submit bulk requests.');
+  const lt = $('reqBulkLectureType').value, reason = $('reqBulkReason').value.trim();
+  showDL(`Submitting ${reqBulkDates.length} requests…`);
+  try {
+    let ok = 0, fail = 0; const failedDates = [];
+    for (const date of reqBulkDates) { try { const res = await fetch(`${API}/api/requests/submit`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: currentUser.rollNo, date, lectureType: lt, reason: reason || 'Bulk request' }) }); if (res.ok) ok++; else { fail++; failedDates.push(date); } } catch(e) { fail++; failedDates.push(date); } }
+    hideDL();
+    reqBulkDates = []; renderReqBulkDates(); $('reqBulkReason').value = '';
+    loadMyRequests();
+    if (fail === 0) showFeedback('success','All Requests Sent',`${ok} attendance request(s) submitted successfully.\nThey will be marked after admin review.`);
+    else if (ok === 0) showFeedback('error','All Failed',`No request could be submitted.\nPlease try again.`);
+    else showFeedback('warning','Partially Submitted',`✅ ${ok} sent\n❌ ${fail} failed\n\nFailed dates: ${failedDates.map(fmtDatePretty).join(', ')}`);
+  } catch(e) { hideDL(); showFeedback('error','Network Error', e.message); }
+}
+async function loadMyRequests(){
+  const el = $('myRequestsList'); if (!el || !currentUser) return;
+  try {
+    const res = await fetch(`${API}/api/requests/my/${currentUser.rollNo}`);
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) return el.innerHTML = '<div class="empty" style="padding:14px 0;">No requests yet</div>';
+    el.innerHTML = data.slice(0, 10).map(r => {
+      const c = r.status === 'Approved' ? 'badge-success' : r.status === 'Rejected' ? 'badge-danger' : r.status === 'Partially Approved' ? 'badge-info' : 'badge-warning';
+      const tl = r.lectureType === 'full_day' ? 'Full Day' : 'Single Lecture';
+      return `<div style="padding:10px 0;border-bottom:1px solid var(--slate-100);font-size:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <div style="min-width:0;"><div style="font-weight:700;">${fmtDatePretty(r.date)} · ${tl}</div>${r.subject ? `<div style="font-size:10.5px;color:var(--slate-500);margin-top:2px;">${escapeHtml(r.subject)}</div>` : ''}</div>
+          <span class="badge ${c}">${r.status}</span>
+        </div>
+        ${r.reason ? `<div style="font-size:10.5px;color:var(--slate-500);margin-top:4px;">${escapeHtml(r.reason)}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) { el.innerHTML = '<div class="empty" style="padding:14px 0;">Failed to load</div>'; }
+  observeNewContent();
+}
+
+async function loadAdminRequests(){
+  const status = $('reqFilterStatus')?.value || '';
+  const el = $('adminRequestsList'); if (!el) return;
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const url = `${API}/api/requests/all/${currentUser.rollNo}${status ? '?status=' + status : ''}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok) return el.innerHTML = `<div class="empty">${escapeHtml(data.error || 'Failed')}</div>`;
+    let reqs = [];
+    if (Array.isArray(data)) reqs = data;
+    else if (data && Array.isArray(data.requests)) reqs = data.requests;
+    else if (data && Array.isArray(data.data)) reqs = data.data;
+    if (status) reqs = reqs.filter(r => (r.status || '') === status);
+    if (!reqs.length) return el.innerHTML = '<div class="empty">No requests</div>';
+    const now = Date.now();
+    const UNDO_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+    el.innerHTML = reqs.map(r => {
+      const sc = r.status === 'Approved' ? 'badge-success' : r.status === 'Rejected' ? 'badge-danger' : r.status === 'Partially Approved' ? 'badge-info' : 'badge-warning';
+      const ll = r.lectureType === 'full_day' ? '📅 Full Day' : '📖 Single Lecture';
+      const canUndo = (r.status === 'Approved' || r.status === 'Partially Approved') && r.updatedAt && (now - new Date(r.updatedAt).getTime()) < UNDO_WINDOW_MS;
+      const remainMin = canUndo ? Math.ceil((UNDO_WINDOW_MS - (now - new Date(r.updatedAt).getTime())) / 60000) : 0;
+      return `<div style="padding:14px;border:1px solid var(--slate-200);border-radius:11px;margin-bottom:10px;background:#fff;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
+          <div style="min-width:0;flex:1;"><div style="font-weight:800;font-size:13px;">${escapeHtml(r.studentName || r.name || '')} <span class="badge badge-neutral">${escapeHtml(r.rollNo || '')}</span></div><div style="font-size:11px;color:var(--slate-500);margin-top:3px;">${escapeHtml(r.branch || '')} · ${fmtDatePretty(r.date)}</div></div>
+          <span class="badge ${sc}">${escapeHtml(r.status || '')}</span>
+        </div>
+        <div style="margin-top:10px;font-size:12px;">${ll}${r.subject ? ' · ' + escapeHtml(r.subject) : ''}</div>
+        <div style="margin-top:5px;font-size:11.5px;color:var(--slate-600);">Reason: ${escapeHtml(r.reason || '—')}</div>
+        ${r.status === 'Pending' ? `<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-success btn-xs" onclick="approveRequest('${r._id}')">✅ Approve</button><button class="btn btn-danger btn-xs" onclick="rejectRequest('${r._id}')">❌ Reject</button></div>` : `<div style="margin-top:10px;font-size:10.5px;color:var(--slate-500);">Reviewed by ${escapeHtml(r.reviewedBy || '—')}</div>`}
+        ${canUndo ? `<div style="margin-top:10px;"><button class="btn btn-warning btn-xs" onclick="openUndoApproval('${r._id}', '${escapeHtml(r.rollNo)}', '${r.date}', ${remainMin})">↩️ Undo Approval (${remainMin}m left)</button></div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
+  observeNewContent();
+}
+async function approveRequest(id){ const note = prompt('Approval note (optional):') || ''; try { const res = await fetch(`${API}/api/requests/review/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, action: 'Approved', note }) }); const d = await res.json(); if (res.ok) { toast(d.message || 'Approved','success'); loadAdminRequests(); loadDashboardStats(); } else toast(d.error,'error'); } catch(e){ toast('Network error','error'); } }
+async function rejectRequest(id){ const note = prompt('Rejection reason (optional):') || ''; try { const res = await fetch(`${API}/api/requests/review/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, action: 'Rejected', note }) }); const d = await res.json(); if (res.ok) { toast('Rejected','success'); loadAdminRequests(); } else toast(d.error,'error'); } catch(e){ toast('Network error','error'); } }
+async function bulkApproveAllRequests(){
+  if (!confirm('Approve ALL pending?')) return;
+  try {
+    const res = await fetch(`${API}/api/requests/all/${currentUser.rollNo}?status=Pending`);
+    const data = await res.json();
+    let reqs = Array.isArray(data) ? data : (data.requests || []);
+    reqs = reqs.filter(r => r.status === 'Pending');
+    const ids = reqs.map(r => r._id);
+    if (!ids.length) return toast('None pending','info');
+    const bR = await fetch(`${API}/api/requests/bulk-review`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, requestIds: ids, action: 'Approved', note: 'Bulk' }) });
+    const d = await bR.json();
+    if (bR.ok) { showFeedback('success','Bulk Approved',`${ids.length} request(s) approved.`); loadAdminRequests(); }
+    else showFeedback('error','Failed', d.error || 'Bulk approval failed');
+  } catch(e){ showFeedback('error','Network Error', e.message); }
+}
+
+function openUndoApproval(requestId, rollNo, date, remainMin) {
+  pendingUndoApprovalId = requestId;
+  $('undoApprovalInfo').innerHTML = `
+    <div style="font-weight:700;color:var(--slate-900);margin-bottom:8px;">Request to revert:</div>
+    <div>🎓 <b>${escapeHtml(rollNo)}</b></div>
+    <div>📅 Date: <b>${fmtDatePretty(date)}</b></div>
+    <div style="margin-top:8px;color:var(--amber-700);font-weight:600;">⏱ ${remainMin} min left in undo window</div>
+  `;
+  openModal('undoApprovalModal');
+}
+async function confirmUndoApproval() {
+  if (!pendingUndoApprovalId) return;
+  closeModal('undoApprovalModal');
+  showDL('Reverting approval…');
+  try {
+    const res = await fetch(`${API}/api/requests/undo/${pendingUndoApprovalId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requesterRollNo: currentUser.rollNo })
+    });
+    const d = await res.json();
+    hideDL();
+    if (res.ok) {
+      showFeedback('success', 'Approval Reverted', d.message || 'Approval undone and attendance records removed.');
+      loadAdminRequests();
+    } else {
+      showFeedback('error', 'Undo Failed', d.error || 'Could not undo approval.');
+    }
+  } catch (e) {
+    hideDL();
+    showFeedback('error', 'Network Error', e.message);
+  }
+  pendingUndoApprovalId = null;
+}
+
+function toggleSubjectBreakdown(){
+  subjectBreakdownOpen = !subjectBreakdownOpen;
+  const b = $('subjectBreakdownBody'), a = $('subjectBreakdownArrow');
+  if (subjectBreakdownOpen) { b?.classList.add('open'); if (a) a.style.transform = 'rotate(180deg)'; loadSubjectBreakdown(); }
+  else { b?.classList.remove('open'); if (a) a.style.transform = 'rotate(0deg)'; }
+}
+
+async function loadDashboardStats(){
+  try {
+    const res = await fetch(`${API}/api/admin/dashboard-stats/${currentUser.rollNo}`);
+    const d = await res.json();
+    if (!res.ok) return;
+    if ($('liveTotalStudents')) $('liveTotalStudents').textContent = d.totalStudents || 0;
+    if ($('liveTodayPresent')) $('liveTodayPresent').textContent = d.todayPresent || 0;
+    if ($('liveTodayAbsent')) $('liveTodayAbsent').textContent = d.todayAbsent || 0;
+    if ($('liveOverallPct')) $('liveOverallPct').textContent = (d.overallPct || 0) + '%';
+    if ($('adminWorkingDaysSoFar')) $('adminWorkingDaysSoFar').textContent = d.workingDaysSoFar || 0;
+    if ($('adminTotalWorkingDays')) $('adminTotalWorkingDays').textContent = d.totalWorkingDaysSemester || 0;
+    const pl = $('adminPresentList');
+    if (pl) {
+      const list = (d.todayPresentStudents || []).slice().sort((a,b) => a.rollNo.localeCompare(b.rollNo, undefined, {numeric: true}));
+      if (list.length === 0) pl.innerHTML = '<div class="text-muted text-xs" style="padding:8px 0;">No students present yet.</div>';
+      else {
+        const cse = list.filter(s => s.rollNo.startsWith('24CSE'));
+        const aids = list.filter(s => s.rollNo.startsWith('24AIDS'));
+        const others = list.filter(s => !s.rollNo.startsWith('24CSE') && !s.rollNo.startsWith('24AIDS'));
+        let html = '';
+        const renderRows = (arr) => arr.map((s) => `<div class="present-row"><b>${escapeHtml(s.rollNo)}</b><span>${escapeHtml(s.name)}</span></div>`).join('');
+        if (cse.length) { html += `<div class="branch-label cse">CSE <span class="branch-count">${cse.length}</span></div>`; html += renderRows(cse); }
+        if (aids.length) { html += `<div class="branch-label aids">AIDS <span class="branch-count">${aids.length}</span></div>`; html += renderRows(aids); }
+        if (others.length) { html += `<div class="branch-label">Other <span class="branch-count">${others.length}</span></div>`; html += renderRows(others); }
+        pl.innerHTML = html;
+      }
+    }
+  } catch(e){}
+}
+
+async function openWorkingDays(){ openModal('wdModal'); $('wdCalendar').innerHTML = '<div class="empty">Loading calendar…</div>'; try { renderWorkingDays(await ensureHolidays() || []); } catch(e){ $('wdCalendar').innerHTML = '<div class="empty">Failed to load.</div>'; } }
+function renderWorkingDays(holidays){
+  const hMap = {}; (holidays || []).forEach(h => { const k = (h.date||'').split('T')[0]; if (k) hMap[k] = h.reason || 'Holiday'; });
+  const today = new Date(); today.setHours(0,0,0,0);
+  const tStr = fmtDate(today);
+  const sS = new Date(2026, 6, 15);
+  const eM = Math.max(6, today.getMonth());
+  let tW = 0, tH = 0, tWk = 0, html = '';
+  for (let m = 6; m <= eM; m++) {
+    const y = 2026;
+    const dim = new Date(y, m+1, 0).getDate();
+    const fd = new Date(y, m, 1).getDay();
+    let mW = 0, mH = 0, mWk = 0, cells = '';
+    for (let i = 0; i < fd; i++) cells += '<div class="wd-cell empty"></div>';
+    for (let d = 1; d <= dim; d++) {
+      const dt = new Date(y, m, d); dt.setHours(0,0,0,0);
+      const ds = fmtDate(dt); const dow = dt.getDay();
+      if (dt < sS) { cells += `<div class="wd-cell before">${d}</div>`; continue; }
+      if (dt > today) { cells += `<div class="wd-cell future">${d}</div>`; continue; }
+      let cls = 'working';
+      if (dow === 0 || dow === 6) { cls = 'weekend'; mWk++; tWk++; }
+      else if (hMap[ds]) { cls = 'holiday'; mH++; tH++; }
+      else { mW++; tW++; }
+      if (ds === tStr) cls += ' today';
+      cells += `<div class="wd-cell ${cls} tappable" onclick="showDayInfo('${ds}', 'compact')">${d}</div>`;
+    }
+    const headCells = DAY_NAMES.map(d => `<div class="wd-day-head">${d}</div>`).join('');
+    html += `<div class="wd-month"><div class="wd-month-title"><span>${MONTH_NAMES[m]} ${y}</span><span class="wd-month-stats">${mW} working · ${mH} holidays</span></div><div class="wd-grid">${headCells}${cells}</div></div>`;
+  }
+  if ($('wdTotalWorking')) $('wdTotalWorking').textContent = tW;
+  if ($('wdTotalHolidays')) $('wdTotalHolidays').textContent = tH;
+  if ($('wdTotalWeekend')) $('wdTotalWeekend').textContent = tWk;
+  if ($('wdModalSub')) $('wdModalSub').textContent = `From 15 Jul 2026 to ${fmtDatePretty(tStr)} (${tW} working days)`;
+  if ($('wdCalendar')) $('wdCalendar').innerHTML = html;
+}
+
+async function showDayInfo(dateStr, mode){
+  mode = mode || 'full';
+  openModal('dayInfoModal');
+  const t = $('dayInfoTitle'), s = $('dayInfoSub'), b = $('dayInfoBody');
+  t.textContent = 'Loading…'; s.textContent = fmtDatePretty(dateStr);
+  b.innerHTML = '<div class="empty"><div class="spinner" style="margin:0 auto 8px;"></div>Loading…</div>';
+  try {
+    const roll = currentUser?.rollNo || 'guest';
+    const res = await fetch(`${API}/api/calendar/day/${roll}/${dateStr}`);
+    const d = await res.json();
+    if (!res.ok) { t.textContent = 'Day Info'; b.innerHTML = `<div class="empty">${escapeHtml(d.error || 'Could not load')}</div>`; return; }
+    const dayEmoji = d.state === 'present' ? '✅' : d.state === 'absent' ? '❌' : d.state === 'holiday' ? '🎉' : d.state === 'weekend' ? '🌴' : d.state === 'future' ? '🔮' : '📘';
+    t.textContent = `${dayEmoji} ${d.dayName}, ${fmtDatePretty(d.date)}`;
+    let stateLabel = '';
+    if (d.state === 'holiday') stateLabel = `<span class="badge badge-warning">🎉 Holiday — ${escapeHtml(d.holidayReason || 'Holiday')}</span>`;
+    else if (d.state === 'weekend') stateLabel = `<span class="badge badge-neutral">🌴 Weekend</span>`;
+    else if (d.state === 'present') stateLabel = `<span class="badge badge-success">✅ Present</span>`;
+    else if (d.state === 'absent') stateLabel = `<span class="badge badge-danger">❌ Absent</span>`;
+    else if (d.state === 'future') stateLabel = `<span class="badge badge-info">🔮 Future</span>`;
+    else if (d.state === 'before-semester') stateLabel = `<span class="badge badge-neutral">⏪ Before Semester</span>`;
+    else stateLabel = `<span class="badge badge-info">📘 Working Day</span>`;
+    s.innerHTML = stateLabel;
+    let html = '';
+    if (d.isHoliday) html += `<div style="padding:14px;background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:11px;margin-bottom:12px;border:1px solid #fcd34d;"><div style="font-size:12px;color:#78350f;font-weight:600;">🎉 Reason</div><div style="font-size:15px;font-weight:800;color:#78350f;margin-top:4px;">${escapeHtml(d.holidayReason || 'Holiday')}</div></div>`;
+    else if (d.isWeekend) html += `<div style="padding:14px;background:#e2e8f0;border-radius:11px;margin-bottom:12px;border:1px solid #cbd5e1;"><div style="font-size:12px;color:#334155;font-weight:600;">🌴 Weekend</div><div style="font-size:13.5px;color:#334155;margin-top:4px;">${escapeHtml(d.dayName)} — College closed. No classes today.</div></div>`;
+    else if (d.isFuture) html += `<div style="padding:14px;background:#dbeafe;border-radius:11px;margin-bottom:12px;border:1px solid #93c5fd;"><div style="font-size:12.5px;color:#1e40af;font-weight:600;">🔮 Future date — details will appear soon.</div></div>`;
+    else if (d.isBeforeSemester) html += `<div style="padding:14px;background:#f1f5f9;border-radius:11px;margin-bottom:12px;border:1px solid #cbd5e1;"><div style="font-size:12.5px;color:#64748b;font-weight:600;">⏪ Semester started on 15 Jul 2026.</div></div>`;
+    if (!d.isWeekend && !d.isHoliday && !d.isFuture && !d.isBeforeSemester) {
+      html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div style="padding:14px;background:#fff;border-radius:11px;border:1px solid var(--slate-200);text-align:center;">
+          <div style="font-size:24px;font-weight:800;color:var(--brand-700);">${d.attended}</div>
+          <div style="font-size:10px;color:var(--slate-500);text-transform:uppercase;font-weight:700;margin-top:2px;">Attended</div>
+        </div>
+        <div style="padding:14px;background:#fff;border-radius:11px;border:1px solid var(--slate-200);text-align:center;">
+          <div style="font-size:24px;font-weight:800;color:var(--slate-700);">${d.conducted}</div>
+          <div style="font-size:10px;color:var(--slate-500);text-transform:uppercase;font-weight:700;margin-top:2px;">Conducted</div>
+        </div>
+      </div>`;
+      if (mode === 'full') {
+        if (d.scheduledLectures && d.scheduledLectures.length) {
+          html += '<div class="section-title" style="margin-top:8px;">📚 Scheduled Lectures</div>';
+          html += d.scheduledLectures.map(sl => {
+            const rec = (d.records || []).find(r => r.subject === sl.subject);
+            const statusBadge = rec
+              ? (rec.status === 'Present' || rec.status === 'Duty Leave'
+                  ? '<span class="badge badge-success">✅ Present</span>'
+                  : `<span class="badge badge-danger">${rec.status}</span>`)
+              : '<span class="badge badge-neutral">— Not Marked</span>';
+            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#fff;border-radius:9px;margin-bottom:6px;border:1px solid var(--slate-200);gap:10px;">
+              <div style="min-width:0;flex:1;">
+                <div style="font-size:11px;color:var(--slate-500);font-weight:700;">${sl.period} · ${sl.start}–${sl.end}</div>
+                <div style="font-size:12.5px;font-weight:700;color:var(--slate-900);margin-top:2px;">${escapeHtml(sl.subject)}</div>
+                <div style="font-size:10.5px;color:var(--slate-500);margin-top:1px;">👨‍🏫 ${escapeHtml(sl.faculty || '—')}</div>
+              </div>
+              <div style="flex-shrink:0;">${statusBadge}</div>
+            </div>`;
+          }).join('');
+        } else html += '<div class="empty" style="padding:14px 0;">No lectures scheduled.</div>';
+      }
+    }
+    b.innerHTML = html;
+  } catch(e) { t.textContent = 'Day Info'; b.innerHTML = `<div class="empty">Network error: ${escapeHtml(e.message)}</div>`; }
+}
+
+async function initStudent(){
+  const tm = $('trendMonth');
+  if (tm) { tm.innerHTML = [6,7,8,9,10,11].map(m => `<option value="${m}">${MONTH_NAMES[m]}</option>`).join(''); const n = new Date(); if (n.getMonth() >= 6 && n.getMonth() <= 11) tm.value = n.getMonth(); }
+  await ensureHolidays(); await fetchHistory(); await updatePeriod();
+  if (periodIntervalId) clearInterval(periodIntervalId);
+  periodIntervalId = setInterval(updatePeriod, 30000);
+  await updateTrend();
+  if (subjectBreakdownOpen) await loadSubjectBreakdown();
+  const rd = $('reqDate'); if (rd) rd.max = fmtDate(new Date());
+  const reqDateEl = $('reqDate');
+  if (reqDateEl && !reqDateEl._boundSubjects) { reqDateEl._boundSubjects = true; reqDateEl.addEventListener('change', loadRequestSubjects); }
+  const reqLtEl = $('reqLectureType');
+  if (reqLtEl && !reqLtEl._boundSubjects) {
+    reqLtEl._boundSubjects = true;
+    reqLtEl.addEventListener('change', function() { const grp = $('reqSubjectGroup'); if (grp) grp.style.display = (this.value === 'single_lecture') ? 'block' : 'none'; loadRequestSubjects(); });
+  }
+  loadRequestSubjects();
+}
+
+async function loadRequestSubjects(){
+  const lt = $('reqLectureType')?.value;
+  const d = $('reqDate')?.value;
+  const s = $('reqSubject');
+  const hint = $('reqSubjectHint');
+  if (!s) return;
+  if (lt === 'single_lecture') {
+    if (!d) { s.innerHTML = '<option value="">Select a date first…</option>'; if (hint) hint.textContent = '— pick a date to load subjects'; return; }
+    const dateObj = new Date(d + 'T00:00:00');
+    const dow = dateObj.getDay();
+    const dayName = FULL_DAY_NAMES[dow];
+    const branch = (currentUser && currentUser.branch) ? currentUser.branch : 'CSE';
+    const daySubs = getTimetableForBranch(branch)[dayName] || [];
+    const subs = daySubs.filter(x => !x.includes('Sports') && !x.includes('LIB') && !x.includes('Library') && x.toLowerCase() !== 'lunch break');
+    if (!subs.length) { s.innerHTML = '<option value="">No lectures scheduled on this day</option>'; if (hint) hint.textContent = `(${dayName} · ${branch})`; return; }
+    s.innerHTML = '<option value="">Select subject…</option>' + subs.map(x => `<option value="${x}">${x}</option>`).join('');
+    if (hint) hint.textContent = `(${dayName} · ${branch})`;
+  } else {
+    if (hint) hint.textContent = '';
+    try { const subs = await fetch(`${API}/api/timetable/subjects`).then(r => r.json()); s.innerHTML = '<option value="">Select subject…</option>' + (subs || []).map(x => `<option value="${x}">${x}</option>`).join(''); } catch(e){}
+  }
+}
+async function fetchHistory(){
+  try { await ensureHolidays();
+    const res = await fetch(`${API}/api/attendance/history/${currentUser.rollNo}`);
+    const data = await res.json();
+    globalHistory = data || [];
+    await loadStats(); renderAttendanceCalendar();
+  } catch(e){ }
+  observeNewContent();
+}
+async function loadStats(){
+  try {
+    const res = await fetch(`${API}/api/student/summary/${currentUser.rollNo}`);
+    const d = await res.json();
+    const wd = d.workingDaysSoFar || 0;
+    if ($('statWorkingDays')) $('statWorkingDays').textContent = wd;
+    const pct = d.attendancePercentage || 0;
+    if ($('statAttendance')) { $('statAttendance').textContent = pct + '%'; $('statAttendance').className = 'stat-value ' + (pct >= 75 ? 'good' : 'bad'); }
+    if ($('statAttendanceHint')) $('statAttendanceHint').textContent = `${d.totalAcademicLectures || 0}/${d.totalConductedLectures || 0}`;
+    if ($('statDaysPresent')) $('statDaysPresent').textContent = d.daysPresent || 0;
+    const wdP = wd > 0 ? Math.round(((d.daysPresent || 0) / wd) * 100) : 0;
+    if ($('statWorkingDaysPct')) $('statWorkingDaysPct').textContent = wdP + '%';
+    const adv = $('advisorText');
+    if (adv && d.totalConductedLectures > 0) {
+      const a = d.totalAcademicLectures || 0, t = d.totalConductedLectures || 0, p = d.attendancePercentage || 0;
+      if (p >= 75) { const safeLectures = Math.max(0, Math.floor((a - 0.75 * t) / 0.75)); adv.innerHTML = `Safe zone (<b style="color:var(--emerald-700);">${p}%</b>). You can skip ~<b>${safeLectures}</b> lecture${safeLectures === 1 ? '' : 's'} safely.`; }
+      else { const needLectures = Math.max(0, Math.ceil((0.75 * t - a) / 0.25)); adv.innerHTML = `Low attendance (<b style="color:var(--rose-700);">${p}%</b>). Attend <b>${needLectures}</b> more lecture${needLectures === 1 ? '' : 's'} to reach 75%.`; }
+    } else if (adv) adv.textContent = 'No data yet.';
+  } catch(e){}
+  observeNewContent();
+}
+async function loadSubjectBreakdown(){
+  if (!currentUser || currentUser.role !== 'student') return;
+  const f = $('subjectMonthFilter').value;
+  const l = $('subjectBreakdownList'); if (!l) return;
+  l.innerHTML = '<span class="text-xs text-muted">Loading…</span>';
+  try {
+    let stats = {}, a = 0, c = 0, p = 0;
+    if (f === 'ALL') { const res = await fetch(`${API}/api/student/summary/${currentUser.rollNo}`); const d = await res.json(); stats = d.subjectStats || {}; a = d.totalAcademicLectures || 0; c = d.totalConductedLectures || 0; p = d.attendancePercentage || 0; }
+    else { const res = await fetch(`${API}/api/student/monthly-summary/${currentUser.rollNo}?month=${f}`); const d = await res.json(); stats = d.subjectStats || {}; a = d.totalAttended || 0; c = d.totalConducted || 0; p = d.attendancePercentage || 0; }
+    if ($('subjAttendedLine')) $('subjAttendedLine').textContent = `Attended ${a}/${c}`;
+    const pe = $('subjPctLine'); if (pe) { pe.textContent = p + '%'; pe.className = 'pct-big ' + (p >= 75 ? 'good' : 'bad'); }
+    const info = $('subjectBreakdownHeaderInfo'); if (info) info.textContent = `${p}%`; // Header text fix
+    const e = Object.entries(stats);
+    if (!e.length) { l.innerHTML = '<span class="text-xs text-muted">No data</span>'; return; }
+    l.innerHTML = e.map(([s, st]) => { let cc = 'bad'; if (st.percentage > 80) cc = 'good'; else if (st.percentage >= 75) cc = 'warn'; return `<span class="chip ${cc}"><span class="chip-name">${s.substring(0,18)}</span><span class="chip-pct">${st.percentage}%</span><span class="chip-count">(${st.present}/${st.total})</span></span>`; }).join('');
+  } catch(e) { l.innerHTML = '<span class="text-xs text-muted">Failed</span>'; }
+  observeNewContent();
+}
+function onCalendarModeChange(){ const m = $('calendarViewMode').value; if ($('calendarSelectedMonthWrap')) $('calendarSelectedMonthWrap').style.display = m === 'SELECTED_MONTH' ? 'block' : 'none'; renderAttendanceCalendar(); }
+function renderAttendanceCalendar(){
+  const w = $('calendarDisplay'); if (!w) return;
+  const m = $('calendarViewMode').value;
+  const hS = new Set((globalHolidays || []).map(h => (h.date||'').split('T')[0]));
+  const aD = new Set((globalHistory || []).filter(r => r.status === 'Present' || r.status === 'Duty Leave').map(r => r.date));
+  const today = new Date(); today.setHours(0,0,0,0);
+  let months = [];
+  if (m === 'CURRENT_MONTH') months = [today.getMonth()];
+  else if (m === 'SELECTED_MONTH') months = [parseInt($('calendarSelectedMonth').value)];
+  else months = [6,7,8,9,10,11];
+  let html = '';
+  months.forEach(mo => {
+    const y = 2026;
+    const dim = new Date(y, mo+1, 0).getDate();
+    const fd = new Date(y, mo, 1).getDay();
+    let cells = '';
+    for (let i = 0; i < fd; i++) cells += '<div class="wd-cell empty"></div>';
+    for (let d = 1; d <= dim; d++) {
+      const dt = new Date(y, mo, d); dt.setHours(0,0,0,0);
+      const ds = fmtDate(dt); const dow = dt.getDay();
+      if (dt < SEMESTER_START) { cells += `<div class="wd-cell before tappable" onclick="showDayInfo('${ds}', 'full')">${d}</div>`; continue; }
+      if (dt > today) { cells += `<div class="wd-cell future tappable" onclick="showDayInfo('${ds}', 'full')">${d}</div>`; continue; }
+      if (dow === 0 || dow === 6) { cells += `<div class="wd-cell weekend tappable" onclick="showDayInfo('${ds}', 'full')">${d}</div>`; continue; }
+      if (hS.has(ds)) { cells += `<div class="wd-cell holiday tappable" onclick="showDayInfo('${ds}', 'full')">${d}</div>`; continue; }
+      if (aD.has(ds)) cells += `<div class="wd-cell present tappable" onclick="showDayInfo('${ds}', 'full')">${d}</div>`;
+      else cells += `<div class="wd-cell absent tappable" onclick="showDayInfo('${ds}', 'full')">${d}</div>`;
+    }
+    const headCells = DAY_NAMES.map(d => `<div class="wd-day-head">${d}</div>`).join('');
+    html += `<div class="wd-month" style="margin-bottom:16px;"><div class="wd-month-title"><span>${MONTH_NAMES[mo]} ${y}</span></div><div class="wd-grid">${headCells}${cells}</div></div>`;
+  });
+  w.innerHTML = html || '<div class="empty">No data</div>';
+  observeNewContent();
+}
+let trendView = 'monthly';
+function setTrendView(v){ trendView = v; $('btnMonthly')?.classList.toggle('active', v === 'monthly'); $('btnDaily')?.classList.toggle('active', v === 'daily'); if ($('trendMonth')) $('trendMonth').style.display = v === 'daily' ? 'inline-block' : 'none'; updateTrend(); }
+async function updateTrend(){
+  const c = $('trendChart'); if (!c) return;
+  try {
+    let labels = [], pctData = [];
+    if (trendView === 'monthly') {
+      const monthNums = [6,7,8,9,10,11]; const monthLabels = ['Jul','Aug','Sep','Oct','Nov','Dec'];
+      const now = new Date(); const nowMonth = now.getMonth();
+      const promises = monthNums.map(m => (m > nowMonth) ? Promise.resolve(null) : fetch(`${API}/api/student/monthly-summary/${currentUser.rollNo}?month=${m}`).then(r => r.ok ? r.json() : null).catch(() => null));
+      const results = await Promise.all(promises);
+      monthNums.forEach((m, i) => { labels.push(monthLabels[i]); if (m > nowMonth) pctData.push(null); else { const d = results[i]; pctData.push(d ? (d.attendancePercentage || 0) : 0); } });
+    } else {
+      const m = parseInt($('trendMonth').value); const y = 2026;
+      const dim = new Date(y, m+1, 0).getDate();
+      const tt = getTimetableForBranch(currentUser.branch || 'CSE');
+      const hS = new Set((globalHolidays || []).map(h => (h.date||'').split('T')[0]));
+      const today = new Date(); today.setHours(0,0,0,0);
+      for (let d = 1; d <= dim; d++) {
+        const dt = new Date(y, m, d); dt.setHours(0,0,0,0);
+        const ds = fmtDate(dt); const dow = dt.getDay(); labels.push(`${d}`);
+        if (dt > today || dt < SEMESTER_START || dow === 0 || dow === 6 || hS.has(ds)) { pctData.push(null); continue; }
+        const subs = (tt[FULL_DAY_NAMES[dow]] || []).filter(s => !s.includes('Sports') && !s.includes('LIB') && !s.includes('Library'));
+        const dayRecs = globalHistory.filter(r => r.date === ds);
+        const pSubs = new Set(dayRecs.filter(r => r.status === 'Present' || r.status === 'Duty Leave').map(r => r.subject));
+        let pc = 0; subs.forEach(s => { if (pSubs.has(s)) pc++; });
+        pctData.push(subs.length > 0 ? Math.round((pc/subs.length)*100) : 0);
+      }
+    }
+    if (trendChart) trendChart.destroy();
+    trendChart = new Chart(c, { type: 'line', data: { labels, datasets: [{ label: 'Attendance %', data: pctData, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.08)', borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#2563eb', pointBorderColor: '#fff', pointBorderWidth: 2, tension: 0.25, fill: true, spanGaps: false }] }, options: { responsive: true, maintainAspectRatio: false, animation: { duration: 800, easing: 'easeOutQuart' }, plugins: { legend: { display: false } }, scales: { y: { min:0, max:100, grid:{color:'#f1f5f9'}, ticks:{font:{size:10},color:'#94a3b8',callback:v=>v+'%'} }, x: { grid:{display:false}, ticks:{font:{size:9},color:'#94a3b8'} } } } });
+  } catch(e){}
+}
+async function updatePeriod(){
+  try {
+    const today = fmtDate(new Date());
+    const st = await checkDateStatus(today);
+    const fdb = $('markFullDayBtn'), cb = $('closedBanner'), cbt = $('closedBannerText'), pr = $('periodRow');
+    if (st.isBlocked) {
+      if (fdb) fdb.style.display = 'none'; if (pr) pr.style.display = 'none';
+      if (cb) cb.style.display = 'flex';
+      if (cbt) { if (st.type === 'WEEKEND') cbt.textContent = `Weekend — College Closed (${st.dayName})`; else cbt.textContent = `Holiday — ${st.holiday || st.message.replace(/^🎉\s*/, '')}`; }
+      if ($('periodLabel')) $('periodLabel').textContent = st.type;
+      if ($('periodName')) $('periodName').textContent = st.message;
+      if ($('markPeriodBtn')) $('markPeriodBtn').disabled = true;
+      if ($('todayTimetable')) $('todayTimetable').innerHTML = `<div class="empty">${st.message}</div>`;
+      window._activeSubject = null; return;
+    }
+    if (fdb) fdb.style.display = 'flex';
+    if (cb) cb.style.display = 'none';
+    if (pr) pr.style.display = 'flex';
+    const branch = currentUser.branch || 'CSE';
+    const schedule = getScheduleForBranch(branch);
+    const dow = new Date().getDay();
+    const now = new Date();
+    const mins = now.getHours()*60 + now.getMinutes();
+    const slots = schedule[dow] || [];
+    let active = null;
+    for (const s of slots) { const [sh,sm] = s.start.split(':').map(Number); const [eh,em] = s.end.split(':').map(Number); if (mins >= sh*60+sm && mins < eh*60+em) { active = s; break; } }
+    if (active && active.period !== 'LUNCH') { if ($('periodLabel')) $('periodLabel').textContent = `${active.start} – ${active.end}`; if ($('periodName')) $('periodName').textContent = active.subject; if ($('markPeriodBtn')) $('markPeriodBtn').disabled = false; window._activeSubject = active.subject; }
+    else if (active && active.period === 'LUNCH') { if ($('periodLabel')) $('periodLabel').textContent = 'LUNCH BREAK'; if ($('periodName')) $('periodName').textContent = 'No active lecture'; if ($('markPeriodBtn')) $('markPeriodBtn').disabled = true; window._activeSubject = null; }
+    else { if ($('periodLabel')) $('periodLabel').textContent = 'OFF HOURS'; if ($('periodName')) $('periodName').textContent = 'No active lecture'; if ($('markPeriodBtn')) $('markPeriodBtn').disabled = true; window._activeSubject = null; }
+    const todaySubs = getTimetableForBranch(branch)[FULL_DAY_NAMES[dow]] || [];
+    if ($('todayTimetable')) $('todayTimetable').innerHTML = todaySubs.length ? todaySubs.map((s,i) => `<div style="padding:7px 0;border-bottom:1px solid var(--slate-100);display:flex;justify-content:space-between;"><span class="text-xs font-bold text-muted">P${i+1}</span><span style="font-weight:600;">${s}</span></div>`).join('') : 'No classes today';
+  } catch(e){}
+}
+async function markFullDay(){
+  const today = fmtDate(new Date());
+  const st = await checkDateStatus(today);
+  if (st.isBlocked) { if (st.type === 'WEEKEND') return showFeedback('warning', 'College Closed', `${st.dayName} — college is closed today.`); return showFeedback('warning', 'Holiday', `${st.holiday || 'College closed'} — today is a holiday.`); }
+  const pc = prompt('Enter Full Day Passcode (5-digit):');
+  if (!pc) return; if (pc.length !== 5) return showFeedback('error', 'Invalid Passcode', 'Passcode must be 5 digits.');
+  showDL('Verifying passcode…');
+  try {
+    const v = await fetch(`${API}/api/auth/verify-passcode`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({passcode:pc.trim(),type:'full_day'})});
+    const vd = await v.json();
+    if (!v.ok) { hideDL(); return showFeedback('error', 'Invalid Passcode', vd.error || 'Passcode is invalid or expired.'); }
+    hideDL();
+    if (!navigator.geolocation) return showFeedback('error', 'GPS Not Supported', 'Geolocation is not supported on your browser.');
+    showDL('Getting location…');
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      hideDL(); showDL('Marking attendance…');
+      const res = await fetch(`${API}/api/attendance/mark-fullday`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo, name: currentUser.name, latitude: pos.coords.latitude, longitude: pos.coords.longitude, passcode: pc.trim()})});
+      const d = await res.json();
+      hideDL();
+      if (res.ok) { showFeedback('success', 'Attendance Marked', d.message || `Full day attendance marked successfully.`); sendPushNotification('✅ Attendance Marked', `Full day marked for ${fmtDatePretty(today)}`, { type: 'mark', date: today }); fetchHistory(); if (subjectBreakdownOpen) loadSubjectBreakdown(); }
+      else showFeedback('error', 'Marking Failed', d.error || 'Could not mark attendance.');
+    }, (err) => { hideDL(); showFeedback('error', 'Location Error', err.code === 1 ? 'Location permission denied. Please allow GPS.' : 'Location not available. Please try again.'); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+  } catch(e){ hideDL(); showFeedback('error', 'Network Error', e.message); }
+}
+async function markActivePeriod(){
+  if (!window._activeSubject) return showFeedback('warning', 'No Active Lecture', 'There is no active lecture right now.');
+  const pc = prompt(`Enter 4-digit passcode for ${window._activeSubject}:`);
+  if (!pc) return; if (pc.length !== 4) return showFeedback('error', 'Invalid Passcode', 'Single lecture passcode is 4 digits.');
+  showDL('Verifying…');
+  try {
+    const v = await fetch(`${API}/api/auth/verify-passcode`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({passcode:pc.trim(),type:'single_lecture'})});
+    const vd = await v.json();
+    if (!v.ok) { hideDL(); return showFeedback('error', 'Invalid Passcode', vd.error || 'Passcode is invalid or expired.'); }
+    hideDL(); showDL('Getting location…');
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      hideDL(); showDL('Marking…');
+      const res = await fetch(`${API}/api/attendance/mark-lecture`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo, name: currentUser.name, subject: window._activeSubject, latitude: pos.coords.latitude, longitude: pos.coords.longitude, passcode: pc.trim()})});
+      const d = await res.json();
+      hideDL();
+      if (res.ok) { showFeedback('success', 'Lecture Marked', `${window._activeSubject} — attendance marked.`); sendPushNotification('✅ Lecture Marked', `${window._activeSubject} attendance recorded`, { type: 'mark_lecture', subject: window._activeSubject }); fetchHistory(); }
+      else showFeedback('error', 'Marking Failed', d.error || 'Could not mark attendance.');
+    }, (err) => { hideDL(); showFeedback('error', 'Location Error', err.code === 1 ? 'Location permission denied.' : 'Location not available.'); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+  } catch(e){ hideDL(); showFeedback('error', 'Network Error', e.message); }
+}
+
+async function generateIndividualPDF(studentRoll, studentName, branch, range, month, isSelf){
+  showDL('Generating PDF…');
+  try {
+    await ensureHolidays();
+    let records = [];
+    if (isSelf) records = (globalHistory || []).slice();
+    else { const attRes = await fetch(`${API}/api/attendance/student/${studentRoll}/${currentUser.rollNo}`); if (attRes.ok) records = await attRes.json(); else { const err = await attRes.json().catch(()=>({})); hideDL(); return toast(err.error || 'Failed', 'error'); } }
+    const rng = getRangeForSelection(range, month);
+    records = records.filter(r => r.date >= rng.start && r.date <= rng.end);
+    if (!records.length) { hideDL(); return toast('No records for range','error'); }
+    const totalAttended = records.filter(r => r.status === 'Present' || r.status === 'Duty Leave').length;
+    const holidaySet = new Set((globalHolidays || []).map(h => (h.date||'').split('T')[0]));
+    const tt = getTimetableForBranch(branch);
+    let totalConducted = 0;
+    let cur = new Date(rng.start + 'T00:00:00');
+    const endD = new Date(rng.end + 'T23:59:59');
+    while (cur <= endD) { const ds = fmtDate(cur); const dow = cur.getDay(); if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) { const subs = (tt[FULL_DAY_NAMES[dow]] || []).filter(s => !s.includes('Sports') && !s.includes('LIB') && !s.includes('Library')); totalConducted += subs.length; } cur.setDate(cur.getDate()+1); }
+    const pct = totalConducted > 0 ? Math.round((totalAttended/totalConducted)*100) : 0;
+    const blob = generatePDFBlob('Student Attendance Report', `${studentName} (${studentRoll})`, [`Branch: ${branch} · 5th Semester`, `Range: ${fmtDatePretty(rng.start)} → ${fmtDatePretty(rng.end)}`], ['Date', 'Subject', 'Status'], records.sort((a,b) => b.date.localeCompare(a.date)).map(r => [fmtDatePretty(r.date), r.subject, r.status]), [`Attended: ${totalAttended}    |    Conducted: ${totalConducted}    |    Percentage: ${pct}%`]);
+    hideDL();
+    if (!blob) return toast('PDF library failed to load','error');
+    const filename = `attendance_${studentRoll}_${Date.now()}.pdf`;
+    universalDownload(blob, filename);
+  } catch(e) { hideDL(); toast('Failed: ' + e.message, 'error'); }
+}
+async function generateSelfPDF(){ const range = $('pdfRangeSelect').value; const month = $('pdfMonthSelect').value; await generateIndividualPDF(currentUser.rollNo, currentUser.name, currentUser.branch || 'CSE', range, month, true); }
+
+function getTimetableForBranch(b){ const CSE = { Monday: ['BDA - Big Data Analytics','ECO - Economics for Engineers','DAA - Design & Analysis of Algorithm','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','CN - Computer Network','Sports'], Tuesday: ['WT - Web Technology','ECO - Economics for Engineers','Internet Lab (Ms. Geeta)','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','BDA - Big Data Analytics','Sports'], Wednesday: ['BDA - Big Data Analytics','ECO - Economics for Engineers','FLA - Formal Language & Automata','Sports / Activity','WT - Web Technology','CN LAB - Computer Network Lab'], Thursday: ['BDA - Big Data Analytics','WT - Web Technology','CN - Computer Network','DAA - Design & Analysis of Algorithm','DAA LAB - Algorithm Lab','HRM - Human Resource Mgmt'], Friday: ['DAA - Design & Analysis of Algorithm','CN - Computer Network','FLA - Formal Language & Automata','BDA - Big Data Analytics','WT LAB - Web Technology Lab','Sports'] }; const AIDS = { Monday: ['BDA - Big Data Analytics','ECO - Economics for Engineers','LIB - Library','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','PA - Predictive Analysis','PA - Predictive Analysis','Sports'], Tuesday: ['WT - Web Technology','ECO - Economics for Engineers','PA - Predictive Analysis','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','BDA - Big Data Analytics','ML - Machine Learning'], Wednesday: ['BDA - Big Data Analytics','ECO - Economics for Engineers','FLA - Formal Language & Automata','Sports / Project','WT - Web Technology','PA LAB - Predictive Analysis Lab'], Thursday: ['BDA - Big Data Analytics','WT - Web Technology','ML - Machine Learning','PA - Predictive Analysis','ML LAB - Machine Learning Lab','HRM - Human Resource Mgmt'], Friday: ['ML - Machine Learning','LIB - Library','FLA - Formal Language & Automata','BDA - Big Data Analytics','BDA LAB - Big Data Analytics Lab','Sports'] }; return (b && b.toUpperCase() === 'AIDS') ? AIDS : CSE; }
+function getScheduleForBranch(b){ const CSE = { 1:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'DAA - Design & Analysis of Algorithm',period:'P3'},{start:'11:35',end:'12:20',subject:'FLA - Formal Language & Automata',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'CN - Computer Network',period:'P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}], 2:[{start:'09:20',end:'10:05',subject:'WT - Web Technology',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'Internet Lab (Ms. Geeta)',period:'P3'},{start:'11:35',end:'12:20',subject:'FLA - Formal Language & Automata',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'BDA - Big Data Analytics',period:'P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}], 3:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'FLA - Formal Language & Automata',period:'P3'},{start:'11:35',end:'12:20',subject:'Sports / Activity',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'WT - Web Technology',period:'P6'},{start:'13:50',end:'15:20',subject:'CN LAB - Computer Network Lab',period:'P7-P8'}], 4:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'WT - Web Technology',period:'P2'},{start:'10:50',end:'11:35',subject:'CN - Computer Network',period:'P3'},{start:'11:35',end:'12:20',subject:'DAA - Design & Analysis of Algorithm',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'DAA LAB - Algorithm Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'HRM - Human Resource Mgmt',period:'P8'}], 5:[{start:'09:20',end:'10:05',subject:'DAA - Design & Analysis of Algorithm',period:'P1'},{start:'10:05',end:'10:50',subject:'CN - Computer Network',period:'P2'},{start:'10:50',end:'11:35',subject:'FLA - Formal Language & Automata',period:'P3'},{start:'11:35',end:'12:20',subject:'BDA - Big Data Analytics',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'WT LAB - Web Technology Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}] }; const AIDS = { 1:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'LIB - Library',period:'P3'},{start:'11:35',end:'12:20',subject:'FLA - Formal Language & Automata',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'PA - Predictive Analysis',period:'P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}], 2:[{start:'09:20',end:'10:05',subject:'WT - Web Technology',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'PA - Predictive Analysis',period:'P3'},{start:'11:35',end:'12:20',subject:'FLA - Formal Language & Automata',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'BDA - Big Data Analytics',period:'P7'},{start:'14:35',end:'15:20',subject:'ML - Machine Learning',period:'P8'}], 3:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'FLA - Formal Language & Automata',period:'P3'},{start:'11:35',end:'12:20',subject:'Sports / Project',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'WT - Web Technology',period:'P6'},{start:'13:50',end:'15:20',subject:'PA LAB - Predictive Analysis Lab',period:'P7-P8'}], 4:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'WT - Web Technology',period:'P2'},{start:'10:50',end:'11:35',subject:'ML - Machine Learning',period:'P3'},{start:'11:35',end:'12:20',subject:'PA - Predictive Analysis',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'ML LAB - Machine Learning Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'HRM - Human Resource Mgmt',period:'P8'}], 5:[{start:'09:20',end:'10:05',subject:'ML - Machine Learning',period:'P1'},{start:'10:05',end:'10:50',subject:'LIB - Library',period:'P2'},{start:'10:50',end:'11:35',subject:'FLA - Formal Language & Automata',period:'P3'},{start:'11:35',end:'12:20',subject:'BDA - Big Data Analytics',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'BDA LAB - Big Data Analytics Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}] }; return (b && b.toUpperCase() === 'AIDS') ? AIDS : CSE; }
+function initAdmin(){ const t = fmtDate(new Date()); if ($('manualDate')) $('manualDate').value = t; if ($('holidayDate')) $('holidayDate').value = t; if ($('classStart')) $('classStart').value = '2026-07-15'; if ($('classEnd')) $('classEnd').value = t; const ssm = $('singleStudentMonth'); if (ssm && !ssm.innerHTML.trim()) ssm.innerHTML = [6,7,8,9,10,11].map(m=>`<option value="${m}">${MONTH_NAMES[m]} 2026</option>`).join(''); setBranch('CSE'); loadHolidays(); }
+
+async function fetchUsers(){
+  try {
+    const res = await fetch(`${API}/api/admin/all-users/${currentUser.rollNo}`);
+    const data = await res.json();
+    const tb = $('directoryBody'); if (!tb) return;
+    if (!data || data.length === 0) return tb.innerHTML = '<tr><td colspan="6" class="empty">No users</td></tr>';
+    const students = data.filter(u => u.role === 'student').slice(0,60);
+    const summaries = await Promise.all(students.map(s => fetch(`${API}/api/student/summary/${s.rollNo}`).then(r=>r.json()).catch(()=>null)));
+    const sumMap = {}; students.forEach((s,i) => { if (summaries[i]) sumMap[s.rollNo] = summaries[i]; });
+    tb.innerHTML = data.sort((a,b)=>a.rollNo.localeCompare(b.rollNo,undefined,{numeric:true})).map(u => {
+      const rb = u.role === 'admin' ? '<span class="badge badge-warning">Admin</span>' : u.role === 'faculty' ? '<span class="badge badge-info">Faculty</span>' : '<span class="badge badge-neutral">Student</span>';
+      const dev = u.boundDeviceName || (u.boundDeviceId ? '<span class="badge badge-success">Bound</span>' : '<span class="badge badge-neutral">—</span>');
+      let att = '—'; if (u.role === 'student' && sumMap[u.rollNo]) { const s = sumMap[u.rollNo]; att = `${s.totalAcademicLectures||0}/${s.totalConductedLectures||0} (${s.attendancePercentage||0}%)`; }
+      return `<tr><td><b>${u.rollNo}</b></td><td>${u.name}</td><td>${rb}</td><td>${dev}</td><td>${att}</td><td>${u.role === 'student' ? `<button class="btn btn-outline btn-xs" onclick="viewStudentRecords('${u.rollNo}')">View</button>` : ''}</td></tr>`;
+    }).join('');
+    const s2 = data.filter(u => u.role === 'student');
+    ['singleStudentSelect','reportStudentSelect'].forEach(id => { const el = $(id); if (el) el.innerHTML = '<option value="">Select Student…</option>' + s2.map(s => `<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`).join(''); });
+    const teachers = data.filter(u => u.role === 'faculty'); const ts = $('assignTeacher'); if (ts) ts.innerHTML = '<option value="">Select Teacher…</option>' + teachers.map(t => `<option value="${t.rollNo}">${t.rollNo} - ${t.name}</option>`).join('');
+  } catch(e){ if ($('directoryBody')) $('directoryBody').innerHTML = '<tr><td colspan="6" class="empty">Network error</td></tr>'; }
+}
+async function viewStudentRecords(r){ try { const res = await fetch(`${API}/api/attendance/student/${r}/${currentUser.rollNo}`); const data = await res.json(); if (!res.ok) return toast(data.error || 'Failed','error'); const g = {}; data.forEach(x => { if (!g[x.date]) g[x.date] = []; g[x.date].push(x); }); const dates = Object.keys(g).sort((a,b)=>b.localeCompare(a)); let html = `<div class="modal-backdrop open safe-top-modal" id="viewRecordsModal"><div class="modal wide"><div class="modal-header"><div><h3>Attendance – ${r}</h3><p class="text-xs text-muted" style="margin-top:4px;">${data.length} records</p></div><button type="button" class="modal-close" onclick="document.getElementById('viewRecordsModal').remove()">✕</button></div><div class="modal-body">`; dates.forEach(d => { html += `<div style="margin-bottom:16px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><b>${fmtDatePretty(d)}</b><button class="btn btn-danger btn-xs" onclick="deleteAllDate('${r}','${d}')">Delete All</button></div>`; g[d].forEach(x => { html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--slate-50);border-radius:8px;margin:4px 0;font-size:12px;"><div>${x.subject} <span class="badge badge-success">${x.status}</span></div><button class="btn btn-danger btn-xs" onclick="deleteRecord('${x._id}')">Del</button></div>`; }); html += `</div>`; }); html += `</div></div></div>`; const div = document.createElement('div'); div.innerHTML = html; document.body.appendChild(div.firstElementChild); } catch(e){ toast('Failed','error'); } }
+async function deleteRecord(id){ if (!confirm('Delete?')) return; try { const res = await fetch(`${API}/api/attendance/delete/${id}/${currentUser.rollNo}`, {method:'DELETE'}); if (res.ok) { toast('Deleted','success'); const m = $('viewRecordsModal'); if (m) m.remove(); loadAllAttendance(); } } catch(e){} }
+async function deleteAllDate(r, d){ if (!confirm('Delete all records for this date?')) return; try { const res = await fetch(`${API}/api/attendance/delete-day/${r}/${d}/${currentUser.rollNo}`, {method:'DELETE'}); if (res.ok) { toast('Deleted','success'); const m = $('viewRecordsModal'); if (m) m.remove(); loadAllAttendance(); } } catch(e){} }
+async function loadAllAttendance(){ try { const res = await fetch(`${API}/api/attendance/all/${currentUser.rollNo}`); const data = await res.json(); const fr = ($('filterRoll').value||'').toUpperCase(); const fd = $('filterDate').value; let filtered = data; if (fr) filtered = filtered.filter(r => r.rollNo.includes(fr)); if (fd) filtered = filtered.filter(r => r.date === fd); const tb = $('allAttendanceBody'); if (!tb) return; if (filtered.length === 0) return tb.innerHTML = '<tr><td colspan="7" class="empty">No records</td></tr>'; window._allRecords = filtered; tb.innerHTML = filtered.slice(0,200).map(r => `<tr><td><input type="checkbox" class="rec-cb" data-id="${r._id}"></td><td>${fmtDatePretty(r.date)}</td><td><b>${r.rollNo}</b></td><td>${r.studentName||''}</td><td>${r.subject}</td><td><span class="badge ${r.status==='Present'?'badge-success':r.status==='Duty Leave'?'badge-warning':'badge-danger'}">${r.status}</span></td><td><button class="btn btn-danger btn-xs" onclick="deleteRecord('${r._id}')">Del</button></td></tr>`).join(''); } catch(e){ if ($('allAttendanceBody')) $('allAttendanceBody').innerHTML = '<tr><td colspan="7" class="empty">Network error</td></tr>'; } observeNewContent(); }
+function toggleAll(){ document.querySelectorAll('.rec-cb').forEach(cb => cb.checked = $('selectAll').checked); }
+async function deleteSelected(){ const ids = Array.from(document.querySelectorAll('.rec-cb:checked')).map(cb => cb.dataset.id); if (!ids.length) return toast('Select records','error'); if (!confirm(`Delete ${ids.length}?`)) return; let ok = 0; for (const id of ids) { try { const r = await fetch(`${API}/api/attendance/delete/${id}/${currentUser.rollNo}`, {method:'DELETE'}); if (r.ok) ok++; } catch(e){} } toast(`Deleted ${ok}`,'success'); loadAllAttendance(); }
+function initReports(){ const s = $('singleStudentMonth'); if (s && !s.innerHTML.trim()) s.innerHTML = [6,7,8,9,10,11].map(m=>`<option value="${m}">${MONTH_NAMES[m]} 2026</option>`).join(''); }
+function toggleSingleMonth(){ const el = $('singleStudentMonth'); if (el) el.style.display = $('singleStudentRange').value === 'SELECTED_MONTH' ? 'block' : 'none'; }
+function downloadSingle(){ const roll = $('singleStudentSelect').value; if (!roll) return toast('Select student','error'); const range = $('singleStudentRange').value; const month = $('singleStudentMonth').value; toast('Downloading CSV…','info'); window.location.href = `${API}/api/export/student-attendance/${currentUser.rollNo}?studentRollNo=${roll}&range=${range}&month=${month}`; }
+async function generateClassReport(){
+  const s = $('classStart').value, e = $('classEnd').value, b = $('classBranch').value;
+  if (!s || !e) return toast('Select dates','error');
+  showDL('Generating…');
+  try {
+    const url = `${API}/api/admin/class-attendance-report?requesterRollNo=${currentUser.rollNo}&startDate=${s}&endDate=${e}&branch=${b}`;
+    const data = await fetch(url).then(r=>r.json());
+    if (!data.students || data.students.length === 0) { hideDL(); return toast('No students','error'); }
+    const rows = data.students.map((x,i)=>[i+1, x.rollNo, x.name, x.totalPresent, x.percentage+'%']);
+    const blob = generatePDFBlob('Class Attendance Report', `${b === 'ALL' ? 'All Branches' : b} – 5th Semester`, [`Range: ${fmtDatePretty(s)} to ${fmtDatePretty(e)}`], ['S.No', 'Roll', 'Name', 'Present', '%'], rows, null);
+    hideDL();
+    if (!blob) return toast('PDF library failed','error');
+    universalDownload(blob, `class_report_${b}_${Date.now()}.pdf`);
+  } catch(e){ hideDL(); toast('Failed: ' + e.message,'error'); }
+}
+function toggleAdminReportRange(){ const e = $('adminReportMonth'); if (e) e.style.display = $('adminReportRange').value === 'SELECTED_MONTH' ? 'block' : 'none'; }
+async function exportGrid(){ const r = window._allRecords || await fetch(`${API}/api/attendance/all/${currentUser.rollNo}`).then(x=>x.json()); const sel = $('exportRange').value; const hol = await fetch(`${API}/api/holidays`).then(x=>x.json()); const hS = new Set(hol.map(h => (h.date||'').split('T')[0])); const start = sel === 'ALL_SEMESTER' ? new Date(2026,6,15) : new Date(2026, parseInt(sel), 1); let end = sel === 'ALL_SEMESTER' ? new Date(2026,11,31) : new Date(2026, parseInt(sel)+1, 0); const today = new Date(); if (end > today) end = today; const days = []; let cur = new Date(start); while (cur <= end) { days.push(fmtDate(cur)); cur.setDate(cur.getDate()+1); } const bs = {}; r.forEach(x => { if (!bs[x.rollNo]) bs[x.rollNo] = { name: x.studentName||'', dates: {} }; if (!bs[x.rollNo].dates[x.date]) bs[x.rollNo].dates[x.date] = []; bs[x.rollNo].dates[x.date].push(x.status); }); let csv = 'Roll,Name,' + days.map(d => `${d}`).join(',') + ',Total\n'; Object.keys(bs).sort().forEach(roll => { const s = bs[roll]; let total = 0, row = `"${roll}","${s.name}"`; days.forEach(d => { const dow = new Date(d).getDay(); if (dow === 0 || dow === 6) { row += ',OFF'; return; } if (hS.has(d)) { row += ',H'; return; } const st = s.dates[d] || []; if (st.some(x => x === 'Present' || x === 'Duty Leave')) { row += ',P'; total++; } else row += ',A'; }); row += `,${total}`; csv += row + '\n'; }); download(csv, `attendance_grid.csv`); }
+async function generateStudentReport(f){ const r = $('reportStudentSelect').value; if (!r) return toast('Select student','error'); const rng = $('adminReportRange').value; const m = $('adminReportMonth').value; if (f === 'pdf') { let sn = r, b = 'CSE'; try { const pR = await fetch(`${API}/api/student/profile/${r}`); if (pR.ok) { const p = await pR.json(); sn = p.name || r; b = p.branch || 'CSE'; } } catch(e){} await generateIndividualPDF(r, sn, b, rng, m, false); } else { const recs = await fetch(`${API}/api/attendance/student/${r}/${currentUser.rollNo}`).then(x=>x.json()); if (!recs || !recs.length) return toast('No records','error'); const r2 = getRangeForSelection(rng, m); const filtered = recs.filter(x => x.date >= r2.start && x.date <= r2.end); let csv = `Student Report\nStudent: ${r}\nRange: ${r2.start} to ${r2.end}\n\nDate,Subject,Status\n`; filtered.forEach(x => { csv += `${x.date},${x.subject},${x.status}\n`; }); download(csv, `report_${r}_${rng}.csv`); } }
+function initEntry(){ setBranch(currentManualBranch); if ($('manualDate')) $('manualDate').value = fmtDate(new Date()); loadBulkStudents(); }
+function setBranch(b){ currentManualBranch = b; if ($('branchCSE')) $('branchCSE').className = 'btn ' + (b === 'CSE' ? 'btn-primary' : 'btn-outline') + ' btn-sm'; if ($('branchAIDS')) $('branchAIDS').className = 'btn ' + (b === 'AIDS' ? 'btn-primary' : 'btn-outline') + ' btn-sm'; loadSubjects(); }
+function loadSubjects(){ const date = $('manualDate').value; if (!date) return; const d = new Date(date); const dayName = FULL_DAY_NAMES[d.getDay()]; const subs = (getTimetableForBranch(currentManualBranch)[dayName] || []).filter(s => !s.includes('Sports') && !s.includes('LIB') && !s.includes('Library')); if ($('subjectCheckboxes')) $('subjectCheckboxes').innerHTML = `<label style="grid-column:span 2;display:flex;align-items:center;gap:8px;padding:9px;background:var(--slate-100);border-radius:9px;font-size:11.5px;font-weight:700;cursor:pointer;"><input type="checkbox" onchange="selectAllSubjects(this.checked)"> Select All (${subs.length})</label>` + subs.map(s => `<label style="display:flex;align-items:center;gap:8px;padding:7px 11px;background:var(--slate-50);border-radius:7px;font-size:11.5px;cursor:pointer;"><input type="checkbox" class="sub-cb" value="${s}"> ${s}</label>`).join(''); validateBranch(); }
+function selectAllSubjects(v){ document.querySelectorAll('.sub-cb').forEach(cb => cb.checked = v); }
+async function validateBranch(){ const r = ($('manualRoll').value||'').toUpperCase(); if (!r) return; try { const p = await fetch(`${API}/api/student/profile/${r}`).then(x=>x.json()); if (p.branch && p.branch !== currentManualBranch) toast(`Warning: Student is in ${p.branch}`,'error'); } catch(e){} }
+async function markManual(){ const r = ($('manualRoll').value||'').trim().toUpperCase(); if (!r) return toast('Enter roll no','error'); const d = $('manualDate').value; const subs = Array.from(document.querySelectorAll('.sub-cb:checked')).map(cb => cb.value); if (!subs.length) return toast('Select subjects','error'); try { const res = await fetch(`${API}/api/admin/manual-attendance-bulk`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, studentRollNo: r, date: d, subjects: subs, status: $('manualStatus').value})}); const x = await res.json(); if (res.ok) { showFeedback('success','Marked',x.message||'Attendance marked.'); sendPushNotification('✅ Attendance Marked', `${r} — ${subs.length} subject(s)`, { type: 'admin_mark' }); selectAllSubjects(false); } else showFeedback('error','Failed',x.error||'Could not mark'); } catch(e){ showFeedback('error','Network Error',e.message); } }
+function markAllForDay(){ selectAllSubjects(true); markManual(); }
+
+async function loadBulkStudents(){
+  const b = $('bulkBranch').value;
+  try {
+    const data = await fetch(`${API}/api/admin/all-users/${currentUser.rollNo}`).then(x=>x.json());
+    const students = data.filter(u => u.role === 'student' && (u.branch === b || u.rollNo.startsWith(b === 'CSE' ? '24CSE' : '24AIDS')));
+    if ($('bulkStudents')) {
+      const sorted = students.sort((a,b) => a.rollNo.localeCompare(b.rollNo, undefined, {numeric: true}));
+      $('bulkStudents').innerHTML = `<label class="bulk-select-item" style="font-weight:700;border-bottom:1px solid var(--slate-200);margin-bottom:6px;padding-bottom:8px;"><input type="checkbox" onchange="document.querySelectorAll('.bulk-stu').forEach(c=>c.checked=this.checked)"><span class="bulk-name" style="font-weight:700;color:var(--slate-900);">Select All (${sorted.length})</span></label>` + sorted.map(s => `<label class="bulk-select-item"><input type="checkbox" class="bulk-stu" value="${escapeHtml(s.rollNo)}" data-name="${escapeHtml(s.name)}"><span class="bulk-roll">${escapeHtml(s.rollNo)}</span><span class="bulk-name">${escapeHtml(s.name)}</span></label>`).join('');
+    }
+  } catch(e){ console.error('loadBulkStudents error:', e); }
+}
+function addBulkDate(){ const d = $('bulkDate').value; if (!d) return toast('Select date','error'); if (selectedBulkDates.includes(d)) return toast('Already added','error'); selectedBulkDates.push(d); renderBulkDates(); }
+function renderBulkDates(){ if ($('bulkDates')) $('bulkDates').innerHTML = selectedBulkDates.map(d => `<span class="chip">${fmtDatePretty(d)} <span onclick="removeBulkDate('${d}')" style="cursor:pointer;color:var(--rose-600);font-weight:800;">×</span></span>`).join(''); }
+function removeBulkDate(d){ selectedBulkDates = selectedBulkDates.filter(x=>x!==d); renderBulkDates(); }
+async function bulkMarkPreview(){ const students = Array.from(document.querySelectorAll('.bulk-stu:checked')).map(cb => ({roll: cb.value, name: cb.dataset.name})); if (!students.length) return toast('Select students','error'); if (!selectedBulkDates.length) return toast('Add dates','error'); let s = `<div style="margin-bottom:14px;padding:14px;background:var(--brand-50);border:1px solid var(--brand-200);border-radius:10px;"><div style="font-size:13.5px;font-weight:800;color:var(--brand-900);">Summary</div><div style="font-size:12.5px;color:var(--brand-700);margin-top:5px;"><b>${students.length}</b> students × <b>${selectedBulkDates.length}</b> dates</div></div>`; s += `<div style="max-height:200px;overflow-y:auto;border:1px solid var(--slate-200);border-radius:10px;padding:8px;">`; students.forEach(st => { s += `<div class="present-row" style="padding:6px 10px;"><b>${escapeHtml(st.roll)}</b><span>${escapeHtml(st.name)}</span></div>`; }); s += `</div>`; $('bulkMarkSummary').innerHTML = s; pendingBulkAction = { type: 'mark', students: students.map(x=>x.roll) }; openModal('bulkMarkModal'); }
+async function confirmBulkMark(){ if (!pendingBulkAction || pendingBulkAction.type !== 'mark') return; closeModal('bulkMarkModal'); showDL('Marking…'); try { const res = await fetch(`${API}/api/admin/bulk-mark-attendance`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, studentRollNos: pendingBulkAction.students, dates: selectedBulkDates, subjects: []})}); const d = await res.json(); hideDL(); if (res.ok) { showFeedback('success','Bulk Marked',d.message||'Attendance marked.'); sendPushNotification('✅ Bulk Marked', `${pendingBulkAction.students.length} students × ${selectedBulkDates.length} dates`, { type: 'bulk_mark' }); } else showFeedback('error','Failed',d.error||'Could not mark'); } catch(e){ hideDL(); showFeedback('error','Network Error',e.message); } pendingBulkAction = null; }
+async function bulkDeletePreview(){ const students = Array.from(document.querySelectorAll('.bulk-stu:checked')).map(cb => ({roll: cb.value, name: cb.dataset.name})); if (!students.length) return toast('Select students','error'); if (!selectedBulkDates.length) return toast('Add dates','error'); let s = `<div style="margin-bottom:14px;padding:14px;background:var(--rose-50);border:1px solid #fecdd3;border-radius:10px;"><div style="font-size:13.5px;font-weight:800;color:var(--rose-700);">Confirm Delete</div><div style="font-size:12.5px;color:var(--rose-700);margin-top:5px;"><b>${students.length}</b> students × <b>${selectedBulkDates.length}</b> dates</div></div>`; $('bulkDeleteSummary').innerHTML = s; pendingBulkAction = { type: 'delete', students: students.map(x=>x.roll) }; openModal('bulkDeleteModal'); }
+async function confirmBulkDelete(){ if (!pendingBulkAction || pendingBulkAction.type !== 'delete') return; closeModal('bulkDeleteModal'); showDL('Deleting…'); try { const res = await fetch(`${API}/api/admin/bulk-delete-attendance`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, studentRollNos: pendingBulkAction.students, dates: selectedBulkDates})}); const d = await res.json(); hideDL(); if (res.ok) showFeedback('success','Deleted',d.message||'Records deleted.'); else showFeedback('error','Failed',d.error||'Could not delete'); } catch(e){ hideDL(); showFeedback('error','Network Error',e.message); } pendingBulkAction = null; }
+async function loadHolidays(){ try { const data = await ensureHolidays(); selectedHolidayDates.clear(); if ($('holidayList')) $('holidayList').innerHTML = data.length ? data.map(h => { const d = (h.date||'').split('T')[0]; return `<div class="holiday-row"><label style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;min-width:0;"><input type="checkbox" class="holiday-cb" value="${d}" onchange="toggleHolidaySelect('${d}', this.checked)"> <b>${fmtDatePretty(d)}</b> · ${h.reason}</label><button class="btn btn-danger btn-xs" onclick="deleteHoliday('${d}')">Delete</button></div>`; }).join('') : '<div class="empty">No holidays</div>'; } catch(e){} observeNewContent(); }
+function toggleHolidaySelect(d, c){ if (c) selectedHolidayDates.add(d); else selectedHolidayDates.delete(d); }
+async function deleteSelectedHolidays(){ if (selectedHolidayDates.size === 0) return toast('Select holidays','error'); if (!confirm(`Delete ${selectedHolidayDates.size}?`)) return; showDL('Deleting…'); let ok = 0; for (const d of selectedHolidayDates) { try { const res = await fetch(`${API}/api/admin/holiday/${d}`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})}); if (res.ok) ok++; } catch(e){} } hideDL(); toast(`Deleted ${ok}`,'success'); globalHolidays = []; await ensureHolidays(); loadHolidays(); }
+async function declareHoliday(){ const d = $('holidayDate').value, r = $('holidayReason').value.trim(); if (!d || !r) return toast('Enter date and reason','error'); try { const res = await fetch(`${API}/api/admin/holiday`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, date: d, reason: r})}); const x = await res.json(); if (res.ok) { showFeedback('success','Holiday Declared',`${fmtDatePretty(d)} — ${r}`); $('holidayReason').value = ''; globalHolidays = []; await ensureHolidays(); loadHolidays(); } else showFeedback('error','Failed',x.error||'Could not declare'); } catch(e){ showFeedback('error','Network Error',e.message); } }
+async function deleteHoliday(d){ if (!confirm('Delete?')) return; try { await fetch(`${API}/api/admin/holiday/${d}`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})}); toast('Deleted','success'); globalHolidays = []; await ensureHolidays(); loadHolidays(); } catch(e){} }
+function addBulkHolidayRange(){ const f = $('bulkHolidayFrom').value, t = $('bulkHolidayTo').value; if (!f || !t) return toast('Select both dates','error'); if (f > t) return toast('Start must be before end','error'); const dates = []; let cur = new Date(f + 'T00:00:00'); const end = new Date(t + 'T00:00:00'); while (cur <= end) { dates.push(fmtDate(cur)); cur.setDate(cur.getDate()+1); } const ta = $('bulkHolidayText'); const ex = ta.value.split('\n').map(s=>s.trim()).filter(Boolean); const merged = [...new Set([...ex, ...dates])]; ta.value = merged.join('\n'); toast(`Added ${dates.length} dates`,'success'); }
+async function submitBulkHolidays(){ const text = $('bulkHolidayText').value; const dates = text.split('\n').map(s=>s.trim()).filter(s => /^\d{4}-\d{2}-\d{2}$/.test(s)); if (!dates.length) return toast('No valid dates','error'); if (!confirm(`Add ${dates.length} holidays?`)) return; showDL('Adding…'); let ok = 0, fail = 0; for (const d of dates) { try { const res = await fetch(`${API}/api/admin/holiday`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, date: d, reason: 'Bulk Holiday'})}); if (res.ok) ok++; else fail++; } catch(e){ fail++; } } hideDL(); showFeedback(ok?'success':'error','Bulk Holidays',`${ok} added${fail ? ', ' + fail + ' skipped' : ''}.`); $('bulkHolidayText').value = ''; globalHolidays = []; await ensureHolidays(); loadHolidays(); }
+const PASSCODE_CACHE_KEY = 'BM_PASSCODE_CACHE';
+function getPasscodeCache() { try { return JSON.parse(localStorage.getItem(PASSCODE_CACHE_KEY) || '{}'); } catch(e) { return {}; } }
+function setPasscodeCache(type, p, e) { const c = getPasscodeCache(); c[type] = { passcode: p, expiresAt: e }; localStorage.setItem(PASSCODE_CACHE_KEY, JSON.stringify(c)); }
+async function loadPasscodes() { const today = fmtDate(new Date()); const st = await checkDateStatus(today); const cb = $('passcodeClosedBanner'), ct = $('passcodeClosedText'), fdC = $('fullDayPasscodeCard'), slC = $('singlePasscodeCard'); if (st.isBlocked) { if (cb) cb.style.display = 'flex'; if (ct) { if (st.type === 'WEEKEND') ct.textContent = `${st.dayName} — College Closed.`; else ct.textContent = `Holiday — ${st.holiday || 'Closed'}.`; } if (fdC) fdC.style.display = 'none'; if (slC) slC.style.display = 'none'; return; } if (cb) cb.style.display = 'none'; if (fdC) fdC.style.display = 'block'; if (slC) slC.style.display = 'block'; const cache = getPasscodeCache(); const now = Date.now(); const fd = cache['full_day'], sl = cache['single_lecture']; if (fd && new Date(fd.expiresAt).getTime() > now) { $('fdPasscode').textContent = fd.passcode; $('fdPasscode').classList.remove('empty'); $('fdPasscodeDisplay').classList.add('valid'); } else { $('fdPasscode').textContent = '— — — — —'; $('fdPasscode').classList.add('empty'); $('fdPasscodeDisplay').classList.remove('valid'); } if (sl && new Date(sl.expiresAt).getTime() > now) { $('slPasscode').textContent = sl.passcode; $('slPasscode').classList.remove('empty'); $('slPasscodeDisplay').classList.add('valid'); } else { $('slPasscode').textContent = '— — — —'; $('slPasscode').classList.add('empty'); $('slPasscodeDisplay').classList.remove('valid'); } }
+async function genPass(type, force){ const today = fmtDate(new Date()); const st = await checkDateStatus(today); if (st.isBlocked) return toast(st.type === 'WEEKEND' ? `${st.dayName} — closed.` : `Holiday — closed.`, 'error'); const label = type === 'full_day' ? 'Full Day' : 'Lecture'; if (force && !confirm(`Change ${label} Passcode?`)) return; try { const res = await fetch(`${API}/api/admin/generate-passcode`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, type, force: !!force }) }); const d = await res.json(); if (!res.ok) return toast(d.error || 'Failed', 'error'); setPasscodeCache(type, d.passcode, d.expiresAt); if (type === 'full_day') { $('fdPasscode').textContent = d.passcode; $('fdPasscode').classList.remove('empty'); $('fdPasscodeDisplay').classList.add('valid'); } else { $('slPasscode').textContent = d.passcode; $('slPasscode').classList.remove('empty'); $('slPasscodeDisplay').classList.add('valid'); } toast(force ? `${label} changed!` : `${label} generated!`, 'success'); } catch(e) { toast('Network error', 'error'); } }
+async function publishPasscode(){ const type = $('pubPassType').value; const dm = parseInt($('pubPassDuration').value) || 30; if (!confirm(`Publish ${type.replace('_',' ')} for ${dm} min?`)) return; try { const res = await fetch(`${API}/api/admin/generate-passcode`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, type, publish: true, durationMinutes: dm }) }); const d = await res.json(); if (!res.ok) return toast(d.error || 'Failed', 'error'); setPasscodeCache(type, d.passcode, d.expiresAt); showFeedback('success','Passcode Published',`Students can now see this passcode.\n\nPasscode: ${d.passcode}\nValid for ${dm} minutes.`); if (type === 'full_day') { $('fdPasscode').textContent = d.passcode; $('fdPasscode').classList.remove('empty'); $('fdPasscodeDisplay').classList.add('valid'); $('fdPasscodeMeta').textContent = `Published · expires ${new Date(d.expiresAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`; } else { $('slPasscode').textContent = d.passcode; $('slPasscode').classList.remove('empty'); $('slPasscodeDisplay').classList.add('valid'); $('slPasscodeMeta').textContent = `Published · expires ${new Date(d.expiresAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`; } } catch(e) { toast('Network error', 'error'); } }
+async function fixAllAttendanceSubjects(isTest){ const tr = isTest ? ($('fixAllTestRoll').value || '').trim().toUpperCase() : ''; if (isTest && !tr) return toast('Test roll required','error'); if (!confirm(isTest ? `Test on ${tr}?` : 'DESTRUCTIVE! Continue?')) return; const se = $('fixAllStatus'), re = $('fixAllReport'); se.textContent = isTest ? `Testing ${tr}…` : 'Scanning…'; re.innerHTML = ''; showDL(isTest ? `Testing ${tr}…` : 'Fixing…'); try { const body = { requesterRollNo: currentUser.rollNo }; if (isTest) body.testRollNo = tr; const res = await fetch(`${API}/api/admin/fix-all-attendance-subjects`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); const d = await res.json(); hideDL(); if (!res.ok) { se.textContent = '❌ ' + (d.error || 'Failed'); return toast(d.error || 'Failed', 'error'); } se.textContent = d.message || 'Done'; let html = `<div style="background:#fff;border:1px solid var(--slate-200);border-radius:10px;padding:14px;font-size:12px;"><div style="font-weight:800;margin-bottom:10px;">${isTest ? 'Test: ' + tr : 'Summary'}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px;background:var(--slate-50);border-radius:8px;"><div>${d.totalStudents || 0} scanned</div><div>${d.removed || 0} removed</div><div>${d.added || 0} added</div><div>${d.renamed || 0} renamed</div><div>${d.deduplicated || 0} deduped</div></div></div>`; re.innerHTML = html; toast(isTest ? `Test done` : `Fix done`, 'success'); if (!isTest) { globalHolidays = []; await ensureHolidays(); if (typeof fetchUsers === 'function') fetchUsers(); } } catch(e) { hideDL(); se.textContent = '❌ ' + e.message; toast('Error: ' + e.message, 'error'); } }
+function initTools(){ toggleFacultyFields(); populateFacultySubjects(); populateAssignSubjects(); loadTeachersForAssign(); loadBulkResetStudents(); }
+function toggleFacultyFields(){ const r = $('toolRole').value; $('facultyFields').style.display = r === 'faculty' ? 'block' : 'none'; if (r === 'faculty') { $('toolRoll').disabled = true; $('toolRoll').value = 'AUTO'; } else { $('toolRoll').disabled = false; $('toolRoll').value = ''; } }
+async function populateFacultySubjects(){ try { const data = await fetch(`${API}/api/timetable/subjects`).then(x=>x.json()); const allowed = ['BDA - Big Data Analytics','ECO - Economics for Engineers','DAA - Design & Analysis of Algorithm','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','CN - Computer Network','WT - Web Technology','Internet Lab (Ms. Geeta)','CN LAB - Computer Network Lab','DAA LAB - Algorithm Lab','WT LAB - Web Technology Lab','PA - Predictive Analysis','ML - Machine Learning','PA LAB - Predictive Analysis Lab','ML LAB - Machine Learning Lab','BDA LAB - Big Data Analytics Lab']; $('facultySubject').innerHTML = '<option value="">Select Subject…</option>' + data.filter(s=>allowed.includes(s)).map(s => `<option value="${s}">${s}</option>`).join(''); $('facultySubject').onchange = function(){ const n = FACULTY_NAME_MAP[this.value]; if (n) $('toolName').value = n; }; } catch(e){} }
+async function populateAssignSubjects(){ try { const data = await fetch(`${API}/api/timetable/subjects`).then(x=>x.json()); const el = $('assignSubject'); if (el) el.innerHTML = '<option value="">Select Subject…</option>' + data.map(s => `<option value="${s}">${s}</option>`).join(''); } catch(e){} }
+async function loadTeachersForAssign(){ try { const data = await fetch(`${API}/api/admin/all-users/${currentUser.rollNo}`).then(x=>x.json()); const teachers = data.filter(u => u.role === 'faculty'); const el = $('assignTeacher'); if (el) el.innerHTML = '<option value="">Select Teacher…</option>' + teachers.map(t => `<option value="${t.rollNo}">${t.rollNo} - ${t.name}</option>`).join(''); } catch(e){} }
+
+async function loadBulkResetStudents() {
+  try {
+    const data = await fetch(`${API}/api/admin/all-users/${currentUser.rollNo}`).then(x => x.json());
+    const students = data.filter(u => u.role === 'student').sort((a,b) => a.rollNo.localeCompare(b.rollNo, undefined, {numeric: true}));
+    const el = $('bulkResetStudents');
+    if (el) el.innerHTML = students.map(s => `<label class="bulk-select-item"><input type="checkbox" class="bulk-reset-stu" value="${escapeHtml(s.rollNo)}"><span class="bulk-roll">${escapeHtml(s.rollNo)}</span><span class="bulk-name">${escapeHtml(s.name)}</span></label>`).join('');
+  } catch(e){}
+}
+function onBulkResetScopeChange() {
+  const v = $('bulkResetScope').value;
+  $('bulkResetSelectedWrap').style.display = v === 'SELECTED' ? 'block' : 'none';
+}
+async function executeBulkDeviceReset() {
+  const scope = $('bulkResetScope').value;
+  let rolls = [];
+  if (scope === 'SELECTED') {
+    rolls = Array.from(document.querySelectorAll('.bulk-reset-stu:checked')).map(cb => cb.value);
+    if (!rolls.length) return toast('Select at least 1 student', 'error');
+  }
+  const scopeLabel = scope === 'ALL' ? 'ALL students' : scope === 'SELECTED' ? `${rolls.length} selected students` : `all ${scope} students`;
+  if (!confirm(`Reset device for ${scopeLabel}?\n\nAll selected students will need to login fresh from any device.`)) return;
+  showDL('Resetting devices…');
+  try {
+    const res = await fetch(`${API}/api/admin/bulk-reset-device`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requesterRollNo: currentUser.rollNo, scope, rollNos: rolls })
+    });
+    const d = await res.json();
+    hideDL();
+    if (res.ok) {
+      showFeedback('success', 'Devices Reset', d.message || `Reset complete. ${d.resetCount || 0} student(s) unlocked.`);
+      loadBulkResetStudents();
+      if (typeof fetchUsers === 'function') fetchUsers();
+    } else showFeedback('error', 'Failed', d.error || 'Bulk reset failed');
+  } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
+}
+
+async function adminLookupStudent(){
+  const roll = ($('adminLookupRoll').value || '').trim().toUpperCase();
+  const out = $('adminLookupResult');
+  if (!roll) return toast('Enter roll no', 'error');
+  out.innerHTML = '<div class="empty"><div class="spinner" style="margin:0 auto 8px;"></div>Loading…</div>';
+  try {
+    const res = await fetch(`${API}/api/student/summary/${roll}`);
+    const d = await res.json();
+    if (!res.ok) { out.innerHTML = `<div class="empty">${escapeHtml(d.error || 'Student not found')}</div>`; return; }
+    const subjRows = Object.entries(d.subjectStats || {}).map(([s, st]) => {
+      const cls = st.percentage >= 75 ? 'good' : 'bad';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--slate-50);border-radius:8px;margin-bottom:4px;font-size:12px;gap:8px;">
+        <span style="font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.substring(0, 24))}</span>
+        <span class="chip ${cls}" style="padding:2px 8px;font-size:10px;flex-shrink:0;">${st.percentage}% (${st.present}/${st.total})</span>
+      </div>`;
+    }).join('');
+    const pctCls = d.attendancePercentage >= 75 ? 'good' : 'bad';
+    out.innerHTML = `
+      <div style="padding:14px;border:1px solid var(--slate-200);border-radius:12px;background:#fff;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;">
+          <div style="font-weight:800;font-size:14px;">${escapeHtml(roll)}</div>
+          <div class="stat-value ${pctCls}" style="font-size:22px;">${d.attendancePercentage}%</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;font-size:11.5px;color:var(--slate-600);">
+          <div>Attended: <b style="color:var(--slate-900);">${d.totalAcademicLectures || 0}</b></div>
+          <div>Conducted: <b style="color:var(--slate-900);">${d.totalConductedLectures || 0}</b></div>
+          <div>Days Present: <b style="color:var(--slate-900);">${d.daysPresent || 0}</b></div>
+          <div>Working Days: <b style="color:var(--slate-900);">${d.workingDaysSoFar || 0}</b></div>
+        </div>
+        <div class="section-title" style="font-size:10px;margin-top:10px;">📚 Subject-wise</div>
+        ${subjRows || '<div class="text-xs text-muted">No subject data</div>'}
+      </div>`;
+  } catch(e) {
+    out.innerHTML = `<div class="empty">Network error: ${escapeHtml(e.message)}</div>`;
+  }
+  observeNewContent();
+}
+
+async function assignSubject(){ const t = $('assignTeacher').value, s = $('assignSubject').value; if (!t || !s) return toast('Select teacher & subject','error'); try { const res = await fetch(`${API}/api/admin/assign-subject`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, teacherRollNo: t, subject: s})}); const d = await res.json(); if (res.ok) showFeedback('success','Assigned','Subject assigned to teacher.'); else showFeedback('error','Failed',d.error||'Could not assign'); } catch(e){ showFeedback('error','Network Error',e.message); } }
+async function removeSubject(){ const t = $('assignTeacher').value, s = $('assignSubject').value; if (!t || !s) return toast('Select teacher & subject','error'); try { const res = await fetch(`${API}/api/admin/remove-subject`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, teacherRollNo: t, subject: s})}); const d = await res.json(); if (res.ok) showFeedback('success','Removed','Subject assignment removed.'); else showFeedback('error','Failed',d.error||'Could not remove'); } catch(e){ showFeedback('error','Network Error',e.message); } }
+async function registerUser(){ const n = $('toolName').value.trim(); const r = $('toolRoll').value.trim().toUpperCase(); const p = $('toolPassword').value.trim() || '123456'; const role = $('toolRole').value; const sub = role === 'faculty' ? $('facultySubject').value : null; if (!n) return toast('Enter name','error'); if (role === 'faculty' && !sub) return toast('Select subject','error'); try { const res = await fetch(`${API}/api/auth/register`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n, rollNo: r, password: p, role, subject: sub})}); const d = await res.json(); if (res.ok) { showFeedback('success','Registered',`Account created: ${d.rollNo || r}`); $('toolName').value=''; $('toolRoll').value=''; fetchUsers(); } else showFeedback('error','Failed',d.error||'Could not register'); } catch(e){ showFeedback('error','Network Error',e.message); } }
+async function resetDevice(){ const r = $('resetDeviceRoll').value.trim().toUpperCase(); if (!r) return toast('Enter roll','error'); try { const res = await fetch(`${API}/api/admin/reset-device`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, targetRollNo: r})}); const d = await res.json(); if (res.ok) { showFeedback('success','Device Reset',`${r} device binding removed.`); $('resetDeviceRoll').value = ''; } else showFeedback('error','Failed',d.error||'Could not reset'); } catch(e){ showFeedback('error','Network Error',e.message); } }
+async function postNotice(){ const m = $('noticeMsg').value.trim(); if (!m) return toast('Enter text','error'); try { const res = await fetch(`${API}/api/admin/notice`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, title:'Announcement', message: m})}); if (res.ok) { showFeedback('success','Notice Published','All students will see this notice.'); $('noticeMsg').value = ''; fetchNotices(); } } catch(e){ showFeedback('error','Network Error',e.message); } }
+async function clearNotice(){ try { await fetch(`${API}/api/admin/notice`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, title:'Announcement', message:''})}); $('noticeBanner').style.display = 'none'; toast('Cleared','success'); } catch(e){} }
+async function updateRoll(){ const o = $('oldRoll').value.trim().toUpperCase(), n = $('newRoll').value.trim().toUpperCase(); if (!o || !n) return toast('Enter old & new ID','error'); try { const res = await fetch(`${API}/api/admin/update-rollno`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, oldRoll: o, newRoll: n})}); const d = await res.json(); if (res.ok) { showFeedback('success','Roll Updated',`${o} → ${n}`); $('oldRoll').value=''; $('newRoll').value=''; fetchUsers(); } else showFeedback('error','Failed',d.error||'Could not update'); } catch(e){ showFeedback('error','Network Error',e.message); } }
+async function resetPassword(){ const r = $('pwResetRoll').value.trim().toUpperCase(), p = $('pwResetPass').value.trim(); if (!r) return toast('Enter ID','error'); try { const res = await fetch(`${API}/api/admin/reset-password`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, targetRollNo: r, newPassword: p})}); const d = await res.json(); if (res.ok) { showFeedback('success','Password Reset',`${r} password reset.`); $('pwResetRoll').value=''; $('pwResetPass').value=''; } else showFeedback('error','Failed',d.error||'Could not reset'); } catch(e){ showFeedback('error','Network Error',e.message); } }
+async function deleteUser(){ const r = $('deleteRoll').value.trim().toUpperCase(); if (!r) return toast('Enter ID','error'); if (!confirm('Permanently delete this account?')) return; try { const res = await fetch(`${API}/api/admin/delete-user`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, targetRollNo: r})}); const d = await res.json(); if (res.ok) { showFeedback('success','Deleted',`${r} has been deleted.`); $('deleteRoll').value = ''; fetchUsers(); } else showFeedback('error','Failed',d.error||'Could not delete'); } catch(e){ showFeedback('error','Network Error',e.message); } }
+async function impersonate(){ const r = $('impRollInput').value.trim().toUpperCase(); if (!r) return toast('Enter roll','error'); try { const res = await fetch(`${API}/api/admin/login-as-student`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, targetRollNo: r})}); const d = await res.json(); if (res.ok) { localStorage.setItem('BM_ORIG_TOKEN', localStorage.getItem('token')); localStorage.setItem('BM_ORIG_USER', localStorage.getItem('user')); localStorage.setItem('token', d.token); localStorage.setItem('user', JSON.stringify(d.user)); location.reload(); } else toast(d.error,'error'); } catch(e){} }
+async function loadLeaveRequests(){ try { const data = await fetch(`${API}/api/leave/requests/${currentUser.rollNo}`).then(x=>x.json()); const el = $('leaveRequestsList'); if (!data || !data.length) return el.innerHTML = '<div class="empty">No requests</div>'; el.innerHTML = data.map(l => `<div style="padding:12px 0;border-bottom:1px solid var(--slate-100);"><div style="display:flex;justify-content:space-between;align-items:center;"><b>${l.studentName}</b> <span class="badge ${l.status==='Approved'?'badge-success':l.status==='Rejected'?'badge-danger':'badge-warning'}">${l.status}</span></div><div class="text-xs text-muted" style="margin-top:4px;">${l.rollNo} · ${fmtDatePretty(l.fromDate)} → ${fmtDatePretty(l.toDate)}</div><div class="text-xs mt-1">${l.reason}</div>${l.status === 'Pending' ? `<div class="row mt-1"><button class="btn btn-success btn-xs" onclick="reviewLeave('${l._id}','Approved')">Approve</button><button class="btn btn-danger btn-xs" onclick="reviewLeave('${l._id}','Rejected')">Reject</button></div>` : ''}</div>`).join(''); } catch(e){} observeNewContent(); }
+async function reviewLeave(id, action){ const n = prompt(`Note for ${action}:`) || ''; try { const res = await fetch(`${API}/api/leave/action/${id}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, action, adminNote: n})}); if (res.ok) { toast('Done','success'); loadLeaveRequests(); } } catch(e){} }
+async function loadDefaulters(){ const t = $('defThreshold').value || 75; try { const data = await fetch(`${API}/api/admin/defaulters/${currentUser.rollNo}?threshold=${t}`).then(x=>x.json()); const el = $('defaulterList'); if (!data.defaulters || !data.defaulters.length) return el.innerHTML = '<div class="empty">None below threshold</div>'; el.innerHTML = data.defaulters.map(s => `<div style="padding:10px 0;border-bottom:1px solid var(--slate-100);"><b>${s.rollNo}</b> · ${s.name} · ${s.branch} · <span class="badge badge-danger">${s.pct}%</span></div>`).join(''); } catch(e){} observeNewContent(); }
+
+/* ============================================================
+   NOTES & DOCUMENTS
+   ============================================================ */
+async function loadStudentNotes() {
+  const el = $('studentNotesList'); if (!el) return;
+  el.innerHTML = '<div class="empty" style="padding:14px 0;"><div class="spinner" style="margin:0 auto 8px;"></div>Loading…</div>';
+  try {
+    const res = await fetch(`${API}/api/notes/${currentUser.branch || 'CSE'}`);
+    const data = await res.json();
+    if (!res.ok) return el.innerHTML = `<div class="empty">${escapeHtml(data.error || 'Failed')}</div>`;
+    const notes = Array.isArray(data) ? data : (data.notes || []);
+    if (!notes.length) return el.innerHTML = '<div class="empty" style="padding:14px 0;">No notes uploaded yet.</div>';
+    el.innerHTML = notes.map(n => `
+      <div style="padding:12px;border:1px solid var(--slate-200);border-radius:10px;margin-bottom:8px;background:#fff;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
+          <div style="min-width:0;flex:1;">
+            <div style="font-weight:800;font-size:13px;">${escapeHtml(n.title || 'Untitled')}</div>
+            <div style="font-size:11px;color:var(--slate-500);margin-top:3px;">${escapeHtml(n.subject || '—')} · ${escapeHtml(n.branch || 'ALL')}</div>
+            <div style="font-size:10.5px;color:var(--slate-400);margin-top:2px;">${new Date(n.createdAt).toLocaleDateString('en-IN')}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            ${n.fileUrl ? `<a href="${escapeHtml(n.fileUrl)}" target="_blank" class="btn btn-success btn-xs">📥 Download</a>` : ''}
+            <button class="btn btn-outline btn-xs" onclick="openDocRequestModal()">📤 Upload Document</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
+}
+function openDocRequestModal() { 
+  openModal('docRequestModal'); 
+  $('docReqTitle').value = ''; $('docReqSubject').value = ''; $('docReqReason').value = ''; $('docReqFile').value = '';
+}
+async function submitDocRequest() {
+  const title = $('docReqTitle').value.trim();
+  const subject = $('docReqSubject').value.trim();
+  const reason = $('docReqReason').value.trim();
+  const fileInput = $('docReqFile');
+  const file = fileInput.files[0];
+
+  if (!title) return toast('Enter title', 'error');
+  if (!subject) return toast('Enter subject', 'error');
+  if (!file) return toast('Select a file', 'error');
+  if (file.size > 10 * 1024 * 1024) return toast('File too large (max 10MB)', 'error');
+
+  showDL('Uploading…');
+  try {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const base64 = reader.result.split(',')[1];
+        const res = await fetch(`${API}/api/notes/request`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            rollNo: currentUser.rollNo,
+            title, subject, reason,
+            branch: currentUser.branch || 'CSE',
+            fileBase64: base64,
+            fileName: file.name,
+            mimeType: file.type || 'application/octet-stream'
+          })
+        });
+        const d = await res.json();
+        hideDL();
+        if (res.ok) {
+          closeModal('docRequestModal');
+          showFeedback('success', 'Upload Sent', 'Your document has been sent to admin for approval. It will be visible once approved.');
+          loadStudentNotes();
+        } else showFeedback('error', 'Failed', d.error || 'Could not submit');
+      } catch (e) { hideDL(); showFeedback('error', 'Upload Error', e.message); }
+    };
+    reader.readAsDataURL(file);
+  } catch (e) { hideDL(); showFeedback('error', 'File Error', e.message); }
+}
+
+async function loadAdminNotes() {
+  const el = $('adminNotesList'); if (!el) return;
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const res = await fetch(`${API}/api/admin/notes/${currentUser.rollNo}`);
+    const data = await res.json();
+    if (!res.ok) return el.innerHTML = `<div class="empty">${escapeHtml(data.error || 'Failed')}</div>`;
+    const notes = Array.isArray(data) ? data : (data.notes || []);
+    if (!notes.length) return el.innerHTML = '<div class="empty">No notes uploaded yet</div>';
+    el.innerHTML = notes.map(n => `
+      <div style="padding:10px;border:1px solid var(--slate-200);border-radius:9px;margin-bottom:8px;background:#fff;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+        <div style="min-width:0;flex:1;">
+          <div style="font-weight:700;font-size:12.5px;">${escapeHtml(n.title)}</div>
+          <div style="font-size:11px;color:var(--slate-500);">${escapeHtml(n.subject)} · ${escapeHtml(n.branch)} · ${new Date(n.createdAt).toLocaleDateString('en-IN')}</div>
+        </div>
+        <button class="btn btn-danger btn-xs" onclick="deleteNote('${n._id}')">🗑️</button>
+      </div>
+    `).join('');
+  } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
+}
+async function deleteNote(id) {
+  if (!confirm('Delete this note?')) return;
+  try {
+    const res = await fetch(`${API}/api/admin/notes/${id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requesterRollNo: currentUser.rollNo })
+    });
+    if (res.ok) { toast('Deleted', 'success'); loadAdminNotes(); } else toast('Failed', 'error');
+  } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function loadDocRequests() {
+  const el = $('docRequestsList'); if (!el) return;
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const res = await fetch(`${API}/api/admin/notes/requests/${currentUser.rollNo}`);
+    const data = await res.json();
+    if (!res.ok) return el.innerHTML = `<div class="empty">${escapeHtml(data.error || 'Failed')}</div>`;
+    const reqs = Array.isArray(data) ? data : (data.requests || []);
+    if (!reqs.length) return el.innerHTML = '<div class="empty">No pending requests</div>';
+    
+    el.innerHTML = reqs.map(r => {
+      const fileHtml = r.fileName 
+        ? `<div style="margin-top:6px;"><button class="btn btn-success btn-xs" onclick="downloadDocReqFile('${r._id}')">📥 Download File</button> <span style="font-size:10px;color:var(--slate-500);margin-left:4px;">${escapeHtml(r.fileName)}</span></div>` 
+        : '';
+      
+      return `
+      <div style="padding:12px;border:1px solid var(--slate-200);border-radius:10px;margin-bottom:8px;background:#fff;">
+        <div style="font-weight:800;font-size:12.5px;">${escapeHtml(r.title)}</div>
+        <div style="font-size:11px;color:var(--slate-500);margin-top:3px;">${escapeHtml(r.rollNo)} · ${escapeHtml(r.subject)}</div>
+        ${r.reason ? `<div style="font-size:11px;color:var(--slate-600);margin-top:5px;">Reason: ${escapeHtml(r.reason)}</div>` : ''}
+        ${fileHtml}
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn btn-success btn-xs" onclick="approveDocRequest('${r._id}')">✅ Fulfil</button>
+          <button class="btn btn-danger btn-xs" onclick="rejectDocRequest('${r._id}')">❌ Reject</button>
+        </div>
+      </div>
+    `;
+    }).join('');
+  } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
+}
+
+async function downloadDocReqFile(reqId) {
+  showDL('Downloading…');
+  try {
+    const res = await fetch(`${API}/api/notes/request-file/${reqId}`);
+    const data = await res.json();
+    hideDL();
+    if (!res.ok || !data.fileBase64) return toast(data.error || 'File not found', 'error');
+    
+    const byteCharacters = atob(data.fileBase64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], {type: data.mimeType || 'application/octet-stream'});
+    
+    universalDownload(blob, data.fileName || 'document.pdf');
+  } catch (e) {
+    hideDL();
+    toast('Download failed: ' + e.message, 'error');
+  }
+}
+
+async function approveDocRequest(id) {
+  showDL('Processing…');
+  try {
+    const res = await fetch(`${API}/api/admin/notes/requests/approve/${id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requesterRollNo: currentUser.rollNo })
+    });
+    const d = await res.json();
+    hideDL();
+    if (res.ok) { showFeedback('success', 'Approved', 'Request fulfilled and student notified.'); loadDocRequests(); }
+    else showFeedback('error', 'Failed', d.error || 'Could not approve');
+  } catch(e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
+}
+async function rejectDocRequest(id) {
+  const note = prompt('Rejection note (optional):') || '';
+  try {
+    const res = await fetch(`${API}/api/admin/notes/requests/reject/${id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requesterRollNo: currentUser.rollNo, note })
+    });
+    if (res.ok) { toast('Rejected', 'success'); loadDocRequests(); } else toast('Failed', 'error');
+  } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function uploadNote() {
+  const title = $('noteTitle').value.trim();
+  const subject = $('noteSubject').value.trim();
+  const branch = $('noteBranch').value;
+  const fileInput = $('noteFile');
+  const file = fileInput.files[0];
+  if (!title) return toast('Enter title', 'error');
+  if (!subject) return toast('Enter subject', 'error');
+  if (!file) return toast('Select a file', 'error');
+  if (file.size > 10 * 1024 * 1024) return toast('File too large (max 10MB)', 'error');
+  showDL('Uploading…');
+  try {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const base64 = reader.result.split(',')[1];
+        const res = await fetch(`${API}/api/admin/notes/upload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            requesterRollNo: currentUser.rollNo,
+            title, subject, branch,
+            fileBase64: base64,
+            fileName: file.name,
+            mimeType: file.type || 'application/octet-stream'
+          })
+        });
+        const d = await res.json();
+        hideDL();
+        if (res.ok) {
+          showFeedback('success', 'Note Uploaded', 'Visible to all relevant students now.');
+          $('noteTitle').value = ''; $('noteSubject').value = '';
+          fileInput.value = '';
+          loadAdminNotes();
+        } else showFeedback('error', 'Upload Failed', d.error || 'Could not upload');
+      } catch (e) { hideDL(); showFeedback('error', 'Upload Error', e.message); }
+    };
+    reader.readAsDataURL(file);
+  } catch (e) { hideDL(); showFeedback('error', 'File Error', e.message); }
+}
+
+/* ============================================================
+   ASSIGNMENTS
+   ============================================================ */
+async function loadStudentAssignments() {
+  const el = $('studentAssignmentsList'); if (!el) return;
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const res = await fetch(`${API}/api/assignments/${currentUser.branch || 'CSE'}`);
+    const data = await res.json();
+    if (!res.ok) return el.innerHTML = `<div class="empty">${escapeHtml(data.error || 'Failed')}</div>`;
+    const assignments = Array.isArray(data) ? data : [];
+    if (!assignments.length) return el.innerHTML = '<div class="empty">No assignments</div>';
+    el.innerHTML = assignments.map(a => {
+      const isOverdue = a.dueDate < fmtDate(new Date());
+      return `
+        <div style="padding:12px;border:1px solid var(--slate-200);border-radius:10px;margin-bottom:8px;background:#fff;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
+            <div style="min-width:0;flex:1;">
+              <div style="font-weight:800;font-size:13px;">${escapeHtml(a.title)}</div>
+              <div style="font-size:11px;color:var(--slate-500);margin-top:3px;">${escapeHtml(a.subject)} · ${escapeHtml(a.facultyName || '')}</div>
+              ${a.description ? `<div style="font-size:11.5px;color:var(--slate-600);margin-top:5px;">${escapeHtml(a.description)}</div>` : ''}
+              <div style="font-size:11px;color:${isOverdue ? 'var(--rose-600)' : 'var(--slate-600)'};margin-top:5px;font-weight:600;">Due: ${fmtDatePretty(a.dueDate)}${isOverdue ? ' (Overdue)' : ''}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
+}
+
+/* ============================================================
+   EXAMS
+   ============================================================ */
+async function loadStudentExams() {
+  const el = $('studentExamsList'); if (!el) return;
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const res = await fetch(`${API}/api/exams/${currentUser.branch || 'CSE'}`);
+    const data = await res.json();
+    if (!res.ok) return el.innerHTML = `<div class="empty">${escapeHtml(data.error || 'Failed')}</div>`;
+    const exams = Array.isArray(data) ? data : [];
+    if (!exams.length) return el.innerHTML = '<div class="empty">No exams scheduled</div>';
+    el.innerHTML = exams.map(e => `
+      <div style="padding:12px;border:1px solid var(--slate-200);border-radius:10px;margin-bottom:8px;background:#fff;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
+          <div style="min-width:0;flex:1;">
+            <div style="font-weight:800;font-size:13px;">${escapeHtml(e.subject)}</div>
+            <div style="font-size:11px;color:var(--slate-500);margin-top:3px;">${escapeHtml(e.examType)}</div>
+            <div style="font-size:11.5px;color:var(--slate-700);margin-top:5px;font-weight:600;">📅 ${fmtDatePretty(e.examDate)} · ${escapeHtml(e.startTime)}–${escapeHtml(e.endTime)}</div>
+            <div style="font-size:11px;color:var(--slate-500);margin-top:2px;">📍 ${escapeHtml(e.venue)}</div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
+}
+async function loadAdminExams() {
+  const el = $('adminExamsList'); if (!el) return;
+  el.innerHTML = '<div class="empty">Refresh to see exams</div>';
+}
+async function createExam() {
+  const subject = $('examSubject').value.trim();
+  const branch = $('examBranch').value;
+  const examType = $('examType').value;
+  const examDate = $('examDate').value;
+  const startTime = $('examStart').value;
+  const endTime = $('examEnd').value;
+  const venue = $('examVenue').value.trim() || 'TBD';
+  if (!subject || !examDate) return toast('Fill required fields', 'error');
+  showDL('Scheduling…');
+  try {
+    const res = await fetch(`${API}/api/admin/exam/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requesterRollNo: currentUser.rollNo, subject, branch, examType, examDate, startTime, endTime, venue })
+    });
+    const d = await res.json();
+    hideDL();
+    if (res.ok) {
+      showFeedback('success', 'Exam Scheduled', `${subject} on ${examDate}`);
+      $('examSubject').value = ''; $('examDate').value = ''; $('examVenue').value = '';
+      loadAdminExams();
+    } else showFeedback('error', 'Failed', d.error || 'Could not schedule');
+  } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
+}
+
+/* ============================================================
+   ANNOUNCEMENTS
+   ============================================================ */
+async function loadStudentAnnouncements() {
+  const el = $('studentAnnouncementsList'); if (!el) return;
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const res = await fetch(`${API}/api/announcements/${currentUser.branch || 'CSE'}`);
+    if (!res.ok) return el.innerHTML = '<div class="empty">No announcements</div>';
+    const data = await res.json();
+    const list = Array.isArray(data) ? data : [];
+    if (!list.length) return el.innerHTML = '<div class="empty">No announcements</div>';
+    el.innerHTML = list.map(a => `
+      <div style="padding:12px;border:1px solid var(--slate-200);border-radius:10px;margin-bottom:8px;background:#fff;">
+        <div style="font-weight:800;font-size:12.5px;">${escapeHtml(a.subject)}</div>
+        <div style="font-size:11px;color:var(--slate-500);margin-top:3px;">From: ${escapeHtml(a.facultyName || 'Faculty')}</div>
+        <div style="font-size:12.5px;color:var(--slate-700);margin-top:6px;line-height:1.5;">${escapeHtml(a.message)}</div>
+        <div style="font-size:10.5px;color:var(--slate-400);margin-top:5px;">${new Date(a.createdAt).toLocaleString('en-IN')}</div>
+      </div>
+    `).join('');
+  } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
+}
+
+/* ============================================================
+   EMERGENCY ALERT
+   ============================================================ */
+async function sendEmergencyAlert() {
+  const title = $('alertTitle').value.trim();
+  const message = $('alertMessage').value.trim();
+  if (!title || !message) return toast('Fill title and message', 'error');
+  if (!confirm(`Send EMERGENCY alert to ALL users?\n\nTitle: ${title}\nMessage: ${message}`)) return;
+  showDL('Sending alert…');
+  try {
+    const res = await fetch(`${API}/api/admin/emergency-alert`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requesterRollNo: currentUser.rollNo, title, message })
+    });
+    const d = await res.json();
+    hideDL();
+    if (res.ok) {
+      showFeedback('success', 'Alert Sent', 'All users will receive this alert via push notification.');
+      $('alertTitle').value = ''; $('alertMessage').value = '';
+    } else showFeedback('error', 'Failed', d.error || 'Could not send alert');
+  } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
+}
+async function postFacultyAnnouncement() {
+  const subject = $('annSubject').value.trim();
+  const branch = $('annBranch').value;
+  const message = $('annMessage').value.trim();
+  if (!subject || !message) return toast('Fill subject and message', 'error');
+  showDL('Posting…');
+  try {
+    const res = await fetch(`${API}/api/faculty/announcement`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requesterRollNo: currentUser.rollNo, subject, branch, message })
+    });
+    const d = await res.json();
+    hideDL();
+    if (res.ok) {
+      showFeedback('success', 'Announcement Sent', `${branch} students notified.`);
+      $('annSubject').value = ''; $('annMessage').value = '';
+    } else showFeedback('error', 'Failed', d.error || 'Could not post');
+  } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
+}
+
+/* ============================================================
+   FACULTY MODULE
+   ============================================================ */
+async function initFaculty(){ await loadFacultySubjects(); await fetchTeacherStudents(); await loadFacultyRecent(); await loadFacultyPasscode(); setInterval(fetchTeacherStudents, 60000); }
+async function loadFacultySubjects(){ try { const subs = await fetch(`${API}/api/teacher/subjects/${currentUser.rollNo}`).then(x=>x.json()); window._facSubs = subs || []; $('facMarkSubject').innerHTML = '<option value="">Select Subject…</option>' + (subs||[]).map(s=>`<option value="${s}">${s}</option>`).join(''); } catch(e){} }
+async function loadFacultyRecent(){ try { const data = await fetch(`${API}/api/attendance/all/${currentUser.rollNo}`).then(x=>x.json()); const tb = $('facRecentBody'); if (!data || !data.length) return tb.innerHTML = '<tr><td colspan="3" class="empty">No records</td></tr>'; tb.innerHTML = data.slice(0,15).map(r => `<tr><td>${fmtDatePretty(r.date)}</td><td>${r.studentName}</td><td>${r.subject}</td></tr>`).join(''); } catch(e){} observeNewContent(); }
+async function loadFacultyPasscode(){ const cache = getPasscodeCache(); const c = cache['single_lecture']; if (c && new Date(c.expiresAt).getTime() > Date.now()) { const p = $('facPasscode'); const d = $('facPasscodeDisplay'); if (p) { p.textContent = c.passcode; p.classList.remove('empty'); } if (d) d.classList.add('valid'); } }
+async function fetchTeacherStudents(){
+  try {
+    const data = await fetch(`${API}/api/teacher/students/${currentUser.rollNo}`).then(x=>x.json());
+    const tb = $('facStudentsBody');
+    if (!data || !data.length) { tb.innerHTML = '<tr><td colspan="3" class="empty">No students</td></tr>'; $('facTotalStudents').textContent = '0'; $('facBulkStudents').innerHTML = '<div class="empty">No students</div>'; return; }
+    window._facStudents = data;
+    $('facMarkStudent').innerHTML = '<option value="">Select Student…</option>' + data.map(s=>`<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`).join('');
+    const fr = $('facReportStudent');
+    if (fr) fr.innerHTML = '<option value="">Select Student…</option>' + data.map(s=>`<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`).join('');
+    $('facTotalStudents').textContent = data.length;
+    tb.innerHTML = data.map(s => `<tr><td><b>${s.rollNo}</b></td><td>${s.name}</td><td><button class="btn btn-outline btn-xs" onclick="viewStudentRecords('${s.rollNo}')">View</button></td></tr>`).join('');
+    const sorted = data.sort((a,b) => a.rollNo.localeCompare(b.rollNo, undefined, {numeric: true}));
+    $('facBulkStudents').innerHTML = `<label class="bulk-select-item" style="font-weight:700;border-bottom:1px solid var(--slate-200);margin-bottom:6px;padding-bottom:8px;"><input type="checkbox" onchange="document.querySelectorAll('.fac-bulk-stu').forEach(c=>c.checked=this.checked)"><span class="bulk-name" style="font-weight:700;color:var(--slate-900);">Select All (${sorted.length})</span></label>` + sorted.map(s => `<label class="bulk-select-item"><input type="checkbox" class="fac-bulk-stu" value="${escapeHtml(s.rollNo)}" data-name="${escapeHtml(s.name)}"><span class="bulk-roll">${escapeHtml(s.rollNo)}</span><span class="bulk-name">${escapeHtml(s.name)}</span></label>`).join('');
+    const today = fmtDate(new Date());
+    let present = 0, absent = 0, presentNames = [];
+    for (const s of data) { try { const recs = await fetch(`${API}/api/attendance/student/${s.rollNo}/${currentUser.rollNo}`).then(x=>x.json()); const todayRecs = recs.filter(r => r.date === today && (window._facSubs||[]).includes(r.subject)); if (todayRecs.some(r => r.status === 'Present' || r.status === 'Duty Leave')) { present++; presentNames.push(s); } else absent++; } catch(e){} }
+    $('facTodayPresent').textContent = present;
+    $('facTodayAbsent').textContent = absent;
+    try { const avg = await fetch(`${API}/api/teacher/class-average/${currentUser.rollNo}`).then(x=>x.json()); $('facClassAvg').textContent = (avg.average||0) + '%'; } catch(e){}
+    $('facPresentList').innerHTML = presentNames.length ? presentNames.map(s => `<div style="padding:5px 0;font-size:12.5px;"><b>${s.rollNo}</b> · ${s.name}</div>`).join('') : '<div class="text-muted text-sm">No students present yet</div>';
+  } catch(e){}
+  observeNewContent();
+}
+async function facLookupStudent(){
+  const roll = ($('facLookupRoll').value || '').trim().toUpperCase();
+  const out = $('facLookupResult');
+  if (!roll) return toast('Enter roll no', 'error');
+  out.innerHTML = '<div class="empty"><div class="spinner" style="margin:0 auto 8px;"></div>Loading…</div>';
+  try {
+    const res = await fetch(`${API}/api/student/summary/${roll}`);
+    const d = await res.json();
+    if (!res.ok) { out.innerHTML = `<div class="empty">${escapeHtml(d.error || 'Student not found')}</div>`; return; }
+    const subjRows = Object.entries(d.subjectStats || {}).map(([s, st]) => {
+      const cls = st.percentage >= 75 ? 'good' : 'bad';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--slate-50);border-radius:8px;margin-bottom:4px;font-size:12px;gap:8px;">
+        <span style="font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.substring(0, 24))}</span>
+        <span class="chip ${cls}" style="padding:2px 8px;font-size:10px;flex-shrink:0;">${st.percentage}% (${st.present}/${st.total})</span>
+      </div>`;
+    }).join('');
+    const pctCls = d.attendancePercentage >= 75 ? 'good' : 'bad';
+    out.innerHTML = `
+      <div style="padding:14px;border:1px solid var(--slate-200);border-radius:12px;background:#fff;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;">
+          <div style="font-weight:800;font-size:14px;">${escapeHtml(roll)}</div>
+          <div class="stat-value ${pctCls}" style="font-size:22px;">${d.attendancePercentage}%</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;font-size:11.5px;color:var(--slate-600);">
+          <div>Attended: <b style="color:var(--slate-900);">${d.totalAcademicLectures || 0}</b></div>
+          <div>Conducted: <b style="color:var(--slate-900);">${d.totalConductedLectures || 0}</b></div>
+          <div>Days Present: <b style="color:var(--slate-900);">${d.daysPresent || 0}</b></div>
+          <div>Working Days: <b style="color:var(--slate-900);">${d.workingDaysSoFar || 0}</b></div>
+        </div>
+        <div class="section-title" style="font-size:10px;margin-top:10px;">📚 Subject-wise</div>
+        ${subjRows || '<div class="text-xs text-muted">No subject data</div>'}
+      </div>`;
+  } catch(e) { out.innerHTML = `<div class="empty">Network error: ${escapeHtml(e.message)}</div>`; }
+  observeNewContent();
+}
+async function genTeacherPass(force){ const today = fmtDate(new Date()); const st = await checkDateStatus(today); if (st.isBlocked) return toast('College closed','error'); if (force && !confirm('Change Lecture Passcode?')) return; try { const res = await fetch(`${API}/api/admin/generate-passcode`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, type:'single_lecture', force: !!force})}); const d = await res.json(); if (res.ok) { setPasscodeCache('single_lecture', d.passcode, d.expiresAt); $('facPasscode').textContent = d.passcode; $('facPasscode').classList.remove('empty'); $('facPasscodeDisplay').classList.add('valid'); toast(force ? 'Changed!' : 'Generated!', 'success'); } else toast(d.error,'error'); } catch(e){} }
+async function facMark(){ const s = $('facMarkStudent').value, sub = $('facMarkSubject').value; if (!s || !sub) return toast('Select student & subject','error'); showDL('Getting location…'); navigator.geolocation.getCurrentPosition(async (pos) => { showDL('Marking…'); const res = await fetch(`${API}/api/teacher/mark-attendance`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo, name: currentUser.name, subject: sub, latitude: pos.coords.latitude, longitude: pos.coords.longitude, studentRollNo: s})}); const d = await res.json(); hideDL(); if (res.ok) { showFeedback('success','Marked',d.message || 'Attendance marked.'); sendPushNotification('✅ Marked', `${s} — ${sub}`, { type: 'faculty_mark' }); fetchTeacherStudents(); loadFacultyRecent(); } else showFeedback('error','Failed',d.error||'Could not mark'); }, () => { hideDL(); showFeedback('error','Location Error','Location permission is required.'); }, { enableHighAccuracy: true, timeout: 15000 }); }
+function facAddBulkDate(){ const d = $('facBulkDate').value; if (!d) return toast('Select date','error'); if (facSelectedBulkDates.includes(d)) return toast('Already added','error'); facSelectedBulkDates.push(d); renderFacBulkDates(); }
+function renderFacBulkDates(){ if ($('facBulkDates')) $('facBulkDates').innerHTML = facSelectedBulkDates.map(d => `<span class="chip">${fmtDatePretty(d)} <span onclick="removeFacBulkDate('${d}')" style="cursor:pointer;color:var(--rose-600);font-weight:800;">×</span></span>`).join(''); }
+function removeFacBulkDate(d){ facSelectedBulkDates = facSelectedBulkDates.filter(x=>x!==d); renderFacBulkDates(); }
+async function facBulkMark(){ const students = Array.from(document.querySelectorAll('.fac-bulk-stu:checked')).map(cb => cb.value); if (!students.length) return toast('Select students','error'); if (!facSelectedBulkDates.length) return toast('Add dates','error'); const status = $('facBulkStatus').value; if (!confirm(`Mark ${status} for ${students.length} students × ${facSelectedBulkDates.length} dates?`)) return; showDL('Marking bulk…'); try { const res = await fetch(`${API}/api/teacher/bulk-mark-attendance`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, studentRollNos: students, dates: facSelectedBulkDates, status }) }); const d = await res.json(); hideDL(); if (res.ok) { showFeedback('success','Bulk Marked',d.message || 'Attendance marked.'); sendPushNotification('✅ Bulk Marked', `${students.length} students × ${facSelectedBulkDates.length} dates`, { type: 'fac_bulk' }); facSelectedBulkDates = []; renderFacBulkDates(); fetchTeacherStudents(); loadFacultyRecent(); } else showFeedback('error','Failed',d.error || 'Could not mark'); } catch(e){ hideDL(); showFeedback('error','Network Error',e.message); } }
+async function facBulkDelete(){ const students = Array.from(document.querySelectorAll('.fac-bulk-stu:checked')).map(cb => cb.value); if (!students.length) return toast('Select students','error'); if (!facSelectedBulkDates.length) return toast('Add dates','error'); if (!confirm(`Delete ${students.length} students × ${facSelectedBulkDates.length} dates?`)) return; showDL('Deleting…'); try { const res = await fetch(`${API}/api/teacher/bulk-delete-attendance`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, studentRollNos: students, dates: facSelectedBulkDates }) }); const d = await res.json(); hideDL(); if (res.ok) { showFeedback('success','Deleted',d.message || 'Records deleted.'); facSelectedBulkDates = []; renderFacBulkDates(); fetchTeacherStudents(); loadFacultyRecent(); } else showFeedback('error','Failed',d.error || 'Could not delete'); } catch(e){ hideDL(); showFeedback('error','Network Error',e.message); } }
+function toggleFacMonth(){ const v = $('facReportRange').value; $('facReportMonth').style.display = v === 'SELECTED_MONTH' ? 'block' : 'none'; $('facCustomRangeRow').style.display = v === 'CUSTOM' ? 'flex' : 'none'; }
+async function facReport(fmt){ const roll = $('facReportStudent').value; if (!roll) return toast('Select student','error'); const range = $('facReportRange').value; showDL('Generating…'); try { const records = await fetch(`${API}/api/attendance/student/${roll}/${currentUser.rollNo}`).then(r=>r.json()); const subs = window._facSubs || []; let filtered = records.filter(r => subs.includes(r.subject)); let startStr, endStr; if (range === 'FULL_SEMESTER') { startStr = '2026-07-15'; endStr = '2026-12-31'; } else if (range === 'CURRENT_MONTH') { const r = getCurrentMonthRangeStrings(); startStr = r.start; endStr = r.end; } else if (range === 'SELECTED_MONTH') { const r = getMonthRangeStrings(parseInt($('facReportMonth').value)); startStr = r.start; endStr = r.end; } else { const s = $('facReportStart').value, e = $('facReportEnd').value; if (!s || !e) { hideDL(); return toast('Pick dates','error'); } startStr = s; endStr = e; } const todayStr = fmtDate(new Date()); if (endStr > todayStr) endStr = todayStr; filtered = filtered.filter(r => r.date >= startStr && r.date <= endStr); if (filtered.length === 0) { hideDL(); return toast('No records in range','error'); } if (fmt === 'pdf') { const blob = generatePDFBlob('Teacher Report', `${roll} · ${currentUser.name}`, [`Range: ${startStr} → ${endStr}`], ['Date','Subject','Status'], filtered.map(r => [fmtDatePretty(r.date), r.subject, r.status]), null); hideDL(); if (!blob) return toast('PDF library failed','error'); universalDownload(blob, `teacher_report_${roll}_${Date.now()}.pdf`); } else { let csv = `Teacher Report\nStudent: ${roll}\nTeacher: ${currentUser.name}\nRange: ${startStr} to ${endStr}\n\nDate,Subject,Status\n`; filtered.forEach(r => { csv += `${r.date},${r.subject},${r.status}\n`; }); download(csv, `teacher_report_${roll}.csv`); hideDL(); } } catch(e){ hideDL(); toast('Failed: ' + e.message,'error'); } }
+async function applyLeave(){ const f = $('leaveFrom').value, t = $('leaveTo').value, r = $('leaveReason').value.trim(); if (!f || !t || !r) return showFeedback('warning','Missing Fields','Dates and reason are required.'); try { const res = await fetch(`${API}/api/leave/apply`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo, fromDate:f, toDate:t, reason:r, leaveType:$('leaveType').value})}); const d = await res.json(); if (res.ok) { $('leaveReason').value = ''; loadMyLeaves(); showFeedback('success','Leave Applied',`${fmtDatePretty(f)} → ${fmtDatePretty(t)}\n\nDuty leave will be marked after admin approval.`); } else showFeedback('error','Failed',d.error||'Could not apply'); } catch(e){ showFeedback('error','Network Error',e.message); } }
+async function loadMyLeaves(){ try { const data = await fetch(`${API}/api/leave/my/${currentUser.rollNo}`).then(x=>x.json()); const el = $('myLeaveList'); el.innerHTML = data.length ? data.map(l => `<div style="padding:10px 0;border-bottom:1px solid var(--slate-100);"><div style="display:flex;justify-content:space-between;"><b>${fmtDatePretty(l.fromDate)} → ${fmtDatePretty(l.toDate)}</b> <span class="badge ${l.status==='Approved'?'badge-success':l.status==='Rejected'?'badge-danger':'badge-warning'}">${l.status}</span></div><div class="text-xs text-muted mt-1">${l.leaveType}: ${l.reason}</div></div>`).join('') : '<div class="empty">No applications</div>'; } catch(e){} observeNewContent(); }
+
+/* ============================================================
+   CHAT
+   ============================================================ */
+function toggleContext(){ useContextMode = !useContextMode; const b = $('ctxToggle'); if (b) { b.classList.toggle('active', useContextMode); const l = b.querySelector('.ctx-label'); if (l) l.textContent = useContextMode ? 'Context On' : 'Context'; } toast(useContextMode ? 'Context ON' : 'Context OFF', useContextMode ? 'success' : 'info'); if ($('chatPanel').classList.contains('open')) { const m = $('chatMsgs'); if (!m.querySelector('.msg')) renderChatWelcome(); } }
+function toggleDatabase(){ useDatabaseMode = !useDatabaseMode; const b = $('dbToggle'); if (b) { b.classList.toggle('active', useDatabaseMode); const l = b.querySelector('.db-label'); if (l) l.textContent = useDatabaseMode ? 'Database On' : 'Database'; } toast(useDatabaseMode ? 'Database ON' : 'Database OFF', useDatabaseMode ? 'success' : 'info'); if ($('chatPanel').classList.contains('open')) { const m = $('chatMsgs'); if (!m.querySelector('.msg')) renderChatWelcome(); } }
+function toggleChat(){
+  const p = $('chatPanel');
+  if (!p) return;
+  p.classList.toggle('open');
+  if (p.classList.contains('open')) { lockBodyScroll(true); chatGreeted = false; fetchChatHistory(); renderChatWelcome(); }
+  else { lockBodyScroll(false); if (openDownloadMenuId) { const m = document.getElementById(openDownloadMenuId); if (m) m.classList.remove('open'); openDownloadMenuId = null; } const sb = $('chatSidebar'); if (sb) sb.classList.remove('open'); }
+}
+function toggleChatSidebar(){ const s = $('chatSidebar'); if (s) s.classList.toggle('open'); }
+document.addEventListener('click', (e) => {
+  const sidebar = $('chatSidebar'); const panel = $('chatPanel');
+  if (!sidebar || !panel) return;
+  if (!sidebar.classList.contains('open')) return;
+  if (sidebar.contains(e.target)) return;
+  const toggleBtn = panel.querySelector('.chat-sidebar-toggle');
+  if (toggleBtn && toggleBtn.contains(e.target)) return;
+  sidebar.classList.remove('open');
+}, true);
+function renderChatWelcome(){
+  const el = $('chatMsgs'); if (!el) return;
+  const now = new Date(); const hour = now.getHours();
+  let greeting = 'Hello'; if (hour < 12) greeting = 'Good morning'; else if (hour < 17) greeting = 'Good afternoon'; else greeting = 'Good evening';
+  const name = currentUser ? currentUser.name : 'there';
+  if (!useContextMode && !useDatabaseMode) { el.innerHTML = `<div class="chat-welcome"><div class="greeting-emoji"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg></div><div><strong>${greeting}, ${name}!</strong> I'm <strong>BM Bot</strong>.</div><div style="margin-top:8px;">Turn on <b>Context</b> for personal data or <b>Database</b> for commands.</div><div style="font-size:11.5px;margin-top:10px;color:var(--slate-400);">Ask me anything — notes, coding, general help.</div></div>`; return; }
+  const role = currentUser ? currentUser.role : 'student';
+  let extra = '';
+  if (useContextMode && !useDatabaseMode) extra = `<div style="margin-top:12px;font-size:12px;text-align:left;background:#ecfdf5;padding:12px 14px;border-radius:10px;color:#065f46;border:1px solid #a7f3d0;"><b>✅ Context ON</b> — Ask about attendance, timetable, holidays.</div>`;
+  else if (useDatabaseMode && !useContextMode) { const roleCmds = role === 'admin' ? 'Try: "Show pending requests", "Add holiday 25 Oct"' : role === 'faculty' ? 'Try: "Mark 24CSE48 present for BDA"' : 'Try: "Mark today\'s attendance", "Show my requests"'; extra = `<div style="margin-top:12px;font-size:12px;text-align:left;background:#f3e8ff;padding:12px 14px;border-radius:10px;color:#5b21b6;border:1px solid #d8b4fe;"><b>🗄️ Database ON</b><br>${roleCmds}</div>`; }
+  else extra = `<div style="margin-top:12px;font-size:12px;text-align:left;background:linear-gradient(135deg,#ecfdf5,#f3e8ff);padding:12px 14px;border-radius:10px;color:#1e293b;border:1px solid #a7f3d0;"><b>✅ Context + Database ON</b></div>`;
+  el.innerHTML = `<div class="chat-welcome"><div class="greeting-emoji"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg></div><div><strong>${greeting}, ${name}!</strong> I'm <strong>BM Bot</strong>.</div>${extra}<div style="font-size:11.5px;margin-top:10px;color:var(--slate-400);">Upload PDF, TXT, images anytime.</div></div>`;
+}
+async function fetchChatHistory(){ if (!currentUser) return; try { const res = await fetch(`${API}/api/chats/${currentUser.rollNo}`); if (!res.ok) return; chatHistory = await res.json(); renderChatHistory(); } catch(e){} }
+function renderChatHistory(){ const l = $('chatHistoryList'); if (!l) return; if (!chatHistory || !chatHistory.length) { l.innerHTML = '<div class="empty" style="padding:16px 0;font-size:10px;">No chats yet</div>'; return; } l.innerHTML = chatHistory.map(c => `<div class="chat-sidebar-item ${c.threadId === currentThreadId ? 'active' : ''}" onclick="event.stopPropagation(); loadChatThread('${c.threadId}')"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${c.title || 'New Chat'}</span><span class="del-chat" onclick="event.stopPropagation(); deleteChatThread('${c.threadId}')">✕</span></div>`).join(''); }
+async function loadChatThread(t){ currentThreadId = t; const c = chatHistory.find(x => x.threadId === t); if (!c) return; const m = $('chatMsgs'); if (!m) return; m.innerHTML = ''; let lu = ''; for (const x of c.messages) { if (x.role === 'user') { lu = x.content; appendChat('user', x.content); } else { const wd = DOWNLOAD_KEYWORDS.some(k => (lu||'').toLowerCase().includes(k)); appendChat('bot', x.content, true, wd, 0, lu); } } m.scrollTop = m.scrollHeight; renderChatHistory(); if (window.innerWidth < 640) toggleChatSidebar(); }
+async function deleteChatThread(t){ if (!confirm('Delete this chat?')) return; try { const res = await fetch(`${API}/api/chats/${t}`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo})}); if (res.ok) { if (currentThreadId === t) newChat(); fetchChatHistory(); toast('Chat deleted','success'); } } catch(e){} }
+function newChat(){ currentThreadId = null; chatGreeted = false; renderChatWelcome(); renderChatHistory(); }
+function onChatFileSelected(ev){ const f = ev.target.files[0]; if (!f) return; if (f.size > 10 * 1024 * 1024) { toast('File too large (10MB)','error'); ev.target.value=''; return; } const r = new FileReader(); r.onload = () => { const b64 = r.result.split(',')[1]; let mt = f.type || 'text/plain'; if (['js','py','java','c','cpp','ts','jsx','tsx','log','yml','yaml','sql','sh','md'].includes(f.name.split('.').pop().toLowerCase())) mt = 'text/plain'; pendingChatFile = { base64: b64, mimeType: mt, name: f.name }; $('chatFileName').textContent = f.name; $('chatFilePreview').classList.add('show'); }; r.readAsDataURL(f); }
+function clearChatFile(){ pendingChatFile = null; $('chatFileInput').value = ''; $('chatFilePreview').classList.remove('show'); }
+function toggleVoiceInput(){ const btn = $('chatVoiceBtn'); const indicator = $('voiceIndicator'); const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SR) { toast('Voice not supported','error'); return; } if (recognition) { try { recognition.stop(); } catch(e){} recognition = null; btn.classList.remove('recording'); indicator.classList.remove('show'); return; } recognition = new SR(); recognition.lang = 'en-IN'; recognition.continuous = false; recognition.interimResults = false; recognition.onstart = () => { btn.classList.add('recording'); indicator.classList.add('show'); }; recognition.onend = () => { btn.classList.remove('recording'); indicator.classList.remove('show'); recognition = null; }; recognition.onerror = () => { btn.classList.remove('recording'); indicator.classList.remove('show'); recognition = null; }; recognition.onresult = (e) => { $('chatInput').value = e.results[0][0].transcript; }; recognition.start(); }
+function handleChatKey(e){ if (e.key !== 'Enter') return; const isM = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (('ontouchstart' in window) && window.innerWidth <= 768); if (isM) { setTimeout(() => autoResizeTextarea(e.target), 0); return; } if (e.shiftKey) return; e.preventDefault(); sendChat(); }
+function autoResizeTextarea(el){ el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
+function createAIThinkingIndicator(l){
+  const d = document.createElement('div');
+  d.className = 'msg bot';
+  d.innerHTML = `<div class="bubble ai-thinking-bubble"><div class="ai-avatar"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg></div><div class="ai-thinking-content"><div class="ai-thinking-top"><span class="ai-thinking-text">${escapeHtml(l||'Thinking')}</span><span class="ai-dots"><span></span><span></span><span></span></span><span class="ai-timer">0.0s</span></div><div class="ai-progress-bar"></div></div></div>`;
+  return d;
+}
+function startThinkingTimer(el){ thinkingStartTime = Date.now(); if (thinkingTimerId) clearInterval(thinkingTimerId); const t = el.querySelector('.ai-timer'); thinkingTimerId = setInterval(() => { if (!t) return; const s = (Date.now() - thinkingStartTime) / 1000; t.textContent = s.toFixed(1) + 's'; }, 100); }
+function stopThinkingTimer(){ if (thinkingTimerId) clearInterval(thinkingTimerId); return Math.max(1, Math.round((Date.now() - thinkingStartTime) / 1000)); }
+function generateThinkingSummary(userMessage){
+  const msg = (userMessage || '').toLowerCase().trim();
+  const steps = [];
+  if (/^(hi|hello|hey|namaste)/i.test(msg)) { steps.push('Greeting detected.'); steps.push('Preparing friendly reply.'); }
+  else if (/attendance|present|bunk|percentage|hazri/i.test(msg)) { steps.push('Attendance query detected.'); steps.push('Fetching summary.'); steps.push('Computing safe bunk count.'); }
+  else if (/timetable|class|period|lecture/i.test(msg)) { steps.push('Timetable request.'); steps.push('Mapping subjects to slots.'); }
+  else if (/holiday|chutti|leave/i.test(msg)) { steps.push('Holiday query.'); steps.push('Checking calendar.'); }
+  else if (/code|program|function|bug/i.test(msg)) { steps.push('Programming request.'); steps.push('Structuring solution.'); }
+  else { steps.push('Understanding question.'); steps.push('Preparing response.'); }
+  return steps;
+}
+async function sendChat(){
+  const inp = $('chatInput'), msg = inp.value.trim();
+  if (!msg && !pendingChatFile) return;
+  const btn = $('chatSendBtn'); btn.disabled = true;
+  inp.value = ''; inp.style.height = 'auto';
+  const w = $('chatMsgs').querySelector('.chat-welcome'); if (w) w.remove();
+  const userWantsDL = DOWNLOAD_KEYWORDS.some(k => msg.toLowerCase().includes(k));
+  if (pendingChatFile) {
+    const fd = pendingChatFile; const isImage = fd.mimeType.startsWith('image/'); const fileLabel = isImage ? 'image' : (fd.mimeType === 'application/pdf' ? 'PDF' : 'file');
+    appendChat('user', `[${fd.name}]${msg ? ' — ' + msg : ''}`); clearChatFile();
+    const typing = createAIThinkingIndicator(isImage ? 'Analyzing image' : `Reading ${fileLabel}`);
+    $('chatMsgs').appendChild(typing); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight; startThinkingTimer(typing);
+    try {
+      const res = await fetch(`${API}/api/ai/chat-with-file`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: msg || (isImage ? 'Explain this image.' : `Analyze this file.`), fileBase64: fd.base64, mimeType: fd.mimeType, rollNo: currentUser.rollNo, role: currentUser.role, name: currentUser.name, branch: currentUser.branch, threadId: currentThreadId }) });
+      let d; try { d = await res.json(); } catch(_) { d = {}; }
+      const tSec = stopThinkingTimer(); typing.remove();
+      if (d.threadId) { currentThreadId = d.threadId; fetchChatHistory(); }
+      if (res.ok && d.reply) appendChat('bot', d.reply, true, userWantsDL, tSec, msg || `[${fd.name}]`);
+      else appendChat('bot', (d.error || 'Failed to process file'));
+    } catch(e) { stopThinkingTimer(); typing.remove(); appendChat('bot', 'Network error: ' + e.message); }
+    finally { btn.disabled = false; $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight; }
+    return;
+  }
+  appendChat('user', msg);
+  const typing = createAIThinkingIndicator(useDatabaseMode ? 'Checking database…' : 'Thinking');
+  $('chatMsgs').appendChild(typing); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight; startThinkingTimer(typing);
+  try {
+    const res = await fetch(`${API}/api/ai/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg, rollNo: currentUser.rollNo, role: currentUser.role, name: currentUser.name, branch: currentUser.branch, threadId: currentThreadId, skipGreeting: chatGreeted, useContext: useContextMode, useDatabase: useDatabaseMode }) });
+    let d; try { d = await res.json(); } catch(_) { d = {}; }
+    const tSec = stopThinkingTimer(); typing.remove();
+    if (d.threadId) { currentThreadId = d.threadId; fetchChatHistory(); }
+    chatGreeted = true;
+    if (d.needsLocation) { pendingLocationRequest = { requestData: d.requestData || {}, explanation: d.explanation, originalMessage: msg }; renderLocationRequest(d.explanation || 'Location required.'); return; }
+    if (d.needsLiveMarking) { pendingLocationRequest = { lectureType: d.lectureType || 'full_day', isLive: true, originalMessage: msg }; renderLocationRequest('Live attendance marking — share location.'); return; }
+    if (d.requiresConfirmation && d.dbOp) { renderDbConfirmation(d.dbOp, d.reply || d.dbOp.explanation); return; }
+    if (d.locationRejected) { appendChat('bot', d.reply || 'Location rejected.', true, false, tSec, msg); return; }
+    if (d.requestSubmitted) { appendChat('bot', d.reply, true, false, tSec, msg); return; }
+    if (d.needsPasscode) { appendChat('bot', d.reply, true, false, tSec, msg); pendingLocationRequest = { location: d.location, passcodeType: d.passcodeType, lectureType: d.lectureType, isLive: true, awaitingPasscode: true, originalMessage: msg }; return; }
+    if (res.status === 503 || res.status === 429) appendChat('bot', 'AI server is busy. Please try again in 15-20 seconds.');
+    else if (res.ok && d.reply) appendChat('bot', d.reply, true, userWantsDL, tSec, msg);
+    else appendChat('bot', (d.error || 'Sorry, could not process.'));
+  } catch(e) { stopThinkingTimer(); typing.remove(); appendChat('bot', 'Network error. Please try again.'); }
+  finally { btn.disabled = false; $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight; }
+}
+function renderLocationRequest(explanation){
+  const div = document.createElement('div'); div.className = 'msg bot';
+  const opId = 'locreq_' + Date.now(); div.id = opId;
+  div.innerHTML = `<div class="bubble" style="border-left:4px solid #6d28d9;background:linear-gradient(135deg,#fff,#f3e8ff);max-width:95%;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span style="background:#6d28d9;color:#fff;padding:4px 11px;border-radius:7px;font-size:10.5px;font-weight:800;">📍 LOCATION REQUIRED</span></div><div style="font-size:13px;color:#0f172a;font-weight:600;margin-bottom:12px;">${escapeHtml(explanation)}</div><div style="font-size:11.5px;color:#6d28d9;background:#f3e8ff;padding:10px 12px;border-radius:8px;margin-bottom:12px;line-height:1.6;">📌 Within 100m of BM Group campus.</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-purple btn-sm" onclick="shareLocationForRequest('${opId}')">📍 Share Location</button><button class="btn btn-outline btn-sm" onclick="document.getElementById('${opId}').remove(); pendingLocationRequest = null;">❌ Cancel</button></div></div>`;
+  $('chatMsgs').appendChild(div); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
+}
+async function shareLocationForRequest(opId){
+  const reqDiv = document.getElementById(opId); if (!reqDiv) return;
+  const btn = reqDiv.querySelector('button');
+  if (btn) { btn.disabled = true; btn.textContent = '📍 Getting location…'; }
+  try {
+    toast('Requesting location…', 'info');
+    const loc = await getBrowserLocation();
+    reqDiv.remove();
+    const typing = createAIThinkingIndicator('Verifying…');
+    $('chatMsgs').appendChild(typing); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight; startThinkingTimer(typing);
+    const res = await fetch(`${API}/api/ai/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: pendingLocationRequest?.originalMessage || 'mark today\'s attendance', rollNo: currentUser.rollNo, role: currentUser.role, name: currentUser.name, branch: currentUser.branch, threadId: currentThreadId, skipGreeting: true, useContext: useContextMode, useDatabase: true, location: { latitude: loc.latitude, longitude: loc.longitude } }) });
+    let d; try { d = await res.json(); } catch(_) { d = {}; }
+    const tSec = stopThinkingTimer(); typing.remove();
+    if (d.threadId) { currentThreadId = d.threadId; fetchChatHistory(); }
+    if (d.reply) { appendChat('bot', d.reply, true, false, tSec, 'location verified'); if (/marked|success|ho gaya|done|✅/i.test(d.reply)) sendPushNotification('✅ Attendance Marked', 'Chatbot marked attendance', { type: 'chat_mark' }); }
+    else appendChat('bot', '❌ ' + (d.error || 'Failed.'));
+    pendingLocationRequest = null;
+    if (currentUser.role === 'student') fetchHistory();
+  } catch(e) { if (btn) { btn.disabled = false; btn.textContent = '📍 Share Location'; } toast('Location error: ' + e.message, 'error'); }
+}
+function renderDbConfirmation(op, explanation) {
+  const div = document.createElement('div'); div.className = 'msg bot';
+  const opType = (op.action || 'db_op').toString().toUpperCase().replace('DB_', '');
+  const opId = 'dbconfirm_' + Date.now(); div.id = opId;
+  div.innerHTML = `<div class="bubble" style="border-left:4px solid #1e40af;background:#fff;max-width:95%;"><div style="margin-bottom:10px;"><span style="background:#1e40af;color:#fff;padding:4px 11px;border-radius:7px;font-size:10.5px;font-weight:800;">⚠️ ${escapeHtml(opType)}</span></div><div style="font-size:13px;font-weight:600;margin-bottom:12px;">${escapeHtml(explanation || 'Confirm?')}</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-danger btn-sm" onclick='confirmDbOp(${JSON.stringify(op).replace(/'/g, "&apos;")}, this)'>✅ Confirm</button><button class="btn btn-outline btn-sm" onclick="document.getElementById('${opId}').remove()">❌ Cancel</button></div></div>`;
+  $('chatMsgs').appendChild(div); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
+}
+async function confirmDbOp(op, btnEl) {
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = '⏳'; }
+  try {
+    const res = await fetch(`${API}/api/ai/chat/confirm-db`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ operation: op, rollNo: currentUser.rollNo }) });
+    const d = await res.json();
+    const m = btnEl ? btnEl.closest('.msg') : null; if (m) m.remove();
+    if (res.ok && d.reply) { appendChat('bot', d.reply, true, false, 2, op.explanation || 'DB op'); sendPushNotification('✅ Command Executed', op.action || 'Database operation complete', { type: 'db_op' }); }
+    else appendChat('bot', '❌ ' + (d.error || 'Failed'));
+  } catch(e) { if (btnEl) { btnEl.disabled = false; btnEl.textContent = '✅ Confirm'; } toast('Failed: ' + e.message, 'error'); }
+}
+function appendChat(role, text, renderMD, showDL2, tSec, umsg){
+  const time = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  const div = document.createElement('div'); div.className = 'msg ' + role;
+  const id = 'msg_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+  const content = (role === 'bot' && renderMD) ? renderMarkdown(text) : escapeHtml(text).replace(/\n/g, '<br>');
+  let actions = ''; let thoughtHtml = '';
+  if (role === 'bot' && tSec && tSec > 0) {
+    const steps = generateThinkingSummary(umsg || '');
+    const stepsHtml = steps.map(s => `<span class="tb-step">${escapeHtml(s)}</span>`).join('');
+    thoughtHtml = `<div class="thought-badge" onclick="this.classList.toggle('expanded')"><div class="tb-head"><svg class="tb-icon" viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-6.88 17.24c.42.38.68.93.68 1.5V22h12.4v-1.26c0-.57.26-1.12.68-1.5A10 10 0 0 0 12 2z"/></svg><span class="tb-text">Thought for <b>${tSec}</b>s</span><svg class="tb-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div><div class="tb-body">${stepsHtml}</div></div>`;
+  }
+  if (role === 'bot') { actions = `<div class="msg-actions"><button class="msg-action-btn" onclick="copyMessageText(this, '${id}')"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy</button>`; if (showDL2) actions += `<button class="msg-action-btn download-btn" onclick="toggleDownloadMenu(event, '${id}')"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download</button><div class="dl-menu" id="dlmenu_${id}"><div class="dl-menu-title">Download as</div><button onclick="downloadMessagePDF('${id}')">PDF</button><button onclick="downloadMessageTXT('${id}')">Text File</button><button onclick="downloadMessageExcel('${id}')">Excel</button></div>`; actions += `</div>`; }
+  else if (role === 'user') actions = `<div class="msg-actions"><button class="msg-action-btn" onclick="copyMessageText(this, '${id}')"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy</button></div>`;
+  div.innerHTML = `${thoughtHtml}<div class="bubble" id="${id}" data-raw="${encodeURIComponent(text)}">${content}<span class="time">${time}</span></div>${actions}`;
+  $('chatMsgs').appendChild(div); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
+}
+function copyMessageText(btn, id){ const el = document.getElementById(id); if (!el) return; const raw = decodeURIComponent(el.dataset.raw || el.innerText); const t = raw.replace(/<span class="time">.*<\/span>$/, '').trim(); if (navigator.clipboard) navigator.clipboard.writeText(t).then(() => { const o = btn.innerHTML; btn.classList.add('copied'); btn.innerHTML = '✓ Copied'; setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = o; }, 1800); }); }
+function toggleDownloadMenu(e, msgId){ if (e && e.stopPropagation) e.stopPropagation(); const menuId = 'dlmenu_' + msgId; const menu = document.getElementById(menuId); if (!menu) return; if (openDownloadMenuId && openDownloadMenuId !== menuId) { const old = document.getElementById(openDownloadMenuId); if (old) old.classList.remove('open'); } if (menu.classList.contains('open')) { menu.classList.remove('open'); openDownloadMenuId = null; return; } const btn = e.currentTarget || e.target; const r = btn.getBoundingClientRect(); menu.style.visibility = 'hidden'; menu.classList.add('open'); const mr = menu.getBoundingClientRect(); let top = r.bottom + 6, left = r.left; if (top + mr.height > window.innerHeight - 12) top = r.top - mr.height - 6; if (left + mr.width > window.innerWidth - 12) left = window.innerWidth - mr.width - 12; if (left < 12) left = 12; if (top < 12) top = 12; menu.style.position = 'fixed'; menu.style.top = top + 'px'; menu.style.left = left + 'px'; menu.style.bottom = 'auto'; menu.style.right = 'auto'; menu.style.visibility = ''; openDownloadMenuId = menuId; }
+function getMessageText(msgId){ const el = document.getElementById(msgId); if (!el) return ''; return decodeURIComponent(el.dataset.raw || ''); }
+function downloadMessagePDF(msgId){
+  try {
+    const text = getMessageText(msgId); if (!text) return toast('Nothing to download','error');
+    const JsPDF = ensureJsPDF(); if (!JsPDF) return;
+    const doc = new JsPDF();
+    doc.setFillColor(37, 99, 235); doc.rect(0, 0, 210, 22, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFontSize(15); doc.setFont(undefined, 'bold');
+    doc.text('BM Group · BM Bot', 105, 14, { align: 'center' });
+    doc.setTextColor(15, 23, 42); doc.setFontSize(10); doc.setFont(undefined, 'normal');
+    const lines = doc.splitTextToSize(text, 182); let y = 32;
+    const pageH = doc.internal.pageSize.height;
+    lines.forEach(line => { if (y > pageH - 15) { doc.addPage(); y = 20; } doc.text(line, 14, y); y += 5.5; });
+    const blob = doc.output('blob');
+    universalDownload(blob, `bm-bot-${Date.now()}.pdf`);
+    const menu = document.getElementById('dlmenu_' + msgId); if (menu) menu.classList.remove('open'); openDownloadMenuId = null;
+  } catch(e) { toast('Failed: ' + e.message, 'error'); }
+}
+function downloadMessageTXT(msgId){ try { const text = getMessageText(msgId); if (!text) return toast('Nothing','error'); const blob = new Blob([text], { type: 'text/plain;charset=utf-8' }); universalDownload(blob, `bm-bot-${Date.now()}.txt`); const m = document.getElementById('dlmenu_' + msgId); if (m) m.classList.remove('open'); openDownloadMenuId = null; } catch(e){ toast('Failed','error'); } }
+function downloadMessageExcel(msgId){ try { const text = getMessageText(msgId); if (!text) return toast('Nothing','error'); const XLSX = window.XLSX; if (!XLSX) return toast('Excel library not loaded','error'); const wb = XLSX.utils.book_new(); const rows = text.split('\n').map(l => [l]); const ws = XLSX.utils.aoa_to_sheet(rows); XLSX.utils.book_append_sheet(wb, ws, 'BM Bot'); const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }); const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); universalDownload(blob, `bm-bot-${Date.now()}.xlsx`); const m = document.getElementById('dlmenu_' + msgId); if (m) m.classList.remove('open'); openDownloadMenuId = null; } catch(e){ toast('Failed','error'); } }
+function renderMarkdown(text){ if (!text) return ''; let html = escapeHtml(text); html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>'); html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>'); html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>'); html = html.replace(/\*\*([^*]+?)\*\*/g, '<strong>$1</strong>'); html = html.replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, '$1<em>$2</em>'); html = html.replace(/`([^`]+)`/g, '<code>$1</code>'); html = html.replace(/\n{2,}/g, '<br><br>'); html = html.replace(/\n/g, '<br>'); return html; }
+function download(content, filename){ const b = new Blob(['\uFEFF' + content], {type: 'text/csv;charset=utf-8;'}); universalDownload(b, filename); }
+async function ensureHolidays(){ try { const res = await fetch(`${API}/api/holidays`); if (res.ok) { globalHolidays = await res.json(); return globalHolidays; } } catch(e){} return globalHolidays || []; }
+async function checkDateStatus(dateStr){ try { const res = await fetch(`${API}/api/date-status/${dateStr}`); if (res.ok) return await res.json(); } catch(e){} const d = new Date(dateStr + 'T00:00:00'); const dow = d.getDay(); if (dow === 0 || dow === 6) return { isBlocked: true, type: 'WEEKEND', message: `${FULL_DAY_NAMES[dow]}: Closed`, dayName: FULL_DAY_NAMES[dow] }; const h = (globalHolidays || []).find(x => (x.date||'').split('T')[0] === dateStr); if (h) return { isBlocked: true, type: 'HOLIDAY', message: `${h.reason}`, dayName: FULL_DAY_NAMES[dow] }; return { isBlocked: false, dayName: FULL_DAY_NAMES[dow] }; }
+function getMonthRangeStrings(m){ const mm = String(m+1).padStart(2,'0'); const last = new Date(2026, m+1, 0).getDate(); const start = m === 6 ? 15 : 1; return { start: `2026-${mm}-${String(start).padStart(2,'0')}`, end: `2026-${mm}-${String(last).padStart(2,'0')}` }; }
+function getCurrentMonthRangeStrings(){ const n = new Date(); const mm = String(n.getMonth()+1).padStart(2,'0'); const last = new Date(n.getFullYear(), n.getMonth()+1, 0).getDate(); const start = (n.getFullYear() === 2026 && n.getMonth() === 6) ? 15 : 1; return { start: `${n.getFullYear()}-${mm}-${String(start).padStart(2,'0')}`, end: `${n.getFullYear()}-${mm}-${String(last).padStart(2,'0')}` }; }
+function getRangeForSelection(range, month){ let s, e; if (range === 'FULL_SEMESTER') { s = '2026-07-15'; e = '2026-12-31'; } else if (range === 'CURRENT_MONTH') { const r = getCurrentMonthRangeStrings(); s = r.start; e = r.end; } else { const r = getMonthRangeStrings(parseInt(month)); s = r.start; e = r.end; } const today = fmtDate(new Date()); if (e > today) e = today; return { start: s, end: e }; }
+
+/* ============================================================
+   FCM PUSH NOTIFICATIONS
+   ============================================================ */
+const FIREBASE_CONFIG = { apiKey: "AIzaSyBBD3V20eKCo8S9Smi6LY--klDj-pBVXYQ", authDomain: "bm-attedance.firebaseapp.com", projectId: "bm-attedance", storageBucket: "bm-attedance.firebasestorage.app", messagingSenderId: "760728083416", appId: "1:760728083416:web:0ff3d79ac1b5d89ab5f0ad" };
+const VAPID_PUBLIC_KEY = "BPgV9AtuPSDUJWdIb-nu-MvD38XngpQXVj7cyrhZGGHxaL6upFPfxth6l_e1gYXOwL9bU1pnmxPYj0AzYX1jYlM";
+let firebaseApp = null, firebaseMessaging = null;
+
+async function initFirebase(){ if (firebaseApp) return firebaseApp; try { if (isMedianApp()) { console.log('[FCM] In Median app — skipping web Firebase init'); return null; } if (!window.firebase || !firebase.messaging) { console.warn('[FCM] Firebase SDK not loaded'); return null; } if (!firebase.apps || !firebase.apps.length) firebaseApp = firebase.initializeApp(FIREBASE_CONFIG); else firebaseApp = firebase.app(); try { firebaseMessaging = firebase.messaging(); } catch(e) { console.warn('[FCM] messaging init failed:', e.message); return null; } return firebaseApp; } catch(e) { console.warn('[FCM] init error:', e.message); return null; } }
+async function registerServiceWorker(){ if (!('serviceWorker' in navigator)) return null; try { const basePath = window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, ''); const swPath = `${basePath}/firebase-messaging-sw.js`; const reg = await navigator.serviceWorker.register(swPath, { scope: `${basePath}/` }); console.log('[FCM] SW registered at:', reg.scope); return reg; } catch(e) { console.warn('[FCM] SW registration failed:', e.message); return null; } }
+async function enableNotifications(){ const btn = $('notifBtn'); if (btn) { btn.disabled = true; } try { toast('Setting up notifications…', 'info'); if (isMedianApp() && window.median.firebaseMessaging) { console.log('[FCM] Median app mode'); await enableMedianNotifications(); if (btn) btn.disabled = false; return; } console.log('[FCM] Browser Web Push mode'); await enableBrowserNotifications(); } catch(e) { console.error('[FCM] Enable error:', e); showFeedback('error', 'Setup Failed', e.message || 'Could not enable notifications.'); } finally { if (btn) btn.disabled = false; } }
+async function enableMedianNotifications(){
+  const fcm = window.median.firebaseMessaging;
+  const permResult = await new Promise((resolve) => { try { fcm.requestPermission({ callback: function(result) { console.log('[FCM] Permission result:', result); resolve(result || { granted: false }); } }); setTimeout(() => resolve({ granted: false, timeout: true }), 15000); } catch(e) { console.warn('[FCM] requestPermission error:', e); resolve({ granted: false, error: e.message }); } });
+  if (!permResult || !permResult.granted) { showFeedback('warning', 'Permission Denied', 'Please allow notifications in your phone settings to receive attendance alerts.'); return; }
+  await new Promise((resolve) => { try { fcm.register({ callback: function(result) { console.log('[FCM] Register result:', result); resolve(result); } }); setTimeout(() => resolve(null), 10000); } catch(e) { console.warn('[FCM] register error:', e); resolve(null); } });
+  const tokenResult = await new Promise((resolve) => { try { fcm.getToken({ callback: function(result) { console.log('[FCM] Token result:', result); resolve(result); } }); setTimeout(() => resolve(null), 10000); } catch(e) { console.warn('[FCM] getToken error:', e); resolve(null); } });
+  const token = tokenResult?.token;
+  if (!token || token.length < 20) { showFeedback('error', 'Token Error', 'FCM token could not be generated. Please try again or restart the app.'); return; }
+  await saveFCMTokenToBackend(token);
+  localStorage.setItem('BM_FCM_ENABLED', '1'); updateNotifBtn(true);
+  try { if (typeof fcm.enableForegroundBanners === 'function') fcm.enableForegroundBanners(); } catch(e) { console.warn('[FCM] enableForegroundBanners:', e); }
+  try { if (typeof fcm.createChannel === 'function') { fcm.createChannel({ channelId: 'attendance_alerts', channelName: 'Attendance Alerts', importance: 'high', callback: function(r) { console.log('[FCM] Channel created:', r); } }); } } catch(e) { console.warn('[FCM] createChannel:', e); }
+  setupMedianFCMListeners(fcm);
+  showFeedback('success', 'Notifications Enabled', 'You will now receive:\n\n• Passcode publish alerts\n• Notice broadcasts\n• Request updates\n• Daily attendance reminders');
+}
+async function enableBrowserNotifications(){
+  const app = await initFirebase(); if (!app || !firebaseMessaging) { toast('Notifications not supported on this browser', 'error'); return; }
+  if (typeof Notification === 'undefined') { toast('Notifications not supported here', 'error'); return; }
+  const perm = await Notification.requestPermission(); if (perm !== 'granted') { showFeedback('warning', 'Permission Denied', 'Please allow notifications in your browser settings.'); return; }
+  const reg = await registerServiceWorker(); if (!reg) { toast('Service worker registration failed', 'error'); return; }
+  const token = await firebaseMessaging.getToken({ vapidKey: VAPID_PUBLIC_KEY, serviceWorkerRegistration: reg });
+  if (!token) { toast('Could not get FCM token', 'error'); return; }
+  await saveFCMTokenToBackend(token);
+  localStorage.setItem('BM_FCM_ENABLED', '1'); updateNotifBtn(true);
+  showFeedback('success', 'Notifications Enabled', 'You will now receive attendance reminders and alerts.');
+}
+function setupMedianFCMListeners(fcm) { try { if (window._medianFCMListenersSet) return; window._medianFCMListenersSet = true; if (fcm.notificationReceived && fcm.notificationReceived.addListener) { fcm.notificationReceived.addListener((data) => { console.log('[FCM] Foreground notification:', data); const title = data?.notification?.title || data?.title || 'BM Attendance'; const body = data?.notification?.body || data?.body || ''; toast(`${title}${body ? ': ' + body : ''}`, 'info'); }); } if (fcm.notificationClicked && fcm.notificationClicked.addListener) { fcm.notificationClicked.addListener((data) => { console.log('[FCM] Notification clicked:', data); if (typeof fetchHistory === 'function' && currentUser?.role === 'student') { fetchHistory().catch(() => {}); } }); } } catch(e) { console.warn('[FCM] Listener setup error:', e.message); } }
+async function saveFCMTokenToBackend(token) { try { const res = await fetch(`${API}/api/user/save-fcm-token`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: currentUser.rollNo, fcmToken: token }) }); const d = await res.json().catch(() => ({})); if (!res.ok) { console.warn('[FCM] Backend save failed:', d.error || res.status); localStorage.setItem('BM_FCM_TOKEN', token); return false; } console.log('[FCM] Token saved to backend'); localStorage.setItem('BM_FCM_TOKEN', token); return true; } catch(e) { console.warn('[FCM] saveFCMTokenToBackend error:', e.message); localStorage.setItem('BM_FCM_TOKEN', token); return false; } }
+function updateNotifBtn(enabled){ const btn = $('notifBtn'); if (!btn) return; if (enabled) { btn.classList.add('notif-on'); btn.setAttribute('title', 'Notifications enabled'); btn.setAttribute('data-tip', 'Notifications ON'); } else { btn.classList.remove('notif-on'); btn.setAttribute('title', 'Enable Notifications'); btn.setAttribute('data-tip', 'Notifications'); } }
+async function autoInitFCM(){
+  if (!currentUser || !currentUser.rollNo) return;
+  if (localStorage.getItem('BM_FCM_ENABLED') !== '1') return;
+  try {
+    if (isMedianApp() && window.median.firebaseMessaging) { const fcm = window.median.firebaseMessaging; setupMedianFCMListeners(fcm); const tokenResult = await new Promise((resolve) => { try { fcm.getToken({ callback: (result) => resolve(result) }); setTimeout(() => resolve(null), 8000); } catch(e) { resolve(null); } }); const token = tokenResult?.token; if (token && token.length > 20) { const saved = localStorage.getItem('BM_FCM_TOKEN'); if (saved !== token) await saveFCMTokenToBackend(token); updateNotifBtn(true); } return; }
+    const app = await initFirebase(); if (!app || !firebaseMessaging) return;
+    const reg = await registerServiceWorker(); if (!reg) return;
+    const token = await firebaseMessaging.getToken({ vapidKey: VAPID_PUBLIC_KEY, serviceWorkerRegistration: reg });
+    if (!token) return;
+    const saved = localStorage.getItem('BM_FCM_TOKEN');
+    if (saved && saved === token) { updateNotifBtn(true); return; }
+    await saveFCMTokenToBackend(token);
+    updateNotifBtn(true);
+  } catch(e) { console.warn('[FCM] autoInit:', e.message); }
+}
+try { if (window.firebase && firebase.messaging && !isMedianApp()) { setTimeout(() => { try { const m = firebase.messaging(); m.onMessage((payload) => { console.log('[FCM] Foreground:', payload); const t = payload.notification?.title || 'BM Attendance'; const b = payload.notification?.body || ''; sendPushNotification(t, b, { type: 'fcm_foreground' }); }); } catch(e){} }, 1500); } } catch(e){}
+
+/* ============================================================
+   PREMIUM INIT
+   ============================================================ */
+function initScrollProgress(){ if (!isDesktop()) return; const bar = document.getElementById('scrollProgress'); if (!bar) return; const update = () => { const h = document.documentElement; const total = h.scrollHeight - h.clientHeight; bar.style.width = total > 0 ? (h.scrollTop / total) * 100 + '%' : '0%'; }; if (bar._bound) return; bar._bound = true; window.addEventListener('scroll', update, { passive: true }); window.addEventListener('resize', update); update(); }
+function initSpotlight(){ if (!isDesktop()) return; const targets = document.querySelectorAll('.card, .stat, .chart-wrap, .portal, .passcode-card, .collapsible-card, .advisor, .attendance-actions-card, .working-days-cta, .approved-banner'); targets.forEach(el => { if (el.dataset.spotlight === '1') return; el.dataset.spotlight = '1'; el.classList.add('spotlight-enabled'); el.addEventListener('mousemove', (e) => { const r = el.getBoundingClientRect(); el.style.setProperty('--mx', (e.clientX - r.left) + 'px'); el.style.setProperty('--my', (e.clientY - r.top) + 'px'); }); }); }
+function initMagneticButtons(){ if (!isDesktop()) return; document.querySelectorAll('.menu-trigger-btn').forEach(btn => { if (btn.dataset.magInit === '1') return; btn.dataset.magInit = '1'; btn.classList.add('magnetic'); btn.addEventListener('mousemove', (e) => { const r = btn.getBoundingClientRect(); const x = (e.clientX - r.left - r.width / 2) * 0.22; const y = (e.clientY - r.top - r.height / 2) * 0.22; btn.style.transform = `translate(${x}px, ${y}px)`; }); btn.addEventListener('mouseleave', () => { btn.style.transform = ''; }); }); }
+function initIconAnimations(){ if (!isDesktop()) return; document.querySelectorAll('.icon-btn').forEach(b => { if (b.dataset.iconAnim === '1') return; b.dataset.iconAnim = '1'; b.classList.add('icon-bounce'); }); const chatBtn = document.getElementById('chatBtn'); if (chatBtn && chatBtn.dataset.iconPulse !== '1') { chatBtn.dataset.iconPulse = '1'; chatBtn.classList.add('icon-pulse'); } const notice = document.getElementById('noticeBanner'); if (notice && notice.dataset.bellRing !== '1') { notice.dataset.bellRing = '1'; notice.classList.add('bell-ring'); } }
+function initTooltips(){ if (!isDesktop()) return; document.querySelectorAll('[title]').forEach(el => { const t = el.getAttribute('title'); if (!t || el.hasAttribute('data-tip')) return; el.setAttribute('data-tip', t); el.removeAttribute('title'); }); }
+function initStaggeredLists(){ if (!isDesktop()) return; document.querySelectorAll('.table-wrap tbody, #adminPresentList, #myRequestsList, #adminRequestsList, #accountRequestsList, #studentMenuList, #adminMenuList, .chips').forEach(el => { if (!el.classList.contains('stagger-list')) el.classList.add('stagger-list'); }); }
+function initStatLift(){ if (!isDesktop()) return; document.querySelectorAll('.stat').forEach(s => { if (s.dataset.tilt === '1') return; s.dataset.tilt = '1'; s.addEventListener('mousemove', (e) => { const r = s.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width - 0.5; const y = (e.clientY - r.top) / r.height - 0.5; s.style.transform = `translateY(-4px) rotateX(${-y * 4}deg) rotateY(${x * 4}deg)`; }); s.addEventListener('mouseleave', () => { s.style.transform = ''; }); }); }
+function runPremiumInit(){ if (!isDesktop()) return; initScrollProgress(); initSpotlight(); initMagneticButtons(); initIconAnimations(); initTooltips(); initStaggeredLists(); initStatLift(); }
+let _premiumResizeDebounce = null;
+window.addEventListener('resize', () => { if (_premiumResizeDebounce) clearTimeout(_premiumResizeDebounce); _premiumResizeDebounce = setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 200); }, { passive: true });
+
+document.addEventListener('click', (e) => { if (e.target && e.target.classList && e.target.classList.contains('modal-backdrop') && e.target.classList.contains('open')) { e.target.classList.remove('open'); } if (openDownloadMenuId && !e.target.closest('.dl-menu') && !e.target.closest('.download-btn')) { const menu = document.getElementById(openDownloadMenuId); if (menu) menu.classList.remove('open'); openDownloadMenuId = null; } }, true);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { document.querySelectorAll('.modal-backdrop.open').forEach(m => m.classList.remove('open')); closeStudentMenu(); closeAdminMenu(); if (openDownloadMenuId) { const m = document.getElementById(openDownloadMenuId); if (m) m.classList.remove('open'); openDownloadMenuId = null; } } });
+
+document.addEventListener('DOMContentLoaded', () => {
+  handleScrollFab();
+  const pdfRange = $('pdfRangeSelect'); if (pdfRange) pdfRange.onchange = function(){ $('pdfMonthSelect').style.display = this.value === 'SELECTED_MONTH' ? 'block' : 'none'; };
+  const adminRepRange = $('adminReportRange'); if (adminRepRange) adminRepRange.onchange = toggleAdminReportRange;
+  const lt = $('reqLectureType'); if (lt) lt.onchange = function(){ $('reqSubjectGroup').style.display = (this.value === 'single_lecture') ? 'block' : 'none'; loadRequestSubjects(); };
+  setTimeout(runPremiumInit, 120);
+  if (localStorage.getItem('token')) loadDashboard();
+  if (isMedianApp()) { console.log('[FCM] Median app detected — bridge ready'); if (typeof window.median_library_ready === 'function') { window.median_library_ready(); } }
+});
+if (document.readyState !== 'loading') { setTimeout(() => handleScrollFab(), 50); setTimeout(runPremiumInit, 200); }
+
+window.median_library_ready = function() { console.log('[FCM] Median JS Bridge ready'); if (isMedianApp() && currentUser && localStorage.getItem('BM_FCM_ENABLED') === '1') { autoInitFCM().catch(() => {}); } };
+
+window.addEventListener('pageshow', () => {
+  window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+});
+window.addEventListener('load', () => {
+  window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+});
