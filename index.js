@@ -1,4 +1,4 @@
-// ================= index.js v5.0 — Full Backend (Razorpay + Subscriptions + Gamification + Notes Fix) =================
+// ================= index.js v5.1 — Full Backend (Razorpay + Subscriptions + Gamification + Notes Fix + Streak Weekend Fix) =================
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -445,21 +445,45 @@ async function awardAchievement(rollNo, achievementId) {
   } catch (e) { return false; }
 }
 
+// ★ NEW HELPER: Calculates the previous working day (skipping weekends & holidays)
+async function getPreviousWorkingDay(dateStr) {
+  let d = new Date(dateStr + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() - 1);
+  while (true) {
+    const ds = d.toISOString().split('T')[0];
+    const dow = d.getUTCDay();
+    if (dow === 0 || dow === 6) { // Skip Weekend
+      d.setUTCDate(d.getUTCDate() - 1);
+      continue;
+    }
+    const isHoliday = await Holiday.findOne({ date: ds });
+    if (isHoliday) { // Skip Holiday
+      d.setUTCDate(d.getUTCDate() - 1);
+      continue;
+    }
+    break;
+  }
+  return d.toISOString().split('T')[0];
+}
+
 async function updateLoginStreak(rollNo) {
   try {
     const g = await getOrCreateGamification(rollNo);
     const todayStr = getISTDateString(new Date());
     const isFirstLogin = !g.lastLoginDate;
+    
     if (g.lastLoginDate === todayStr) {
-      // Same day login, no streak update
+      // Same day login, do nothing
     } else if (!g.lastLoginDate) {
       g.loginStreak = 1;
     } else {
-      const last = new Date(g.lastLoginDate + 'T00:00:00Z');
-      const now = new Date(todayStr + 'T00:00:00Z');
-      const diffDays = Math.round((now - last) / (24 * 60 * 60 * 1000));
-      if (diffDays === 1) g.loginStreak = (g.loginStreak || 0) + 1;
-      else if (diffDays > 1) g.loginStreak = 1;
+      // ★ FIX: Check if last login was on the previous working day
+      const prevWorkingDay = await getPreviousWorkingDay(todayStr);
+      if (g.lastLoginDate === prevWorkingDay) {
+        g.loginStreak = (g.loginStreak || 0) + 1;
+      } else {
+        g.loginStreak = 1; // Reset if gap is more than 1 working day
+      }
     }
     g.lastLoginDate = todayStr;
     g.totalXp = (g.totalXp || 0) + 10;
@@ -494,14 +518,12 @@ async function updateAttendanceStreak(rollNo) {
       if (!g.lastAttendanceDate) {
         g.attendanceStreak = 1;
       } else {
-        const last = new Date(g.lastAttendanceDate + 'T00:00:00Z');
-        const now = new Date(todayStr + 'T00:00:00Z');
-        const diffDays = Math.round((now - last) / (24 * 60 * 60 * 1000));
-        
-        if (diffDays === 1) {
+        // ★ FIX: Check if last attendance was on the previous working day
+        const prevWorkingDay = await getPreviousWorkingDay(todayStr);
+        if (g.lastAttendanceDate === prevWorkingDay) {
           g.attendanceStreak = (g.attendanceStreak || 0) + 1;
         } else {
-          g.attendanceStreak = 1;
+          g.attendanceStreak = 1; // Reset if gap is more than 1 working day
         }
       }
       g.lastAttendanceDate = todayStr;
@@ -1329,7 +1351,7 @@ app.get('/health', (req, res) => res.json({
   ai: { primary: { provider: 'groq', model: GROQ_MODEL, keys: GROQ_API_KEYS.length }, fallback: { provider: 'gemini', model: GEMINI_MODEL, keys: GEMINI_API_KEYS.length, discovered: _geminiModelsCache.list.length } },
   fcm: { ready: fcmReady, projectId: process.env.FIREBASE_PROJECT_ID || null },
   razorpay: { ready: razorpayReady, keyId: process.env.RAZORPAY_KEY_ID ? process.env.RAZORPAY_KEY_ID.substring(0, 8) + '...' : null },
-  version: '5.0',
+  version: '5.1',
   timestamp: new Date().toISOString()
 }));
 
@@ -5768,7 +5790,7 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, async () => {
   console.log('');
   console.log('╔══════════════════════════════════════════════════════╗');
-  console.log('║       🎓 BM GROUP ERP BACKEND · v5.0.0              ║');
+  console.log('║       🎓 BM GROUP ERP BACKEND · v5.1.0              ║');
   console.log('╠══════════════════════════════════════════════════════╣');
   console.log(`║  🚀 Port: ${String(PORT).padEnd(44)}║`);
   console.log(`║  🌍 TZ:   ${String(process.env.TZ || 'Asia/Kolkata').padEnd(44)}║`);
@@ -5777,7 +5799,8 @@ app.listen(PORT, async () => {
   console.log(`║  🔥 FCM:  ${(fcmReady ? 'READY ✅' : 'DISABLED ⚠️').padEnd(43)}║`);
   console.log(`║  💳 Pay:  ${(razorpayReady ? 'Razorpay READY ✅' : 'Razorpay DISABLED ⚠️').padEnd(43)}║`);
   console.log('╠══════════════════════════════════════════════════════╣');
-  console.log('║  ✨ NEW in v5.0:                                     ║');
+  console.log('║  ✨ NEW in v5.1:                                     ║');
+  console.log('║     • Streak FIX: Weekends & holidays skipped       ║');
   console.log('║     • Real Razorpay payments (Silver/Gold/Platinum) ║');
   console.log('║     • Subscription gating (Silver=PDF, Gold=AI)     ║');
   console.log('║     • Gamification (streaks, achievements, XP)      ║');
@@ -5834,116 +5857,14 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
-
 /* ============================================================
-   ★ NEW: GAMIFICATION & LEADERBOARDS
+   NOTE: Frontend helpers (openLeaderboardModal, loadLeaderboard,
+   adminSearchGamification, adminSaveGamification) were previously
+   appended at the bottom of this file by mistake — they are FRONTEND
+   functions and do NOT belong in the backend. Removing them here to
+   keep index.js strictly backend. Move them to your frontend JS file.
    ============================================================ */
 
-// Student Side: Open Leaderboard
-function openLeaderboardModal() {
-  openModal('leaderboardModal');
-  loadLeaderboard('attendance'); // Default
-}
-
-// Fetch and Render Leaderboard
-async function loadLeaderboard(type) {
-  const el = $('leaderboardList');
-  el.innerHTML = '<div class="empty"><div class="spinner" style="margin:0 auto 8px;"></div>Fetching rankings...</div>';
-  
-  // Update button active states
-  const btns = document.querySelectorAll('#leaderboardModal .btn');
-  btns.forEach(b => b.classList.replace('btn-primary', 'btn-outline'));
-  event.target.classList.replace('btn-outline', 'btn-primary');
-
-  try {
-    const res = await fetch(`${API}/api/leaderboard/${type}`);
-    const data = await res.json();
-    
-    if (!res.ok || !data.length) return el.innerHTML = '<div class="empty">No data available yet.</div>';
-    
-    el.innerHTML = data.map((s, i) => {
-      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
-      const isMe = currentUser && currentUser.rollNo === s.rollNo;
-      const bg = isMe ? 'background:var(--brand-50); border-color:var(--brand-300);' : 'background:#fff; border-color:var(--slate-200);';
-      
-      return `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-radius:12px; border:1px solid; ${bg}">
-          <div style="display:flex; align-items:center; gap:12px;">
-            <div style="font-size:18px; font-weight:900; width:24px; text-align:center;">${medal}</div>
-            <div>
-              <div style="font-weight:800; font-size:13px; color:var(--slate-900);">${escapeHtml(s.name)} ${isMe ? '(You)' : ''}</div>
-              <div style="font-size:11px; color:var(--slate-500);">${s.rollNo} • ${s.branch}</div>
-            </div>
-          </div>
-          <div style="text-align:right;">
-            <div style="font-size:18px; font-weight:900; color:${type === 'login' ? '#b45309' : '#047857'};">${s.streak} 🔥</div>
-            <div style="font-size:10px; color:var(--slate-400); font-weight:700;">DAYS</div>
-          </div>
-        </div>
-      `;
-    }).join('');
-  } catch (e) {
-    el.innerHTML = '<div class="empty">Network error</div>';
-  }
-}
-
-// Admin Side: Search Student
-async function adminSearchGamification() {
-  const roll = $('gmRollNo').value.trim().toUpperCase();
-  if (!roll) return toast('Enter roll no', 'error');
-
-  const resEl = $('gmResult');
-  resEl.style.display = 'none';
-
-  try {
-    const res = await fetch(`${API}/api/admin/gamification/${roll}`);
-    if (!res.ok) return toast('Student not found', 'error');
-    const data = await res.json();
-
-    $('gmName').textContent = `${data.user.name} (${data.user.rollNo})`;
-    $('gmLoginStreak').value = data.gamification.loginStreak || 0;
-    $('gmAttendanceStreak').value = data.gamification.attendanceStreak || 0;
-    $('gmExcluded').checked = data.gamification.excludedFromLeaderboard || false;
-
-    resEl.style.display = 'block';
-  } catch (e) {
-    toast('Network error', 'error');
-  }
-}
-
-// Admin Side: Save Changes
-async function adminSaveGamification() {
-  const roll = $('gmRollNo').value.trim().toUpperCase();
-  const loginStreak = parseInt($('gmLoginStreak').value) || 0;
-  const attendanceStreak = parseInt($('gmAttendanceStreak').value) || 0;
-  const excluded = $('gmExcluded').checked;
-
-  showDL('Saving...');
-  try {
-    const res = await fetch(`${API}/api/admin/gamification/update`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        requesterRollNo: currentUser.rollNo, 
-        targetRollNo: roll, 
-        loginStreak, attendanceStreak, excluded 
-      })
-    });
-    
-    hideDL();
-    if (res.ok) {
-      showFeedback('success', 'Updated', 'Streaks and leaderboard status updated successfully.');
-    } else {
-      const d = await res.json();
-      showFeedback('error', 'Failed', d.error || 'Could not update');
-    }
-  } catch (e) {
-    hideDL(); showFeedback('error', 'Network Error', e.message);
-  }
-}
-
 // ============================================================
-//  END OF FILE — index.js v5.0.0
+//  END OF FILE — index.js v5.1.0
 // ============================================================
-                                                                                                                                                               
-      
