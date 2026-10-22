@@ -86,6 +86,29 @@ let sessionCheckInterval = null;
 let userSubscription = { tier: 'free', expiresAt: null }; // NEW
 
 /* ============================================================
+   ★ CUSTOM LAYOUT FIX INJECTION
+   ============================================================ */
+(function injectLayoutFix() {
+  if (document.getElementById('bm-custom-layout-fix')) return;
+  const style = document.createElement('style');
+  style.id = 'bm-custom-layout-fix';
+  style.innerHTML = `
+    .welcome { display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: flex-start !important; flex-wrap: nowrap !important; gap: 10px !important; }
+    .welcome-left { display: flex !important; flex-direction: row !important; align-items: center !important; gap: 10px !important; flex: 1; min-width: 0; }
+    .welcome-left > div { min-width: 0; }
+    .welcome-left h2 { font-size: 16px !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; margin: 0 !important; }
+    .welcome .meta { display: flex !important; align-items: center !important; gap: 6px !important; font-size: 11px !important; margin-top: 4px !important; flex-wrap: wrap !important; }
+    .welcome .row.no-flex { display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; justify-content: flex-end !important; gap: 4px !important; max-width: 140px; }
+    
+    @media (max-width: 400px) {
+        .welcome { flex-wrap: wrap !important; }
+        .welcome .row.no-flex { justify-content: flex-start !important; max-width: 100%; margin-top: 4px; margin-left: 52px; }
+    }
+  `;
+  document.head.appendChild(style);
+})();
+
+/* ============================================================
    DEVICE INFO DETECTION
    ============================================================ */
 function getDeviceInfo() {
@@ -863,7 +886,6 @@ function updateSubscriptionBadge() {
   }
   if (!badge) return;
   
-  // ★ FIX: Show the badge since it's hidden by default in HTML
   badge.style.display = 'inline-flex'; 
   
   const tier = userSubscription.tier || 'free';
@@ -881,9 +903,10 @@ function openSubscriptionModal() {
     modal.className = 'modal-backdrop safe-top-modal';
     modal.innerHTML = `
       <div class="modal wide">
-        <div class="modal-header"><div><h3>🌟 Upgrade Premium</h3><p class="text-xs text-muted" style="margin-top:4px;">Unlock exclusive features</p></div>
-        <!-- ★ FIX: Added stopPropagation to ensure close button works -->
-        <button type="button" class="modal-close" onclick="event.stopPropagation(); closeModal('subscriptionModal')">✕</button></div>
+        <div class="modal-header" style="align-items: center !important; padding-bottom: 12px;">
+          <div><h3>🌟 Upgrade Premium</h3><p class="text-xs text-muted" style="margin-top:4px;">Unlock exclusive features</p></div>
+          <button type="button" class="modal-close" style="margin-top: 8px; margin-right: 4px;" onclick="event.stopPropagation(); event.preventDefault(); closeModal('subscriptionModal')">✕</button>
+        </div>
         <div class="modal-body" id="subscriptionBody">
           <div class="empty">Loading plans…</div>
         </div>
@@ -906,17 +929,32 @@ function renderSubscriptionPlans() {
     { id: 'platinum', name: 'Platinum', icon: '💎', price: '₹20', color: '#6d28d9', features: ['All Gold Features', 'AI File/Image Analysis', 'Unlimited everything', 'Early Access to new features'] }
   ];
 
+  const tierRank = { free: 0, silver: 1, gold: 2, platinum: 3 };
+  const userRank = tierRank[currentTier] || 0;
+
   let html = '';
   plans.forEach(p => {
     const isCurrent = currentTier === p.id;
     const isExpired = userSubscription.isExpired;
-    const btnText = isCurrent && !isExpired ? 'Current Plan' : 'Upgrade Now';
-    const btnClass = isCurrent && !isExpired ? 'btn-outline' : 'btn-primary';
-    const disabled = isCurrent && !isExpired ? 'disabled' : '';
+    const isLowerTier = userRank > tierRank[p.id];
+
+    let btnText = 'Upgrade Now';
+    let btnClass = 'btn-primary';
+    let disabled = '';
+
+    if (isCurrent && !isExpired) {
+      btnText = 'Current Plan';
+      btnClass = 'btn-outline';
+      disabled = 'disabled';
+    } else if (isLowerTier && !isExpired) {
+      btnText = 'Included'; // ★ FIX: Show Included if higher tier is active
+      btnClass = 'btn-outline';
+      disabled = 'disabled';
+    }
     
     html += `
-      <div style="border:2px solid ${isCurrent && !isExpired ? p.color : 'var(--slate-200)'};border-radius:14px;padding:16px;margin-bottom:12px;position:relative;background:#fff;">
-        ${isCurrent && !isExpired ? `<span style="position:absolute;top:-10px;right:16px;background:${p.color};color:#fff;font-size:10px;font-weight:800;padding:2px 10px;border-radius:20px;">ACTIVE</span>` : ''}
+      <div style="border:2px solid ${(isCurrent || isLowerTier) && !isExpired ? p.color : 'var(--slate-200)'};border-radius:14px;padding:16px;margin-bottom:12px;position:relative;background:#fff; ${disabled ? 'opacity:0.8;' : ''}">
+        ${(isCurrent || isLowerTier) && !isExpired ? `<span style="position:absolute;top:-10px;right:16px;background:${p.color};color:#fff;font-size:10px;font-weight:800;padding:2px 10px;border-radius:20px;">ACTIVE</span>` : ''}
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
           <div style="font-size:18px;font-weight:800;color:${p.color};">${p.icon} ${p.name}</div>
           <div style="font-size:20px;font-weight:900;color:var(--slate-900);">${p.price}<span style="font-size:12px;color:var(--slate-500);font-weight:500;">/mo</span></div>
@@ -1004,8 +1042,10 @@ function openAchievementsModal() {
     modal.className = 'modal-backdrop safe-top-modal';
     modal.innerHTML = `
       <div class="modal wide">
-        <div class="modal-header"><div><h3>🏆 Achievements</h3><p class="text-xs text-muted" style="margin-top:4px;">Your streaks & unlocked badges</p></div>
-        <button type="button" class="modal-close" onclick="event.stopPropagation(); closeModal('achievementsModal')">✕</button></div>
+        <div class="modal-header" style="align-items: center !important; padding-bottom: 12px;">
+          <div><h3>🏆 Achievements</h3><p class="text-xs text-muted" style="margin-top:4px;">Your streaks & unlocked badges</p></div>
+          <button type="button" class="modal-close" style="margin-top: 8px; margin-right: 4px;" onclick="event.stopPropagation(); event.preventDefault(); closeModal('achievementsModal')">✕</button>
+        </div>
         <div class="modal-body" id="achievementsBody">
           <div class="empty">Loading…</div>
         </div>
