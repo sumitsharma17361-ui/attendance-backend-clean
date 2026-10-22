@@ -86,23 +86,29 @@ let sessionCheckInterval = null;
 let userSubscription = { tier: 'free', expiresAt: null }; // NEW
 
 /* ============================================================
-   ★ CUSTOM LAYOUT FIX INJECTION
+   ★ CUSTOM LAYOUT FIX INJECTION (UPDATED & MOBILE-FRIENDLY)
    ============================================================ */
 (function injectLayoutFix() {
   if (document.getElementById('bm-custom-layout-fix')) return;
   const style = document.createElement('style');
   style.id = 'bm-custom-layout-fix';
   style.innerHTML = `
-    .welcome { display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: flex-start !important; flex-wrap: nowrap !important; gap: 10px !important; }
-    .welcome-left { display: flex !important; flex-direction: row !important; align-items: center !important; gap: 10px !important; flex: 1; min-width: 0; }
-    .welcome-left > div { min-width: 0; }
-    .welcome-left h2 { font-size: 16px !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; margin: 0 !important; }
-    .welcome .meta { display: flex !important; align-items: center !important; gap: 6px !important; font-size: 11px !important; margin-top: 4px !important; flex-wrap: wrap !important; }
-    .welcome .row.no-flex { display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; justify-content: flex-end !important; gap: 4px !important; max-width: 140px; }
+    /* Desktop & General */
+    .welcome { display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: flex-start !important; gap: 10px !important; flex-wrap: wrap !important; }
+    .welcome-left { display: flex !important; flex-direction: row !important; align-items: center !important; gap: 12px !important; flex: 1; min-width: 0; }
+    .welcome-left > div { min-width: 0; flex: 1; }
+    .welcome-left h2 { font-size: 18px !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; margin: 0 0 4px 0 !important; }
+    .welcome .meta { display: flex !important; align-items: center !important; gap: 6px !important; font-size: 12px !important; flex-wrap: wrap !important; }
     
-    @media (max-width: 400px) {
-        .welcome { flex-wrap: wrap !important; }
-        .welcome .row.no-flex { justify-content: flex-start !important; max-width: 100%; margin-top: 4px; margin-left: 52px; }
+    /* Badges Container */
+    .welcome .row.no-flex { display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; justify-content: flex-end !important; gap: 6px !important; max-width: 160px; }
+    
+    /* Mobile Specific Fix (Screens < 640px) */
+    @media (max-width: 640px) {
+        .welcome { flex-direction: column !important; align-items: stretch !important; }
+        .welcome-left { flex-direction: row !important; align-items: flex-start !important; width: 100% !important; }
+        .welcome .row.no-flex { justify-content: flex-start !important; max-width: 100% !important; margin-top: 8px !important; padding-left: 54px !important; }
+        .welcome-left h2 { font-size: 16px !important; white-space: normal !important; line-height: 1.3 !important; }
     }
   `;
   document.head.appendChild(style);
