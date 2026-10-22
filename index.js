@@ -1,4 +1,4 @@
-// ================= index.js v4.5 — Full Backend (Strict Device Binding + 10 Min Class Reminders + All Features) =================
+// ================= index.js v5.0 — Full Backend (Razorpay + Subscriptions + Gamification + Notes Fix) =================
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -8,6 +8,8 @@ const rateLimit = require('express-rate-limit');
 const { z } = require('zod');
 const PDFDocument = require('pdfkit');
 const admin = require('firebase-admin');
+const crypto = require('crypto');
+const Razorpay = require('razorpay');
 process.env.TZ = 'Asia/Kolkata';
 console.log(`🕐 Server Timezone: ${process.env.TZ}`);
 
@@ -15,6 +17,32 @@ const app = express();
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '50mb' }));
 app.use(cors());
+
+// ============================================================
+//  RAZORPAY INIT
+// ============================================================
+let razorpayReady = false;
+let razorpay = null;
+try {
+  if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+    razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET
+    });
+    razorpayReady = true;
+    console.log('💳 Razorpay initialized — payments READY');
+  } else {
+    console.warn('⚠️ RAZORPAY env vars missing — payments DISABLED');
+  }
+} catch (e) {
+  console.error('❌ Razorpay init failed:', e.message);
+  razorpayReady = false;
+}
+
+// Tier prices (INR per month, in paise for Razorpay)
+const TIER_PRICES_PAISE = { silver: 4900, gold: 9900, platinum: 19900 };
+const TIER_PRICES_RUPEES = { silver: 49, gold: 99, platinum: 199 };
+const TIER_ORDER = { free: 0, silver: 1, gold: 2, platinum: 3 };
 
 // ============================================================
 //  FCM INIT
@@ -316,6 +344,179 @@ function languageInstruction(lang) {
 }
 
 // ============================================================
+//  SUBSCRIPTION HELPERS
+// ============================================================
+function getSubscriptionTierRank(tier) {
+  return TIER_ORDER[tier] || 0;
+}
+
+async function getUserSubscription(rollNo) {
+  try {
+    const sub = await Subscription.findOne({ rollNo: rollNo.toUpperCase() }).lean();
+    if (!sub) {
+      return { tier: 'free', expiresAt: null, isExpired: false, isActive: true, history: [] };
+    }
+    const isExpired = sub.expiresAt ? new Date(sub.expiresAt) < new Date() : false;
+    return {
+      tier: sub.tier || 'free',
+      expiresAt: sub.expiresAt,
+      isExpired,
+      isActive: !isExpired && sub.tier !== 'free',
+      history: sub.history || []
+    };
+  } catch (e) {
+    return { tier: 'free', expiresAt: null, isExpired: false, isActive: true, history: [] };
+  }
+}
+
+function hasMinTier(userSub, requiredTier) {
+  if (userSub.isExpired) return requiredTier === 'free';
+  return getSubscriptionTierRank(userSub.tier) >= getSubscriptionTierRank(requiredTier);
+}
+
+async function activateSubscription(rollNo, tier, paymentId, orderId, amountRupees) {
+  const cr = rollNo.toUpperCase();
+  const now = new Date();
+  const oneMonthLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  let sub = await Subscription.findOne({ rollNo: cr });
+  if (!sub) sub = new Subscription({ rollNo: cr, tier: 'free' });
+  // If existing active sub, extend 30 days from current expiry
+  let baseDate = now;
+  if (sub.expiresAt && new Date(sub.expiresAt) > now) {
+    baseDate = new Date(sub.expiresAt);
+  }
+  const newExpiry = new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+  sub.tier = tier;
+  sub.expiresAt = newExpiry;
+  sub.history = sub.history || [];
+  sub.history.push({
+    tier,
+    amount: amountRupees,
+    paymentId,
+    orderId,
+    startedAt: now,
+    expiresAt: newExpiry
+  });
+  await sub.save();
+  return sub;
+}
+
+// ============================================================
+//  GAMIFICATION HELPERS
+// ============================================================
+const ACHIEVEMENT_DEFINITIONS = {
+  first_login: { title: 'First Login', desc: 'Logged in for the first time', icon: '🌟' },
+  streak_3: { title: '3-Day Streak', desc: 'Logged in 3 days in a row', icon: '🔥' },
+  streak_7: { title: 'Week Warrior', desc: '7-day login streak', icon: '⚡' },
+  streak_30: { title: 'Monthly Master', desc: '30-day login streak', icon: '👑' },
+  first_attendance: { title: 'First Attendance', desc: 'Marked attendance for the first time', icon: '✅' },
+  attendances_50: { title: '50 Attendances', desc: 'Marked 50 attendances', icon: '🎯' },
+  attendances_100: { title: 'Century', desc: 'Marked 100 attendances', icon: '💯' },
+  perfect_week: { title: 'Perfect Week', desc: '100% attendance this week', icon: '⭐' },
+  night_owl: { title: 'Night Owl', desc: 'Active after 11 PM', icon: '🦉' },
+  early_bird: { title: 'Early Bird', desc: 'Logged in before 7 AM', icon: '🌅' }
+};
+
+async function getOrCreateGamification(rollNo) {
+  const cr = rollNo.toUpperCase();
+  let g = await Gamification.findOne({ rollNo: cr });
+  if (!g) g = await Gamification.create({ rollNo: cr });
+  return g;
+}
+
+async function awardAchievement(rollNo, achievementId) {
+  try {
+    const g = await getOrCreateGamification(rollNo);
+    if (!ACHIEVEMENT_DEFINITIONS[achievementId]) return false;
+    if (g.unlockedAchievements.find(a => a.id === achievementId)) return false;
+    const def = ACHIEVEMENT_DEFINITIONS[achievementId];
+    g.unlockedAchievements.push({
+      id: achievementId,
+      title: def.title,
+      desc: def.desc,
+      icon: def.icon,
+      unlockedAt: new Date()
+    });
+    g.totalXp = (g.totalXp || 0) + 50; // bonus XP per achievement
+    await g.save();
+    // Push notification
+    sendPushToRollNo(rollNo, `${def.icon} Achievement Unlocked!`, `"${def.title}" — ${def.desc}`, { type: 'achievement', achievementId }).catch(() => {});
+    return true;
+  } catch (e) { return false; }
+}
+
+async function updateLoginStreak(rollNo) {
+  try {
+    const g = await getOrCreateGamification(rollNo);
+    const todayStr = getISTDateString(new Date());
+    const isFirstLogin = !g.lastLoginDate;
+    if (g.lastLoginDate === todayStr) {
+      // Same day login, no streak update
+    } else if (!g.lastLoginDate) {
+      g.loginStreak = 1;
+    } else {
+      const last = new Date(g.lastLoginDate + 'T00:00:00Z');
+      const now = new Date(todayStr + 'T00:00:00Z');
+      const diffDays = Math.round((now - last) / (24 * 60 * 60 * 1000));
+      if (diffDays === 1) g.loginStreak = (g.loginStreak || 0) + 1;
+      else if (diffDays > 1) g.loginStreak = 1;
+    }
+    g.lastLoginDate = todayStr;
+    g.totalXp = (g.totalXp || 0) + 10;
+    await g.save();
+
+    // Award streak achievements
+    if (isFirstLogin) await awardAchievement(rollNo, 'first_login');
+    if (g.loginStreak === 3) await awardAchievement(rollNo, 'streak_3');
+    if (g.loginStreak === 7) await awardAchievement(rollNo, 'streak_7');
+    if (g.loginStreak === 30) await awardAchievement(rollNo, 'streak_30');
+
+    // Time-based achievements
+    const now = new Date();
+    const istHour = getISTHour(now);
+    if (istHour >= 23) await awardAchievement(rollNo, 'night_owl');
+    if (istHour < 7) await awardAchievement(rollNo, 'early_bird');
+
+    return g;
+  } catch (e) {
+    console.warn('updateLoginStreak error:', e.message);
+    return null;
+  }
+}
+
+async function updateAttendanceStreak(rollNo) {
+  try {
+    const g = await getOrCreateGamification(rollNo);
+    const todayStr = getISTDateString(new Date());
+    const isFirst = !g.lastAttendanceDate;
+    if (g.lastAttendanceDate !== todayStr) {
+      if (!g.lastAttendanceDate) g.attendanceStreak = 1;
+      else {
+        const last = new Date(g.lastAttendanceDate + 'T00:00:00Z');
+        const now = new Date(todayStr + 'T00:00:00Z');
+        const diffDays = Math.round((now - last) / (24 * 60 * 60 * 1000));
+        if (diffDays === 1) g.attendanceStreak = (g.attendanceStreak || 0) + 1;
+        else g.attendanceStreak = 1;
+      }
+      g.lastAttendanceDate = todayStr;
+      g.totalXp = (g.totalXp || 0) + 5;
+      await g.save();
+    }
+    if (isFirst) await awardAchievement(rollNo, 'first_attendance');
+
+    // Count total attendances
+    const total = await Attendance.countDocuments({ rollNo: rollNo.toUpperCase(), status: { $in: ['Present', 'Duty Leave'] } });
+    if (total >= 50) await awardAchievement(rollNo, 'attendances_50');
+    if (total >= 100) await awardAchievement(rollNo, 'attendances_100');
+
+    return g;
+  } catch (e) {
+    console.warn('updateAttendanceStreak error:', e.message);
+    return null;
+  }
+}
+
+// ============================================================
 //  TIMETABLE
 // ============================================================
 const CSE_TIME_TABLE = {
@@ -483,7 +684,7 @@ const userSchema = new mongoose.Schema({
   phone: { type: String, default: null },
   role: { type: String, enum: ['student', 'faculty', 'admin'], default: 'student' },
   boundDeviceId: { type: String, default: null },
-  boundDeviceName: { type: String, default: null },  // ★ NEW: Feature #3
+  boundDeviceName: { type: String, default: null },
   lastAttendanceTime: { type: Date, default: null },
   lastAttendanceLocation: { latitude: Number, longitude: Number },
   failedAttempts: { type: Number, default: 0 },
@@ -515,10 +716,10 @@ const attendanceSchema = new mongoose.Schema({
   isVerified: { type: Boolean, default: false },
   branch: { type: String, default: 'CSE' },
   markedBy: { type: String, default: null },
-  markedByRequestId: { type: String, default: null }  // ★ NEW: Feature #4 — tracks which attendance request created this record (for undo)
+  markedByRequestId: { type: String, default: null }
 }, { timestamps: true });
 attendanceSchema.index({ rollNo: 1, subject: 1, date: 1 }, { unique: true });
-attendanceSchema.index({ markedByRequestId: 1 });  // ★ NEW: fast undo lookup
+attendanceSchema.index({ markedByRequestId: 1 });
 
 const holidaySchema = new mongoose.Schema({ date: { type: String, required: true, unique: true }, reason: { type: String, default: 'Holiday' } }, { timestamps: true });
 const noticeSchema = new mongoose.Schema({ title: String, message: String, date: { type: Date, default: Date.now }, postedBy: String });
@@ -580,7 +781,7 @@ const accountRequestSchema = new mongoose.Schema({
 const registrationRequestSchema = new mongoose.Schema({
   name: { type: String, required: true }, rollNo: { type: String, required: true },
   password: { type: String, required: true }, deviceId: { type: String, default: null },
-  deviceName: { type: String, default: null },  // ★ NEW
+  deviceName: { type: String, default: null },
   branch: { type: String, default: 'CSE' }, role: { type: String, enum: ['student'], default: 'student' },
   status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
   reviewedBy: { type: String, default: null }, adminNote: { type: String, default: '' },
@@ -681,6 +882,49 @@ const docRequestSchema = new mongoose.Schema({
 }, { timestamps: true });
 docRequestSchema.index({ status: 1, createdAt: -1 });
 
+// ★ NEW: Subscription Schema
+const subscriptionSchema = new mongoose.Schema({
+  rollNo: { type: String, required: true, unique: true },
+  tier: { type: String, enum: ['free', 'silver', 'gold', 'platinum'], default: 'free' },
+  expiresAt: { type: Date, default: null },
+  history: [{
+    tier: String,
+    amount: Number,
+    paymentId: String,
+    orderId: String,
+    startedAt: Date,
+    expiresAt: Date
+  }]
+}, { timestamps: true });
+
+// ★ NEW: Payment Order Schema (to track Razorpay orders)
+const paymentOrderSchema = new mongoose.Schema({
+  orderId: { type: String, required: true, unique: true },
+  rollNo: { type: String, required: true },
+  tier: { type: String, required: true },
+  amount: { type: Number, required: true },
+  status: { type: String, enum: ['created', 'paid', 'failed'], default: 'created' },
+  paymentId: { type: String, default: null },
+  paidAt: { type: Date, default: null }
+}, { timestamps: true });
+
+// ★ NEW: Gamification Schema
+const gamificationSchema = new mongoose.Schema({
+  rollNo: { type: String, required: true, unique: true },
+  loginStreak: { type: Number, default: 0 },
+  lastLoginDate: { type: String, default: null },
+  attendanceStreak: { type: Number, default: 0 },
+  lastAttendanceDate: { type: String, default: null },
+  totalXp: { type: Number, default: 0 },
+  unlockedAchievements: [{
+    id: String,
+    title: String,
+    desc: String,
+    icon: String,
+    unlockedAt: { type: Date, default: Date.now }
+  }]
+}, { timestamps: true });
+
 const User = mongoose.model('User', userSchema);
 const Attendance = mongoose.model('Attendance', attendanceSchema);
 const Holiday = mongoose.model('Holiday', holidaySchema);
@@ -703,6 +947,9 @@ const EmergencyAlert = mongoose.model('EmergencyAlert', emergencyAlertSchema);
 const Note = mongoose.model('Note', noteSchema);
 const NotesFile = mongoose.model('NotesFile', notesFileSchema);
 const DocRequest = mongoose.model('DocRequest', docRequestSchema);
+const Subscription = mongoose.model('Subscription', subscriptionSchema);
+const PaymentOrder = mongoose.model('PaymentOrder', paymentOrderSchema);
+const Gamification = mongoose.model('Gamification', gamificationSchema);
 
 Attendance.createIndexes().catch(err => console.error('Index error:', err));
 
@@ -1072,7 +1319,8 @@ app.get('/health', (req, res) => res.json({
   status: 'ok',
   ai: { primary: { provider: 'groq', model: GROQ_MODEL, keys: GROQ_API_KEYS.length }, fallback: { provider: 'gemini', model: GEMINI_MODEL, keys: GEMINI_API_KEYS.length, discovered: _geminiModelsCache.list.length } },
   fcm: { ready: fcmReady, projectId: process.env.FIREBASE_PROJECT_ID || null },
-  version: '4.4',
+  razorpay: { ready: razorpayReady, keyId: process.env.RAZORPAY_KEY_ID ? process.env.RAZORPAY_KEY_ID.substring(0, 8) + '...' : null },
+  version: '5.0',
   timestamp: new Date().toISOString()
 }));
 
@@ -1084,6 +1332,137 @@ app.get('/api/health/push', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ============================================================
+//  ★★★ NEW: RAZORPAY PAYMENT ROUTES ★★★
+// ============================================================
+app.post('/api/payment/create-order', async (req, res) => {
+  try {
+    if (!razorpayReady) return res.status(503).json({ error: 'Payment system not configured.' });
+    const { rollNo, tier } = req.body || {};
+    if (!rollNo) return res.status(400).json({ error: 'rollNo required' });
+    if (!tier || !TIER_PRICES_PAISE[tier]) return res.status(400).json({ error: 'Invalid tier. Use silver/gold/platinum.' });
+
+    const cr = rollNo.trim().toUpperCase();
+    const user = await User.findOne({ rollNo: cr, role: 'student' });
+    if (!user) return res.status(404).json({ error: 'Student not found' });
+
+    const amount = TIER_PRICES_PAISE[tier];
+    const receipt = `sub_${cr}_${tier}_${Date.now()}`.substring(0, 40);
+
+    const order = await razorpay.orders.create({
+      amount,
+      currency: 'INR',
+      receipt,
+      notes: { rollNo: cr, tier, studentName: user.name }
+    });
+
+    // Save order locally
+    await PaymentOrder.create({
+      orderId: order.id,
+      rollNo: cr,
+      tier,
+      amount: TIER_PRICES_RUPEES[tier],
+      status: 'created'
+    });
+
+    res.json({
+      order: {
+        id: order.id,
+        amount: order.amount,
+        currency: order.currency
+      },
+      key_id: process.env.RAZORPAY_KEY_ID,
+      tier,
+      price: TIER_PRICES_RUPEES[tier]
+    });
+  } catch (err) {
+    console.error('create-order error:', err);
+    res.status(500).json({ error: err.message || 'Order creation failed' });
+  }
+});
+
+app.post('/api/payment/verify', async (req, res) => {
+  try {
+    if (!razorpayReady) return res.status(503).json({ error: 'Payment system not configured.' });
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body || {};
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({ error: 'Missing payment fields' });
+    }
+
+    // Verify signature
+    const sign = razorpay_order_id + '|' + razorpay_payment_id;
+    const expected = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET).update(sign).digest('hex');
+    if (expected !== razorpay_signature) {
+      console.warn('❌ Invalid Razorpay signature for order', razorpay_order_id);
+      return res.status(400).json({ error: 'Invalid payment signature' });
+    }
+
+    // Find order
+    const order = await PaymentOrder.findOne({ orderId: razorpay_order_id });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (order.status === 'paid') {
+      return res.json({ success: true, message: 'Already processed', tier: order.tier });
+    }
+
+    // Activate subscription
+    const sub = await activateSubscription(order.rollNo, order.tier, razorpay_payment_id, razorpay_order_id, order.amount);
+
+    order.status = 'paid';
+    order.paymentId = razorpay_payment_id;
+    order.paidAt = new Date();
+    await order.save();
+
+    // Award achievement + notify
+    await awardAchievement(order.rollNo, 'first_login'); // fallback if not unlocked
+    sendPushToRollNo(
+      order.rollNo,
+      '🎉 Subscription Activated!',
+      `You're now a ${order.tier.toUpperCase()} member. Enjoy premium features!`,
+      { type: 'subscription_activated', tier: order.tier }
+    ).catch(() => {});
+
+    console.log(`✅ Subscription activated: ${order.rollNo} → ${order.tier} (payment: ${razorpay_payment_id})`);
+    res.json({
+      success: true,
+      message: 'Payment verified. Subscription activated!',
+      tier: order.tier,
+      expiresAt: sub.expiresAt
+    });
+  } catch (err) {
+    console.error('verify-payment error:', err);
+    res.status(500).json({ error: err.message || 'Verification failed' });
+  }
+});
+
+app.get('/api/user/subscription/:rollNo', async (req, res) => {
+  try {
+    const rollNo = (req.params.rollNo || '').trim().toUpperCase();
+    if (!rollNo) return res.status(400).json({ error: 'rollNo required' });
+    const sub = await getUserSubscription(rollNo);
+    res.json(sub);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ============================================================
+//  ★★★ NEW: GAMIFICATION ROUTE ★★★
+// ============================================================
+app.get('/api/student/achievements/:rollNo', async (req, res) => {
+  try {
+    const cr = (req.params.rollNo || '').trim().toUpperCase();
+    if (!cr) return res.status(400).json({ error: 'rollNo required' });
+    const g = await getOrCreateGamification(cr);
+    res.json({
+      loginStreak: g.loginStreak || 0,
+      attendanceStreak: g.attendanceStreak || 0,
+      totalXp: g.totalXp || 0,
+      unlockedAchievements: (g.unlockedAchievements || []).sort((a, b) => new Date(b.unlockedAt) - new Date(a.unlockedAt))
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ============================================================
+//  FCM TOKEN ROUTES
+// ============================================================
 app.post('/api/user/save-fcm-token', async (req, res) => {
   try {
     const { rollNo, fcmToken } = req.body || {};
@@ -1147,9 +1526,6 @@ app.get('/api/admin/fix-branches/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ============================================================
-//  ★★★ NEW: BULK DEVICE RESET (Feature #2) ★★★
-// ============================================================
 app.post('/api/admin/bulk-reset-device', async (req, res) => {
   try {
     const { requesterRollNo, scope, rollNos } = req.body;
@@ -1177,7 +1553,6 @@ app.post('/api/admin/bulk-reset-device', async (req, res) => {
       $set: { boundDeviceId: null, boundDeviceName: null, activeSession: null }
     });
 
-    // Notify each student
     for (const s of students) {
       sendPushToRollNo(s.rollNo, '📱 Device Reset', 'Your device binding was reset by admin. Please login again from any device.', { type: 'device_reset' }).catch(() => {});
     }
@@ -1192,10 +1567,10 @@ app.post('/api/admin/bulk-reset-device', async (req, res) => {
 });
 
 // ============================================================
-//  ★★★ NEW: NOTES & DOCUMENTS (Feature #1) ★★★
+//  ★★★ NOTES & DOCUMENTS — UPDATED WITH VIEW/DOWNLOAD SPLIT ★★★
 // ============================================================
 
-// GET /api/notes/:branch — student/faculty view notes visible to their branch
+// GET /api/notes/:branch — list notes (view + download URLs)
 app.get('/api/notes/:branch', async (req, res) => {
   try {
     const branch = (req.params.branch || 'CSE').toUpperCase();
@@ -1213,13 +1588,53 @@ app.get('/api/notes/:branch', async (req, res) => {
       uploadedBy: n.uploadedBy,
       uploadedByName: n.uploadedByName,
       createdAt: n.createdAt,
-      fileUrl: `/api/notes/file/${n._id}`
+      // ★ FIX: split URLs
+      viewUrl: `/api/notes/view/${n._id}`,
+      downloadUrl: `/api/notes/download/${n._id}`,
+      // legacy alias
+      fileUrl: `/api/notes/download/${n._id}`
     }));
     res.json(result);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// POST /api/admin/notes/upload — admin uploads a note
+// ★ NEW: Inline view endpoint
+app.get('/api/notes/view/:noteId', async (req, res) => {
+  try {
+    const file = await NotesFile.findOne({ noteId: req.params.noteId });
+    if (!file) return res.status(404).json({ error: 'File not found' });
+    res.setHeader('Content-Type', file.mimeType || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(file.fileName)}"`);
+    res.setHeader('Content-Length', file.data.length);
+    res.send(file.data);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ★ NEW: Attachment download endpoint
+app.get('/api/notes/download/:noteId', async (req, res) => {
+  try {
+    const file = await NotesFile.findOne({ noteId: req.params.noteId });
+    if (!file) return res.status(404).json({ error: 'File not found' });
+    res.setHeader('Content-Type', file.mimeType || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.fileName)}"`);
+    res.setHeader('Content-Length', file.data.length);
+    res.send(file.data);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Legacy alias (kept for backward compat)
+app.get('/api/notes/file/:noteId', async (req, res) => {
+  try {
+    const file = await NotesFile.findOne({ noteId: req.params.noteId });
+    if (!file) return res.status(404).json({ error: 'File not found' });
+    res.setHeader('Content-Type', file.mimeType || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.fileName)}"`);
+    res.setHeader('Content-Length', file.data.length);
+    res.send(file.data);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/admin/notes/upload
 app.post('/api/admin/notes/upload', async (req, res) => {
   try {
     const { requesterRollNo, title, subject, branch, fileBase64, fileName, mimeType } = req.body;
@@ -1252,7 +1667,6 @@ app.post('/api/admin/notes/upload', async (req, res) => {
       size: buffer.length
     });
 
-    // Notify students
     const msg = `📚 New Note: ${title} — ${subject}`;
     if (finalBranch === 'ALL') {
       sendPushToAllStudents('📚 New Note Uploaded', msg, { type: 'note_added', noteId: note._id.toString() }).catch(() => {});
@@ -1262,12 +1676,19 @@ app.post('/api/admin/notes/upload', async (req, res) => {
 
     res.status(201).json({
       message: 'Note uploaded successfully.',
-      note: { _id: note._id, title, subject, branch: finalBranch, fileName, fileUrl: `/api/notes/file/${note._id}` }
+      note: {
+        _id: note._id,
+        title, subject,
+        branch: finalBranch,
+        fileName,
+        viewUrl: `/api/notes/view/${note._id}`,
+        downloadUrl: `/api/notes/download/${note._id}`
+      }
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// GET /api/admin/notes/:rollNo — admin lists all notes
+// GET /api/admin/notes/:rollNo
 app.get('/api/admin/notes/:rollNo', async (req, res) => {
   try {
     const user = await User.findOne({ rollNo: req.params.rollNo.trim().toUpperCase() });
@@ -1275,13 +1696,15 @@ app.get('/api/admin/notes/:rollNo', async (req, res) => {
     const notes = await Note.find({}).sort({ createdAt: -1 }).limit(200).lean();
     const result = notes.map(n => ({
       ...n,
-      fileUrl: `/api/notes/file/${n._id}`
+      viewUrl: `/api/notes/view/${n._id}`,
+      downloadUrl: `/api/notes/download/${n._id}`,
+      fileUrl: `/api/notes/download/${n._id}`
     }));
     res.json(result);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// DELETE /api/admin/notes/:id — delete a note
+// DELETE /api/admin/notes/:id
 app.delete('/api/admin/notes/:id', async (req, res) => {
   try {
     const { requesterRollNo } = req.body;
@@ -1294,22 +1717,10 @@ app.delete('/api/admin/notes/:id', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// GET /api/notes/file/:noteId — download file
-app.get('/api/notes/file/:noteId', async (req, res) => {
-  try {
-    const file = await NotesFile.findOne({ noteId: req.params.noteId });
-    if (!file) return res.status(404).json({ error: 'File not found' });
-    res.setHeader('Content-Type', file.mimeType || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.fileName)}"`);
-    res.setHeader('Content-Length', file.data.length);
-    res.send(file.data);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// POST /api/notes/request — student requests a document upload
+// POST /api/notes/request — student requests doc upload
 app.post('/api/notes/request', async (req, res) => {
   try {
-    const { rollNo, title, subject, reason, branch } = req.body;
+    const { rollNo, title, subject, reason, branch, fileBase64, fileName, mimeType } = req.body;
     if (!rollNo || !title || !subject) return res.status(400).json({ error: 'rollNo, title, subject required.' });
     const cr = rollNo.trim().toUpperCase();
     const user = await User.findOne({ rollNo: cr, role: 'student' });
@@ -1323,18 +1734,53 @@ app.post('/api/notes/request', async (req, res) => {
       status: 'Pending'
     });
 
+    // If file uploaded with request, save it (uploadedBy student — admin reviews)
+    if (fileBase64 && fileName && mimeType) {
+      try {
+        const buffer = Buffer.from(fileBase64, 'base64');
+        if (buffer.length <= 10 * 1024 * 1024) {
+          const note = await Note.create({
+            title: `[PENDING] ${title}`,
+            subject,
+            branch: (branch || user.branch || 'CSE').toUpperCase(),
+            fileName, mimeType, size: buffer.length,
+            uploadedBy: cr, uploadedByName: user.name
+          });
+          await NotesFile.create({ noteId: note._id, data: buffer, fileName, mimeType, size: buffer.length });
+          docReq.adminNote = `noteId:${note._id}`;
+          await docReq.save();
+        }
+      } catch (e) { console.warn('File attach error:', e.message); }
+    }
+
     sendPushToRole('admin', '📤 Document Upload Request', `${user.name} (${cr}) — ${title} (${subject})`, { type: 'doc_request', requestId: docReq._id.toString() }).catch(() => {});
     res.status(201).json({ message: 'Request submitted. Admin will review shortly.', request: docReq });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// GET /api/admin/notes/requests/:rollNo — list pending doc requests
+// GET /api/admin/notes/requests/:rollNo
 app.get('/api/admin/notes/requests/:rollNo', async (req, res) => {
   try {
     const user = await User.findOne({ rollNo: req.params.rollNo.trim().toUpperCase() });
     if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
     const requests = await DocRequest.find({ status: 'Pending' }).sort({ createdAt: -1 }).limit(100).lean();
-    res.json(requests);
+    const enriched = await Promise.all(requests.map(async r => {
+      let fileInfo = null;
+      if (r.adminNote && r.adminNote.startsWith('noteId:')) {
+        const noteId = r.adminNote.replace('noteId:', '');
+        const note = await Note.findById(noteId).lean();
+        if (note) {
+          fileInfo = {
+            noteId: note._id,
+            fileName: note.fileName,
+            viewUrl: `/api/notes/view/${note._id}`,
+            downloadUrl: `/api/notes/download/${note._id}`
+          };
+        }
+      }
+      return { ...r, fileInfo };
+    }));
+    res.json(enriched);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -1347,6 +1793,17 @@ app.post('/api/admin/notes/requests/approve/:id', async (req, res) => {
     const docReq = await DocRequest.findById(req.params.id);
     if (!docReq) return res.status(404).json({ error: 'Request not found' });
     if (docReq.status !== 'Pending') return res.status(400).json({ error: `Already ${docReq.status}.` });
+
+    // If note was attached, approve it (remove [PENDING] prefix)
+    if (docReq.adminNote && docReq.adminNote.startsWith('noteId:')) {
+      const noteId = docReq.adminNote.replace('noteId:', '');
+      const note = await Note.findById(noteId);
+      if (note && note.title.startsWith('[PENDING] ')) {
+        note.title = note.title.replace('[PENDING] ', '');
+        note.branch = docReq.branch || 'ALL';
+        await note.save();
+      }
+    }
 
     docReq.status = 'Approved';
     docReq.reviewedBy = adminUser.rollNo;
@@ -1368,6 +1825,15 @@ app.post('/api/admin/notes/requests/reject/:id', async (req, res) => {
     if (!docReq) return res.status(404).json({ error: 'Request not found' });
     if (docReq.status !== 'Pending') return res.status(400).json({ error: `Already ${docReq.status}.` });
 
+    // Delete attached pending note
+    if (docReq.adminNote && docReq.adminNote.startsWith('noteId:')) {
+      const noteId = docReq.adminNote.replace('noteId:', '');
+      try {
+        await Note.findByIdAndDelete(noteId);
+        await NotesFile.deleteOne({ noteId });
+      } catch (e) {}
+    }
+
     docReq.status = 'Rejected';
     docReq.reviewedBy = adminUser.rollNo;
     docReq.reviewedAt = new Date();
@@ -1379,8 +1845,25 @@ app.post('/api/admin/notes/requests/reject/:id', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// GET /api/notes/request-file/:reqId — legacy
+app.get('/api/notes/request-file/:reqId', async (req, res) => {
+  try {
+    const docReq = await DocRequest.findById(req.params.reqId);
+    if (!docReq) return res.status(404).json({ error: 'Not found' });
+    if (docReq.adminNote && docReq.adminNote.startsWith('noteId:')) {
+      const noteId = docReq.adminNote.replace('noteId:', '');
+      const file = await NotesFile.findOne({ noteId });
+      if (!file) return res.status(404).json({ error: 'File not found' });
+      res.setHeader('Content-Type', file.mimeType || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.fileName)}"`);
+      return res.send(file.data);
+    }
+    res.status(404).json({ error: 'No file attached' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ============================================================
-//  ★★★ NEW: ANNOUNCEMENTS GET (Feature #6) ★★★
+//  ANNOUNCEMENTS GET
 // ============================================================
 app.get('/api/announcements/:branch', async (req, res) => {
   try {
@@ -1611,7 +2094,7 @@ app.post('/api/faculty/announcement', async (req, res) => {
 });
 
 // ============================================================
-//  AUTH ROUTES
+//  AUTH ROUTES (with Gamification on login)
 // ============================================================
 app.post('/api/auth/register', async (req, res) => {
   try {
@@ -1711,7 +2194,7 @@ app.post('/api/admin/clear-registrations', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ★★★ MODIFIED: STRICT DEVICE BINDING ★★★
+// LOGIN with strict device binding + Gamification
 app.post('/api/auth/login', async (req, res) => {
   try {
     const parsed = loginSchema.safeParse(req.body);
@@ -1729,7 +2212,7 @@ app.post('/api/auth/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ error: 'Invalid password!' });
     user.failedAttempts = 0; user.blockUntil = null;
-    
+
     if (user.role === 'student') {
       const correctBranch = getBranchFromRoll(cleanRoll);
       if (correctBranch && user.branch !== correctBranch) user.branch = correctBranch;
@@ -1738,13 +2221,11 @@ app.post('/api/auth/login', async (req, res) => {
       if (user.boundDeviceId && user.boundDeviceId !== deviceId) {
         return res.status(403).json({ error: '⛔ Unauthorized Device! You can only login from your registered phone. Please use "Reset Device" if you changed your phone.' });
       }
-      
+
       if (!user.boundDeviceId && deviceId) {
-        // First time login or after reset - bind the new device
         user.boundDeviceId = deviceId;
         user.boundDeviceName = deviceName || 'Unknown Device';
       } else if (user.boundDeviceId === deviceId && deviceName) {
-        // Update name just in case
         user.boundDeviceName = deviceName;
       }
     }
@@ -1755,11 +2236,16 @@ app.post('/api/auth/login', async (req, res) => {
     const token = jwt.sign({ id: user._id, rollNo: user.rollNo, name: user.name, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     user.activeSession = token; await user.save();
 
+    // ★ GAMIFICATION: update login streak + achievements
+    if (user.role === 'student') {
+      updateLoginStreak(cleanRoll).catch(() => {});
+    }
+
     res.json({ message: 'Login successful!', token, user: { name: user.name, rollNo: user.rollNo, role: user.role, branch: user.branch } });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ★★★ NEW: VERIFY SESSION — detects auto-logout (Feature #2) ★★★
+// VERIFY SESSION
 app.post('/api/auth/verify-session', async (req, res) => {
   try {
     const { rollNo, token } = req.body;
@@ -2010,7 +2496,6 @@ app.post('/api/admin/login-as-student', async (req, res) => {
     if (!req1 || req1.role !== 'admin') return res.status(403).json({ error: 'Admin only!' });
     const student = await User.findOne({ rollNo: targetRollNo.trim().toUpperCase() });
     if (!student) return res.status(404).json({ error: 'Not found!' });
-    // ★ NEW: impersonated flag so session check doesn't kick them out
     const token = jwt.sign({ id: student._id, rollNo: student.rollNo, name: student.name, role: 'student', impersonated: true, impersonatedBy: req1.rollNo }, JWT_SECRET, { expiresIn: '1h' });
     res.json({ message: `As ${student.name}`, token, user: { name: student.name, rollNo: student.rollNo, role: 'student', branch: student.branch }, isImpersonating: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -2088,6 +2573,7 @@ app.post('/api/attendance/mark-live', async (req, res) => {
       user.failedAttempts = 0; user.blockUntil = null; await user.save();
       if (marked === 0) return res.status(400).json({ error: `Already marked.` });
       checkAttendanceMilestone(cr).catch(() => {});
+      updateAttendanceStreak(cr).catch(() => {});
       sendPushToRollNo(cr, '✅ Attendance Marked', `Full day attendance marked (${marked} lectures) · ${lc.distance}m from campus`, { type: 'attendance_marked', date: todayStr, lectureType: 'full_day' }).catch(() => {});
       return res.status(201).json({ message: `✅ ${marked} marked (${skipped} already). ${lc.distance}m.`, marked, skipped });
     }
@@ -2099,6 +2585,7 @@ app.post('/api/attendance/mark-live', async (req, res) => {
     user.lastAttendanceTime = new Date(); user.lastAttendanceLocation = { latitude, longitude };
     user.failedAttempts = 0; user.blockUntil = null; await user.save();
     checkAttendanceMilestone(cr).catch(() => {});
+    updateAttendanceStreak(cr).catch(() => {});
     sendPushToRollNo(cr, '✅ Lecture Marked', `${activeSubj} attendance marked · ${lc.distance}m from campus`, { type: 'attendance_marked', date: todayStr, lectureType: 'single_lecture', subject: activeSubj }).catch(() => {});
     res.status(201).json({ message: `✅ ${activeSubj} marked. ${lc.distance}m.`, subject: activeSubj });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -2169,7 +2656,7 @@ app.post('/api/requests/review/:id', async (req, res) => {
               ipAddress: 'request-approved',
               isVerified: false,
               branch: b,
-              markedByRequestId: request._id.toString()  // ★ NEW
+              markedByRequestId: request._id.toString()
             });
             markedCount++;
             markedSubjects.push(sub);
@@ -2180,6 +2667,7 @@ app.post('/api/requests/review/:id', async (req, res) => {
       request.reviewedBy = req1.rollNo; request.adminNote = note || '';
       request.reviewHistory.push({ action: 'Approved', by: req1.rollNo, at: new Date(), note: note || '', reviewedSubjects: markedSubjects });
       await request.save();
+      if (markedCount > 0) updateAttendanceStreak(request.rollNo).catch(() => {});
       sendPushToRollNo(request.rollNo, '✅ Attendance Request Approved', `${request.date} — ${markedCount} lecture(s) marked.`, { type: 'request_approved' }).catch(() => {});
       res.json({ message: `✅ Approved. ${markedCount} marked.`, request, markedCount, markedSubjects, totalRequested: subjectsToMark.length, undoWindowSeconds: 300 });
     } else {
@@ -2273,7 +2761,7 @@ app.post('/api/requests/bulk-review', async (req, res) => {
                   ipAddress: 'bulk-approve',
                   isVerified: false,
                   branch: b,
-                  markedByRequestId: request._id.toString()  // ★ NEW
+                  markedByRequestId: request._id.toString()
                 });
                 marked++;
               }
@@ -2302,7 +2790,7 @@ app.post('/api/admin/clear-requests', async (req, res) => {
 });
 
 // ============================================================
-//  PASSCODE TOGGLE / TEACHER SUBJECTS / PASSCODE GENERATE
+//  PASSCODE / TEACHER / PASSCODE GENERATE
 // ============================================================
 app.post('/api/admin/passcode/toggle', async (req, res) => {
   try {
@@ -2398,6 +2886,7 @@ app.post('/api/teacher/mark-attendance', async (req, res) => {
     const b = getBranchFromRoll(cs) || su.branch || 'CSE';
     await new Attendance({ rollNo: cs, studentName: su.name, subject: subj, date: todayDate, status: 'Present', location: { latitude, longitude }, ipAddress: req.ip, isVerified: true, branch: b, markedBy: cr }).save();
     checkAttendanceMilestone(cs).catch(() => {});
+    updateAttendanceStreak(cs).catch(() => {});
     sendPushToRollNo(cs, '✅ Marked Present', `${teacher.name} marked you present for ${subj}`, { type: 'faculty_mark', subject: subj, markedBy: teacher.name }).catch(() => {});
     res.status(201).json({ message: `✅ Marked ${su.name}` });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -2570,6 +3059,7 @@ app.post('/api/attendance/mark-lecture', async (req, res) => {
     user.lastAttendanceTime = new Date(); user.lastAttendanceLocation = { latitude, longitude };
     user.failedAttempts = 0; user.blockUntil = null; await user.save();
     checkAttendanceMilestone(cr).catch(() => {});
+    updateAttendanceStreak(cr).catch(() => {});
     sendPushToRollNo(cr, '✅ Lecture Marked', `${ns} marked · ${lc.distance}m from campus`, { type: 'attendance_marked', subject: ns }).catch(() => {});
     res.status(201).json({ message: `✅ Marked ${subject}!` });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -2608,6 +3098,7 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     if (marked === 0 && skipped > 0) return res.status(400).json({ error: `All ${skipped} already marked today.` });
     if (marked === 0) return res.status(400).json({ error: 'No academic subjects today.' });
     checkAttendanceMilestone(cr).catch(() => {});
+    updateAttendanceStreak(cr).catch(() => {});
     sendPushToRollNo(cr, '✅ Full Day Marked', `${marked} lectures marked · ${lc.distance}m from campus`, { type: 'attendance_marked', lectureType: 'full_day' }).catch(() => {});
     res.status(201).json({ message: `✅ Marked ${marked} new (${skipped} already).` });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -2805,7 +3296,6 @@ app.get('/api/admin/all-users/:requesterRollNo', async (req, res) => {
   try {
     const req1 = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
     if (!req1 || req1.role !== 'admin') return res.status(403).json({ error: 'Admin only!' });
-    // ★ NEW: includes boundDeviceName
     res.json(await User.find().select('name rollNo role boundDeviceId boundDeviceName email phone semester branch profilePic facultySubject dateOfBirth').sort({ rollNo: 1 }));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -2973,6 +3463,7 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
     if (already.length > 0) msg += `. Already: ${already.join(', ')}`;
     if (marked > 0) {
       sendPushToRollNo(tr, '✅ Attendance Marked by Admin', `${req1.name} marked you for ${marked} subject(s) on ${date}`, { type: 'admin_manual_mark', date, markedBy: req1.name }).catch(() => {});
+      updateAttendanceStreak(tr).catch(() => {});
     }
     res.status(201).json({ message: msg, markedSubjects: markedSubs, alreadyMarked: already, total: marked });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -3164,6 +3655,7 @@ app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
       tMarked += mk; tSkipped += sk;
       if (mk > 0) {
         sendPushToRollNo(s.rollNo, '✅ Bulk Marked by Admin', `${req1.name} marked you for ${mk} lecture(s)`, { type: 'admin_bulk_mark', markedBy: req1.name }).catch(() => {});
+        updateAttendanceStreak(s.rollNo).catch(() => {});
       }
     }
     res.json({ message: `✅ ${tMarked} new, ${tSkipped} skipped.`, results });
@@ -3344,7 +3836,7 @@ async function getSystemHealth() {
     Attendance.countDocuments().catch(() => 0), AttendanceRequest.countDocuments({ status: 'Pending' }).catch(() => 0), Holiday.countDocuments().catch(() => 0),
     Chat.countDocuments().catch(() => 0), RegistrationRequest.countDocuments({ status: 'Pending' }).catch(() => 0)
   ]);
-  return { status: 'HEALTHY', uptime: `${uptimeHrs} hours`, database: { state: dbState, ping: dbPing }, ai: { primary: { provider: 'Groq', model: GROQ_MODEL, keysConfigured: GROQ_API_KEYS.length }, fallback: { provider: 'Gemini', model: GEMINI_MODEL, keysConfigured: GEMINI_API_KEYS.length, discovered: _geminiModelsCache.list.length } }, fcm: { ready: fcmReady }, counts: { totalUsers: users, students, faculty, attendances, pendingRequests: requests, holidays, chats, pendingRegistrationRequests: regReqs } };
+  return { status: 'HEALTHY', uptime: `${uptimeHrs} hours`, database: { state: dbState, ping: dbPing }, ai: { primary: { provider: 'Groq', model: GROQ_MODEL, keysConfigured: GROQ_API_KEYS.length }, fallback: { provider: 'Gemini', model: GEMINI_MODEL, keysConfigured: GEMINI_API_KEYS.length, discovered: _geminiModelsCache.list.length } }, fcm: { ready: fcmReady }, razorpay: { ready: razorpayReady }, counts: { totalUsers: users, students, faculty, attendances, pendingRequests: requests, holidays, chats, pendingRegistrationRequests: regReqs } };
 }
 
 async function getFacultyClassAverage(teacherRollNo, subjectFilter = null) {
@@ -3619,7 +4111,6 @@ async function executeDbAction(intent, userContext, threadId = null) {
     if (holidays.length) txt += `\n\n**Upcoming Holidays:**\n` + holidays.map(h => `• ${h.date} — ${h.reason}`).join('\n');
     return { reply: txt, isReply: true };
   }
-  if (action === 'db_my_report_pdf') return { reply: `📄 I can generate your PDF. Tap **Download PDF** on dashboard or say the exact month.`, isReply: true, showDownload: true };
 
   if (action === 'db_faculty_mark') {
     if (!isFaculty && !isAdmin) return { error: 'Faculty/Admin only.' };
@@ -3638,6 +4129,7 @@ async function executeDbAction(intent, userContext, threadId = null) {
       const b = getBranchFromRoll(stu.rollNo) || stu.branch || 'CSE';
       await Attendance.create({ rollNo: stu.rollNo, studentName: stu.name, subject: subj, date, status: 'Present', location: null, ipAddress: 'chat-faculty-mark', isVerified: false, branch: b });
       sendPushToRollNo(stu.rollNo, '✅ Marked Present', `${userContext.name} marked you present for ${subj}`, { type: 'faculty_mark', subject: subj }).catch(() => {});
+      updateAttendanceStreak(stu.rollNo).catch(() => {});
       return { reply: `✅ Marked **${stu.rollNo}** (${stu.name}) as **Present** for **${subj}** on ${date}.`, isReply: true };
     } catch (e) { return { error: e.message }; }
   }
@@ -4113,7 +4605,7 @@ async function executeDbAction(intent, userContext, threadId = null) {
   if (action === 'db_system_health') {
     if (!isAdmin) return { error: 'Admin only.' };
     const h = await getSystemHealth();
-    let txt = `🖥️ **System Health**\n\n**Status:** ✅ ${h.status}\n**Uptime:** ${h.uptime}\n**DB:** ${h.database.state} (ping ${h.database.ping})\n**FCM:** ${h.fcm.ready ? '✅ Ready' : '⚠️ Not configured'}\n\n**AI:** ${h.ai.primary.provider} (${h.ai.primary.keysConfigured} keys) → ${h.ai.fallback.provider} (${h.ai.fallback.keysConfigured} keys, ${h.ai.fallback.discovered} discovered)\n\n**Counts:**\n• Users: ${h.counts.totalUsers} (S:${h.counts.students} F:${h.counts.faculty})\n• Attendance: ${h.counts.attendances}\n• Pending: ${h.counts.pendingRequests}\n• Reg Reqs: ${h.counts.pendingRegistrationRequests || 0}\n• Holidays: ${h.counts.holidays}`;
+    let txt = `🖥️ **System Health**\n\n**Status:** ✅ ${h.status}\n**Uptime:** ${h.uptime}\n**DB:** ${h.database.state} (ping ${h.database.ping})\n**FCM:** ${h.fcm.ready ? '✅ Ready' : '⚠️ Not configured'}\n**Razorpay:** ${h.razorpay.ready ? '✅ Ready' : '⚠️ Not configured'}\n\n**AI:** ${h.ai.primary.provider} (${h.ai.primary.keysConfigured} keys) → ${h.ai.fallback.provider} (${h.ai.fallback.keysConfigured} keys, ${h.ai.fallback.discovered} discovered)\n\n**Counts:**\n• Users: ${h.counts.totalUsers} (S:${h.counts.students} F:${h.counts.faculty})\n• Attendance: ${h.counts.attendances}\n• Pending: ${h.counts.pendingRequests}\n• Reg Reqs: ${h.counts.pendingRegistrationRequests || 0}\n• Holidays: ${h.counts.holidays}`;
     return { reply: txt, isReply: true };
   }
   if (action === 'db_timetable') {
@@ -4176,7 +4668,7 @@ function L(lang, key) {
 }
 
 // ============================================================
-//  AI CHAT
+//  AI CHAT (with Gold+ subscription gate)
 // ============================================================
 app.post('/api/ai/chat', async (req, res) => {
   try {
@@ -4193,6 +4685,20 @@ app.post('/api/ai/chat', async (req, res) => {
     const userRole = userData?.role || role || 'student';
     const userName = userData?.name || name || 'Guest';
     const userBranch = getBranchFromRoll(cr) || userData?.branch || branch || 'CSE';
+
+    // ★ FEATURE GATE: AI Chat requires Gold+ for students
+    if (userData && userRole === 'student') {
+      const userSub = await getUserSubscription(cr);
+      if (!hasMinTier(userSub, 'gold')) {
+        return res.status(403).json({
+          requiresSubscription: true,
+          error: 'AI Chatbot is a Gold+ feature. Please upgrade your plan.',
+          requiredTier: 'gold',
+          currentTier: userSub.tier
+        });
+      }
+    }
+
     const effectiveThreadId = existingChat?.threadId || threadId || null;
     const tStart = Date.now();
     const thinkingCtx = { userMessage: message, userRole, flags: { languageDetected: null } };
@@ -4253,6 +4759,7 @@ app.post('/api/ai/chat', async (req, res) => {
             await clearPending(cr);
             thinkingCtx.flags.locationVerified = true; thinkingCtx.flags.attendanceMarked = true;
             checkAttendanceMilestone(cr).catch(() => {});
+            updateAttendanceStreak(cr).catch(() => {});
             sendPushToRollNo(cr, '✅ Attendance Marked via Chat', `${lectureType === 'full_day' ? 'Full day' : 'Single lecture'} marked · ${lc.distance}m`, { type: 'chat_mark', lectureType }).catch(() => {});
             if (cr !== 'guest') {
               const nt = existingChat || await Chat.create({ rollNo: cr, threadId: `chat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`, title: 'Attendance', messages: [] });
@@ -4376,6 +4883,20 @@ app.post('/api/ai/chat-with-file', async (req, res) => {
     if (cr !== 'guest') userData = await User.findOne({ rollNo: cr });
     const userName = userData?.name || name || 'Guest';
     const userRole = userData?.role || role || 'student';
+
+    // ★ FEATURE GATE: File analysis requires Platinum
+    if (userData && userRole === 'student') {
+      const userSub = await getUserSubscription(cr);
+      if (!hasMinTier(userSub, 'platinum')) {
+        return res.status(403).json({
+          requiresSubscription: true,
+          error: 'File/Image analysis is a Platinum feature. Please upgrade.',
+          requiredTier: 'platinum',
+          currentTier: userSub.tier
+        });
+      }
+    }
+
     const userLang = detectLanguage(userPrompt);
     const systemPrompt = `You are "BM Bot" helping ${userName} (${userRole}).\n## LANGUAGE RULE — ${languageInstruction(userLang)}\nAnalyze and summarize. Use markdown bullets. NEVER use markdown tables.`;
     let reply = '', aiOk = false;
@@ -4398,6 +4919,20 @@ app.post('/api/ai/generate-report-pdf', async (req, res) => {
     if (!cr) return res.status(400).json({ error: 'rollNo required' });
     const requester = await User.findOne({ rollNo: cr });
     if (!requester) return res.status(404).json({ error: 'User not found' });
+
+    // ★ FEATURE GATE: PDF reports require Silver+
+    if (requester.role === 'student') {
+      const userSub = await getUserSubscription(cr);
+      if (!hasMinTier(userSub, 'silver')) {
+        return res.status(403).json({
+          requiresSubscription: true,
+          error: 'PDF Reports are a Silver+ feature. Please upgrade.',
+          requiredTier: 'silver',
+          currentTier: userSub.tier
+        });
+      }
+    }
+
     if (reportType === 'admin-defaulters' && requester.role !== 'admin') return res.status(403).json({ error: 'Admin only.' });
     let pdfBuffer;
     if (reportType === 'student-attendance') {
@@ -4442,6 +4977,12 @@ app.post('/api/ai/generate-report-pdf', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ────────────────────────────────────────────────────────────
+// ▸ END OF PART 1 — Continue in Part 2 below
+// ────────────────────────────────────────────────────────────
+      // ============================================================
+//  ADMIN REQUESTS SUMMARY
+// ============================================================
 app.get('/api/admin/requests-summary/:requesterRollNo', async (req, res) => {
   try {
     const req1 = await User.findOne({ rollNo: req.params.requesterRollNo.trim().toUpperCase() });
@@ -4493,18 +5034,40 @@ app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
 });
 
 // ============================================================
+//  ★★★ NEW: BULK RESET — legacy duplicate kept safe (no conflict)
+// ============================================================
+// (already defined earlier in Part 1)
+
+// ============================================================
 //  CRON JOBS
 // ============================================================
-const _cronFlags = { dailySummary: null, shortageWeekly: null, weeklyReport: null, monthlyProgress: null, birthday: null, pendingAdmin: null, pendingStudent: null, systemHealth: null };
-function MONTH_NAME(m) { return ['January','February','March','April','May','June','July','August','September','October','November','December'][m]; }
+const _cronFlags = {
+  dailySummary: null,
+  shortageWeekly: null,
+  weeklyReport: null,
+  monthlyProgress: null,
+  birthday: null,
+  pendingAdmin: null,
+  pendingStudent: null,
+  systemHealth: null
+};
+
+function MONTH_NAME(m) {
+  return ['January','February','March','April','May','June','July','August','September','October','November','December'][m];
+}
 
 let _lastReminderDate = null;
+
+// ------------------------------------------------------------
+//  1. Attendance Reminder (2:45–2:55 PM IST daily, weekdays)
+// ------------------------------------------------------------
 function scheduleAttendanceReminder() {
   setInterval(async () => {
     try {
       if (!fcmReady) return;
       const now = new Date();
-      const istHour = getISTHour(now); const istMin = getISTMinutes(now);
+      const istHour = getISTHour(now);
+      const istMin = getISTMinutes(now);
       const todayStr = getISTDateString(now);
       const day = now.getDay();
       if (day === 0 || day === 6) return;
@@ -4514,71 +5077,126 @@ function scheduleAttendanceReminder() {
       const hol = await Holiday.findOne({ date: todayStr });
       if (hol) { _lastReminderDate = todayStr; return; }
       _lastReminderDate = todayStr;
-      await sendPushToAllStudents('⏰ Attendance Reminder', 'Live attendance window closes at 3 PM. Mark your attendance now!', { type: 'attendance_reminder', date: todayStr });
-    } catch (e) {}
+      await sendPushToAllStudents(
+        '⏰ Attendance Reminder',
+        'Live attendance window closes at 3 PM. Mark your attendance now!',
+        { type: 'attendance_reminder', date: todayStr }
+      );
+      console.log(`📢 [CRON] Attendance reminder sent for ${todayStr}`);
+    } catch (e) { /* silent */ }
   }, 60 * 1000);
 }
+
+// ------------------------------------------------------------
+//  2. Daily Summary (9:00 PM IST daily)
+// ------------------------------------------------------------
 function scheduleDailySummary() {
   setInterval(async () => {
     try {
       if (!fcmReady) return;
       const now = new Date();
-      const istHour = getISTHour(now); const istMin = getISTMinutes(now);
+      const istHour = getISTHour(now);
+      const istMin = getISTMinutes(now);
       const todayStr = getISTDateString(now);
       if (istHour !== 21 || istMin !== 0) return;
       if (_cronFlags.dailySummary === todayStr) return;
       _cronFlags.dailySummary = todayStr;
-      const day = now.getDay(); if (day === 0 || day === 6) return;
-      const hol = await Holiday.findOne({ date: todayStr }); if (hol) return;
+      const day = now.getDay();
+      if (day === 0 || day === 6) return;
+      const hol = await Holiday.findOne({ date: todayStr });
+      if (hol) return;
       const students = await User.find({ role: 'student', fcmToken: { $ne: null } }).select('rollNo name branch fcmToken').lean();
+      let sent = 0;
       for (const s of students) {
         try {
           const b = getBranchFromRoll(s.rollNo) || s.branch || 'CSE';
           const tt = getTimetableForBranch(b);
           const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][day];
-          const acad = [...new Set((tt[dayName] || []).filter(x => !x.subject.includes('LIB') && !x.subject.includes('Sports')).map(x => mapToCanonical(x.subject)))];
-          const recs = await Attendance.find({ rollNo: s.rollNo, date: todayStr, status: { $in: ['Present', 'Duty Leave'] } }).lean();
+          const acad = [...new Set((tt[dayName] || [])
+            .filter(x => !x.subject.includes('LIB') && !x.subject.includes('Sports'))
+            .map(x => mapToCanonical(x.subject)))];
+          const recs = await Attendance.find({
+            rollNo: s.rollNo,
+            date: todayStr,
+            status: { $in: ['Present', 'Duty Leave'] }
+          }).lean();
           const pSet = new Set(recs.map(r => mapToCanonical(r.subject)));
-          let pCount = 0; acad.forEach(sub => { if (pSet.has(sub)) pCount++; });
+          let pCount = 0;
+          acad.forEach(sub => { if (pSet.has(sub)) pCount++; });
           const pct = acad.length > 0 ? Math.round((pCount / acad.length) * 100) : 0;
           const summary = await getStudentSummary(s.rollNo);
           const overallPct = summary ? summary.attendancePercentage : 0;
-          await sendPushNotification(s.fcmToken, '📊 Today\'s Summary', `Today: ${pCount}/${acad.length} lectures (${pct}%). Overall: ${overallPct}%`, { type: 'daily_summary' });
+          await sendPushNotification(
+            s.fcmToken,
+            '📊 Today\'s Summary',
+            `Today: ${pCount}/${acad.length} lectures (${pct}%). Overall: ${overallPct}%`,
+            { type: 'daily_summary' }
+          );
+          sent++;
         } catch (e) {}
       }
+      console.log(`📊 [CRON] Daily summary sent to ${sent}/${students.length} students`);
     } catch (e) {}
   }, 60 * 1000);
 }
+
+// ------------------------------------------------------------
+//  3. Shortage Alert (Monday 10:00 AM IST)
+// ------------------------------------------------------------
 function scheduleShortageAlert() {
   setInterval(async () => {
     try {
       if (!fcmReady) return;
       const now = new Date();
-      const istHour = getISTHour(now); const istMin = getISTMinutes(now);
-      const day = now.getDay(); const todayStr = getISTDateString(now);
+      const istHour = getISTHour(now);
+      const istMin = getISTMinutes(now);
+      const day = now.getDay();
+      const todayStr = getISTDateString(now);
       if (day !== 1) return;
       if (istHour !== 10 || istMin !== 0) return;
       if (_cronFlags.shortageWeekly === todayStr) return;
       _cronFlags.shortageWeekly = todayStr;
       const students = await User.find({ role: 'student', fcmToken: { $ne: null } }).select('rollNo name fcmToken').lean();
+      let alerts = 0;
       for (const s of students) {
         try {
           const summary = await getStudentSummary(s.rollNo);
           if (!summary) continue;
-          if (summary.attendancePercentage < 75) { await sendPushNotification(s.fcmToken, '⚠️ Attendance Warning', `Your attendance is ${summary.attendancePercentage}% — below 75%!`, { type: 'shortage_alert' }); }
-          else if (summary.attendancePercentage < 80) { await sendPushNotification(s.fcmToken, '⚡ Attendance Near Limit', `Your attendance is ${summary.attendancePercentage}% — stay above 75%!`, { type: 'shortage_warning' }); }
+          if (summary.attendancePercentage < 75) {
+            await sendPushNotification(
+              s.fcmToken,
+              '⚠️ Attendance Warning',
+              `Your attendance is ${summary.attendancePercentage}% — below 75%!`,
+              { type: 'shortage_alert' }
+            );
+            alerts++;
+          } else if (summary.attendancePercentage < 80) {
+            await sendPushNotification(
+              s.fcmToken,
+              '⚡ Attendance Near Limit',
+              `Your attendance is ${summary.attendancePercentage}% — stay above 75%!`,
+              { type: 'shortage_warning' }
+            );
+          }
         } catch (e) {}
       }
+      console.log(`⚠️ [CRON] Shortage alerts sent to ${alerts} students`);
     } catch (e) {}
   }, 60 * 1000);
 }
+
+// ------------------------------------------------------------
+//  4. Weekly Report (Sunday 8:00 PM IST)
+// ------------------------------------------------------------
 function scheduleWeeklyReport() {
   setInterval(async () => {
     try {
       if (!fcmReady) return;
       const now = new Date();
-      const istHour = getISTHour(now); const istMin = getISTMinutes(now);
-      const day = now.getDay(); const todayStr = getISTDateString(now);
+      const istHour = getISTHour(now);
+      const istMin = getISTMinutes(now);
+      const day = now.getDay();
+      const todayStr = getISTDateString(now);
       if (day !== 0) return;
       if (istHour !== 20 || istMin !== 0) return;
       if (_cronFlags.weeklyReport === todayStr) return;
@@ -4586,23 +5204,36 @@ function scheduleWeeklyReport() {
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       const weekAgoStr = getISTDateString(weekAgo);
       const students = await User.find({ role: 'student', fcmToken: { $ne: null } }).select('rollNo fcmToken').lean();
+      let sent = 0;
       for (const s of students) {
         try {
           const recs = await Attendance.find({ rollNo: s.rollNo, date: { $gte: weekAgoStr, $lte: todayStr } }).lean();
           const present = recs.filter(r => r.status === 'Present' || r.status === 'Duty Leave').length;
           const pct = recs.length > 0 ? Math.round((present / recs.length) * 100) : 0;
-          await sendPushNotification(s.fcmToken, '📈 Weekly Report', `This week: ${present}/${recs.length} (${pct}%). Keep going!`, { type: 'weekly_report' });
+          await sendPushNotification(
+            s.fcmToken,
+            '📈 Weekly Report',
+            `This week: ${present}/${recs.length} (${pct}%). Keep going!`,
+            { type: 'weekly_report' }
+          );
+          sent++;
         } catch (e) {}
       }
+      console.log(`📈 [CRON] Weekly report sent to ${sent} students`);
     } catch (e) {}
   }, 60 * 1000);
 }
+
+// ------------------------------------------------------------
+//  5. Monthly Progress (last day of month, 8:00 PM IST)
+// ------------------------------------------------------------
 function scheduleMonthlyProgress() {
   setInterval(async () => {
     try {
       if (!fcmReady) return;
       const now = new Date();
-      const istHour = getISTHour(now); const istMin = getISTMinutes(now);
+      const istHour = getISTHour(now);
+      const istMin = getISTMinutes(now);
       const todayStr = getISTDateString(now);
       const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
       if (tomorrow.getDate() !== 1) return;
@@ -4610,129 +5241,280 @@ function scheduleMonthlyProgress() {
       if (_cronFlags.monthlyProgress === todayStr) return;
       _cronFlags.monthlyProgress = todayStr;
       const students = await User.find({ role: 'student', fcmToken: { $ne: null } }).select('rollNo fcmToken').lean();
+      let sent = 0;
       for (const s of students) {
         try {
           const summary = await getStudentSummary(s.rollNo);
           if (!summary) continue;
           const emoji = summary.attendancePercentage >= 75 ? '✅' : '⚠️';
-          await sendPushNotification(s.fcmToken, `📊 ${MONTH_NAME(now.getMonth())} Summary`, `${emoji} Overall: ${summary.attendancePercentage}% (${summary.totalAcademicLectures}/${summary.totalConductedLectures})`, { type: 'monthly_progress' });
+          await sendPushNotification(
+            s.fcmToken,
+            `📊 ${MONTH_NAME(now.getMonth())} Summary`,
+            `${emoji} Overall: ${summary.attendancePercentage}% (${summary.totalAcademicLectures}/${summary.totalConductedLectures})`,
+            { type: 'monthly_progress' }
+          );
+          sent++;
         } catch (e) {}
       }
+      console.log(`📊 [CRON] Monthly progress sent to ${sent} students`);
     } catch (e) {}
   }, 60 * 1000);
 }
+
+// ------------------------------------------------------------
+//  6. Birthday Wish (9:00 AM IST daily)
+// ------------------------------------------------------------
 function scheduleBirthdayWish() {
   setInterval(async () => {
     try {
       if (!fcmReady) return;
       const now = new Date();
-      const istHour = getISTHour(now); const istMin = getISTMinutes(now);
+      const istHour = getISTHour(now);
+      const istMin = getISTMinutes(now);
       const todayStr = getISTDateString(now);
       if (istHour !== 9 || istMin !== 0) return;
       if (_cronFlags.birthday === todayStr) return;
       _cronFlags.birthday = todayStr;
-      const todayMD = todayStr.substring(5);
+      const todayMD = todayStr.substring(5); // MM-DD
       const students = await User.find({ role: 'student', dateOfBirth: { $ne: null } }).lean();
+      let wished = 0;
       for (const s of students) {
         if (!s.dateOfBirth) continue;
         const md = s.dateOfBirth.substring(5);
-        if (md === todayMD) { try { await sendPushNotification(s.fcmToken, '🎂 Happy Birthday!', `Wishing you a wonderful day, ${s.name}! - BM Group`, { type: 'birthday' }); } catch (e) {} }
+        if (md === todayMD) {
+          try {
+            await sendPushNotification(
+              s.fcmToken,
+              '🎂 Happy Birthday!',
+              `Wishing you a wonderful day, ${s.name}! - BM Group`,
+              { type: 'birthday' }
+            );
+            wished++;
+          } catch (e) {}
+        }
       }
+      if (wished > 0) console.log(`🎂 [CRON] Birthday wishes sent to ${wished} students`);
     } catch (e) {}
   }, 60 * 1000);
 }
+
+// ------------------------------------------------------------
+//  7. Fee Reminder (10:00 AM IST daily)
+// ------------------------------------------------------------
 function scheduleFeeReminder() {
   setInterval(async () => {
     try {
       if (!fcmReady) return;
       const now = new Date();
-      const istHour = getISTHour(now); const istMin = getISTMinutes(now);
+      const istHour = getISTHour(now);
+      const istMin = getISTMinutes(now);
       const todayStr = getISTDateString(now);
       if (istHour !== 10 || istMin !== 0) return;
       const fees = await Fee.find({ status: { $ne: 'Paid' } }).lean();
+      let sent = 0;
       for (const fee of fees) {
         try {
           const dueD = new Date(fee.dueDate + 'T00:00:00');
           const todayD = new Date(todayStr + 'T00:00:00');
           const daysLeft = Math.round((dueD - todayD) / (24 * 60 * 60 * 1000));
           let reminderKey = null;
-          if (daysLeft === 7) reminderKey = '7d'; else if (daysLeft === 3) reminderKey = '3d'; else if (daysLeft === 1) reminderKey = '1d'; else if (daysLeft === 0) reminderKey = 'due'; else if (daysLeft < 0) reminderKey = 'overdue';
+          if (daysLeft === 7) reminderKey = '7d';
+          else if (daysLeft === 3) reminderKey = '3d';
+          else if (daysLeft === 1) reminderKey = '1d';
+          else if (daysLeft === 0) reminderKey = 'due';
+          else if (daysLeft < 0) reminderKey = 'overdue';
           if (!reminderKey) continue;
           if (fee.remindersSent && fee.remindersSent.includes(reminderKey)) continue;
-          const msg = daysLeft > 0 ? `Fee of ₹${fee.amount} due on ${fee.dueDate}. ${daysLeft} day(s) remaining.` : daysLeft === 0 ? `Fee of ₹${fee.amount} due TODAY (${fee.dueDate}). Pay now!` : `Fee of ₹${fee.amount} is OVERDUE since ${fee.dueDate}. Pay immediately.`;
+          const msg = daysLeft > 0
+            ? `Fee of ₹${fee.amount} due on ${fee.dueDate}. ${daysLeft} day(s) remaining.`
+            : daysLeft === 0
+              ? `Fee of ₹${fee.amount} due TODAY (${fee.dueDate}). Pay now!`
+              : `Fee of ₹${fee.amount} is OVERDUE since ${fee.dueDate}. Pay immediately.`;
           await sendPushToRollNo(fee.rollNo, daysLeft < 0 ? '💰 Fee OVERDUE' : '💰 Fee Due Reminder', msg, { type: 'fee_reminder', dueDate: fee.dueDate });
           await Fee.updateOne({ _id: fee._id }, { $push: { remindersSent: reminderKey } });
+          sent++;
         } catch (e) {}
       }
+      if (sent > 0) console.log(`💰 [CRON] Fee reminders sent to ${sent} students`);
     } catch (e) {}
   }, 60 * 1000);
 }
+
+// ------------------------------------------------------------
+//  8. Assignment Reminder (6:00 PM IST, 24h before due)
+// ------------------------------------------------------------
 function scheduleAssignmentReminder() {
   setInterval(async () => {
     try {
       if (!fcmReady) return;
       const now = new Date();
-      const istHour = getISTHour(now); const istMin = getISTMinutes(now);
+      const istHour = getISTHour(now);
+      const istMin = getISTMinutes(now);
       if (istHour !== 18 || istMin !== 0) return;
       const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
       const tomorrowStr = getISTDateString(tomorrow);
       const assignments = await Assignment.find({ dueDate: tomorrowStr }).lean();
+      let sent = 0;
       for (const a of assignments) {
         try {
           if (a.remindersSent && a.remindersSent.includes('24h')) continue;
-          await sendPushToBranch(a.branch, '📝 Assignment Due Tomorrow', `${a.title} — ${a.subject} — Due tomorrow (${a.dueDate})`, { type: 'assignment_deadline', assignmentId: a._id.toString() });
+          await sendPushToBranch(
+            a.branch,
+            '📝 Assignment Due Tomorrow',
+            `${a.title} — ${a.subject} — Due tomorrow (${a.dueDate})`,
+            { type: 'assignment_deadline', assignmentId: a._id.toString() }
+          );
           await Assignment.updateOne({ _id: a._id }, { $push: { remindersSent: '24h' } });
+          sent++;
         } catch (e) {}
       }
+      if (sent > 0) console.log(`📝 [CRON] Assignment reminders sent for ${sent} assignments`);
     } catch (e) {}
   }, 60 * 1000);
 }
+
+// ------------------------------------------------------------
+//  9. Exam Reminder (9:00 AM IST, 3 days before)
+// ------------------------------------------------------------
 function scheduleExamReminder() {
   setInterval(async () => {
     try {
       if (!fcmReady) return;
       const now = new Date();
-      const istHour = getISTHour(now); const istMin = getISTMinutes(now);
+      const istHour = getISTHour(now);
+      const istMin = getISTMinutes(now);
       if (istHour !== 9 || istMin !== 0) return;
       const checkDate = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
       const checkStr = getISTDateString(checkDate);
       const exams = await Exam.find({ examDate: checkStr }).lean();
+      let sent = 0;
       for (const ex of exams) {
         try {
           if (ex.remindersSent && ex.remindersSent.includes('3d')) continue;
-          await sendPushToBranch(ex.branch, '📝 Exam in 3 Days', `${ex.subject} — ${ex.examType} on ${ex.examDate} at ${ex.startTime} (${ex.venue})`, { type: 'exam_reminder', examId: ex._id.toString() });
+          await sendPushToBranch(
+            ex.branch,
+            '📝 Exam in 3 Days',
+            `${ex.subject} — ${ex.examType} on ${ex.examDate} at ${ex.startTime} (${ex.venue})`,
+            { type: 'exam_reminder', examId: ex._id.toString() }
+          );
           await Exam.updateOne({ _id: ex._id }, { $push: { remindersSent: '3d' } });
+          sent++;
         } catch (e) {}
       }
+      if (sent > 0) console.log(`📝 [CRON] Exam reminders sent for ${sent} exams`);
     } catch (e) {}
   }, 60 * 1000);
 }
+
+// ------------------------------------------------------------
+//  10. Library Due Reminder (10:05 AM IST, 2 days before)
+// ------------------------------------------------------------
 function scheduleLibraryReminder() {
   setInterval(async () => {
     try {
       if (!fcmReady) return;
       const now = new Date();
-      const istHour = getISTHour(now); const istMin = getISTMinutes(now);
+      const istHour = getISTHour(now);
+      const istMin = getISTMinutes(now);
       if (istHour !== 10 || istMin !== 5) return;
       const checkDate = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
       const checkStr = getISTDateString(checkDate);
       const books = await LibraryBook.find({ dueDate: checkStr, status: 'Issued' }).lean();
+      let sent = 0;
       for (const b of books) {
         try {
           if (b.remindersSent && b.remindersSent.includes('2d')) continue;
-          await sendPushToRollNo(b.rollNo, '📚 Book Return Reminder', `"${b.bookTitle}" due on ${b.dueDate}. Return or renew.`, { type: 'library_due', bookId: b._id.toString() });
+          await sendPushToRollNo(
+            b.rollNo,
+            '📚 Book Return Reminder',
+            `"${b.bookTitle}" due on ${b.dueDate}. Return or renew.`,
+            { type: 'library_due', bookId: b._id.toString() }
+          );
           await LibraryBook.updateOne({ _id: b._id }, { $push: { remindersSent: '2d' } });
+          sent++;
         } catch (e) {}
       }
+      if (sent > 0) console.log(`📚 [CRON] Library reminders sent for ${sent} books`);
     } catch (e) {}
   }, 60 * 1000);
 }
+
+// ------------------------------------------------------------
+//  11. ★ Class Reminders — Student 10 min / Faculty 5 min before
+// ------------------------------------------------------------
+function scheduleClassReminders() {
+  setInterval(async () => {
+    try {
+      if (!fcmReady) return;
+      const now = new Date();
+      const day = now.getDay();
+      if (day === 0 || day === 6) return;
+      const istMin = getISTMinutes(now);
+
+      for (const branch of ['CSE', 'AIDS']) {
+        const schedule = getScheduleForBranch(branch);
+        const daySchedule = schedule[day] || [];
+
+        for (const slot of daySchedule) {
+          if (slot.period === 'LUNCH') continue;
+          if (slot.subject.includes('Sports')) continue;
+          if (slot.subject.includes('LIB')) continue;
+
+          const startMins = parseInt(slot.start.split(':')[0]) * 60 + parseInt(slot.start.split(':')[1]);
+
+          // Student reminder — 10 minutes before
+          if (istMin === startMins - 10) {
+            try {
+              await sendPushToBranch(
+                branch,
+                '⏰ Class in 10 Minutes!',
+                `${mapToCanonical(slot.subject)} starts at ${slot.start} (${slot.faculty}). Get ready!`,
+                { type: 'class_reminder_student', subject: slot.subject, time: slot.start }
+              );
+              console.log(`⏰ [CRON] Student reminder: ${branch} ${slot.subject} @ ${slot.start}`);
+            } catch (e) {}
+          }
+
+          // Faculty reminder — 5 minutes before
+          if (istMin === startMins - 5) {
+            try {
+              const facultyUsers = await User.find({
+                role: 'faculty',
+                fcmToken: { $ne: null },
+                facultySubject: mapToCanonical(slot.subject)
+              }).select('rollNo name fcmToken').lean();
+
+              for (const f of facultyUsers) {
+                try {
+                  await sendPushNotification(
+                    f.fcmToken,
+                    '⏰ Class in 5 Minutes',
+                    `${mapToCanonical(slot.subject)} at ${slot.start} (${branch} branch)`,
+                    { type: 'class_reminder_faculty', subject: slot.subject, time: slot.start }
+                  );
+                } catch (e) {}
+              }
+              if (facultyUsers.length > 0) {
+                console.log(`⏰ [CRON] Faculty reminder: ${branch} ${slot.subject} → ${facultyUsers.length} teacher(s)`);
+              }
+            } catch (e) {}
+          }
+        }
+      }
+    } catch (e) { console.error('[CRON] Class reminder error:', e.message); }
+  }, 60 * 1000);
+}
+
+// ------------------------------------------------------------
+//  12. Pending Admin Reminder (11:00 AM IST daily)
+// ------------------------------------------------------------
 function schedulePendingAdminReminder() {
   setInterval(async () => {
     try {
       if (!fcmReady) return;
       const now = new Date();
-      const istHour = getISTHour(now); const istMin = getISTMinutes(now);
+      const istHour = getISTHour(now);
+      const istMin = getISTMinutes(now);
       const todayStr = getISTDateString(now);
       if (istHour !== 11 || istMin !== 0) return;
       if (_cronFlags.pendingAdmin === todayStr) return;
@@ -4743,23 +5525,50 @@ function schedulePendingAdminReminder() {
       const regs = await RegistrationRequest.countDocuments({ status: 'Pending', createdAt: { $lt: cutoff } });
       const docReqs = await DocRequest.countDocuments({ status: 'Pending', createdAt: { $lt: cutoff } });
       const total = pending + leaves + regs + docReqs;
-      if (total > 0) await sendPushToRole('admin', '⏰ Pending Requests', `${total} request(s) pending for 24+ hours. Review needed.`, { type: 'pending_admin_reminder' });
+      if (total > 0) {
+        await sendPushToRole(
+          'admin',
+          '⏰ Pending Requests',
+          `${total} request(s) pending for 24+ hours. Review needed.`,
+          { type: 'pending_admin_reminder' }
+        );
+        console.log(`⏰ [CRON] Pending admin reminder: ${total} items`);
+      }
     } catch (e) {}
   }, 60 * 1000);
 }
+
+// ------------------------------------------------------------
+//  13. Pending Student Reminder (6:05 PM IST daily)
+// ------------------------------------------------------------
 function schedulePendingStudentReminder() {
   setInterval(async () => {
     try {
       if (!fcmReady) return;
       const now = new Date();
-      const istHour = getISTHour(now); const istMin = getISTMinutes(now);
+      const istHour = getISTHour(now);
+      const istMin = getISTMinutes(now);
       if (istHour !== 18 || istMin !== 5) return;
       const cutoff = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
       const pending = await AttendanceRequest.find({ status: 'Pending', createdAt: { $lt: cutoff } }).lean();
-      for (const p of pending) { try { await sendPushToRollNo(p.rollNo, '📋 Request Still Pending', `Your ${p.date} request is still pending with admin.`, { type: 'request_pending_student' }); } catch (e) {} }
+      for (const p of pending) {
+        try {
+          await sendPushToRollNo(
+            p.rollNo,
+            '📋 Request Still Pending',
+            `Your ${p.date} request is still pending with admin.`,
+            { type: 'request_pending_student' }
+          );
+        } catch (e) {}
+      }
+      if (pending.length > 0) console.log(`⏰ [CRON] Pending student reminders: ${pending.length}`);
     } catch (e) {}
   }, 60 * 1000);
 }
+
+// ------------------------------------------------------------
+//  14. System Health Check (every hour)
+// ------------------------------------------------------------
 function scheduleSystemHealthCheck() {
   setInterval(async () => {
     try {
@@ -4768,55 +5577,22 @@ function scheduleSystemHealthCheck() {
       const istMin = getISTMinutes(now);
       if (istMin !== 0) return;
       const dbState = mongoose.connection.readyState;
-      if (dbState !== 1) { await sendPushToRole('admin', '🚨 System Alert', `Database connection issue. Check immediately.`, { type: 'system_alert' }); }
+      if (dbState !== 1) {
+        await sendPushToRole(
+          'admin',
+          '🚨 System Alert',
+          `Database connection issue. State: ${dbState}. Check immediately.`,
+          { type: 'system_alert' }
+        );
+        console.warn('🚨 [CRON] System alert sent: DB state =', dbState);
+      }
     } catch (e) {}
   }, 60 * 1000);
 }
 
-// ★★★ NEW: 10 MIN LECTURE REMINDER FOR STUDENTS & 5 MIN FOR FACULTY ★★★
-function scheduleClassReminders() {
-  setInterval(async () => {
-    try {
-      if (!fcmReady) return;
-      const now = new Date();
-      const day = now.getDay();
-      if (day === 0 || day === 6) return;
-      const istHour = getISTHour(now);
-      const istMin = getISTMinutes(now);
-
-      // Check for classes
-      for (const branch of ['CSE', 'AIDS']) {
-        const schedule = getScheduleForBranch(branch);
-        const daySchedule = schedule[day] || [];
-        
-        for (const slot of daySchedule) {
-          if (slot.period === 'LUNCH' || slot.subject.includes('Sports') || slot.subject.includes('LIB')) continue;
-          
-          const startMins = parseInt(slot.start.split(':')[0]) * 60 + parseInt(slot.start.split(':')[1]);
-
-          // Student Reminder: 10 Minutes before
-          if (istMin === startMins - 10) {
-            await sendPushToBranch(branch, `⏰ Class in 10 Mins!`, `${slot.subject} starts at ${slot.start}. Get ready!`, { type: 'class_reminder_student', subject: slot.subject });
-          }
-
-          // Faculty Reminder: 5 Minutes before
-          if (istMin === startMins - 5) {
-            const faculty = await User.find({ role: 'faculty', fcmToken: { $ne: null } }).lean();
-            for (const f of faculty) {
-              try {
-                const teaches = await TeacherSubject.findOne({ teacherRollNo: f.rollNo, subject: mapToCanonical(slot.subject) });
-                if (teaches) {
-                  await sendPushNotification(f.fcmToken, '⏰ Class in 5 Mins', `${slot.subject} at ${slot.start} — ${slot.faculty}`, { type: 'class_reminder_faculty' });
-                }
-              } catch (e) {}
-            }
-          }
-        }
-      }
-    } catch (e) { console.error('Class Reminder Error:', e.message); }
-  }, 60 * 1000);
-}
-
+// ============================================================
+//  INVOKE ALL CRON JOBS
+// ============================================================
 scheduleAttendanceReminder();
 scheduleDailySummary();
 scheduleShortageAlert();
@@ -4827,19 +5603,102 @@ scheduleFeeReminder();
 scheduleAssignmentReminder();
 scheduleExamReminder();
 scheduleLibraryReminder();
-scheduleClassReminders(); // Added new
+scheduleClassReminders();
 schedulePendingAdminReminder();
 schedulePendingStudentReminder();
 scheduleSystemHealthCheck();
 
-process.on('unhandledRejection', (reason) => console.error('Unhandled:', reason));
-process.on('uncaughtException', (err) => { console.error('Uncaught:', err); process.exit(1); });
+console.log('✅ [CRON] All 14 scheduled jobs initialized');
 
+// ============================================================
+//  PROCESS ERROR HANDLERS
+// ============================================================
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('⚠️ Unhandled Promise Rejection:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('❌ Uncaught Exception:', err);
+  console.error(err.stack);
+  // Don't exit — let the process stay alive for other requests
+  // process.exit(1); // Uncomment to crash on uncaught exceptions
+});
+
+// ============================================================
+//  SERVER STARTUP
+// ============================================================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, async () => {
-  console.log(`🚀 Port ${PORT}`);
-  console.log(`🤖 AI: Groq(${GROQ_API_KEYS.length} keys) → Gemini(${GEMINI_API_KEYS.length} keys)`);
-  console.log(`🔥 FCM: ${fcmReady ? 'READY ✅' : 'DISABLED ⚠️'}`);
-  console.log(`📦 Version: 4.5 (Strict Device Binding + 10 Min Class Reminders + All Features)`);
-  setTimeout(runBranchMigration, 3000);
+  console.log('');
+  console.log('╔══════════════════════════════════════════════════════╗');
+  console.log('║       🎓 BM GROUP ERP BACKEND · v5.0.0              ║');
+  console.log('╠══════════════════════════════════════════════════════╣');
+  console.log(`║  🚀 Port: ${String(PORT).padEnd(44)}║`);
+  console.log(`║  🌍 TZ:   ${String(process.env.TZ || 'Asia/Kolkata').padEnd(44)}║`);
+  console.log(`║  🗄️  Mongo: ${MONGO_URI ? 'CONNECTED / PENDING' .padEnd(35) : 'MISSING'.padEnd(35)}║`);
+  console.log(`║  🤖 AI:   Groq(${GROQ_API_KEYS.length} keys) → Gemini(${GEMINI_API_KEYS.length} keys)${' '.padEnd(10)}║`);
+  console.log(`║  🔥 FCM:  ${(fcmReady ? 'READY ✅' : 'DISABLED ⚠️').padEnd(43)}║`);
+  console.log(`║  💳 Pay:  ${(razorpayReady ? 'Razorpay READY ✅' : 'Razorpay DISABLED ⚠️').padEnd(43)}║`);
+  console.log('╠══════════════════════════════════════════════════════╣');
+  console.log('║  ✨ NEW in v5.0:                                     ║');
+  console.log('║     • Real Razorpay payments (Silver/Gold/Platinum) ║');
+  console.log('║     • Subscription gating (Silver=PDF, Gold=AI)     ║');
+  console.log('║     • Gamification (streaks, achievements, XP)      ║');
+  console.log('║     • Notes view/download split                     ║');
+  console.log('║     • 10-min student / 5-min faculty class alerts   ║');
+  console.log('╚══════════════════════════════════════════════════════╝');
+  console.log('');
+
+  // Delay branch migration to allow DB connection to settle
+  setTimeout(() => {
+    runBranchMigration().catch(err => console.warn('Migration error:', err.message));
+  }, 3000);
+
+  // Small hint if Razorpay is not configured
+  if (!razorpayReady) {
+    console.warn('⚠️  Razorpay env vars missing — payments will fail.');
+    console.warn('    Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET on Render.');
+  }
+
+  // Small hint if FCM is not configured
+  if (!fcmReady) {
+    console.warn('⚠️  FCM env vars missing — push notifications will fail.');
+    console.warn('    Set FIREBASE_PROJECT_ID, FIREBASE_PRIVATE_KEY, FIREBASE_CLIENT_EMAIL on Render.');
+  }
+
+  // Small hint if AI is not configured
+  if (GROQ_API_KEYS.length === 0 && GEMINI_API_KEYS.length === 0) {
+    console.warn('⚠️  No AI API keys configured — chatbot will fail.');
+  }
 });
+
+// ============================================================
+//  GRACEFUL SHUTDOWN
+// ============================================================
+process.on('SIGTERM', async () => {
+  console.log('🛑 SIGTERM received. Shutting down gracefully…');
+  try {
+    await mongoose.connection.close();
+    console.log('✅ MongoDB connection closed');
+  } catch (e) {
+    console.error('Error closing MongoDB:', e.message);
+  }
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  console.log('🛑 SIGINT received. Shutting down gracefully…');
+  try {
+    await mongoose.connection.close();
+    console.log('✅ MongoDB connection closed');
+  } catch (e) {
+    console.error('Error closing MongoDB:', e.message);
+  }
+  process.exit(0);
+});
+
+// ============================================================
+//  END OF FILE — index.js v5.0.0
+// ============================================================
+                                                                                                                                                               
+      
