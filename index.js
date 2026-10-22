@@ -5046,6 +5046,77 @@ app.post('/api/ai/generate-report-pdf', async (req, res) => {
 // ────────────────────────────────────────────────────────────
 // ▸ END OF PART 1 — Continue in Part 2 below
 // ────────────────────────────────────────────────────────────
+
+// ============================================================
+// ★ NEW: LEADERBOARD & GAMIFICATION APIs
+// ============================================================
+
+// 1. Get Leaderboard (For Students)
+app.get('/api/leaderboard/:type', async (req, res) => {
+  try {
+    const type = req.params.type; // 'login' or 'attendance'
+    const sortField = type === 'login' ? 'loginStreak' : 'attendanceStreak';
+
+    // Sirf students ko fetch karo, admins ko nahi, aur excluded ko hatao
+    const students = await User.find({ role: 'student' }).select('rollNo name branch').lean();
+    const studentRolls = students.map(s => s.rollNo);
+    
+    const gamifications = await Gamification.find({ 
+      rollNo: { $in: studentRolls },
+      excludedFromLeaderboard: false 
+    }).sort({ [sortField]: -1 }).limit(50).lean();
+
+    // Data merge karo (Name and Branch add karne ke liye)
+    const leaderboard = gamifications.map(g => {
+      const u = students.find(s => s.rollNo === g.rollNo);
+      return {
+        rollNo: g.rollNo,
+        name: u ? u.name : 'Unknown',
+        branch: u ? u.branch : 'CSE',
+        streak: g[sortField] || 0,
+        xp: g.totalXp || 0
+      };
+    }).filter(l => l.streak > 0);
+
+    res.json(leaderboard);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// 2. Admin - Get Student Gamification Data
+app.get('/api/admin/gamification/:rollNo', async (req, res) => {
+  try {
+    const cr = req.params.rollNo.trim().toUpperCase();
+    const user = await User.findOne({ rollNo: cr }).select('name rollNo');
+    if (!user) return res.status(404).json({ error: 'Student not found' });
+    
+    let g = await Gamification.findOne({ rollNo: cr });
+    if (!g) g = { loginStreak: 0, attendanceStreak: 0, excludedFromLeaderboard: false };
+    
+    res.json({ user, gamification: g });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// 3. Admin - Update Streaks / Exclude Student
+app.post('/api/admin/gamification/update', async (req, res) => {
+  try {
+    const { requesterRollNo, targetRollNo, loginStreak, attendanceStreak, excluded } = req.body;
+    const admin = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+    if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+
+    const cr = targetRollNo.trim().toUpperCase();
+    let g = await Gamification.findOne({ rollNo: cr });
+    if (!g) g = new Gamification({ rollNo: cr });
+
+    if (loginStreak !== undefined) g.loginStreak = parseInt(loginStreak);
+    if (attendanceStreak !== undefined) g.attendanceStreak = parseInt(attendanceStreak);
+    if (excluded !== undefined) g.excludedFromLeaderboard = excluded;
+
+    await g.save();
+    res.json({ message: 'Streak updated successfully', gamification: g });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ============================================================
       // ============================================================
 //  ADMIN REQUESTS SUMMARY
 // ============================================================
