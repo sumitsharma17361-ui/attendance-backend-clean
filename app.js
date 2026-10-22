@@ -862,6 +862,10 @@ function updateSubscriptionBadge() {
     }
   }
   if (!badge) return;
+  
+  // ★ FIX: Show the badge since it's hidden by default in HTML
+  badge.style.display = 'inline-flex'; 
+  
   const tier = userSubscription.tier || 'free';
   if (tier === 'silver') { badge.textContent = '🥈 Silver'; badge.style.background = '#e2e8f0'; badge.style.color = '#475569'; }
   else if (tier === 'gold') { badge.textContent = '🥇 Gold'; badge.style.background = '#fef3c7'; badge.style.color = '#b45309'; }
@@ -878,7 +882,8 @@ function openSubscriptionModal() {
     modal.innerHTML = `
       <div class="modal wide">
         <div class="modal-header"><div><h3>🌟 Upgrade Premium</h3><p class="text-xs text-muted" style="margin-top:4px;">Unlock exclusive features</p></div>
-        <button type="button" class="modal-close" onclick="closeModal('subscriptionModal')">✕</button></div>
+        <!-- ★ FIX: Added stopPropagation to ensure close button works -->
+        <button type="button" class="modal-close" onclick="event.stopPropagation(); closeModal('subscriptionModal')">✕</button></div>
         <div class="modal-body" id="subscriptionBody">
           <div class="empty">Loading plans…</div>
         </div>
@@ -894,10 +899,11 @@ function renderSubscriptionPlans() {
   const body = $('subscriptionBody');
   const currentTier = userSubscription.tier || 'free';
   
+  // ★ FIX: Updated prices to ₹5, ₹10, ₹20
   const plans = [
-    { id: 'silver', name: 'Silver', icon: '🥈', price: '₹49', color: '#475569', features: ['PDF Reports (Attendance)', 'Basic Bunk Advisor'] },
-    { id: 'gold', name: 'Gold', icon: '🥇', price: '₹99', color: '#b45309', features: ['PDF Reports', 'Bunk Advisor', 'AI Chatbot Access', 'Priority Support'] },
-    { id: 'platinum', name: 'Platinum', icon: '💎', price: '₹199', color: '#6d28d9', features: ['All Gold Features', 'AI File/Image Analysis', 'Unlimited everything', 'Early Access to new features'] }
+    { id: 'silver', name: 'Silver', icon: '🥈', price: '₹5', color: '#475569', features: ['PDF Reports (Attendance)', 'Basic Bunk Advisor'] },
+    { id: 'gold', name: 'Gold', icon: '🥇', price: '₹10', color: '#b45309', features: ['PDF Reports', 'Bunk Advisor', 'AI Chatbot Access', 'Priority Support'] },
+    { id: 'platinum', name: 'Platinum', icon: '💎', price: '₹20', color: '#6d28d9', features: ['All Gold Features', 'AI File/Image Analysis', 'Unlimited everything', 'Early Access to new features'] }
   ];
 
   let html = '';
@@ -999,7 +1005,7 @@ function openAchievementsModal() {
     modal.innerHTML = `
       <div class="modal wide">
         <div class="modal-header"><div><h3>🏆 Achievements</h3><p class="text-xs text-muted" style="margin-top:4px;">Your streaks & unlocked badges</p></div>
-        <button type="button" class="modal-close" onclick="closeModal('achievementsModal')">✕</button></div>
+        <button type="button" class="modal-close" onclick="event.stopPropagation(); closeModal('achievementsModal')">✕</button></div>
         <div class="modal-body" id="achievementsBody">
           <div class="empty">Loading…</div>
         </div>
