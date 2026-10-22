@@ -47,12 +47,16 @@ const ADMIN_MENU_ITEMS = [
   { key: 'a-holiday', label: 'Holidays', icon: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="m9 16 2 2 4-4"/>' },
   { key: 'a-passcode', label: 'Passcode', icon: '<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>' },
   { key: 'a-notes', label: 'Notes', icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>' },
+  { key: 'a-fees', label: 'Fees', icon: '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>' },
+  { key: 'a-library', label: 'Library', icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>' },
+  { key: 'a-results', label: 'Results', icon: '<line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/>' },
   { key: 'a-exams', label: 'Exams', icon: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>' },
   { key: 'a-alerts', label: 'Emergency Alerts', icon: '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>' },
   { key: 'a-tools', label: 'Tools', icon: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>' },
   { key: 'a-leave', label: 'Leave Requests', icon: '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/>' },
   { key: 'a-defaulters', label: 'Defaulters', icon: '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>' },
   { key: 'a-subscriptions', label: 'Subscriptions', icon: '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>' },
+  { key: 'a-gamification', label: 'Streaks', icon: '<path d="M8 21h8M12 17v4M7 4h10M9 4v4a3 3 0 0 0 6 0V4"/>' },
   { key: 'divider', divider: true },
   { key: 'changepassword', label: 'Change Password', icon: '<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>' }
 ];
@@ -82,7 +86,7 @@ let clockIntervalId = null, dashboardIntervalId = null, periodIntervalId = null,
 let passcodeCountdownInterval = null;
 let pendingUndoApprovalId = null;
 let sessionCheckInterval = null;
-let userSubscription = { tier: 'free', expiresAt: null }; // NEW
+let userSubscription = { tier: 'free', expiresAt: null };
 
 /* ============================================================
    ★ CUSTOM LAYOUT FIX INJECTION (UPDATED & MOBILE-FRIENDLY)
@@ -1007,21 +1011,21 @@ async function initiatePayment(tier) {
       description: `${tier.toUpperCase()} Subscription - 1 Month`,
       order_id: orderData.order.id,
       config: {
-  display: {
-    blocks: {
-      upi: {
-        name: "UPI (GPay, PhonePe, Paytm)",
-        instruments: [
-          { method: "upi" }
-        ]
-      }
-    },
-    sequence: ["block.upi", "block.other"],
-    preferences: {
-      show_default_blocks: true
-    }
-  }
-},
+        display: {
+          blocks: {
+            upi: {
+              name: "UPI (GPay, PhonePe, Paytm)",
+              instruments: [
+                { method: "upi" }
+              ]
+            }
+          },
+          sequence: ["block.upi", "block.other"],
+          preferences: {
+            show_default_blocks: true
+          }
+        }
+      },
       handler: async function (response) {
         showDL('Verifying payment…');
         const verifyRes = await fetch(`${API}/api/payment/verify`, {
@@ -1264,7 +1268,10 @@ function switchTab(id){
 }
 function showAdmin(id){
   document.querySelectorAll('.subnav-item').forEach(b => b.classList.toggle('active', b.getAttribute('onclick').includes(id)));
-  ['a-directory','a-attendance','a-requests','a-registrations','a-account','a-reports','a-entry','a-holiday','a-passcode','a-notes','a-fees','a-library','a-results','a-exams','a-alerts','a-tools','a-leave','a-defaulters'].forEach(x => { const el = $(x); if (el) el.style.display = 'none'; });
+  
+  // ★ FIX: Added a-subscriptions and a-gamification here so they hide properly when switching tabs
+  ['a-directory','a-attendance','a-requests','a-registrations','a-account','a-reports','a-entry','a-holiday','a-passcode','a-notes','a-fees','a-library','a-results','a-exams','a-alerts','a-tools','a-leave','a-defaulters','a-subscriptions','a-gamification'].forEach(x => { const el = $(x); if (el) el.style.display = 'none'; });
+  
   const el = $(id); if (el) { el.style.display = 'block'; el.style.animation = 'tabFadeIn .35s ease'; }
   if (id === 'a-directory') fetchUsers();
   if (id === 'a-attendance') loadAllAttendance();
@@ -2824,9 +2831,126 @@ window.addEventListener('load', () => {
   document.body.scrollTop = 0;
 });
 
-// ============================================================
-// ★ NEW: SUBSCRIPTION MANAGEMENT (ADMIN PANEL)
-// ============================================================
+
+/* ============================================================
+   ★ NEW: LEADERBOARD & GAMIFICATION (STUDENT & ADMIN)
+   ============================================================ */
+
+// Student Side: Open Leaderboard
+function openLeaderboardModal() {
+  openModal('leaderboardModal');
+  loadLeaderboard('attendance'); // Default
+}
+
+// Fetch and Render Leaderboard
+async function loadLeaderboard(type) {
+  const el = $('leaderboardList');
+  if (!el) return;
+  el.innerHTML = '<div class="empty"><div class="spinner" style="margin:0 auto 8px;"></div>Fetching rankings...</div>';
+  
+  // Update button active states (Bina event.target ke)
+  const btns = document.querySelectorAll('#leaderboardModal .btn');
+  btns.forEach(b => {
+    if (b.getAttribute('onclick') && b.getAttribute('onclick').includes(type)) {
+      b.classList.remove('btn-outline');
+      b.classList.add('btn-primary');
+    } else {
+      b.classList.remove('btn-primary');
+      b.classList.add('btn-outline');
+    }
+  });
+
+  try {
+    const res = await fetch(`${API}/api/leaderboard/${type}`);
+    const data = await res.json();
+    
+    if (!res.ok || !data.length) return el.innerHTML = '<div class="empty">No data available yet.</div>';
+    
+    el.innerHTML = data.map((s, i) => {
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
+      const isMe = currentUser && currentUser.rollNo === s.rollNo;
+      const bg = isMe ? 'background:var(--brand-50); border-color:var(--brand-300);' : 'background:#fff; border-color:var(--slate-200);';
+      
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-radius:12px; border:1px solid; ${bg}">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="font-size:18px; font-weight:900; width:24px; text-align:center;">${medal}</div>
+            <div>
+              <div style="font-weight:800; font-size:13px; color:var(--slate-900);">${escapeHtml(s.name)} ${isMe ? '(You)' : ''}</div>
+              <div style="font-size:11px; color:var(--slate-500);">${s.rollNo} • ${s.branch}</div>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:18px; font-weight:900; color:${type === 'login' ? '#b45309' : '#047857'};">${s.streak} 🔥</div>
+            <div style="font-size:10px; color:var(--slate-400); font-weight:700;">DAYS</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (e) {
+    el.innerHTML = '<div class="empty">Network error</div>';
+  }
+}
+
+// Admin Side: Search Student
+async function adminSearchGamification() {
+  const roll = $('gmRollNo').value.trim().toUpperCase();
+  if (!roll) return toast('Enter roll no', 'error');
+
+  const resEl = $('gmResult');
+  resEl.style.display = 'none';
+
+  try {
+    const res = await fetch(`${API}/api/admin/gamification/${roll}`);
+    if (!res.ok) return toast('Student not found', 'error');
+    const data = await res.json();
+
+    $('gmName').textContent = `${data.user.name} (${data.user.rollNo})`;
+    $('gmLoginStreak').value = data.gamification.loginStreak || 0;
+    $('gmAttendanceStreak').value = data.gamification.attendanceStreak || 0;
+    $('gmExcluded').checked = data.gamification.excludedFromLeaderboard || false;
+
+    resEl.style.display = 'block';
+  } catch (e) {
+    toast('Network error', 'error');
+  }
+}
+
+// Admin Side: Save Changes
+async function adminSaveGamification() {
+  const roll = $('gmRollNo').value.trim().toUpperCase();
+  const loginStreak = parseInt($('gmLoginStreak').value) || 0;
+  const attendanceStreak = parseInt($('gmAttendanceStreak').value) || 0;
+  const excluded = $('gmExcluded').checked;
+
+  showDL('Saving...');
+  try {
+    const res = await fetch(`${API}/api/admin/gamification/update`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        requesterRollNo: currentUser.rollNo, 
+        targetRollNo: roll, 
+        loginStreak, attendanceStreak, excluded 
+      })
+    });
+    
+    hideDL();
+    if (res.ok) {
+      showFeedback('success', 'Updated', 'Streaks and leaderboard status updated successfully.');
+    } else {
+      const d = await res.json();
+      showFeedback('error', 'Failed', d.error || 'Could not update');
+    }
+  } catch (e) {
+    hideDL(); showFeedback('error', 'Network Error', e.message);
+  }
+}
+
+
+/* ============================================================
+   ★ NEW: SUBSCRIPTION MANAGEMENT (ADMIN PANEL)
+   ============================================================ */
 async function lookupSubStudent() {
   const roll = $('subMgmtRollNo').value.trim().toUpperCase();
   if (!roll) return toast('Enter roll no', 'error');
