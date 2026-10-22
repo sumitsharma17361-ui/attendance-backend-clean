@@ -2807,3 +2807,89 @@ window.addEventListener('load', () => {
   document.documentElement.scrollTop = 0;
   document.body.scrollTop = 0;
 });
+
+// ============================================================
+// ★ NEW: SUBSCRIPTION MANAGEMENT (ADMIN PANEL)
+// ============================================================
+async function lookupSubStudent() {
+  const roll = $('subMgmtRollNo').value.trim().toUpperCase();
+  if (!roll) return toast('Enter roll no', 'error');
+  
+  const resEl = $('subMgmtResult');
+  resEl.style.display = 'none';
+
+  try {
+    // Fetch student's profile to verify they exist
+    const userRes = await fetch(`${API}/api/student/profile/${roll}`);
+    if (!userRes.ok) return toast('Student not found', 'error');
+    const user = await userRes.json();
+
+    // Fetch student's current subscription
+    const subRes = await fetch(`${API}/api/user/subscription/${roll}`);
+    const sub = await subRes.json();
+
+    $('subMgmtName').textContent = `${user.name} (${user.rollNo})`;
+    
+    const tier = sub.tier || 'free';
+    const isExpired = sub.isExpired;
+    const cEl = $('subMgmtCurrent');
+    
+    cEl.textContent = isExpired ? `${tier.toUpperCase()} (Expired)` : tier.toUpperCase();
+    
+    if (tier === 'platinum' && !isExpired) cEl.className = 'badge badge-purple';
+    else if (tier === 'gold' && !isExpired) cEl.className = 'badge badge-warning';
+    else if (tier === 'silver' && !isExpired) cEl.className = 'badge badge-info';
+    else cEl.className = 'badge badge-neutral';
+
+    resEl.style.display = 'block';
+  } catch (e) {
+    toast('Network error', 'error');
+  }
+}
+
+async function grantSubscription() {
+  const roll = $('subMgmtRollNo').value.trim().toUpperCase();
+  const tier = $('subMgmtNewTier').value;
+  if (!roll) return toast('Search a student first', 'error');
+  
+  if (!confirm(`Grant ${tier.toUpperCase()} plan to ${roll} for 30 days?`)) return;
+
+  showDL('Granting access…');
+  try {
+    const res = await fetch(`${API}/api/admin/subscription/grant`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requesterRollNo: currentUser.rollNo, targetRollNo: roll, tier })
+    });
+    const d = await res.json();
+    hideDL();
+    
+    if (res.ok) {
+      showFeedback('success', 'Plan Granted', `${roll} is now a ${tier.toUpperCase()} member.`);
+      lookupSubStudent(); // Refresh info
+    } else showFeedback('error', 'Failed', d.error || 'Could not grant');
+  } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
+}
+
+async function cancelSubscription() {
+  const roll = $('subMgmtRollNo').value.trim().toUpperCase();
+  if (!roll) return toast('Search a student first', 'error');
+  
+  if (!confirm(`Are you sure you want to CANCEL the subscription for ${roll}?`)) return;
+
+  showDL('Cancelling…');
+  try {
+    const res = await fetch(`${API}/api/admin/subscription/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requesterRollNo: currentUser.rollNo, targetRollNo: roll })
+    });
+    const d = await res.json();
+    hideDL();
+    
+    if (res.ok) {
+      showFeedback('success', 'Cancelled', `Subscription for ${roll} downgraded to Free.`);
+      lookupSubStudent(); // Refresh info
+    } else showFeedback('error', 'Failed', d.error || 'Could not cancel');
+  } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
+}
