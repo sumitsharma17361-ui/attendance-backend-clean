@@ -489,22 +489,30 @@ async function updateAttendanceStreak(rollNo) {
     const g = await getOrCreateGamification(rollNo);
     const todayStr = getISTDateString(new Date());
     const isFirst = !g.lastAttendanceDate;
+    
     if (g.lastAttendanceDate !== todayStr) {
-      if (!g.lastAttendanceDate) g.attendanceStreak = 1;
-      else {
+      if (!g.lastAttendanceDate) {
+        g.attendanceStreak = 1;
+      } else {
         const last = new Date(g.lastAttendanceDate + 'T00:00:00Z');
         const now = new Date(todayStr + 'T00:00:00Z');
         const diffDays = Math.round((now - last) / (24 * 60 * 60 * 1000));
-        if (diffDays === 1) g.attendanceStreak = (g.attendanceStreak || 0) + 1;
-        else g.attendanceStreak = 1;
+        
+        if (diffDays === 1) {
+          g.attendanceStreak = (g.attendanceStreak || 0) + 1;
+        } else {
+          g.attendanceStreak = 1;
+        }
       }
       g.lastAttendanceDate = todayStr;
       g.totalXp = (g.totalXp || 0) + 5;
       await g.save();
     }
-    if (isFirst) await awardAchievement(rollNo, 'first_attendance');
+    
+    if (isFirst) {
+      await awardAchievement(rollNo, 'first_attendance');
+    }
 
-    // Count total attendances
     const total = await Attendance.countDocuments({ rollNo: rollNo.toUpperCase(), status: { $in: ['Present', 'Duty Leave'] } });
     if (total >= 50) await awardAchievement(rollNo, 'attendances_50');
     if (total >= 100) await awardAchievement(rollNo, 'attendances_100');
@@ -916,6 +924,7 @@ const gamificationSchema = new mongoose.Schema({
   attendanceStreak: { type: Number, default: 0 },
   lastAttendanceDate: { type: String, default: null },
   totalXp: { type: Number, default: 0 },
+  excludedFromLeaderboard: { type: Boolean, default: false },
   unlockedAchievements: [{
     id: String,
     title: String,
