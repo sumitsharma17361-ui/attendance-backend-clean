@@ -40,8 +40,8 @@ try {
 }
 
 // Tier prices (INR per month, in paise for Razorpay)
-const TIER_PRICES_PAISE = { silver: 4900, gold: 9900, platinum: 19900 };
-const TIER_PRICES_RUPEES = { silver: 49, gold: 99, platinum: 199 };
+const TIER_PRICES_PAISE = { silver: 500, gold: 1000, platinum: 1900 };
+const TIER_PRICES_RUPEES = { silver: 5, gold: 10, platinum: 19 };
 const TIER_ORDER = { free: 0, silver: 1, gold: 2, platinum: 3 };
 
 // ============================================================
