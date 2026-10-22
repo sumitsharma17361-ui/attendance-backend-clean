@@ -437,6 +437,7 @@
           <button class="subnav-item" onclick="showAdmin('a-tools')">Tools</button>
           <button class="subnav-item" onclick="showAdmin('a-leave')">Leave</button>
           <button class="subnav-item" onclick="showAdmin('a-defaulters')">Defaulters</button>
+          <button class="subnav-item" onclick="showAdmin('a-subscriptions')">Subscriptions</button>
         </div>
 
         <div id="a-directory">
@@ -664,6 +665,37 @@
             <div id="adminNotesList"><div class="empty">Loading…</div></div>
           </div>
         </div>
+
+        <!-- ★ NEW: Manual Subscriptions Tab -->
+<div id="a-subscriptions" style="display:none;">
+  <div class="card">
+    <div class="card-title"><span>⭐ Manage Subscriptions</span></div>
+    <p class="text-xs text-muted mb-2">Manually grant or cancel premium plans for students.</p>
+    
+    <div class="row mb-2">
+      <input type="text" id="subMgmtRollNo" placeholder="Student Roll No (e.g. 24CSE01)" style="text-transform:uppercase;" />
+      <button class="btn btn-outline btn-sm" onclick="lookupSubStudent()" style="flex:0 0 auto;">Search</button>
+    </div>
+    
+    <div id="subMgmtResult" style="display:none; padding:16px; background:var(--slate-50); border-radius:12px; border:1px solid var(--slate-200);">
+      <div style="font-weight:800; font-size:14px; margin-bottom:8px;" id="subMgmtName">Student Name</div>
+      <div style="font-size:12px; margin-bottom:12px;">Current Plan: <span id="subMgmtCurrent" class="badge badge-neutral">Free</span></div>
+      
+      <div class="section-title">Grant New Plan (30 Days)</div>
+      <div class="row mb-2">
+        <select id="subMgmtNewTier" style="flex:1;">
+          <option value="silver">🥈 Silver</option>
+          <option value="gold">🥇 Gold</option>
+          <option value="platinum">💎 Platinum</option>
+        </select>
+        <button class="btn btn-success btn-sm" onclick="grantSubscription()" style="flex:0 0 auto;">Grant Plan</button>
+      </div>
+      
+      <div class="section-title" style="margin-top:16px; color:var(--rose-600);">Danger Zone</div>
+      <button class="btn btn-danger btn-block btn-sm" onclick="cancelSubscription()">Cancel Subscription (Downgrade to Free)</button>
+    </div>
+  </div>
+</div>
 
         <div id="a-fees" style="display:none;">
           <div class="card">
