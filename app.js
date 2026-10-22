@@ -16,6 +16,8 @@ const DOWNLOAD_KEYWORDS = ['pdf','download','excel','file','save','print','xlsx'
 
 const STUDENT_MENU_ITEMS = [
   { key: 'home', label: 'Home', icon: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
+  { key: 'subscription', label: 'Premium Plans', icon: '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>' },
+  { key: 'achievements', label: 'Achievements', icon: '<circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/>' },
   { key: 'request', label: 'Request Attendance', icon: '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>' },
   { key: 'notes', label: 'Notes & Documents', icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>' },
   { key: 'assignments', label: 'Assignments', icon: '<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/>' },
@@ -81,6 +83,7 @@ let clockIntervalId = null, dashboardIntervalId = null, periodIntervalId = null,
 let passcodeCountdownInterval = null;
 let pendingUndoApprovalId = null;
 let sessionCheckInterval = null;
+let userSubscription = { tier: 'free', expiresAt: null }; // NEW
 
 /* ============================================================
    DEVICE INFO DETECTION
@@ -312,6 +315,8 @@ function navigateStudentMenu(key){
   setTimeout(() => {
     if (key === 'changepassword') { openModal('changePassModal'); return; }
     if (key === 'leave') { switchTab('tab-leave'); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+    if (key === 'subscription') { openSubscriptionModal(); return; }
+    if (key === 'achievements') { openAchievementsModal(); return; }
     switchTab('tab-mark');
     let targetId = 'sec-home', action = null;
     switch (key) {
@@ -817,6 +822,242 @@ async function submitChangePassword(){
 }
 
 /* ============================================================
+   SUBSCRIPTION & PAYMENTS (NEW)
+   ============================================================ */
+function loadRazorpayScript() {
+  return new Promise((resolve) => {
+    if (window.Razorpay) return resolve(true);
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
+async function fetchUserSubscription() {
+  if (!currentUser || currentUser.role !== 'student') return;
+  try {
+    const res = await fetch(`${API}/api/user/subscription/${currentUser.rollNo}`);
+    if (res.ok) {
+      const d = await res.json();
+      userSubscription = d;
+      updateSubscriptionBadge();
+    }
+  } catch (e) {}
+}
+
+function updateSubscriptionBadge() {
+  let badge = $('subBadge');
+  if (!badge) {
+    // Inject badge near roleBadge
+    const rb = $('roleBadge');
+    if (rb && rb.parentElement) {
+      badge = document.createElement('span');
+      badge.id = 'subBadge';
+      badge.className = 'pill';
+      badge.style.cursor = 'pointer';
+      badge.onclick = openSubscriptionModal;
+      rb.parentElement.appendChild(badge);
+    }
+  }
+  if (!badge) return;
+  const tier = userSubscription.tier || 'free';
+  if (tier === 'silver') { badge.textContent = '🥈 Silver'; badge.style.background = '#e2e8f0'; badge.style.color = '#475569'; }
+  else if (tier === 'gold') { badge.textContent = '🥇 Gold'; badge.style.background = '#fef3c7'; badge.style.color = '#b45309'; }
+  else if (tier === 'platinum') { badge.textContent = '💎 Platinum'; badge.style.background = '#f3e8ff'; badge.style.color = '#6d28d9'; }
+  else { badge.textContent = 'Free'; badge.style.background = '#f1f5f9'; badge.style.color = '#64748b'; }
+}
+
+function openSubscriptionModal() {
+  let modal = $('subscriptionModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'subscriptionModal';
+    modal.className = 'modal-backdrop safe-top-modal';
+    modal.innerHTML = `
+      <div class="modal wide">
+        <div class="modal-header"><div><h3>🌟 Upgrade Premium</h3><p class="text-xs text-muted" style="margin-top:4px;">Unlock exclusive features</p></div>
+        <button type="button" class="modal-close" onclick="closeModal('subscriptionModal')">✕</button></div>
+        <div class="modal-body" id="subscriptionBody">
+          <div class="empty">Loading plans…</div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+  openModal('subscriptionModal');
+  renderSubscriptionPlans();
+}
+
+function renderSubscriptionPlans() {
+  const body = $('subscriptionBody');
+  const currentTier = userSubscription.tier || 'free';
+  
+  const plans = [
+    { id: 'silver', name: 'Silver', icon: '🥈', price: '₹49', color: '#475569', features: ['PDF Reports (Attendance)', 'Basic Bunk Advisor'] },
+    { id: 'gold', name: 'Gold', icon: '🥇', price: '₹99', color: '#b45309', features: ['PDF Reports', 'Bunk Advisor', 'AI Chatbot Access', 'Priority Support'] },
+    { id: 'platinum', name: 'Platinum', icon: '💎', price: '₹199', color: '#6d28d9', features: ['All Gold Features', 'AI File/Image Analysis', 'Unlimited everything', 'Early Access to new features'] }
+  ];
+
+  let html = '';
+  plans.forEach(p => {
+    const isCurrent = currentTier === p.id;
+    const isExpired = userSubscription.isExpired;
+    const btnText = isCurrent && !isExpired ? 'Current Plan' : 'Upgrade Now';
+    const btnClass = isCurrent && !isExpired ? 'btn-outline' : 'btn-primary';
+    const disabled = isCurrent && !isExpired ? 'disabled' : '';
+    
+    html += `
+      <div style="border:2px solid ${isCurrent && !isExpired ? p.color : 'var(--slate-200)'};border-radius:14px;padding:16px;margin-bottom:12px;position:relative;background:#fff;">
+        ${isCurrent && !isExpired ? `<span style="position:absolute;top:-10px;right:16px;background:${p.color};color:#fff;font-size:10px;font-weight:800;padding:2px 10px;border-radius:20px;">ACTIVE</span>` : ''}
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div style="font-size:18px;font-weight:800;color:${p.color};">${p.icon} ${p.name}</div>
+          <div style="font-size:20px;font-weight:900;color:var(--slate-900);">${p.price}<span style="font-size:12px;color:var(--slate-500);font-weight:500;">/mo</span></div>
+        </div>
+        <ul style="list-style:none;padding:0;margin:0 0 16px 0;font-size:12px;color:var(--slate-600);line-height:1.8;">
+          ${p.features.map(f => `<li>✅ ${f}</li>`).join('')}
+        </ul>
+        <button class="btn ${btnClass} btn-block" ${disabled} onclick="initiatePayment('${p.id}')">${btnText}</button>
+      </div>
+    `;
+  });
+  body.innerHTML = html;
+}
+
+async function initiatePayment(tier) {
+  showDL('Initiating payment…');
+  try {
+    const isLoaded = await loadRazorpayScript();
+    if (!isLoaded) { hideDL(); return toast('Razorpay SDK failed to load.', 'error'); }
+    
+    const res = await fetch(`${API}/api/payment/create-order`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rollNo: currentUser.rollNo, tier })
+    });
+    const orderData = await res.json();
+    hideDL();
+    
+    if (!res.ok) return toast(orderData.error || 'Order creation failed', 'error');
+
+    const options = {
+      key: orderData.key_id,
+      amount: orderData.order.amount,
+      currency: "INR",
+      name: "BM Group ERP",
+      description: `${tier.toUpperCase()} Subscription - 1 Month`,
+      order_id: orderData.order.id,
+      handler: async function (response) {
+        showDL('Verifying payment…');
+        const verifyRes = await fetch(`${API}/api/payment/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature
+          })
+        });
+        const verifyData = await verifyRes.json();
+        hideDL();
+        
+        if (verifyData.success) {
+          showFeedback('success', 'Payment Successful!', `You are now a ${tier.toUpperCase()} member! Enjoy premium features.`);
+          closeModal('subscriptionModal');
+          fetchUserSubscription();
+        } else {
+          toast(verifyData.error || 'Payment verification failed', 'error');
+        }
+      },
+      prefill: {
+        name: currentUser.name,
+        contact: currentUser.phone || ""
+      },
+      theme: { color: "#2563eb" }
+    };
+    const rzp = new Razorpay(options);
+    rzp.on('payment.failed', function (response){
+      toast('Payment Failed: ' + response.error.description, 'error');
+    });
+    rzp.open();
+  } catch (e) {
+    hideDL();
+    toast('Payment Error: ' + e.message, 'error');
+  }
+}
+
+/* ============================================================
+   GAMIFICATION (NEW)
+   ============================================================ */
+function openAchievementsModal() {
+  let modal = $('achievementsModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'achievementsModal';
+    modal.className = 'modal-backdrop safe-top-modal';
+    modal.innerHTML = `
+      <div class="modal wide">
+        <div class="modal-header"><div><h3>🏆 Achievements</h3><p class="text-xs text-muted" style="margin-top:4px;">Your streaks & unlocked badges</p></div>
+        <button type="button" class="modal-close" onclick="closeModal('achievementsModal')">✕</button></div>
+        <div class="modal-body" id="achievementsBody">
+          <div class="empty">Loading…</div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+  openModal('achievementsModal');
+  loadAchievementsData();
+}
+
+async function loadAchievementsData() {
+  const body = $('achievementsBody');
+  body.innerHTML = '<div class="empty">Fetching your rewards…</div>';
+  try {
+    const res = await fetch(`${API}/api/student/achievements/${currentUser.rollNo}`);
+    if (!res.ok) throw new Error('Failed to load');
+    const data = await res.json();
+    
+    let html = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+        <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:12px;padding:16px;text-align:center;border:1px solid #fcd34d;">
+          <div style="font-size:32px;margin-bottom:4px;">🔥</div>
+          <div style="font-size:24px;font-weight:900;color:#b45309;">${data.loginStreak || 0}</div>
+          <div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;">Day Login Streak</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);border-radius:12px;padding:16px;text-align:center;border:1px solid #6ee7b7;">
+          <div style="font-size:32px;margin-bottom:4px;">⚡</div>
+          <div style="font-size:24px;font-weight:900;color:#047857;">${data.totalXp || 0}</div>
+          <div style="font-size:11px;font-weight:700;color:#065f46;text-transform:uppercase;">Total XP</div>
+        </div>
+      </div>
+      <div class="section-title">Unlocked Badges (${data.unlockedAchievements.length})</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(100px, 1fr));gap:10px;">
+    `;
+
+    if (data.unlockedAchievements.length === 0) {
+      html += `<div style="grid-column:1/-1;" class="empty">No achievements yet. Keep marking attendance and logging in daily!</div>`;
+    } else {
+      data.unlockedAchievements.forEach(a => {
+        html += `
+          <div style="background:#fff;border:1px solid var(--slate-200);border-radius:12px;padding:12px;text-align:center;box-shadow:var(--shadow-sm);">
+            <div style="font-size:32px;margin-bottom:6px;">${a.icon}</div>
+            <div style="font-size:12px;font-weight:800;color:var(--slate-900);line-height:1.2;margin-bottom:4px;">${escapeHtml(a.title)}</div>
+            <div style="font-size:10px;color:var(--slate-500);line-height:1.3;">${escapeHtml(a.desc)}</div>
+          </div>
+        `;
+      });
+    }
+    html += `</div>`;
+    body.innerHTML = html;
+  } catch (e) {
+    body.innerHTML = `<div class="empty">Error: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+
+/* ============================================================
    DASHBOARD
    ============================================================ */
 function loadDashboard(){
@@ -839,6 +1080,8 @@ function loadDashboard(){
   const rb = $('roleBadge');
   if (rb) { rb.innerHTML = (roleIcons[currentUser.role] || '') + (currentUser.role === 'admin' ? 'Admin' : currentUser.role === 'faculty' ? 'Faculty' : 'Student'); rb.className = 'pill role-' + currentUser.role; }
   if ($('branchBadge')) $('branchBadge').textContent = currentUser.branch || 'CSE';
+  
+  fetchUserSubscription(); // NEW
 
   const studentMenuBtn = $('studentMenuBtn');
   const adminMenuBtn = $('adminMenuBtn');
@@ -1541,7 +1784,13 @@ async function generateIndividualPDF(studentRoll, studentName, branch, range, mo
     universalDownload(blob, filename);
   } catch(e) { hideDL(); toast('Failed: ' + e.message, 'error'); }
 }
-async function generateSelfPDF(){ const range = $('pdfRangeSelect').value; const month = $('pdfMonthSelect').value; await generateIndividualPDF(currentUser.rollNo, currentUser.name, currentUser.branch || 'CSE', range, month, true); }
+async function generateSelfPDF(){ 
+  // FEATURE GATE: Silver+
+  if (userSubscription.tier === 'free' || userSubscription.isExpired) {
+    return showFeedback('warning', 'Premium Required', 'PDF Reports are a Silver+ feature. Please upgrade your plan.', { buttonText: 'View Plans', onClose: openSubscriptionModal });
+  }
+  const range = $('pdfRangeSelect').value; const month = $('pdfMonthSelect').value; await generateIndividualPDF(currentUser.rollNo, currentUser.name, currentUser.branch || 'CSE', range, month, true); 
+}
 
 function getTimetableForBranch(b){ const CSE = { Monday: ['BDA - Big Data Analytics','ECO - Economics for Engineers','DAA - Design & Analysis of Algorithm','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','CN - Computer Network','Sports'], Tuesday: ['WT - Web Technology','ECO - Economics for Engineers','Internet Lab (Ms. Geeta)','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','BDA - Big Data Analytics','Sports'], Wednesday: ['BDA - Big Data Analytics','ECO - Economics for Engineers','FLA - Formal Language & Automata','Sports / Activity','WT - Web Technology','CN LAB - Computer Network Lab'], Thursday: ['BDA - Big Data Analytics','WT - Web Technology','CN - Computer Network','DAA - Design & Analysis of Algorithm','DAA LAB - Algorithm Lab','HRM - Human Resource Mgmt'], Friday: ['DAA - Design & Analysis of Algorithm','CN - Computer Network','FLA - Formal Language & Automata','BDA - Big Data Analytics','WT LAB - Web Technology Lab','Sports'] }; const AIDS = { Monday: ['BDA - Big Data Analytics','ECO - Economics for Engineers','LIB - Library','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','PA - Predictive Analysis','PA - Predictive Analysis','Sports'], Tuesday: ['WT - Web Technology','ECO - Economics for Engineers','PA - Predictive Analysis','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','BDA - Big Data Analytics','ML - Machine Learning'], Wednesday: ['BDA - Big Data Analytics','ECO - Economics for Engineers','FLA - Formal Language & Automata','Sports / Project','WT - Web Technology','PA LAB - Predictive Analysis Lab'], Thursday: ['BDA - Big Data Analytics','WT - Web Technology','ML - Machine Learning','PA - Predictive Analysis','ML LAB - Machine Learning Lab','HRM - Human Resource Mgmt'], Friday: ['ML - Machine Learning','LIB - Library','FLA - Formal Language & Automata','BDA - Big Data Analytics','BDA LAB - Big Data Analytics Lab','Sports'] }; return (b && b.toUpperCase() === 'AIDS') ? AIDS : CSE; }
 function getScheduleForBranch(b){ const CSE = { 1:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'DAA - Design & Analysis of Algorithm',period:'P3'},{start:'11:35',end:'12:20',subject:'FLA - Formal Language & Automata',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'CN - Computer Network',period:'P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}], 2:[{start:'09:20',end:'10:05',subject:'WT - Web Technology',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'Internet Lab (Ms. Geeta)',period:'P3'},{start:'11:35',end:'12:20',subject:'FLA - Formal Language & Automata',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'BDA - Big Data Analytics',period:'P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}], 3:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'FLA - Formal Language & Automata',period:'P3'},{start:'11:35',end:'12:20',subject:'Sports / Activity',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'WT - Web Technology',period:'P6'},{start:'13:50',end:'15:20',subject:'CN LAB - Computer Network Lab',period:'P7-P8'}], 4:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'WT - Web Technology',period:'P2'},{start:'10:50',end:'11:35',subject:'CN - Computer Network',period:'P3'},{start:'11:35',end:'12:20',subject:'DAA - Design & Analysis of Algorithm',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'DAA LAB - Algorithm Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'HRM - Human Resource Mgmt',period:'P8'}], 5:[{start:'09:20',end:'10:05',subject:'DAA - Design & Analysis of Algorithm',period:'P1'},{start:'10:05',end:'10:50',subject:'CN - Computer Network',period:'P2'},{start:'10:50',end:'11:35',subject:'FLA - Formal Language & Automata',period:'P3'},{start:'11:35',end:'12:20',subject:'BDA - Big Data Analytics',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'WT LAB - Web Technology Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}] }; const AIDS = { 1:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'LIB - Library',period:'P3'},{start:'11:35',end:'12:20',subject:'FLA - Formal Language & Automata',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'PA - Predictive Analysis',period:'P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}], 2:[{start:'09:20',end:'10:05',subject:'WT - Web Technology',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'PA - Predictive Analysis',period:'P3'},{start:'11:35',end:'12:20',subject:'FLA - Formal Language & Automata',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'BDA - Big Data Analytics',period:'P7'},{start:'14:35',end:'15:20',subject:'ML - Machine Learning',period:'P8'}], 3:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'FLA - Formal Language & Automata',period:'P3'},{start:'11:35',end:'12:20',subject:'Sports / Project',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'WT - Web Technology',period:'P6'},{start:'13:50',end:'15:20',subject:'PA LAB - Predictive Analysis Lab',period:'P7-P8'}], 4:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'WT - Web Technology',period:'P2'},{start:'10:50',end:'11:35',subject:'ML - Machine Learning',period:'P3'},{start:'11:35',end:'12:20',subject:'PA - Predictive Analysis',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'ML LAB - Machine Learning Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'HRM - Human Resource Mgmt',period:'P8'}], 5:[{start:'09:20',end:'10:05',subject:'ML - Machine Learning',period:'P1'},{start:'10:05',end:'10:50',subject:'LIB - Library',period:'P2'},{start:'10:50',end:'11:35',subject:'FLA - Formal Language & Automata',period:'P3'},{start:'11:35',end:'12:20',subject:'BDA - Big Data Analytics',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'BDA LAB - Big Data Analytics Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}] }; return (b && b.toUpperCase() === 'AIDS') ? AIDS : CSE; }
@@ -1731,7 +1980,7 @@ async function reviewLeave(id, action){ const n = prompt(`Note for ${action}:`) 
 async function loadDefaulters(){ const t = $('defThreshold').value || 75; try { const data = await fetch(`${API}/api/admin/defaulters/${currentUser.rollNo}?threshold=${t}`).then(x=>x.json()); const el = $('defaulterList'); if (!data.defaulters || !data.defaulters.length) return el.innerHTML = '<div class="empty">None below threshold</div>'; el.innerHTML = data.defaulters.map(s => `<div style="padding:10px 0;border-bottom:1px solid var(--slate-100);"><b>${s.rollNo}</b> · ${s.name} · ${s.branch} · <span class="badge badge-danger">${s.pct}%</span></div>`).join(''); } catch(e){} observeNewContent(); }
 
 /* ============================================================
-   NOTES & DOCUMENTS
+   NOTES & DOCUMENTS (FIXED UI)
    ============================================================ */
 async function loadStudentNotes() {
   const el = $('studentNotesList'); if (!el) return;
@@ -1742,27 +1991,28 @@ async function loadStudentNotes() {
     if (!res.ok) return el.innerHTML = `<div class="empty">${escapeHtml(data.error || 'Failed')}</div>`;
     const notes = Array.isArray(data) ? data : (data.notes || []);
     if (!notes.length) return el.innerHTML = '<div class="empty" style="padding:14px 0;">No notes uploaded yet.</div>';
+    
+    // New Row Format with separated View & Download
     el.innerHTML = notes.map(n => `
-      <div style="padding:12px;border:1px solid var(--slate-200);border-radius:10px;margin-bottom:8px;background:#fff;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
-          <div style="min-width:0;flex:1;">
-            <div style="font-weight:800;font-size:13px;">${escapeHtml(n.title || 'Untitled')}</div>
-            <div style="font-size:11px;color:var(--slate-500);margin-top:3px;">${escapeHtml(n.subject || '—')} · ${escapeHtml(n.branch || 'ALL')}</div>
-            <div style="font-size:10.5px;color:var(--slate-400);margin-top:2px;">${new Date(n.createdAt).toLocaleDateString('en-IN')}</div>
-          </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            ${n.fileUrl ? `<a href="${escapeHtml(n.fileUrl)}" target="_blank" class="btn btn-success btn-xs">📥 Download</a>` : ''}
-            <button class="btn btn-outline btn-xs" onclick="openDocRequestModal()">📤 Upload Document</button>
-          </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 14px; border:1px solid var(--slate-200); border-radius:10px; margin-bottom:8px; background:#fff; flex-wrap:wrap;">
+        <div style="min-width:0; flex:1;">
+          <div style="font-weight:800; font-size:13px; color:var(--slate-900); margin-bottom:2px;">${escapeHtml(n.title || 'Untitled')}</div>
+          <div style="font-size:11px; color:var(--slate-500);">${escapeHtml(n.subject || '—')} · ${escapeHtml(n.branch || 'ALL')} · ${new Date(n.createdAt).toLocaleDateString('en-IN')}</div>
+        </div>
+        <div style="display:flex; gap:6px; flex-shrink:0;">
+          <a href="${API}${n.viewUrl}" target="_blank" class="btn btn-outline btn-xs" style="padding:5px 10px;">👁️ View</a>
+          <a href="${API}${n.downloadUrl}" class="btn btn-success btn-xs" style="padding:5px 10px;">📥 Download</a>
         </div>
       </div>
     `).join('');
   } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
 }
+
 function openDocRequestModal() { 
   openModal('docRequestModal'); 
   $('docReqTitle').value = ''; $('docReqSubject').value = ''; $('docReqReason').value = ''; $('docReqFile').value = '';
 }
+
 async function submitDocRequest() {
   const title = $('docReqTitle').value.trim();
   const subject = $('docReqSubject').value.trim();
@@ -1821,11 +2071,16 @@ async function loadAdminNotes() {
           <div style="font-weight:700;font-size:12.5px;">${escapeHtml(n.title)}</div>
           <div style="font-size:11px;color:var(--slate-500);">${escapeHtml(n.subject)} · ${escapeHtml(n.branch)} · ${new Date(n.createdAt).toLocaleDateString('en-IN')}</div>
         </div>
-        <button class="btn btn-danger btn-xs" onclick="deleteNote('${n._id}')">🗑️</button>
+        <div style="display:flex; gap:6px;">
+          <a href="${API}${n.viewUrl}" target="_blank" class="btn btn-outline btn-xs">👁️ View</a>
+          <a href="${API}${n.downloadUrl}" class="btn btn-success btn-xs">📥 Download</a>
+          <button class="btn btn-danger btn-xs" onclick="deleteNote('${n._id}')">🗑️</button>
+        </div>
       </div>
     `).join('');
   } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
 }
+
 async function deleteNote(id) {
   if (!confirm('Delete this note?')) return;
   try {
@@ -2252,6 +2507,11 @@ function generateThinkingSummary(userMessage){
   return steps;
 }
 async function sendChat(){
+  // FEATURE GATE: AI Chat requires Gold+
+  if (currentUser.role === 'student' && (userSubscription.tier === 'free' || userSubscription.tier === 'silver' || userSubscription.isExpired)) {
+    return showFeedback('warning', 'Premium Required', 'AI Chatbot is a Gold+ feature. Please upgrade your plan to access it.', { buttonText: 'View Plans', onClose: openSubscriptionModal });
+  }
+
   const inp = $('chatInput'), msg = inp.value.trim();
   if (!msg && !pendingChatFile) return;
   const btn = $('chatSendBtn'); btn.disabled = true;
@@ -2283,6 +2543,13 @@ async function sendChat(){
     const tSec = stopThinkingTimer(); typing.remove();
     if (d.threadId) { currentThreadId = d.threadId; fetchChatHistory(); }
     chatGreeted = true;
+    
+    // NEW: Catch 403 Subscription Required from backend
+    if (res.status === 403 && d.requiresSubscription) {
+      typing.remove();
+      return showFeedback('warning', 'Premium Required', d.error || 'This feature requires a premium plan.', { buttonText: 'View Plans', onClose: openSubscriptionModal });
+    }
+
     if (d.needsLocation) { pendingLocationRequest = { requestData: d.requestData || {}, explanation: d.explanation, originalMessage: msg }; renderLocationRequest(d.explanation || 'Location required.'); return; }
     if (d.needsLiveMarking) { pendingLocationRequest = { lectureType: d.lectureType || 'full_day', isLive: true, originalMessage: msg }; renderLocationRequest('Live attendance marking — share location.'); return; }
     if (d.requiresConfirmation && d.dbOp) { renderDbConfirmation(d.dbOp, d.reply || d.dbOp.explanation); return; }
