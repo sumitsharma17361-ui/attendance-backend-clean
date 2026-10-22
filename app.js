@@ -1004,6 +1004,22 @@ async function initiatePayment(tier) {
       name: "BM Group ERP",
       description: `${tier.toUpperCase()} Subscription - 1 Month`,
       order_id: orderData.order.id,
+      config: {
+  display: {
+    blocks: {
+      upi: {
+        name: "UPI (GPay, PhonePe, Paytm)",
+        instruments: [
+          { method: "upi" }
+        ]
+      }
+    },
+    sequence: ["block.upi", "block.other"],
+    preferences: {
+      show_default_blocks: true
+    }
+  }
+},
       handler: async function (response) {
         showDL('Verifying payment…');
         const verifyRes = await fetch(`${API}/api/payment/verify`, {
