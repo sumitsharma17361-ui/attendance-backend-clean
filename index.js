@@ -1,4 +1,4 @@
-// ================= index.js v4.4 — Full Backend (Notes/Docs + Bulk Device Reset + Undo Approval + Auto Logout + All Features) =================
+// ================= index.js v4.5 — Full Backend (Strict Device Binding + 10 Min Class Reminders + All Features) =================
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -247,7 +247,7 @@ const COLLEGE_RADIUS = 100;
 const COLLEGE_CLOSE_HOUR = 15;
 const SEMESTER_START = new Date('2026-07-15T00:00:00+05:30');
 const SEMESTER_END = new Date('2026-12-31T23:59:59+05:30');
-const UNDO_WINDOW_MS = 5 * 60 * 1000; // 5 minutes for undo approval
+const UNDO_WINDOW_MS = 5 * 60 * 1000;
 
 if (!MONGO_URI) { console.error('❌ MONGO_URI missing'); process.exit(1); }
 
@@ -647,7 +647,6 @@ const emergencyAlertSchema = new mongoose.Schema({
   postedBy: { type: String, required: true }, active: { type: Boolean, default: true }
 }, { timestamps: true });
 
-// ★★★ NEW SCHEMAS for Feature #1 (Notes/Documents) ★★★
 const noteSchema = new mongoose.Schema({
   title: { type: String, required: true },
   subject: { type: String, required: true },
@@ -1712,7 +1711,7 @@ app.post('/api/admin/clear-registrations', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ★★★ MODIFIED: login now accepts deviceName, always updates device, no "Unauthorized device" block ★★★
+// ★★★ MODIFIED: STRICT DEVICE BINDING ★★★
 app.post('/api/auth/login', async (req, res) => {
   try {
     const parsed = loginSchema.safeParse(req.body);
@@ -1730,20 +1729,24 @@ app.post('/api/auth/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ error: 'Invalid password!' });
     user.failedAttempts = 0; user.blockUntil = null;
+    
     if (user.role === 'student') {
       const correctBranch = getBranchFromRoll(cleanRoll);
       if (correctBranch && user.branch !== correctBranch) user.branch = correctBranch;
-    }
 
-    // ★ NEW BEHAVIOR: Always update device binding, auto-logout old device
-    let newDeviceLogin = false;
-    const prevDeviceId = user.boundDeviceId;
-    if (user.role === 'student') {
-      if (prevDeviceId && deviceId && prevDeviceId !== deviceId) {
-        newDeviceLogin = true;
+      // STRICT DEVICE BINDING
+      if (user.boundDeviceId && user.boundDeviceId !== deviceId) {
+        return res.status(403).json({ error: '⛔ Unauthorized Device! You can only login from your registered phone. Please use "Reset Device" if you changed your phone.' });
       }
-      if (deviceId) user.boundDeviceId = deviceId;
-      if (deviceName) user.boundDeviceName = deviceName;
+      
+      if (!user.boundDeviceId && deviceId) {
+        // First time login or after reset - bind the new device
+        user.boundDeviceId = deviceId;
+        user.boundDeviceName = deviceName || 'Unknown Device';
+      } else if (user.boundDeviceId === deviceId && deviceName) {
+        // Update name just in case
+        user.boundDeviceName = deviceName;
+      }
     }
 
     user.lastLoginIP = req.ip;
@@ -1751,12 +1754,6 @@ app.post('/api/auth/login', async (req, res) => {
     user.lastLoginAt = new Date();
     const token = jwt.sign({ id: user._id, rollNo: user.rollNo, name: user.name, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     user.activeSession = token; await user.save();
-
-    // ★ Send "New device login" alert (to OLD FCM token, BEFORE new one is saved)
-    if (newDeviceLogin) {
-      sendPushToRollNo(cleanRoll, '🔐 New Device Login', `Your account was logged in from a new device (${deviceName || 'Unknown'}). If this wasn't you, contact admin immediately.`, { type: 'new_device_login' }).catch(() => {});
-      console.log(`🔐 [NEW-DEVICE] ${cleanRoll}: old=${prevDeviceId?.substring(0,15)} new=${deviceId?.substring(0,15)}`);
-    }
 
     res.json({ message: 'Login successful!', token, user: { name: user.name, rollNo: user.rollNo, role: user.role, branch: user.branch } });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -1775,7 +1772,6 @@ app.post('/api/auth/verify-session', async (req, res) => {
       return res.status(401).json({ sessionInvalid: true, error: 'Invalid or expired token.' });
     }
 
-    // Impersonation tokens bypass the session check
     if (decoded.impersonated) {
       return res.json({ valid: true, impersonated: true });
     }
@@ -2139,7 +2135,6 @@ app.get('/api/requests/pending/:requesterRollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ★★★ MODIFIED: Now records markedByRequestId for undo tracking (Feature #4) ★★★
 app.post('/api/requests/review/:id', async (req, res) => {
   try {
     const { requesterRollNo, action, note, approvedSubjects } = req.body;
@@ -2197,7 +2192,6 @@ app.post('/api/requests/review/:id', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ★★★ NEW: UNDO APPROVAL (Feature #4) ★★★
 app.post('/api/requests/undo/:id', async (req, res) => {
   try {
     const { requesterRollNo } = req.body;
@@ -2216,10 +2210,8 @@ app.post('/api/requests/undo/:id', async (req, res) => {
       return res.status(400).json({ error: `Undo window expired (${Math.round(elapsedMs/60000)} min ago). Max ${UNDO_WINDOW_MS/60000} minutes.` });
     }
 
-    // Delete auto-marked attendance records created by this approval
     const delResult = await Attendance.deleteMany({ markedByRequestId: request._id.toString() });
 
-    // Revert request status to Pending
     request.status = 'Pending';
     request.reviewedBy = null;
     request.adminNote = '';
@@ -2242,7 +2234,6 @@ app.post('/api/requests/undo/:id', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ★★★ MODIFIED: bulk-review also tracks markedByRequestId ★★★
 app.post('/api/requests/bulk-review', async (req, res) => {
   try {
     const { requesterRollNo, requestIds, action, note } = req.body;
@@ -4736,33 +4727,6 @@ function scheduleLibraryReminder() {
     } catch (e) {}
   }, 60 * 1000);
 }
-function scheduleFacultyClassReminder() {
-  setInterval(async () => {
-    try {
-      if (!fcmReady) return;
-      const now = new Date();
-      const day = now.getDay();
-      if (day === 0 || day === 6) return;
-      const istMin = getISTMinutes(now);
-      for (const branch of ['CSE', 'AIDS']) {
-        const schedule = getScheduleForBranch(branch);
-        const daySchedule = schedule[day] || [];
-        for (const slot of daySchedule) {
-          if (slot.period === 'LUNCH') continue;
-          const startMins = parseInt(slot.start.split(':')[0]) * 60 + parseInt(slot.start.split(':')[1]);
-          if (istMin !== startMins - 5) continue;
-          const faculty = await User.find({ role: 'faculty', fcmToken: { $ne: null } }).lean();
-          for (const f of faculty) {
-            try {
-              const teaches = await TeacherSubject.findOne({ teacherRollNo: f.rollNo, subject: mapToCanonical(slot.subject) });
-              if (teaches) await sendPushNotification(f.fcmToken, '⏰ Class Starting in 5 min', `${slot.subject} at ${slot.start} — ${slot.faculty}`, { type: 'faculty_class_reminder' });
-            } catch (e) {}
-          }
-        }
-      }
-    } catch (e) {}
-  }, 60 * 1000);
-}
 function schedulePendingAdminReminder() {
   setInterval(async () => {
     try {
@@ -4809,6 +4773,50 @@ function scheduleSystemHealthCheck() {
   }, 60 * 1000);
 }
 
+// ★★★ NEW: 10 MIN LECTURE REMINDER FOR STUDENTS & 5 MIN FOR FACULTY ★★★
+function scheduleClassReminders() {
+  setInterval(async () => {
+    try {
+      if (!fcmReady) return;
+      const now = new Date();
+      const day = now.getDay();
+      if (day === 0 || day === 6) return;
+      const istHour = getISTHour(now);
+      const istMin = getISTMinutes(now);
+
+      // Check for classes
+      for (const branch of ['CSE', 'AIDS']) {
+        const schedule = getScheduleForBranch(branch);
+        const daySchedule = schedule[day] || [];
+        
+        for (const slot of daySchedule) {
+          if (slot.period === 'LUNCH' || slot.subject.includes('Sports') || slot.subject.includes('LIB')) continue;
+          
+          const startMins = parseInt(slot.start.split(':')[0]) * 60 + parseInt(slot.start.split(':')[1]);
+
+          // Student Reminder: 10 Minutes before
+          if (istMin === startMins - 10) {
+            await sendPushToBranch(branch, `⏰ Class in 10 Mins!`, `${slot.subject} starts at ${slot.start}. Get ready!`, { type: 'class_reminder_student', subject: slot.subject });
+          }
+
+          // Faculty Reminder: 5 Minutes before
+          if (istMin === startMins - 5) {
+            const faculty = await User.find({ role: 'faculty', fcmToken: { $ne: null } }).lean();
+            for (const f of faculty) {
+              try {
+                const teaches = await TeacherSubject.findOne({ teacherRollNo: f.rollNo, subject: mapToCanonical(slot.subject) });
+                if (teaches) {
+                  await sendPushNotification(f.fcmToken, '⏰ Class in 5 Mins', `${slot.subject} at ${slot.start} — ${slot.faculty}`, { type: 'class_reminder_faculty' });
+                }
+              } catch (e) {}
+            }
+          }
+        }
+      }
+    } catch (e) { console.error('Class Reminder Error:', e.message); }
+  }, 60 * 1000);
+}
+
 scheduleAttendanceReminder();
 scheduleDailySummary();
 scheduleShortageAlert();
@@ -4819,7 +4827,7 @@ scheduleFeeReminder();
 scheduleAssignmentReminder();
 scheduleExamReminder();
 scheduleLibraryReminder();
-scheduleFacultyClassReminder();
+scheduleClassReminders(); // Added new
 schedulePendingAdminReminder();
 schedulePendingStudentReminder();
 scheduleSystemHealthCheck();
@@ -4832,6 +4840,6 @@ app.listen(PORT, async () => {
   console.log(`🚀 Port ${PORT}`);
   console.log(`🤖 AI: Groq(${GROQ_API_KEYS.length} keys) → Gemini(${GEMINI_API_KEYS.length} keys)`);
   console.log(`🔥 FCM: ${fcmReady ? 'READY ✅' : 'DISABLED ⚠️'}`);
-  console.log(`📦 Version: 4.4 (Notes/Docs + Bulk Device Reset + Undo Approval + Auto Logout + All Features)`);
+  console.log(`📦 Version: 4.5 (Strict Device Binding + 10 Min Class Reminders + All Features)`);
   setTimeout(runBranchMigration, 3000);
 });
