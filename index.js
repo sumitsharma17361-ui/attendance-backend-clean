@@ -5834,6 +5834,114 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
+
+/* ============================================================
+   ★ NEW: GAMIFICATION & LEADERBOARDS
+   ============================================================ */
+
+// Student Side: Open Leaderboard
+function openLeaderboardModal() {
+  openModal('leaderboardModal');
+  loadLeaderboard('attendance'); // Default
+}
+
+// Fetch and Render Leaderboard
+async function loadLeaderboard(type) {
+  const el = $('leaderboardList');
+  el.innerHTML = '<div class="empty"><div class="spinner" style="margin:0 auto 8px;"></div>Fetching rankings...</div>';
+  
+  // Update button active states
+  const btns = document.querySelectorAll('#leaderboardModal .btn');
+  btns.forEach(b => b.classList.replace('btn-primary', 'btn-outline'));
+  event.target.classList.replace('btn-outline', 'btn-primary');
+
+  try {
+    const res = await fetch(`${API}/api/leaderboard/${type}`);
+    const data = await res.json();
+    
+    if (!res.ok || !data.length) return el.innerHTML = '<div class="empty">No data available yet.</div>';
+    
+    el.innerHTML = data.map((s, i) => {
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
+      const isMe = currentUser && currentUser.rollNo === s.rollNo;
+      const bg = isMe ? 'background:var(--brand-50); border-color:var(--brand-300);' : 'background:#fff; border-color:var(--slate-200);';
+      
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-radius:12px; border:1px solid; ${bg}">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="font-size:18px; font-weight:900; width:24px; text-align:center;">${medal}</div>
+            <div>
+              <div style="font-weight:800; font-size:13px; color:var(--slate-900);">${escapeHtml(s.name)} ${isMe ? '(You)' : ''}</div>
+              <div style="font-size:11px; color:var(--slate-500);">${s.rollNo} • ${s.branch}</div>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:18px; font-weight:900; color:${type === 'login' ? '#b45309' : '#047857'};">${s.streak} 🔥</div>
+            <div style="font-size:10px; color:var(--slate-400); font-weight:700;">DAYS</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (e) {
+    el.innerHTML = '<div class="empty">Network error</div>';
+  }
+}
+
+// Admin Side: Search Student
+async function adminSearchGamification() {
+  const roll = $('gmRollNo').value.trim().toUpperCase();
+  if (!roll) return toast('Enter roll no', 'error');
+
+  const resEl = $('gmResult');
+  resEl.style.display = 'none';
+
+  try {
+    const res = await fetch(`${API}/api/admin/gamification/${roll}`);
+    if (!res.ok) return toast('Student not found', 'error');
+    const data = await res.json();
+
+    $('gmName').textContent = `${data.user.name} (${data.user.rollNo})`;
+    $('gmLoginStreak').value = data.gamification.loginStreak || 0;
+    $('gmAttendanceStreak').value = data.gamification.attendanceStreak || 0;
+    $('gmExcluded').checked = data.gamification.excludedFromLeaderboard || false;
+
+    resEl.style.display = 'block';
+  } catch (e) {
+    toast('Network error', 'error');
+  }
+}
+
+// Admin Side: Save Changes
+async function adminSaveGamification() {
+  const roll = $('gmRollNo').value.trim().toUpperCase();
+  const loginStreak = parseInt($('gmLoginStreak').value) || 0;
+  const attendanceStreak = parseInt($('gmAttendanceStreak').value) || 0;
+  const excluded = $('gmExcluded').checked;
+
+  showDL('Saving...');
+  try {
+    const res = await fetch(`${API}/api/admin/gamification/update`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        requesterRollNo: currentUser.rollNo, 
+        targetRollNo: roll, 
+        loginStreak, attendanceStreak, excluded 
+      })
+    });
+    
+    hideDL();
+    if (res.ok) {
+      showFeedback('success', 'Updated', 'Streaks and leaderboard status updated successfully.');
+    } else {
+      const d = await res.json();
+      showFeedback('error', 'Failed', d.error || 'Could not update');
+    }
+  } catch (e) {
+    hideDL(); showFeedback('error', 'Network Error', e.message);
+  }
+}
+
 // ============================================================
 //  END OF FILE — index.js v5.0.0
 // ============================================================
