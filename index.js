@@ -1333,6 +1333,63 @@ app.get('/api/health/push', async (req, res) => {
 });
 
 // ============================================================
+//  ★★★ NEW: ADMIN MANUAL SUBSCRIPTION MANAGEMENT ★★★
+// ============================================================
+
+// Grant / Change Subscription Manually
+app.post('/api/admin/subscription/grant', async (req, res) => {
+  try {
+    const { requesterRollNo, targetRollNo, tier } = req.body;
+    const admin = await User.findOne({ rollNo: (requesterRollNo || '').trim().toUpperCase() });
+    if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    
+    if (!['free', 'silver', 'gold', 'platinum'].includes(tier)) return res.status(400).json({ error: 'Invalid tier' });
+
+    const target = await User.findOne({ rollNo: (targetRollNo || '').trim().toUpperCase() });
+    if (!target) return res.status(404).json({ error: 'Student not found' });
+
+    let sub = await Subscription.findOne({ rollNo: target.rollNo });
+    if (!sub) sub = new Subscription({ rollNo: target.rollNo });
+
+    sub.tier = tier;
+    // Grant for 30 days from now
+    sub.expiresAt = tier === 'free' ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    
+    // Add to history
+    if (!sub.history) sub.history = [];
+    sub.history.push({ tier, amount: 0, paymentId: 'ADMIN_GRANT', orderId: 'ADMIN_' + Date.now(), startedAt: new Date(), expiresAt: sub.expiresAt });
+    
+    await sub.save();
+
+    sendPushToRollNo(target.rollNo, '🎉 Subscription Granted', `Admin has granted you the ${tier.toUpperCase()} plan! Enjoy premium features.`, { type: 'subscription_granted', tier }).catch(() => {});
+
+    res.json({ message: `Successfully granted ${tier} plan to ${target.rollNo}`, subscription: sub });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Cancel Subscription (Downgrade to Free)
+app.post('/api/admin/subscription/cancel', async (req, res) => {
+  try {
+    const { requesterRollNo, targetRollNo } = req.body;
+    const admin = await User.findOne({ rollNo: (requesterRollNo || '').trim().toUpperCase() });
+    if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+
+    let sub = await Subscription.findOne({ rollNo: (targetRollNo || '').trim().toUpperCase() });
+    if (!sub) return res.status(404).json({ error: 'Subscription not found' });
+
+    sub.tier = 'free';
+    sub.expiresAt = null;
+    sub.history.push({ tier: 'free', amount: 0, paymentId: 'ADMIN_CANCEL', orderId: 'ADMIN_' + Date.now(), startedAt: new Date(), expiresAt: null });
+    
+    await sub.save();
+
+    sendPushToRollNo(targetRollNo.toUpperCase(), '⚠️ Subscription Cancelled', 'Your premium subscription has been cancelled by admin.', { type: 'subscription_cancelled' }).catch(() => {});
+
+    res.json({ message: `Successfully cancelled subscription for ${targetRollNo}`, subscription: sub });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ============================================================
 //  ★★★ NEW: RAZORPAY PAYMENT ROUTES ★★★
 // ============================================================
 app.post('/api/payment/create-order', async (req, res) => {
