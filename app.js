@@ -18,6 +18,7 @@ const STUDENT_MENU_ITEMS = [
   { key: 'home', label: 'Home', icon: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
   { key: 'subscription', label: 'Premium Plans', icon: '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>' },
   { key: 'achievements', label: 'Achievements', icon: '<circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/>' },
+  { key: 'leaderboard', label: 'Leaderboards', icon: '<path d="M8 21h8M12 17v4M7 4h10M9 4v4a3 3 0 0 0 6 0V4"/>' },
   { key: 'request', label: 'Request Attendance', icon: '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>' },
   { key: 'notes', label: 'Notes & Documents', icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>' },
   { key: 'assignments', label: 'Assignments', icon: '<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/>' },
@@ -352,6 +353,7 @@ function navigateStudentMenu(key){
     if (key === 'leave') { switchTab('tab-leave'); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
     if (key === 'subscription') { openSubscriptionModal(); return; }
     if (key === 'achievements') { openAchievementsModal(); return; }
+    if (key === 'leaderboard') { openLeaderboardModal(); return; }
     switchTab('tab-mark');
     let targetId = 'sec-home', action = null;
     switch (key) {
