@@ -41,6 +41,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+<!-- ★ RAZORPAY SCRIPT ADDED HERE -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
 
@@ -71,7 +73,7 @@
     </div>
   </div>
   <div class="student-menu-list" id="studentMenuList"></div>
-  <div class="student-menu-footer">BM ERP · v3.2</div>
+  <div class="student-menu-footer">BM ERP · v5.0</div>
 </div>
 
 <!-- ADMIN / FACULTY MENU -->
@@ -87,7 +89,7 @@
     </div>
   </div>
   <div class="student-menu-list" id="adminMenuList"></div>
-  <div class="student-menu-footer">BM ERP · v3.2</div>
+  <div class="student-menu-footer">BM ERP · v5.0</div>
 </div>
 
 <div class="app">
@@ -177,6 +179,8 @@
           </div>
           <div class="row no-flex" style="gap:6px;">
             <span class="pill role-student" id="roleBadge">Student</span>
+            <!-- ★ NEW SUBSCRIPTION BADGE -->
+            <span class="pill" id="subBadge" style="cursor:pointer; display:none;" onclick="openSubscriptionModal()"></span>
             <span class="pill" id="branchBadge">CSE</span>
           </div>
         </div>
