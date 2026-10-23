@@ -1,4 +1,4 @@
-// ================= index.js v5.1 — Full Backend (Razorpay + Subscriptions + Gamification + Notes Fix + Streak Weekend Fix) =================
+// ================= index.js v5.2 — Full Backend (Razorpay + Subscriptions + Gamification + Streak & Leaderboard Fixes) =================
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -346,27 +346,15 @@ function languageInstruction(lang) {
 // ============================================================
 //  SUBSCRIPTION HELPERS
 // ============================================================
-function getSubscriptionTierRank(tier) {
-  return TIER_ORDER[tier] || 0;
-}
+function getSubscriptionTierRank(tier) { return TIER_ORDER[tier] || 0; }
 
 async function getUserSubscription(rollNo) {
   try {
     const sub = await Subscription.findOne({ rollNo: rollNo.toUpperCase() }).lean();
-    if (!sub) {
-      return { tier: 'free', expiresAt: null, isExpired: false, isActive: true, history: [] };
-    }
+    if (!sub) return { tier: 'free', expiresAt: null, isExpired: false, isActive: true, history: [] };
     const isExpired = sub.expiresAt ? new Date(sub.expiresAt) < new Date() : false;
-    return {
-      tier: sub.tier || 'free',
-      expiresAt: sub.expiresAt,
-      isExpired,
-      isActive: !isExpired && sub.tier !== 'free',
-      history: sub.history || []
-    };
-  } catch (e) {
-    return { tier: 'free', expiresAt: null, isExpired: false, isActive: true, history: [] };
-  }
+    return { tier: sub.tier || 'free', expiresAt: sub.expiresAt, isExpired, isActive: !isExpired && sub.tier !== 'free', history: sub.history || [] };
+  } catch (e) { return { tier: 'free', expiresAt: null, isExpired: false, isActive: true, history: [] }; }
 }
 
 function hasMinTier(userSub, requiredTier) {
@@ -377,26 +365,14 @@ function hasMinTier(userSub, requiredTier) {
 async function activateSubscription(rollNo, tier, paymentId, orderId, amountRupees) {
   const cr = rollNo.toUpperCase();
   const now = new Date();
-  const oneMonthLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
   let sub = await Subscription.findOne({ rollNo: cr });
   if (!sub) sub = new Subscription({ rollNo: cr, tier: 'free' });
-  // If existing active sub, extend 30 days from current expiry
   let baseDate = now;
-  if (sub.expiresAt && new Date(sub.expiresAt) > now) {
-    baseDate = new Date(sub.expiresAt);
-  }
+  if (sub.expiresAt && new Date(sub.expiresAt) > now) baseDate = new Date(sub.expiresAt);
   const newExpiry = new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000);
-  sub.tier = tier;
-  sub.expiresAt = newExpiry;
+  sub.tier = tier; sub.expiresAt = newExpiry;
   sub.history = sub.history || [];
-  sub.history.push({
-    tier,
-    amount: amountRupees,
-    paymentId,
-    orderId,
-    startedAt: now,
-    expiresAt: newExpiry
-  });
+  sub.history.push({ tier, amount: amountRupees, paymentId, orderId, startedAt: now, expiresAt: newExpiry });
   await sub.save();
   return sub;
 }
@@ -430,37 +406,23 @@ async function awardAchievement(rollNo, achievementId) {
     if (!ACHIEVEMENT_DEFINITIONS[achievementId]) return false;
     if (g.unlockedAchievements.find(a => a.id === achievementId)) return false;
     const def = ACHIEVEMENT_DEFINITIONS[achievementId];
-    g.unlockedAchievements.push({
-      id: achievementId,
-      title: def.title,
-      desc: def.desc,
-      icon: def.icon,
-      unlockedAt: new Date()
-    });
-    g.totalXp = (g.totalXp || 0) + 50; // bonus XP per achievement
+    g.unlockedAchievements.push({ id: achievementId, title: def.title, desc: def.desc, icon: def.icon, unlockedAt: new Date() });
+    g.totalXp = (g.totalXp || 0) + 50; 
     await g.save();
-    // Push notification
     sendPushToRollNo(rollNo, `${def.icon} Achievement Unlocked!`, `"${def.title}" — ${def.desc}`, { type: 'achievement', achievementId }).catch(() => {});
     return true;
   } catch (e) { return false; }
 }
 
-// ★ NEW HELPER: Calculates the previous working day (skipping weekends & holidays)
 async function getPreviousWorkingDay(dateStr) {
   let d = new Date(dateStr + 'T00:00:00Z');
   d.setUTCDate(d.getUTCDate() - 1);
   while (true) {
     const ds = d.toISOString().split('T')[0];
     const dow = d.getUTCDay();
-    if (dow === 0 || dow === 6) { // Skip Weekend
-      d.setUTCDate(d.getUTCDate() - 1);
-      continue;
-    }
+    if (dow === 0 || dow === 6) { d.setUTCDate(d.getUTCDate() - 1); continue; }
     const isHoliday = await Holiday.findOne({ date: ds });
-    if (isHoliday) { // Skip Holiday
-      d.setUTCDate(d.getUTCDate() - 1);
-      continue;
-    }
+    if (isHoliday) { d.setUTCDate(d.getUTCDate() - 1); continue; }
     break;
   }
   return d.toISOString().split('T')[0];
@@ -470,80 +432,72 @@ async function updateLoginStreak(rollNo) {
   try {
     const g = await getOrCreateGamification(rollNo);
     const todayStr = getISTDateString(new Date());
+    
+    // FIX: If already logged in today, do nothing and don't add XP
+    if (g.lastLoginDate === todayStr) return g;
+    
     const isFirstLogin = !g.lastLoginDate;
     
-    if (g.lastLoginDate === todayStr) {
-      // Same day login, do nothing
-    } else if (!g.lastLoginDate) {
+    if (!g.lastLoginDate) {
       g.loginStreak = 1;
     } else {
-      // ★ FIX: Check if last login was on the previous working day
       const prevWorkingDay = await getPreviousWorkingDay(todayStr);
       if (g.lastLoginDate === prevWorkingDay) {
         g.loginStreak = (g.loginStreak || 0) + 1;
       } else {
-        g.loginStreak = 1; // Reset if gap is more than 1 working day
+        g.loginStreak = 1;
       }
     }
     g.lastLoginDate = todayStr;
     g.totalXp = (g.totalXp || 0) + 10;
     await g.save();
 
-    // Award streak achievements
     if (isFirstLogin) await awardAchievement(rollNo, 'first_login');
     if (g.loginStreak === 3) await awardAchievement(rollNo, 'streak_3');
     if (g.loginStreak === 7) await awardAchievement(rollNo, 'streak_7');
     if (g.loginStreak === 30) await awardAchievement(rollNo, 'streak_30');
 
-    // Time-based achievements
     const now = new Date();
     const istHour = getISTHour(now);
     if (istHour >= 23) await awardAchievement(rollNo, 'night_owl');
     if (istHour < 7) await awardAchievement(rollNo, 'early_bird');
 
     return g;
-  } catch (e) {
-    console.warn('updateLoginStreak error:', e.message);
-    return null;
-  }
+  } catch (e) { console.warn('updateLoginStreak error:', e.message); return null; }
 }
 
 async function updateAttendanceStreak(rollNo) {
   try {
     const g = await getOrCreateGamification(rollNo);
     const todayStr = getISTDateString(new Date());
+    
+    // FIX: If already marked today, do nothing and don't add XP
+    if (g.lastAttendanceDate === todayStr) return g;
+    
     const isFirst = !g.lastAttendanceDate;
     
-    if (g.lastAttendanceDate !== todayStr) {
-      if (!g.lastAttendanceDate) {
-        g.attendanceStreak = 1;
+    if (!g.lastAttendanceDate) {
+      g.attendanceStreak = 1;
+    } else {
+      const prevWorkingDay = await getPreviousWorkingDay(todayStr);
+      if (g.lastAttendanceDate === prevWorkingDay) {
+        g.attendanceStreak = (g.attendanceStreak || 0) + 1;
       } else {
-        // ★ FIX: Check if last attendance was on the previous working day
-        const prevWorkingDay = await getPreviousWorkingDay(todayStr);
-        if (g.lastAttendanceDate === prevWorkingDay) {
-          g.attendanceStreak = (g.attendanceStreak || 0) + 1;
-        } else {
-          g.attendanceStreak = 1; // Reset if gap is more than 1 working day
-        }
+        g.attendanceStreak = 1;
       }
-      g.lastAttendanceDate = todayStr;
-      g.totalXp = (g.totalXp || 0) + 5;
-      await g.save();
     }
+    g.lastAttendanceDate = todayStr;
+    g.totalXp = (g.totalXp || 0) + 5;
+    await g.save();
     
-    if (isFirst) {
-      await awardAchievement(rollNo, 'first_attendance');
-    }
+    if (isFirst) await awardAchievement(rollNo, 'first_attendance');
 
     const total = await Attendance.countDocuments({ rollNo: rollNo.toUpperCase(), status: { $in: ['Present', 'Duty Leave'] } });
     if (total >= 50) await awardAchievement(rollNo, 'attendances_50');
     if (total >= 100) await awardAchievement(rollNo, 'attendances_100');
 
     return g;
-  } catch (e) {
-    console.warn('updateAttendanceStreak error:', e.message);
-    return null;
-  }
+  } catch (e) { console.warn('updateAttendanceStreak error:', e.message); return null; }
 }
 
 // ============================================================
@@ -912,22 +866,13 @@ const docRequestSchema = new mongoose.Schema({
 }, { timestamps: true });
 docRequestSchema.index({ status: 1, createdAt: -1 });
 
-// ★ NEW: Subscription Schema
 const subscriptionSchema = new mongoose.Schema({
   rollNo: { type: String, required: true, unique: true },
   tier: { type: String, enum: ['free', 'silver', 'gold', 'platinum'], default: 'free' },
   expiresAt: { type: Date, default: null },
-  history: [{
-    tier: String,
-    amount: Number,
-    paymentId: String,
-    orderId: String,
-    startedAt: Date,
-    expiresAt: Date
-  }]
+  history: [{ tier: String, amount: Number, paymentId: String, orderId: String, startedAt: Date, expiresAt: Date }]
 }, { timestamps: true });
 
-// ★ NEW: Payment Order Schema (to track Razorpay orders)
 const paymentOrderSchema = new mongoose.Schema({
   orderId: { type: String, required: true, unique: true },
   rollNo: { type: String, required: true },
@@ -938,7 +883,6 @@ const paymentOrderSchema = new mongoose.Schema({
   paidAt: { type: Date, default: null }
 }, { timestamps: true });
 
-// ★ NEW: Gamification Schema
 const gamificationSchema = new mongoose.Schema({
   rollNo: { type: String, required: true, unique: true },
   loginStreak: { type: Number, default: 0 },
@@ -947,13 +891,7 @@ const gamificationSchema = new mongoose.Schema({
   lastAttendanceDate: { type: String, default: null },
   totalXp: { type: Number, default: 0 },
   excludedFromLeaderboard: { type: Boolean, default: false },
-  unlockedAchievements: [{
-    id: String,
-    title: String,
-    desc: String,
-    icon: String,
-    unlockedAt: { type: Date, default: Date.now }
-  }]
+  unlockedAchievements: [{ id: String, title: String, desc: String, icon: String, unlockedAt: { type: Date, default: Date.now } }]
 }, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);
@@ -1126,21 +1064,7 @@ async function getBunkAdvisor(rollNo) {
     message = `⚠️ You are at ${pct}% (${attended}/${total}). 75% is NOT achievable this semester. Attend ALL ${remainingLectures} remaining lectures to reach max possible ${maxPossiblePct}%.`;
   }
 
-  return {
-    totalAttended: attended,
-    totalConducted: total,
-    percentage: pct,
-    canBunkLectures: safeSkips,
-    lecturesNeeded,
-    maxPossiblePct,
-    minPossiblePct,
-    remainingLectures,
-    remainingWorkingDays,
-    totalSemesterLectures,
-    canReach75,
-    status,
-    message
-  };
+  return { totalAttended: attended, totalConducted: total, percentage: pct, canBunkLectures: safeSkips, lecturesNeeded, maxPossiblePct, minPossiblePct, remainingLectures, remainingWorkingDays, totalSemesterLectures, canReach75, status, message };
 }
 
 async function checkAttendanceMilestone(rollNo) {
@@ -1351,7 +1275,7 @@ app.get('/health', (req, res) => res.json({
   ai: { primary: { provider: 'groq', model: GROQ_MODEL, keys: GROQ_API_KEYS.length }, fallback: { provider: 'gemini', model: GEMINI_MODEL, keys: GEMINI_API_KEYS.length, discovered: _geminiModelsCache.list.length } },
   fcm: { ready: fcmReady, projectId: process.env.FIREBASE_PROJECT_ID || null },
   razorpay: { ready: razorpayReady, keyId: process.env.RAZORPAY_KEY_ID ? process.env.RAZORPAY_KEY_ID.substring(0, 8) + '...' : null },
-  version: '5.1',
+  version: '5.2',
   timestamp: new Date().toISOString()
 }));
 
@@ -1364,10 +1288,8 @@ app.get('/api/health/push', async (req, res) => {
 });
 
 // ============================================================
-//  ★★★ NEW: ADMIN MANUAL SUBSCRIPTION MANAGEMENT ★★★
+//  ADMIN MANUAL SUBSCRIPTION MANAGEMENT
 // ============================================================
-
-// Grant / Change Subscription Manually
 app.post('/api/admin/subscription/grant', async (req, res) => {
   try {
     const { requesterRollNo, targetRollNo, tier } = req.body;
@@ -1383,10 +1305,8 @@ app.post('/api/admin/subscription/grant', async (req, res) => {
     if (!sub) sub = new Subscription({ rollNo: target.rollNo });
 
     sub.tier = tier;
-    // Grant for 30 days from now
     sub.expiresAt = tier === 'free' ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     
-    // Add to history
     if (!sub.history) sub.history = [];
     sub.history.push({ tier, amount: 0, paymentId: 'ADMIN_GRANT', orderId: 'ADMIN_' + Date.now(), startedAt: new Date(), expiresAt: sub.expiresAt });
     
@@ -1398,7 +1318,6 @@ app.post('/api/admin/subscription/grant', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Cancel Subscription (Downgrade to Free)
 app.post('/api/admin/subscription/cancel', async (req, res) => {
   try {
     const { requesterRollNo, targetRollNo } = req.body;
@@ -1421,7 +1340,7 @@ app.post('/api/admin/subscription/cancel', async (req, res) => {
 });
 
 // ============================================================
-//  ★★★ NEW: RAZORPAY PAYMENT ROUTES ★★★
+//  RAZORPAY PAYMENT ROUTES
 // ============================================================
 app.post('/api/payment/create-order', async (req, res) => {
   try {
@@ -1437,107 +1356,50 @@ app.post('/api/payment/create-order', async (req, res) => {
     const amount = TIER_PRICES_PAISE[tier];
     const receipt = `sub_${cr}_${tier}_${Date.now()}`.substring(0, 40);
 
-    const order = await razorpay.orders.create({
-      amount,
-      currency: 'INR',
-      receipt,
-      notes: { rollNo: cr, tier, studentName: user.name }
-    });
+    const order = await razorpay.orders.create({ amount, currency: 'INR', receipt, notes: { rollNo: cr, tier, studentName: user.name } });
 
-    // Save order locally
-    await PaymentOrder.create({
-      orderId: order.id,
-      rollNo: cr,
-      tier,
-      amount: TIER_PRICES_RUPEES[tier],
-      status: 'created'
-    });
+    await PaymentOrder.create({ orderId: order.id, rollNo: cr, tier, amount: TIER_PRICES_RUPEES[tier], status: 'created' });
 
-    res.json({
-      order: {
-        id: order.id,
-        amount: order.amount,
-        currency: order.currency
-      },
-      key_id: process.env.RAZORPAY_KEY_ID,
-      tier,
-      price: TIER_PRICES_RUPEES[tier]
-    });
-  } catch (err) {
-    console.error('create-order error:', err);
-    res.status(500).json({ error: err.message || 'Order creation failed' });
-  }
+    res.json({ order: { id: order.id, amount: order.amount, currency: order.currency }, key_id: process.env.RAZORPAY_KEY_ID, tier, price: TIER_PRICES_RUPEES[tier] });
+  } catch (err) { console.error('create-order error:', err); res.status(500).json({ error: err.message || 'Order creation failed' }); }
 });
 
 app.post('/api/payment/verify', async (req, res) => {
   try {
     if (!razorpayReady) return res.status(503).json({ error: 'Payment system not configured.' });
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body || {};
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      return res.status(400).json({ error: 'Missing payment fields' });
-    }
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) return res.status(400).json({ error: 'Missing payment fields' });
 
-    // Verify signature
     const sign = razorpay_order_id + '|' + razorpay_payment_id;
     const expected = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET).update(sign).digest('hex');
-    if (expected !== razorpay_signature) {
-      console.warn('❌ Invalid Razorpay signature for order', razorpay_order_id);
-      return res.status(400).json({ error: 'Invalid payment signature' });
-    }
+    if (expected !== razorpay_signature) return res.status(400).json({ error: 'Invalid payment signature' });
 
-    // Find order
     const order = await PaymentOrder.findOne({ orderId: razorpay_order_id });
     if (!order) return res.status(404).json({ error: 'Order not found' });
-    if (order.status === 'paid') {
-      return res.json({ success: true, message: 'Already processed', tier: order.tier });
-    }
+    if (order.status === 'paid') return res.json({ success: true, message: 'Already processed', tier: order.tier });
 
-    // Activate subscription
     const sub = await activateSubscription(order.rollNo, order.tier, razorpay_payment_id, razorpay_order_id, order.amount);
 
-    order.status = 'paid';
-    order.paymentId = razorpay_payment_id;
-    order.paidAt = new Date();
-    await order.save();
+    order.status = 'paid'; order.paymentId = razorpay_payment_id; order.paidAt = new Date(); await order.save();
 
-    // Award achievement + notify
-    await awardAchievement(order.rollNo, 'first_login'); // fallback if not unlocked
-    sendPushToRollNo(
-      order.rollNo,
-      '🎉 Subscription Activated!',
-      `You're now a ${order.tier.toUpperCase()} member. Enjoy premium features!`,
-      { type: 'subscription_activated', tier: order.tier }
-    ).catch(() => {});
+    await awardAchievement(order.rollNo, 'first_login'); 
+    sendPushToRollNo(order.rollNo, '🎉 Subscription Activated!', `You're now a ${order.tier.toUpperCase()} member. Enjoy premium features!`, { type: 'subscription_activated', tier: order.tier }).catch(() => {});
 
-    console.log(`✅ Subscription activated: ${order.rollNo} → ${order.tier} (payment: ${razorpay_payment_id})`);
-    res.json({
-      success: true,
-      message: 'Payment verified. Subscription activated!',
-      tier: order.tier,
-      expiresAt: sub.expiresAt
-    });
-  } catch (err) {
-    console.error('verify-payment error:', err);
-    res.status(500).json({ error: err.message || 'Verification failed' });
-  }
+    res.json({ success: true, message: 'Payment verified. Subscription activated!', tier: order.tier, expiresAt: sub.expiresAt });
+  } catch (err) { console.error('verify-payment error:', err); res.status(500).json({ error: err.message || 'Verification failed' }); }
 });
 
 app.get('/api/user/subscription/:rollNo', async (req, res) => {
-  try {
-    const rollNo = (req.params.rollNo || '').trim().toUpperCase();
-    if (!rollNo) return res.status(400).json({ error: 'rollNo required' });
-    const sub = await getUserSubscription(rollNo);
-    res.json(sub);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  try { res.json(await getUserSubscription((req.params.rollNo || '').trim().toUpperCase())); }
+  catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ============================================================
-//  ★★★ NEW: GAMIFICATION ROUTE ★★★
+//  GAMIFICATION & LEADERBOARD
 // ============================================================
 app.get('/api/student/achievements/:rollNo', async (req, res) => {
   try {
     const cr = (req.params.rollNo || '').trim().toUpperCase();
-    if (!cr) return res.status(400).json({ error: 'rollNo required' });
     const g = await getOrCreateGamification(cr);
     res.json({
       loginStreak: g.loginStreak || 0,
@@ -1545,6 +1407,69 @@ app.get('/api/student/achievements/:rollNo', async (req, res) => {
       totalXp: g.totalXp || 0,
       unlockedAchievements: (g.unlockedAchievements || []).sort((a, b) => new Date(b.unlockedAt) - new Date(a.unlockedAt))
     });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ★ FIXED: Robust Leaderboard Query
+app.get('/api/leaderboard/:type', async (req, res) => {
+  try {
+    const type = req.params.type; // 'login' or 'attendance'
+    const sortField = type === 'login' ? 'loginStreak' : 'attendanceStreak';
+
+    const students = await User.find({ role: 'student' }).select('rollNo name branch').lean();
+    const studentRolls = students.map(s => s.rollNo);
+    
+    // Removed 'excludedFromLeaderboard: false' from Query to prevent missing data
+    const gamifications = await Gamification.find({ rollNo: { $in: studentRolls } })
+                                           .sort({ [sortField]: -1 })
+                                           .limit(50)
+                                           .lean();
+
+    const leaderboard = gamifications
+      .filter(g => g.excludedFromLeaderboard !== true) // Check in JS safely
+      .map(g => {
+        const u = students.find(s => s.rollNo === g.rollNo);
+        return {
+          rollNo: g.rollNo,
+          name: u ? u.name : 'Unknown',
+          branch: u ? u.branch : 'CSE',
+          streak: g[sortField] || 0,
+          xp: g.totalXp || 0
+        };
+      })
+      .filter(l => l.streak > 0);
+
+    res.json(leaderboard);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/admin/gamification/:rollNo', async (req, res) => {
+  try {
+    const cr = req.params.rollNo.trim().toUpperCase();
+    const user = await User.findOne({ rollNo: cr }).select('name rollNo');
+    if (!user) return res.status(404).json({ error: 'Student not found' });
+    let g = await Gamification.findOne({ rollNo: cr });
+    if (!g) g = { loginStreak: 0, attendanceStreak: 0, excludedFromLeaderboard: false };
+    res.json({ user, gamification: g });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/admin/gamification/update', async (req, res) => {
+  try {
+    const { requesterRollNo, targetRollNo, loginStreak, attendanceStreak, excluded } = req.body;
+    const admin = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+    if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+
+    const cr = targetRollNo.trim().toUpperCase();
+    let g = await Gamification.findOne({ rollNo: cr });
+    if (!g) g = new Gamification({ rollNo: cr });
+
+    if (loginStreak !== undefined) g.loginStreak = parseInt(loginStreak);
+    if (attendanceStreak !== undefined) g.attendanceStreak = parseInt(attendanceStreak);
+    if (excluded !== undefined) g.excludedFromLeaderboard = excluded;
+
+    await g.save();
+    res.json({ message: 'Streak updated successfully', gamification: g });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -1560,7 +1485,6 @@ app.post('/api/user/save-fcm-token', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
     user.fcmToken = fcmToken;
     await user.save();
-    console.log(`📱 [FCM-SAVE] ${cr} → ${fcmToken.substring(0, 20)}...`);
     res.json({ message: 'FCM token saved', fcmReady });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -1620,73 +1544,42 @@ app.post('/api/admin/bulk-reset-device', async (req, res) => {
     const adminUser = await User.findOne({ rollNo: (requesterRollNo || '').trim().toUpperCase() });
     if (!adminUser || adminUser.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
 
-    if (!scope || !['ALL', 'CSE', 'AIDS', 'SELECTED'].includes(scope)) {
-      return res.status(400).json({ error: 'Invalid scope. Use ALL / CSE / AIDS / SELECTED.' });
-    }
+    if (!scope || !['ALL', 'CSE', 'AIDS', 'SELECTED'].includes(scope)) return res.status(400).json({ error: 'Invalid scope.' });
 
     let query = { role: 'student' };
     if (scope === 'CSE') query.branch = 'CSE';
     else if (scope === 'AIDS') query.branch = 'AIDS';
     else if (scope === 'SELECTED') {
-      if (!Array.isArray(rollNos) || !rollNos.length) {
-        return res.status(400).json({ error: 'rollNos required for SELECTED scope.' });
-      }
+      if (!Array.isArray(rollNos) || !rollNos.length) return res.status(400).json({ error: 'rollNos required for SELECTED scope.' });
       query.rollNo = { $in: rollNos.map(r => String(r).trim().toUpperCase()) };
     }
 
     const students = await User.find(query).select('rollNo name').lean();
     if (!students.length) return res.status(404).json({ error: 'No matching students found.' });
 
-    const result = await User.updateMany(query, {
-      $set: { boundDeviceId: null, boundDeviceName: null, activeSession: null }
-    });
+    const result = await User.updateMany(query, { $set: { boundDeviceId: null, boundDeviceName: null, activeSession: null } });
 
-    for (const s of students) {
-      sendPushToRollNo(s.rollNo, '📱 Device Reset', 'Your device binding was reset by admin. Please login again from any device.', { type: 'device_reset' }).catch(() => {});
-    }
+    for (const s of students) { sendPushToRollNo(s.rollNo, '📱 Device Reset', 'Your device binding was reset by admin.', { type: 'device_reset' }).catch(() => {}); }
 
-    console.log(`📱 [BULK RESET] ${result.modifiedCount} students reset (scope: ${scope})`);
-    res.json({
-      message: `Reset complete. ${result.modifiedCount} student(s) unlocked.`,
-      resetCount: result.modifiedCount,
-      students: students.map(s => s.rollNo)
-    });
+    res.json({ message: `Reset complete. ${result.modifiedCount} student(s) unlocked.`, resetCount: result.modifiedCount, students: students.map(s => s.rollNo) });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ============================================================
-//  ★★★ NOTES & DOCUMENTS — UPDATED WITH VIEW/DOWNLOAD SPLIT ★★★
+//  NOTES & DOCUMENTS
 // ============================================================
-
-// GET /api/notes/:branch — list notes (view + download URLs)
 app.get('/api/notes/:branch', async (req, res) => {
   try {
     const branch = (req.params.branch || 'CSE').toUpperCase();
-    const notes = await Note.find({
-      $or: [{ branch: 'ALL' }, { branch }]
-    }).sort({ createdAt: -1 }).limit(100).lean();
+    const notes = await Note.find({ $or: [{ branch: 'ALL' }, { branch }] }).sort({ createdAt: -1 }).limit(100).lean();
     const result = notes.map(n => ({
-      _id: n._id,
-      title: n.title,
-      subject: n.subject,
-      branch: n.branch,
-      fileName: n.fileName,
-      mimeType: n.mimeType,
-      size: n.size,
-      uploadedBy: n.uploadedBy,
-      uploadedByName: n.uploadedByName,
-      createdAt: n.createdAt,
-      // ★ FIX: split URLs
-      viewUrl: `/api/notes/view/${n._id}`,
-      downloadUrl: `/api/notes/download/${n._id}`,
-      // legacy alias
-      fileUrl: `/api/notes/download/${n._id}`
+      _id: n._id, title: n.title, subject: n.subject, branch: n.branch, fileName: n.fileName, mimeType: n.mimeType, size: n.size, uploadedBy: n.uploadedBy, uploadedByName: n.uploadedByName, createdAt: n.createdAt,
+      viewUrl: `/api/notes/view/${n._id}`, downloadUrl: `/api/notes/download/${n._id}`, fileUrl: `/api/notes/download/${n._id}`
     }));
     res.json(result);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ★ NEW: Inline view endpoint
 app.get('/api/notes/view/:noteId', async (req, res) => {
   try {
     const file = await NotesFile.findOne({ noteId: req.params.noteId });
@@ -1698,7 +1591,6 @@ app.get('/api/notes/view/:noteId', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ★ NEW: Attachment download endpoint
 app.get('/api/notes/download/:noteId', async (req, res) => {
   try {
     const file = await NotesFile.findOne({ noteId: req.params.noteId });
@@ -1710,7 +1602,6 @@ app.get('/api/notes/download/:noteId', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Legacy alias (kept for backward compat)
 app.get('/api/notes/file/:noteId', async (req, res) => {
   try {
     const file = await NotesFile.findOne({ noteId: req.params.noteId });
@@ -1722,7 +1613,6 @@ app.get('/api/notes/file/:noteId', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// POST /api/admin/notes/upload
 app.post('/api/admin/notes/upload', async (req, res) => {
   try {
     const { requesterRollNo, title, subject, branch, fileBase64, fileName, mimeType } = req.body;
@@ -1733,66 +1623,30 @@ app.post('/api/admin/notes/upload', async (req, res) => {
     if (!fileBase64 || !fileName || !mimeType) return res.status(400).json({ error: 'File data required.' });
 
     let buffer;
-    try { buffer = Buffer.from(fileBase64, 'base64'); }
-    catch (e) { return res.status(400).json({ error: 'Invalid base64 file data.' }); }
-
-    if (buffer.length > 10 * 1024 * 1024) {
-      return res.status(400).json({ error: 'File too large. Max 10MB.' });
-    }
+    try { buffer = Buffer.from(fileBase64, 'base64'); } catch (e) { return res.status(400).json({ error: 'Invalid base64 file data.' }); }
+    if (buffer.length > 10 * 1024 * 1024) return res.status(400).json({ error: 'File too large. Max 10MB.' });
 
     const finalBranch = (branch || 'ALL').toUpperCase();
-    const note = await Note.create({
-      title, subject,
-      branch: finalBranch,
-      fileName, mimeType, size: buffer.length,
-      uploadedBy: user.rollNo, uploadedByName: user.name
-    });
-
-    await NotesFile.create({
-      noteId: note._id,
-      data: buffer,
-      fileName, mimeType,
-      size: buffer.length
-    });
+    const note = await Note.create({ title, subject, branch: finalBranch, fileName, mimeType, size: buffer.length, uploadedBy: user.rollNo, uploadedByName: user.name });
+    await NotesFile.create({ noteId: note._id, data: buffer, fileName, mimeType, size: buffer.length });
 
     const msg = `📚 New Note: ${title} — ${subject}`;
-    if (finalBranch === 'ALL') {
-      sendPushToAllStudents('📚 New Note Uploaded', msg, { type: 'note_added', noteId: note._id.toString() }).catch(() => {});
-    } else {
-      sendPushToBranch(finalBranch, '📚 New Note Uploaded', msg, { type: 'note_added', noteId: note._id.toString() }).catch(() => {});
-    }
+    if (finalBranch === 'ALL') sendPushToAllStudents('📚 New Note Uploaded', msg, { type: 'note_added', noteId: note._id.toString() }).catch(() => {});
+    else sendPushToBranch(finalBranch, '📚 New Note Uploaded', msg, { type: 'note_added', noteId: note._id.toString() }).catch(() => {});
 
-    res.status(201).json({
-      message: 'Note uploaded successfully.',
-      note: {
-        _id: note._id,
-        title, subject,
-        branch: finalBranch,
-        fileName,
-        viewUrl: `/api/notes/view/${note._id}`,
-        downloadUrl: `/api/notes/download/${note._id}`
-      }
-    });
+    res.status(201).json({ message: 'Note uploaded successfully.', note: { _id: note._id, title, subject, branch: finalBranch, fileName, viewUrl: `/api/notes/view/${note._id}`, downloadUrl: `/api/notes/download/${note._id}` } });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// GET /api/admin/notes/:rollNo
 app.get('/api/admin/notes/:rollNo', async (req, res) => {
   try {
     const user = await User.findOne({ rollNo: req.params.rollNo.trim().toUpperCase() });
     if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
     const notes = await Note.find({}).sort({ createdAt: -1 }).limit(200).lean();
-    const result = notes.map(n => ({
-      ...n,
-      viewUrl: `/api/notes/view/${n._id}`,
-      downloadUrl: `/api/notes/download/${n._id}`,
-      fileUrl: `/api/notes/download/${n._id}`
-    }));
-    res.json(result);
+    res.json(notes.map(n => ({ ...n, viewUrl: `/api/notes/view/${n._id}`, downloadUrl: `/api/notes/download/${n._id}`, fileUrl: `/api/notes/download/${n._id}` })));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// DELETE /api/admin/notes/:id
 app.delete('/api/admin/notes/:id', async (req, res) => {
   try {
     const { requesterRollNo } = req.body;
@@ -1805,7 +1659,6 @@ app.delete('/api/admin/notes/:id', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// POST /api/notes/request — student requests doc upload
 app.post('/api/notes/request', async (req, res) => {
   try {
     const { rollNo, title, subject, reason, branch, fileBase64, fileName, mimeType } = req.body;
@@ -1814,26 +1667,13 @@ app.post('/api/notes/request', async (req, res) => {
     const user = await User.findOne({ rollNo: cr, role: 'student' });
     if (!user) return res.status(404).json({ error: 'Student not found' });
 
-    const docReq = await DocRequest.create({
-      rollNo: cr, studentName: user.name,
-      title, subject,
-      reason: reason || '',
-      branch: (branch || user.branch || 'CSE').toUpperCase(),
-      status: 'Pending'
-    });
+    const docReq = await DocRequest.create({ rollNo: cr, studentName: user.name, title, subject, reason: reason || '', branch: (branch || user.branch || 'CSE').toUpperCase(), status: 'Pending' });
 
-    // If file uploaded with request, save it (uploadedBy student — admin reviews)
     if (fileBase64 && fileName && mimeType) {
       try {
         const buffer = Buffer.from(fileBase64, 'base64');
         if (buffer.length <= 10 * 1024 * 1024) {
-          const note = await Note.create({
-            title: `[PENDING] ${title}`,
-            subject,
-            branch: (branch || user.branch || 'CSE').toUpperCase(),
-            fileName, mimeType, size: buffer.length,
-            uploadedBy: cr, uploadedByName: user.name
-          });
+          const note = await Note.create({ title: `[PENDING] ${title}`, subject, branch: (branch || user.branch || 'CSE').toUpperCase(), fileName, mimeType, size: buffer.length, uploadedBy: cr, uploadedByName: user.name });
           await NotesFile.create({ noteId: note._id, data: buffer, fileName, mimeType, size: buffer.length });
           docReq.adminNote = `noteId:${note._id}`;
           await docReq.save();
@@ -1846,7 +1686,6 @@ app.post('/api/notes/request', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// GET /api/admin/notes/requests/:rollNo
 app.get('/api/admin/notes/requests/:rollNo', async (req, res) => {
   try {
     const user = await User.findOne({ rollNo: req.params.rollNo.trim().toUpperCase() });
@@ -1857,14 +1696,7 @@ app.get('/api/admin/notes/requests/:rollNo', async (req, res) => {
       if (r.adminNote && r.adminNote.startsWith('noteId:')) {
         const noteId = r.adminNote.replace('noteId:', '');
         const note = await Note.findById(noteId).lean();
-        if (note) {
-          fileInfo = {
-            noteId: note._id,
-            fileName: note.fileName,
-            viewUrl: `/api/notes/view/${note._id}`,
-            downloadUrl: `/api/notes/download/${note._id}`
-          };
-        }
+        if (note) fileInfo = { noteId: note._id, fileName: note.fileName, viewUrl: `/api/notes/view/${note._id}`, downloadUrl: `/api/notes/download/${note._id}` };
       }
       return { ...r, fileInfo };
     }));
@@ -1872,7 +1704,6 @@ app.get('/api/admin/notes/requests/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// POST /api/admin/notes/requests/approve/:id
 app.post('/api/admin/notes/requests/approve/:id', async (req, res) => {
   try {
     const { requesterRollNo } = req.body;
@@ -1882,7 +1713,6 @@ app.post('/api/admin/notes/requests/approve/:id', async (req, res) => {
     if (!docReq) return res.status(404).json({ error: 'Request not found' });
     if (docReq.status !== 'Pending') return res.status(400).json({ error: `Already ${docReq.status}.` });
 
-    // If note was attached, approve it (remove [PENDING] prefix)
     if (docReq.adminNote && docReq.adminNote.startsWith('noteId:')) {
       const noteId = docReq.adminNote.replace('noteId:', '');
       const note = await Note.findById(noteId);
@@ -1893,17 +1723,13 @@ app.post('/api/admin/notes/requests/approve/:id', async (req, res) => {
       }
     }
 
-    docReq.status = 'Approved';
-    docReq.reviewedBy = adminUser.rollNo;
-    docReq.reviewedAt = new Date();
-    await docReq.save();
+    docReq.status = 'Approved'; docReq.reviewedBy = adminUser.rollNo; docReq.reviewedAt = new Date(); await docReq.save();
 
-    sendPushToRollNo(docReq.rollNo, '✅ Document Request Fulfilled', `Your request for "${docReq.title}" (${docReq.subject}) has been completed. Check Notes section.`, { type: 'doc_approved', requestId: docReq._id.toString() }).catch(() => {});
+    sendPushToRollNo(docReq.rollNo, '✅ Document Request Fulfilled', `Your request for "${docReq.title}" (${docReq.subject}) has been completed.`, { type: 'doc_approved', requestId: docReq._id.toString() }).catch(() => {});
     res.json({ message: 'Request approved and student notified.', request: docReq });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// POST /api/admin/notes/requests/reject/:id
 app.post('/api/admin/notes/requests/reject/:id', async (req, res) => {
   try {
     const { requesterRollNo, note } = req.body;
@@ -1913,27 +1739,18 @@ app.post('/api/admin/notes/requests/reject/:id', async (req, res) => {
     if (!docReq) return res.status(404).json({ error: 'Request not found' });
     if (docReq.status !== 'Pending') return res.status(400).json({ error: `Already ${docReq.status}.` });
 
-    // Delete attached pending note
     if (docReq.adminNote && docReq.adminNote.startsWith('noteId:')) {
       const noteId = docReq.adminNote.replace('noteId:', '');
-      try {
-        await Note.findByIdAndDelete(noteId);
-        await NotesFile.deleteOne({ noteId });
-      } catch (e) {}
+      try { await Note.findByIdAndDelete(noteId); await NotesFile.deleteOne({ noteId }); } catch (e) {}
     }
 
-    docReq.status = 'Rejected';
-    docReq.reviewedBy = adminUser.rollNo;
-    docReq.reviewedAt = new Date();
-    docReq.adminNote = note || '';
-    await docReq.save();
+    docReq.status = 'Rejected'; docReq.reviewedBy = adminUser.rollNo; docReq.reviewedAt = new Date(); docReq.adminNote = note || ''; await docReq.save();
 
     sendPushToRollNo(docReq.rollNo, '❌ Document Request Rejected', `Your request for "${docReq.title}" was rejected.${note ? ' Note: ' + note : ''}`, { type: 'doc_rejected', requestId: docReq._id.toString() }).catch(() => {});
     res.json({ message: 'Request rejected.', request: docReq });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// GET /api/notes/request-file/:reqId — legacy
 app.get('/api/notes/request-file/:reqId', async (req, res) => {
   try {
     const docReq = await DocRequest.findById(req.params.reqId);
@@ -1951,21 +1768,15 @@ app.get('/api/notes/request-file/:reqId', async (req, res) => {
 });
 
 // ============================================================
-//  ANNOUNCEMENTS GET
+//  FEE ENDPOINTS
 // ============================================================
 app.get('/api/announcements/:branch', async (req, res) => {
   try {
     const branch = (req.params.branch || 'CSE').toUpperCase();
-    const announcements = await Announcement.find({
-      $or: [{ branch: 'ALL' }, { branch }]
-    }).sort({ createdAt: -1 }).limit(50).lean();
-    res.json(announcements);
+    res.json(await Announcement.find({ $or: [{ branch: 'ALL' }, { branch }] }).sort({ createdAt: -1 }).limit(50).lean());
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ============================================================
-//  FEE ENDPOINTS
-// ============================================================
 app.post('/api/admin/fee/add', async (req, res) => {
   try {
     const { requesterRollNo, rollNo, amount, dueDate, description, academicYear } = req.body;
@@ -2005,8 +1816,7 @@ app.post('/api/admin/fee/bulk-add', async (req, res) => {
 });
 
 app.get('/api/student/fees/:rollNo', async (req, res) => {
-  try { res.json(await Fee.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ dueDate: -1 })); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  try { res.json(await Fee.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ dueDate: -1 })); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.get('/api/admin/fees/:requesterRollNo', async (req, res) => {
@@ -2053,8 +1863,7 @@ app.post('/api/faculty/assignment/create', async (req, res) => {
 });
 
 app.get('/api/assignments/:branch', async (req, res) => {
-  try { res.json(await Assignment.find({ branch: req.params.branch.toUpperCase() }).sort({ dueDate: 1 })); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  try { res.json(await Assignment.find({ branch: req.params.branch.toUpperCase() }).sort({ dueDate: 1 })); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.delete('/api/faculty/assignment/:id', async (req, res) => {
@@ -2081,8 +1890,7 @@ app.post('/api/admin/exam/create', async (req, res) => {
 });
 
 app.get('/api/exams/:branch', async (req, res) => {
-  try { res.json(await Exam.find({ branch: req.params.branch.toUpperCase() }).sort({ examDate: 1 })); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  try { res.json(await Exam.find({ branch: req.params.branch.toUpperCase() }).sort({ examDate: 1 })); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.delete('/api/admin/exam/:id', async (req, res) => {
@@ -2112,8 +1920,7 @@ app.post('/api/admin/library/issue', async (req, res) => {
 });
 
 app.get('/api/student/library/:rollNo', async (req, res) => {
-  try { res.json(await LibraryBook.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ dueDate: -1 })); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  try { res.json(await LibraryBook.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ dueDate: -1 })); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.get('/api/admin/library/all/:requesterRollNo', async (req, res) => {
@@ -2131,8 +1938,7 @@ app.post('/api/admin/library/return/:bookId', async (req, res) => {
     if (!adminUser || adminUser.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
     const book = await LibraryBook.findById(req.params.bookId);
     if (!book) return res.status(404).json({ error: 'Book not found' });
-    book.status = 'Returned'; book.returnDate = getISTDateString(new Date());
-    await book.save();
+    book.status = 'Returned'; book.returnDate = getISTDateString(new Date()); await book.save();
     res.json({ message: 'Book returned', book });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -2153,8 +1959,7 @@ app.post('/api/admin/result/publish', async (req, res) => {
 });
 
 app.get('/api/student/results/:rollNo', async (req, res) => {
-  try { res.json(await Result.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ publishedAt: -1 })); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  try { res.json(await Result.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ publishedAt: -1 })); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/api/admin/emergency-alert', async (req, res) => {
@@ -2199,10 +2004,7 @@ app.post('/api/auth/register', async (req, res) => {
     if (user) return res.status(400).json({ error: 'ID already registered!' });
     const hashedPassword = await bcrypt.hash(password, 10);
     let branch = 'CSE';
-    if (role === 'student') {
-      const derived = getBranchFromRoll(cleanRoll);
-      branch = derived || (cleanRoll.includes('AIDS') ? 'AIDS' : 'CSE');
-    }
+    if (role === 'student') { branch = getBranchFromRoll(cleanRoll) || (cleanRoll.includes('AIDS') ? 'AIDS' : 'CSE'); }
     const boundDeviceId = (role === 'student') ? (deviceId || null) : null;
     const newUser = new User({ name, rollNo: cleanRoll, password: hashedPassword, role, boundDeviceId, branch, facultySubject: (role === 'faculty') ? subject : null });
     await newUser.save();
@@ -2282,7 +2084,6 @@ app.post('/api/admin/clear-registrations', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// LOGIN with strict device binding + Gamification
 app.post('/api/auth/login', async (req, res) => {
   try {
     const parsed = loginSchema.safeParse(req.body);
@@ -2305,7 +2106,6 @@ app.post('/api/auth/login', async (req, res) => {
       const correctBranch = getBranchFromRoll(cleanRoll);
       if (correctBranch && user.branch !== correctBranch) user.branch = correctBranch;
 
-      // STRICT DEVICE BINDING
       if (user.boundDeviceId && user.boundDeviceId !== deviceId) {
         return res.status(403).json({ error: '⛔ Unauthorized Device! You can only login from your registered phone. Please use "Reset Device" if you changed your phone.' });
       }
@@ -2318,13 +2118,10 @@ app.post('/api/auth/login', async (req, res) => {
       }
     }
 
-    user.lastLoginIP = req.ip;
-    user.lastLoginDevice = deviceId || 'unknown';
-    user.lastLoginAt = new Date();
+    user.lastLoginIP = req.ip; user.lastLoginDevice = deviceId || 'unknown'; user.lastLoginAt = new Date();
     const token = jwt.sign({ id: user._id, rollNo: user.rollNo, name: user.name, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     user.activeSession = token; await user.save();
 
-    // ★ GAMIFICATION: update login streak + achievements
     if (user.role === 'student') {
       updateLoginStreak(cleanRoll).catch(() => {});
     }
@@ -2333,32 +2130,26 @@ app.post('/api/auth/login', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// VERIFY SESSION
 app.post('/api/auth/verify-session', async (req, res) => {
   try {
     const { rollNo, token } = req.body;
     if (!rollNo || !token) return res.status(400).json({ error: 'rollNo and token required' });
 
     let decoded;
-    try {
-      decoded = jwt.verify(token, JWT_SECRET);
-    } catch (e) {
-      return res.status(401).json({ sessionInvalid: true, error: 'Invalid or expired token.' });
-    }
+    try { decoded = jwt.verify(token, JWT_SECRET); } catch (e) { return res.status(401).json({ sessionInvalid: true, error: 'Invalid or expired token.' }); }
 
-    if (decoded.impersonated) {
-      return res.json({ valid: true, impersonated: true });
-    }
+    if (decoded.impersonated) return res.json({ valid: true, impersonated: true });
 
-    if (decoded.rollNo !== rollNo.trim().toUpperCase()) {
-      return res.status(401).json({ sessionInvalid: true, error: 'Token does not match user.' });
-    }
+    if (decoded.rollNo !== rollNo.trim().toUpperCase()) return res.status(401).json({ sessionInvalid: true, error: 'Token does not match user.' });
 
     const user = await User.findOne({ rollNo: decoded.rollNo });
     if (!user) return res.status(401).json({ sessionInvalid: true, error: 'User not found.' });
 
-    if (user.activeSession !== token) {
-      return res.status(401).json({ sessionInvalid: true, error: 'You were logged out because you signed in on another device.' });
+    if (user.activeSession !== token) return res.status(401).json({ sessionInvalid: true, error: 'You were logged out because you signed in on another device.' });
+
+    // ★ FIX: Auto-update login streak on app open (verify session)
+    if (user.role === 'student') {
+      updateLoginStreak(user.rollNo).catch(() => {});
     }
 
     res.json({ valid: true });
@@ -2420,8 +2211,7 @@ app.post('/api/auth/change-password', async (req, res) => {
     const ok = await bcrypt.compare(currentPassword, user.password);
     if (!ok) return res.status(400).json({ error: 'Current password is incorrect' });
     if (newPassword.length < 6) return res.status(400).json({ error: 'New password too short' });
-    user.password = await bcrypt.hash(newPassword, 10);
-    await user.save();
+    user.password = await bcrypt.hash(newPassword, 10); await user.save();
     res.json({ message: 'Password changed' });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -2465,8 +2255,7 @@ app.post('/api/admin/account-requests/review/:id', async (req, res) => {
     if (!['Approved', 'Rejected'].includes(action)) return res.status(400).json({ error: 'Invalid action' });
     const r = await AccountRequest.findById(req.params.id);
     if (!r) return res.status(404).json({ error: 'Not found' });
-    r.status = action; r.reviewedBy = adminUser.rollNo; r.adminNote = note || '';
-    await r.save();
+    r.status = action; r.reviewedBy = adminUser.rollNo; r.adminNote = note || ''; await r.save();
     if (action === 'Approved' && r.type === 'device_reset') {
       await User.updateOne({ rollNo: r.rollNo }, { $set: { boundDeviceId: null, boundDeviceName: null, activeSession: null } });
     }
@@ -2683,8 +2472,7 @@ app.post('/api/attendance/mark-live', async (req, res) => {
 //  REQUESTS VIEW/REVIEW
 // ============================================================
 app.get('/api/requests/my/:rollNo', async (req, res) => {
-  try { res.json(await AttendanceRequest.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ createdAt: -1 }).limit(50)); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  try { res.json(await AttendanceRequest.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ createdAt: -1 }).limit(50)); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 app.get('/api/requests/all/:requesterRollNo', async (req, res) => {
   try {
@@ -2734,20 +2522,8 @@ app.post('/api/requests/review/:id', async (req, res) => {
         try {
           const exists = await Attendance.findOne({ rollNo: request.rollNo, subject: sub, date: request.date });
           if (!exists) {
-            await Attendance.create({
-              rollNo: request.rollNo,
-              studentName: request.studentName,
-              subject: sub,
-              date: request.date,
-              status: 'Present',
-              location: null,
-              ipAddress: 'request-approved',
-              isVerified: false,
-              branch: b,
-              markedByRequestId: request._id.toString()
-            });
-            markedCount++;
-            markedSubjects.push(sub);
+            await Attendance.create({ rollNo: request.rollNo, studentName: request.studentName, subject: sub, date: request.date, status: 'Present', location: null, ipAddress: 'request-approved', isVerified: false, branch: b, markedByRequestId: request._id.toString() });
+            markedCount++; markedSubjects.push(sub);
           }
         } catch (e) { if (e.code !== 11000) console.warn(e.message); }
       }
@@ -2755,7 +2531,12 @@ app.post('/api/requests/review/:id', async (req, res) => {
       request.reviewedBy = req1.rollNo; request.adminNote = note || '';
       request.reviewHistory.push({ action: 'Approved', by: req1.rollNo, at: new Date(), note: note || '', reviewedSubjects: markedSubjects });
       await request.save();
-      if (markedCount > 0) updateAttendanceStreak(request.rollNo).catch(() => {});
+      
+      // ★ FIX: Only update streak if the approved date is TODAY
+      if (markedCount > 0 && request.date === getISTDateString(new Date())) {
+        updateAttendanceStreak(request.rollNo).catch(() => {});
+      }
+      
       sendPushToRollNo(request.rollNo, '✅ Attendance Request Approved', `${request.date} — ${markedCount} lecture(s) marked.`, { type: 'request_approved' }).catch(() => {});
       res.json({ message: `✅ Approved. ${markedCount} marked.`, request, markedCount, markedSubjects, totalRequested: subjectsToMark.length, undoWindowSeconds: 300 });
     } else {
@@ -2777,36 +2558,19 @@ app.post('/api/requests/undo/:id', async (req, res) => {
     const request = await AttendanceRequest.findById(req.params.id);
     if (!request) return res.status(404).json({ error: 'Request not found.' });
 
-    if (request.status !== 'Approved' && request.status !== 'Partially Approved') {
-      return res.status(400).json({ error: `Cannot undo — current status is "${request.status}".` });
-    }
+    if (request.status !== 'Approved' && request.status !== 'Partially Approved') return res.status(400).json({ error: `Cannot undo — current status is "${request.status}".` });
 
     const elapsedMs = Date.now() - new Date(request.updatedAt).getTime();
-    if (elapsedMs > UNDO_WINDOW_MS) {
-      return res.status(400).json({ error: `Undo window expired (${Math.round(elapsedMs/60000)} min ago). Max ${UNDO_WINDOW_MS/60000} minutes.` });
-    }
+    if (elapsedMs > UNDO_WINDOW_MS) return res.status(400).json({ error: `Undo window expired.` });
 
     const delResult = await Attendance.deleteMany({ markedByRequestId: request._id.toString() });
 
-    request.status = 'Pending';
-    request.reviewedBy = null;
-    request.adminNote = '';
-    request.reviewHistory.push({
-      action: 'Undone',
-      by: adminUser.rollNo,
-      at: new Date(),
-      note: `Approval undone — ${delResult.deletedCount} attendance record(s) removed.`
-    });
+    request.status = 'Pending'; request.reviewedBy = null; request.adminNote = '';
+    request.reviewHistory.push({ action: 'Undone', by: adminUser.rollNo, at: new Date(), note: `Approval undone — ${delResult.deletedCount} attendance record(s) removed.` });
     await request.save();
 
     sendPushToRollNo(request.rollNo, '↩️ Approval Revoked', `Your attendance request for ${request.date} has been reverted to Pending by admin.`, { type: 'request_undone' }).catch(() => {});
-
-    console.log(`↩️ [UNDO] Request ${request._id} reverted by ${adminUser.rollNo} — ${delResult.deletedCount} records removed.`);
-    res.json({
-      message: `Approval undone. ${delResult.deletedCount} attendance record(s) removed.`,
-      deletedCount: delResult.deletedCount,
-      request
-    });
+    res.json({ message: `Approval undone. ${delResult.deletedCount} attendance record(s) removed.`, deletedCount: delResult.deletedCount, request });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -2839,18 +2603,7 @@ app.post('/api/requests/bulk-review', async (req, res) => {
             try {
               const ex = await Attendance.findOne({ rollNo: request.rollNo, subject: sub, date: request.date });
               if (!ex) {
-                await Attendance.create({
-                  rollNo: request.rollNo,
-                  studentName: request.studentName,
-                  subject: sub,
-                  date: request.date,
-                  status: 'Present',
-                  location: null,
-                  ipAddress: 'bulk-approve',
-                  isVerified: false,
-                  branch: b,
-                  markedByRequestId: request._id.toString()
-                });
+                await Attendance.create({ rollNo: request.rollNo, studentName: request.studentName, subject: sub, date: request.date, status: 'Present', location: null, ipAddress: 'bulk-approve', isVerified: false, branch: b, markedByRequestId: request._id.toString() });
                 marked++;
               }
             } catch (e) {}
@@ -2878,7 +2631,7 @@ app.post('/api/admin/clear-requests', async (req, res) => {
 });
 
 // ============================================================
-//  PASSCODE / TEACHER / PASSCODE GENERATE
+//  PASSCODE / TEACHER
 // ============================================================
 app.post('/api/admin/passcode/toggle', async (req, res) => {
   try {
@@ -2926,8 +2679,7 @@ app.post('/api/admin/remove-subject', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 app.get('/api/teacher/subjects/:rollNo', async (req, res) => {
-  try { res.json((await TeacherSubject.find({ teacherRollNo: req.params.rollNo.trim().toUpperCase() })).map(a => mapToCanonical(a.subject))); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  try { res.json((await TeacherSubject.find({ teacherRollNo: req.params.rollNo.trim().toUpperCase() })).map(a => mapToCanonical(a.subject))); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 app.get('/api/teacher/students/:rollNo', async (req, res) => {
   try {
@@ -3009,9 +2761,7 @@ app.post('/api/teacher/bulk-mark-attendance', async (req, res) => {
       }
       results.push({ rollNo: s.rollNo, branch: b, marked: mk, skipped: sk });
       totalMarked += mk; totalSkipped += sk;
-      if (mk > 0) {
-        sendPushToRollNo(s.rollNo, '✅ Bulk Attendance Marked', `${req1.name} marked you for ${mk} lecture(s)`, { type: 'faculty_bulk_mark', markedBy: req1.name }).catch(() => {});
-      }
+      if (mk > 0) sendPushToRollNo(s.rollNo, '✅ Bulk Attendance Marked', `${req1.name} marked you for ${mk} lecture(s)`, { type: 'faculty_bulk_mark', markedBy: req1.name }).catch(() => {});
     }
     res.json({ message: `✅ ${totalMarked} new, ${totalSkipped} skipped.`, results });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -3551,7 +3301,11 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
     if (already.length > 0) msg += `. Already: ${already.join(', ')}`;
     if (marked > 0) {
       sendPushToRollNo(tr, '✅ Attendance Marked by Admin', `${req1.name} marked you for ${marked} subject(s) on ${date}`, { type: 'admin_manual_mark', date, markedBy: req1.name }).catch(() => {});
-      updateAttendanceStreak(tr).catch(() => {});
+      
+      // ★ FIX: Only update streak if the date is TODAY
+      if (date === getISTDateString(new Date())) {
+        updateAttendanceStreak(tr).catch(() => {});
+      }
     }
     res.status(201).json({ message: msg, markedSubjects: markedSubs, alreadyMarked: already, total: marked });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -3659,8 +3413,7 @@ app.get('/api/timetable/subjects', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 app.get('/api/timetable/full/:branch', async (req, res) => {
-  try { const branch = (req.params.branch || 'CSE').toUpperCase(); res.json({ branch, timetable: getTimetableForBranch(branch), schedule: getScheduleForBranch(branch) }); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  try { const branch = (req.params.branch || 'CSE').toUpperCase(); res.json({ branch, timetable: getTimetableForBranch(branch), schedule: getScheduleForBranch(branch) }); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 app.get('/api/timetable/strict/:branch/:date', async (req, res) => {
   try {
@@ -3743,7 +3496,11 @@ app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
       tMarked += mk; tSkipped += sk;
       if (mk > 0) {
         sendPushToRollNo(s.rollNo, '✅ Bulk Marked by Admin', `${req1.name} marked you for ${mk} lecture(s)`, { type: 'admin_bulk_mark', markedBy: req1.name }).catch(() => {});
-        updateAttendanceStreak(s.rollNo).catch(() => {});
+        
+        // ★ FIX: Only update streak if today is in the dates array
+        if (dates.includes(getISTDateString(new Date()))) {
+          updateAttendanceStreak(s.rollNo).catch(() => {});
+        }
       }
     }
     res.json({ message: `✅ ${tMarked} new, ${tSkipped} skipped.`, results });
@@ -3766,8 +3523,7 @@ app.delete('/api/admin/bulk-delete-attendance', async (req, res) => {
 //  CHAT
 // ============================================================
 app.get('/api/chats/:rollNo', async (req, res) => {
-  try { res.json(await Chat.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ updatedAt: -1 })); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  try { res.json(await Chat.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ updatedAt: -1 })); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 app.post('/api/chats', async (req, res) => {
   try {
@@ -3825,8 +3581,7 @@ app.post('/api/leave/apply', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 app.get('/api/leave/my/:rollNo', async (req, res) => {
-  try { res.json(await Leave.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ createdAt: -1 })); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  try { res.json(await Leave.find({ rollNo: req.params.rollNo.trim().toUpperCase() }).sort({ createdAt: -1 })); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 app.get('/api/leave/requests/:requesterRollNo', async (req, res) => {
   try {
@@ -4774,16 +4529,10 @@ app.post('/api/ai/chat', async (req, res) => {
     const userName = userData?.name || name || 'Guest';
     const userBranch = getBranchFromRoll(cr) || userData?.branch || branch || 'CSE';
 
-    // ★ FEATURE GATE: AI Chat requires Gold+ for students
     if (userData && userRole === 'student') {
       const userSub = await getUserSubscription(cr);
       if (!hasMinTier(userSub, 'gold')) {
-        return res.status(403).json({
-          requiresSubscription: true,
-          error: 'AI Chatbot is a Gold+ feature. Please upgrade your plan.',
-          requiredTier: 'gold',
-          currentTier: userSub.tier
-        });
+        return res.status(403).json({ requiresSubscription: true, error: 'AI Chatbot is a Gold+ feature. Please upgrade your plan.', requiredTier: 'gold', currentTier: userSub.tier });
       }
     }
 
@@ -4972,16 +4721,10 @@ app.post('/api/ai/chat-with-file', async (req, res) => {
     const userName = userData?.name || name || 'Guest';
     const userRole = userData?.role || role || 'student';
 
-    // ★ FEATURE GATE: File analysis requires Platinum
     if (userData && userRole === 'student') {
       const userSub = await getUserSubscription(cr);
       if (!hasMinTier(userSub, 'platinum')) {
-        return res.status(403).json({
-          requiresSubscription: true,
-          error: 'File/Image analysis is a Platinum feature. Please upgrade.',
-          requiredTier: 'platinum',
-          currentTier: userSub.tier
-        });
+        return res.status(403).json({ requiresSubscription: true, error: 'File/Image analysis is a Platinum feature. Please upgrade.', requiredTier: 'platinum', currentTier: userSub.tier });
       }
     }
 
@@ -5008,16 +4751,10 @@ app.post('/api/ai/generate-report-pdf', async (req, res) => {
     const requester = await User.findOne({ rollNo: cr });
     if (!requester) return res.status(404).json({ error: 'User not found' });
 
-    // ★ FEATURE GATE: PDF reports require Silver+
     if (requester.role === 'student') {
       const userSub = await getUserSubscription(cr);
       if (!hasMinTier(userSub, 'silver')) {
-        return res.status(403).json({
-          requiresSubscription: true,
-          error: 'PDF Reports are a Silver+ feature. Please upgrade.',
-          requiredTier: 'silver',
-          currentTier: userSub.tier
-        });
+        return res.status(403).json({ requiresSubscription: true, error: 'PDF Reports are a Silver+ feature. Please upgrade.', requiredTier: 'silver', currentTier: userSub.tier });
       }
     }
 
@@ -5065,81 +4802,7 @@ app.post('/api/ai/generate-report-pdf', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ────────────────────────────────────────────────────────────
-// ▸ END OF PART 1 — Continue in Part 2 below
-// ────────────────────────────────────────────────────────────
-
 // ============================================================
-// ★ NEW: LEADERBOARD & GAMIFICATION APIs
-// ============================================================
-
-// 1. Get Leaderboard (For Students)
-app.get('/api/leaderboard/:type', async (req, res) => {
-  try {
-    const type = req.params.type; // 'login' or 'attendance'
-    const sortField = type === 'login' ? 'loginStreak' : 'attendanceStreak';
-
-    // Sirf students ko fetch karo, admins ko nahi, aur excluded ko hatao
-    const students = await User.find({ role: 'student' }).select('rollNo name branch').lean();
-    const studentRolls = students.map(s => s.rollNo);
-    
-    const gamifications = await Gamification.find({ 
-      rollNo: { $in: studentRolls },
-      excludedFromLeaderboard: false 
-    }).sort({ [sortField]: -1 }).limit(50).lean();
-
-    // Data merge karo (Name and Branch add karne ke liye)
-    const leaderboard = gamifications.map(g => {
-      const u = students.find(s => s.rollNo === g.rollNo);
-      return {
-        rollNo: g.rollNo,
-        name: u ? u.name : 'Unknown',
-        branch: u ? u.branch : 'CSE',
-        streak: g[sortField] || 0,
-        xp: g.totalXp || 0
-      };
-    }).filter(l => l.streak > 0);
-
-    res.json(leaderboard);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// 2. Admin - Get Student Gamification Data
-app.get('/api/admin/gamification/:rollNo', async (req, res) => {
-  try {
-    const cr = req.params.rollNo.trim().toUpperCase();
-    const user = await User.findOne({ rollNo: cr }).select('name rollNo');
-    if (!user) return res.status(404).json({ error: 'Student not found' });
-    
-    let g = await Gamification.findOne({ rollNo: cr });
-    if (!g) g = { loginStreak: 0, attendanceStreak: 0, excludedFromLeaderboard: false };
-    
-    res.json({ user, gamification: g });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// 3. Admin - Update Streaks / Exclude Student
-app.post('/api/admin/gamification/update', async (req, res) => {
-  try {
-    const { requesterRollNo, targetRollNo, loginStreak, attendanceStreak, excluded } = req.body;
-    const admin = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
-    if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
-
-    const cr = targetRollNo.trim().toUpperCase();
-    let g = await Gamification.findOne({ rollNo: cr });
-    if (!g) g = new Gamification({ rollNo: cr });
-
-    if (loginStreak !== undefined) g.loginStreak = parseInt(loginStreak);
-    if (attendanceStreak !== undefined) g.attendanceStreak = parseInt(attendanceStreak);
-    if (excluded !== undefined) g.excludedFromLeaderboard = excluded;
-
-    await g.save();
-    res.json({ message: 'Streak updated successfully', gamification: g });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// ============================================================
-      // ============================================================
 //  ADMIN REQUESTS SUMMARY
 // ============================================================
 app.get('/api/admin/requests-summary/:requesterRollNo', async (req, res) => {
@@ -5193,11 +4856,6 @@ app.post('/api/admin/fix-all-attendance-subjects', async (req, res) => {
 });
 
 // ============================================================
-//  ★★★ NEW: BULK RESET — legacy duplicate kept safe (no conflict)
-// ============================================================
-// (already defined earlier in Part 1)
-
-// ============================================================
 //  CRON JOBS
 // ============================================================
 const _cronFlags = {
@@ -5217,9 +4875,6 @@ function MONTH_NAME(m) {
 
 let _lastReminderDate = null;
 
-// ------------------------------------------------------------
-//  1. Attendance Reminder (2:45–2:55 PM IST daily, weekdays)
-// ------------------------------------------------------------
 function scheduleAttendanceReminder() {
   setInterval(async () => {
     try {
@@ -5236,19 +4891,11 @@ function scheduleAttendanceReminder() {
       const hol = await Holiday.findOne({ date: todayStr });
       if (hol) { _lastReminderDate = todayStr; return; }
       _lastReminderDate = todayStr;
-      await sendPushToAllStudents(
-        '⏰ Attendance Reminder',
-        'Live attendance window closes at 3 PM. Mark your attendance now!',
-        { type: 'attendance_reminder', date: todayStr }
-      );
-      console.log(`📢 [CRON] Attendance reminder sent for ${todayStr}`);
+      await sendPushToAllStudents('⏰ Attendance Reminder', 'Live attendance window closes at 3 PM. Mark your attendance now!', { type: 'attendance_reminder', date: todayStr });
     } catch (e) { /* silent */ }
   }, 60 * 1000);
 }
 
-// ------------------------------------------------------------
-//  2. Daily Summary (9:00 PM IST daily)
-// ------------------------------------------------------------
 function scheduleDailySummary() {
   setInterval(async () => {
     try {
@@ -5271,37 +4918,22 @@ function scheduleDailySummary() {
           const b = getBranchFromRoll(s.rollNo) || s.branch || 'CSE';
           const tt = getTimetableForBranch(b);
           const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][day];
-          const acad = [...new Set((tt[dayName] || [])
-            .filter(x => !x.subject.includes('LIB') && !x.subject.includes('Sports'))
-            .map(x => mapToCanonical(x.subject)))];
-          const recs = await Attendance.find({
-            rollNo: s.rollNo,
-            date: todayStr,
-            status: { $in: ['Present', 'Duty Leave'] }
-          }).lean();
+          const acad = [...new Set((tt[dayName] || []).filter(x => !x.subject.includes('LIB') && !x.subject.includes('Sports')).map(x => mapToCanonical(x.subject)))];
+          const recs = await Attendance.find({ rollNo: s.rollNo, date: todayStr, status: { $in: ['Present', 'Duty Leave'] } }).lean();
           const pSet = new Set(recs.map(r => mapToCanonical(r.subject)));
           let pCount = 0;
           acad.forEach(sub => { if (pSet.has(sub)) pCount++; });
           const pct = acad.length > 0 ? Math.round((pCount / acad.length) * 100) : 0;
           const summary = await getStudentSummary(s.rollNo);
           const overallPct = summary ? summary.attendancePercentage : 0;
-          await sendPushNotification(
-            s.fcmToken,
-            '📊 Today\'s Summary',
-            `Today: ${pCount}/${acad.length} lectures (${pct}%). Overall: ${overallPct}%`,
-            { type: 'daily_summary' }
-          );
+          await sendPushNotification(s.fcmToken, '📊 Today\'s Summary', `Today: ${pCount}/${acad.length} lectures (${pct}%). Overall: ${overallPct}%`, { type: 'daily_summary' });
           sent++;
         } catch (e) {}
       }
-      console.log(`📊 [CRON] Daily summary sent to ${sent}/${students.length} students`);
     } catch (e) {}
   }, 60 * 1000);
 }
 
-// ------------------------------------------------------------
-//  3. Shortage Alert (Monday 10:00 AM IST)
-// ------------------------------------------------------------
 function scheduleShortageAlert() {
   setInterval(async () => {
     try {
@@ -5322,31 +4954,17 @@ function scheduleShortageAlert() {
           const summary = await getStudentSummary(s.rollNo);
           if (!summary) continue;
           if (summary.attendancePercentage < 75) {
-            await sendPushNotification(
-              s.fcmToken,
-              '⚠️ Attendance Warning',
-              `Your attendance is ${summary.attendancePercentage}% — below 75%!`,
-              { type: 'shortage_alert' }
-            );
+            await sendPushNotification(s.fcmToken, '⚠️ Attendance Warning', `Your attendance is ${summary.attendancePercentage}% — below 75%!`, { type: 'shortage_alert' });
             alerts++;
           } else if (summary.attendancePercentage < 80) {
-            await sendPushNotification(
-              s.fcmToken,
-              '⚡ Attendance Near Limit',
-              `Your attendance is ${summary.attendancePercentage}% — stay above 75%!`,
-              { type: 'shortage_warning' }
-            );
+            await sendPushNotification(s.fcmToken, '⚡ Attendance Near Limit', `Your attendance is ${summary.attendancePercentage}% — stay above 75%!`, { type: 'shortage_warning' });
           }
         } catch (e) {}
       }
-      console.log(`⚠️ [CRON] Shortage alerts sent to ${alerts} students`);
     } catch (e) {}
   }, 60 * 1000);
 }
 
-// ------------------------------------------------------------
-//  4. Weekly Report (Sunday 8:00 PM IST)
-// ------------------------------------------------------------
 function scheduleWeeklyReport() {
   setInterval(async () => {
     try {
@@ -5369,23 +4987,14 @@ function scheduleWeeklyReport() {
           const recs = await Attendance.find({ rollNo: s.rollNo, date: { $gte: weekAgoStr, $lte: todayStr } }).lean();
           const present = recs.filter(r => r.status === 'Present' || r.status === 'Duty Leave').length;
           const pct = recs.length > 0 ? Math.round((present / recs.length) * 100) : 0;
-          await sendPushNotification(
-            s.fcmToken,
-            '📈 Weekly Report',
-            `This week: ${present}/${recs.length} (${pct}%). Keep going!`,
-            { type: 'weekly_report' }
-          );
+          await sendPushNotification(s.fcmToken, '📈 Weekly Report', `This week: ${present}/${recs.length} (${pct}%). Keep going!`, { type: 'weekly_report' });
           sent++;
         } catch (e) {}
       }
-      console.log(`📈 [CRON] Weekly report sent to ${sent} students`);
     } catch (e) {}
   }, 60 * 1000);
 }
 
-// ------------------------------------------------------------
-//  5. Monthly Progress (last day of month, 8:00 PM IST)
-// ------------------------------------------------------------
 function scheduleMonthlyProgress() {
   setInterval(async () => {
     try {
@@ -5406,23 +5015,14 @@ function scheduleMonthlyProgress() {
           const summary = await getStudentSummary(s.rollNo);
           if (!summary) continue;
           const emoji = summary.attendancePercentage >= 75 ? '✅' : '⚠️';
-          await sendPushNotification(
-            s.fcmToken,
-            `📊 ${MONTH_NAME(now.getMonth())} Summary`,
-            `${emoji} Overall: ${summary.attendancePercentage}% (${summary.totalAcademicLectures}/${summary.totalConductedLectures})`,
-            { type: 'monthly_progress' }
-          );
+          await sendPushNotification(s.fcmToken, `📊 ${MONTH_NAME(now.getMonth())} Summary`, `${emoji} Overall: ${summary.attendancePercentage}% (${summary.totalAcademicLectures}/${summary.totalConductedLectures})`, { type: 'monthly_progress' });
           sent++;
         } catch (e) {}
       }
-      console.log(`📊 [CRON] Monthly progress sent to ${sent} students`);
     } catch (e) {}
   }, 60 * 1000);
 }
 
-// ------------------------------------------------------------
-//  6. Birthday Wish (9:00 AM IST daily)
-// ------------------------------------------------------------
 function scheduleBirthdayWish() {
   setInterval(async () => {
     try {
@@ -5434,7 +5034,7 @@ function scheduleBirthdayWish() {
       if (istHour !== 9 || istMin !== 0) return;
       if (_cronFlags.birthday === todayStr) return;
       _cronFlags.birthday = todayStr;
-      const todayMD = todayStr.substring(5); // MM-DD
+      const todayMD = todayStr.substring(5);
       const students = await User.find({ role: 'student', dateOfBirth: { $ne: null } }).lean();
       let wished = 0;
       for (const s of students) {
@@ -5442,24 +5042,15 @@ function scheduleBirthdayWish() {
         const md = s.dateOfBirth.substring(5);
         if (md === todayMD) {
           try {
-            await sendPushNotification(
-              s.fcmToken,
-              '🎂 Happy Birthday!',
-              `Wishing you a wonderful day, ${s.name}! - BM Group`,
-              { type: 'birthday' }
-            );
+            await sendPushNotification(s.fcmToken, '🎂 Happy Birthday!', `Wishing you a wonderful day, ${s.name}! - BM Group`, { type: 'birthday' });
             wished++;
           } catch (e) {}
         }
       }
-      if (wished > 0) console.log(`🎂 [CRON] Birthday wishes sent to ${wished} students`);
     } catch (e) {}
   }, 60 * 1000);
 }
 
-// ------------------------------------------------------------
-//  7. Fee Reminder (10:00 AM IST daily)
-// ------------------------------------------------------------
 function scheduleFeeReminder() {
   setInterval(async () => {
     try {
@@ -5484,24 +5075,16 @@ function scheduleFeeReminder() {
           else if (daysLeft < 0) reminderKey = 'overdue';
           if (!reminderKey) continue;
           if (fee.remindersSent && fee.remindersSent.includes(reminderKey)) continue;
-          const msg = daysLeft > 0
-            ? `Fee of ₹${fee.amount} due on ${fee.dueDate}. ${daysLeft} day(s) remaining.`
-            : daysLeft === 0
-              ? `Fee of ₹${fee.amount} due TODAY (${fee.dueDate}). Pay now!`
-              : `Fee of ₹${fee.amount} is OVERDUE since ${fee.dueDate}. Pay immediately.`;
+          const msg = daysLeft > 0 ? `Fee of ₹${fee.amount} due on ${fee.dueDate}. ${daysLeft} day(s) remaining.` : daysLeft === 0 ? `Fee of ₹${fee.amount} due TODAY (${fee.dueDate}). Pay now!` : `Fee of ₹${fee.amount} is OVERDUE since ${fee.dueDate}. Pay immediately.`;
           await sendPushToRollNo(fee.rollNo, daysLeft < 0 ? '💰 Fee OVERDUE' : '💰 Fee Due Reminder', msg, { type: 'fee_reminder', dueDate: fee.dueDate });
           await Fee.updateOne({ _id: fee._id }, { $push: { remindersSent: reminderKey } });
           sent++;
         } catch (e) {}
       }
-      if (sent > 0) console.log(`💰 [CRON] Fee reminders sent to ${sent} students`);
     } catch (e) {}
   }, 60 * 1000);
 }
 
-// ------------------------------------------------------------
-//  8. Assignment Reminder (6:00 PM IST, 24h before due)
-// ------------------------------------------------------------
 function scheduleAssignmentReminder() {
   setInterval(async () => {
     try {
@@ -5517,24 +5100,15 @@ function scheduleAssignmentReminder() {
       for (const a of assignments) {
         try {
           if (a.remindersSent && a.remindersSent.includes('24h')) continue;
-          await sendPushToBranch(
-            a.branch,
-            '📝 Assignment Due Tomorrow',
-            `${a.title} — ${a.subject} — Due tomorrow (${a.dueDate})`,
-            { type: 'assignment_deadline', assignmentId: a._id.toString() }
-          );
+          await sendPushToBranch(a.branch, '📝 Assignment Due Tomorrow', `${a.title} — ${a.subject} — Due tomorrow (${a.dueDate})`, { type: 'assignment_deadline', assignmentId: a._id.toString() });
           await Assignment.updateOne({ _id: a._id }, { $push: { remindersSent: '24h' } });
           sent++;
         } catch (e) {}
       }
-      if (sent > 0) console.log(`📝 [CRON] Assignment reminders sent for ${sent} assignments`);
     } catch (e) {}
   }, 60 * 1000);
 }
 
-// ------------------------------------------------------------
-//  9. Exam Reminder (9:00 AM IST, 3 days before)
-// ------------------------------------------------------------
 function scheduleExamReminder() {
   setInterval(async () => {
     try {
@@ -5550,24 +5124,15 @@ function scheduleExamReminder() {
       for (const ex of exams) {
         try {
           if (ex.remindersSent && ex.remindersSent.includes('3d')) continue;
-          await sendPushToBranch(
-            ex.branch,
-            '📝 Exam in 3 Days',
-            `${ex.subject} — ${ex.examType} on ${ex.examDate} at ${ex.startTime} (${ex.venue})`,
-            { type: 'exam_reminder', examId: ex._id.toString() }
-          );
+          await sendPushToBranch(ex.branch, '📝 Exam in 3 Days', `${ex.subject} — ${ex.examType} on ${ex.examDate} at ${ex.startTime} (${ex.venue})`, { type: 'exam_reminder', examId: ex._id.toString() });
           await Exam.updateOne({ _id: ex._id }, { $push: { remindersSent: '3d' } });
           sent++;
         } catch (e) {}
       }
-      if (sent > 0) console.log(`📝 [CRON] Exam reminders sent for ${sent} exams`);
     } catch (e) {}
   }, 60 * 1000);
 }
 
-// ------------------------------------------------------------
-//  10. Library Due Reminder (10:05 AM IST, 2 days before)
-// ------------------------------------------------------------
 function scheduleLibraryReminder() {
   setInterval(async () => {
     try {
@@ -5583,24 +5148,15 @@ function scheduleLibraryReminder() {
       for (const b of books) {
         try {
           if (b.remindersSent && b.remindersSent.includes('2d')) continue;
-          await sendPushToRollNo(
-            b.rollNo,
-            '📚 Book Return Reminder',
-            `"${b.bookTitle}" due on ${b.dueDate}. Return or renew.`,
-            { type: 'library_due', bookId: b._id.toString() }
-          );
+          await sendPushToRollNo(b.rollNo, '📚 Book Return Reminder', `"${b.bookTitle}" due on ${b.dueDate}. Return or renew.`, { type: 'library_due', bookId: b._id.toString() });
           await LibraryBook.updateOne({ _id: b._id }, { $push: { remindersSent: '2d' } });
           sent++;
         } catch (e) {}
       }
-      if (sent > 0) console.log(`📚 [CRON] Library reminders sent for ${sent} books`);
     } catch (e) {}
   }, 60 * 1000);
 }
 
-// ------------------------------------------------------------
-//  11. ★ Class Reminders — Student 10 min / Faculty 5 min before
-// ------------------------------------------------------------
 function scheduleClassReminders() {
   setInterval(async () => {
     try {
@@ -5621,40 +5177,19 @@ function scheduleClassReminders() {
 
           const startMins = parseInt(slot.start.split(':')[0]) * 60 + parseInt(slot.start.split(':')[1]);
 
-          // Student reminder — 10 minutes before
           if (istMin === startMins - 10) {
             try {
-              await sendPushToBranch(
-                branch,
-                '⏰ Class in 10 Minutes!',
-                `${mapToCanonical(slot.subject)} starts at ${slot.start} (${slot.faculty}). Get ready!`,
-                { type: 'class_reminder_student', subject: slot.subject, time: slot.start }
-              );
-              console.log(`⏰ [CRON] Student reminder: ${branch} ${slot.subject} @ ${slot.start}`);
+              await sendPushToBranch(branch, '⏰ Class in 10 Minutes!', `${mapToCanonical(slot.subject)} starts at ${slot.start} (${slot.faculty}). Get ready!`, { type: 'class_reminder_student', subject: slot.subject, time: slot.start });
             } catch (e) {}
           }
 
-          // Faculty reminder — 5 minutes before
           if (istMin === startMins - 5) {
             try {
-              const facultyUsers = await User.find({
-                role: 'faculty',
-                fcmToken: { $ne: null },
-                facultySubject: mapToCanonical(slot.subject)
-              }).select('rollNo name fcmToken').lean();
-
+              const facultyUsers = await User.find({ role: 'faculty', fcmToken: { $ne: null }, facultySubject: mapToCanonical(slot.subject) }).select('rollNo name fcmToken').lean();
               for (const f of facultyUsers) {
                 try {
-                  await sendPushNotification(
-                    f.fcmToken,
-                    '⏰ Class in 5 Minutes',
-                    `${mapToCanonical(slot.subject)} at ${slot.start} (${branch} branch)`,
-                    { type: 'class_reminder_faculty', subject: slot.subject, time: slot.start }
-                  );
+                  await sendPushNotification(f.fcmToken, '⏰ Class in 5 Minutes', `${mapToCanonical(slot.subject)} at ${slot.start} (${branch} branch)`, { type: 'class_reminder_faculty', subject: slot.subject, time: slot.start });
                 } catch (e) {}
-              }
-              if (facultyUsers.length > 0) {
-                console.log(`⏰ [CRON] Faculty reminder: ${branch} ${slot.subject} → ${facultyUsers.length} teacher(s)`);
               }
             } catch (e) {}
           }
@@ -5664,9 +5199,6 @@ function scheduleClassReminders() {
   }, 60 * 1000);
 }
 
-// ------------------------------------------------------------
-//  12. Pending Admin Reminder (11:00 AM IST daily)
-// ------------------------------------------------------------
 function schedulePendingAdminReminder() {
   setInterval(async () => {
     try {
@@ -5685,21 +5217,12 @@ function schedulePendingAdminReminder() {
       const docReqs = await DocRequest.countDocuments({ status: 'Pending', createdAt: { $lt: cutoff } });
       const total = pending + leaves + regs + docReqs;
       if (total > 0) {
-        await sendPushToRole(
-          'admin',
-          '⏰ Pending Requests',
-          `${total} request(s) pending for 24+ hours. Review needed.`,
-          { type: 'pending_admin_reminder' }
-        );
-        console.log(`⏰ [CRON] Pending admin reminder: ${total} items`);
+        await sendPushToRole('admin', '⏰ Pending Requests', `${total} request(s) pending for 24+ hours. Review needed.`, { type: 'pending_admin_reminder' });
       }
     } catch (e) {}
   }, 60 * 1000);
 }
 
-// ------------------------------------------------------------
-//  13. Pending Student Reminder (6:05 PM IST daily)
-// ------------------------------------------------------------
 function schedulePendingStudentReminder() {
   setInterval(async () => {
     try {
@@ -5712,22 +5235,13 @@ function schedulePendingStudentReminder() {
       const pending = await AttendanceRequest.find({ status: 'Pending', createdAt: { $lt: cutoff } }).lean();
       for (const p of pending) {
         try {
-          await sendPushToRollNo(
-            p.rollNo,
-            '📋 Request Still Pending',
-            `Your ${p.date} request is still pending with admin.`,
-            { type: 'request_pending_student' }
-          );
+          await sendPushToRollNo(p.rollNo, '📋 Request Still Pending', `Your ${p.date} request is still pending with admin.`, { type: 'request_pending_student' });
         } catch (e) {}
       }
-      if (pending.length > 0) console.log(`⏰ [CRON] Pending student reminders: ${pending.length}`);
     } catch (e) {}
   }, 60 * 1000);
 }
 
-// ------------------------------------------------------------
-//  14. System Health Check (every hour)
-// ------------------------------------------------------------
 function scheduleSystemHealthCheck() {
   setInterval(async () => {
     try {
@@ -5737,21 +5251,12 @@ function scheduleSystemHealthCheck() {
       if (istMin !== 0) return;
       const dbState = mongoose.connection.readyState;
       if (dbState !== 1) {
-        await sendPushToRole(
-          'admin',
-          '🚨 System Alert',
-          `Database connection issue. State: ${dbState}. Check immediately.`,
-          { type: 'system_alert' }
-        );
-        console.warn('🚨 [CRON] System alert sent: DB state =', dbState);
+        await sendPushToRole('admin', '🚨 System Alert', `Database connection issue. State: ${dbState}. Check immediately.`, { type: 'system_alert' });
       }
     } catch (e) {}
   }, 60 * 1000);
 }
 
-// ============================================================
-//  INVOKE ALL CRON JOBS
-// ============================================================
 scheduleAttendanceReminder();
 scheduleDailySummary();
 scheduleShortageAlert();
@@ -5769,9 +5274,6 @@ scheduleSystemHealthCheck();
 
 console.log('✅ [CRON] All 14 scheduled jobs initialized');
 
-// ============================================================
-//  PROCESS ERROR HANDLERS
-// ============================================================
 process.on('unhandledRejection', (reason, promise) => {
   console.error('⚠️ Unhandled Promise Rejection:', reason);
 });
@@ -5779,18 +5281,13 @@ process.on('unhandledRejection', (reason, promise) => {
 process.on('uncaughtException', (err) => {
   console.error('❌ Uncaught Exception:', err);
   console.error(err.stack);
-  // Don't exit — let the process stay alive for other requests
-  // process.exit(1); // Uncomment to crash on uncaught exceptions
 });
 
-// ============================================================
-//  SERVER STARTUP
-// ============================================================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, async () => {
   console.log('');
   console.log('╔══════════════════════════════════════════════════════╗');
-  console.log('║       🎓 BM GROUP ERP BACKEND · v5.1.0              ║');
+  console.log('║       🎓 BM GROUP ERP BACKEND · v5.2.0              ║');
   console.log('╠══════════════════════════════════════════════════════╣');
   console.log(`║  🚀 Port: ${String(PORT).padEnd(44)}║`);
   console.log(`║  🌍 TZ:   ${String(process.env.TZ || 'Asia/Kolkata').padEnd(44)}║`);
@@ -5799,72 +5296,35 @@ app.listen(PORT, async () => {
   console.log(`║  🔥 FCM:  ${(fcmReady ? 'READY ✅' : 'DISABLED ⚠️').padEnd(43)}║`);
   console.log(`║  💳 Pay:  ${(razorpayReady ? 'Razorpay READY ✅' : 'Razorpay DISABLED ⚠️').padEnd(43)}║`);
   console.log('╠══════════════════════════════════════════════════════╣');
-  console.log('║  ✨ NEW in v5.1:                                     ║');
-  console.log('║     • Streak FIX: Weekends & holidays skipped       ║');
-  console.log('║     • Real Razorpay payments (Silver/Gold/Platinum) ║');
-  console.log('║     • Subscription gating (Silver=PDF, Gold=AI)     ║');
-  console.log('║     • Gamification (streaks, achievements, XP)      ║');
-  console.log('║     • Notes view/download split                     ║');
-  console.log('║     • 10-min student / 5-min faculty class alerts   ║');
+  console.log('║  ✨ NEW in v5.2:                                     ║');
+  console.log('║     • Fixed Login Streak on app open (verify-session)║');
+  console.log('║     • Fixed Leaderboard missing data issue          ║');
+  console.log('║     • Fixed XP adding on multiple logins same day   ║');
+  console.log('║     • Past attendance approval no longer breaks streak║');
   console.log('╚══════════════════════════════════════════════════════╝');
   console.log('');
 
-  // Delay branch migration to allow DB connection to settle
   setTimeout(() => {
     runBranchMigration().catch(err => console.warn('Migration error:', err.message));
   }, 3000);
 
-  // Small hint if Razorpay is not configured
-  if (!razorpayReady) {
-    console.warn('⚠️  Razorpay env vars missing — payments will fail.');
-    console.warn('    Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET on Render.');
-  }
-
-  // Small hint if FCM is not configured
-  if (!fcmReady) {
-    console.warn('⚠️  FCM env vars missing — push notifications will fail.');
-    console.warn('    Set FIREBASE_PROJECT_ID, FIREBASE_PRIVATE_KEY, FIREBASE_CLIENT_EMAIL on Render.');
-  }
-
-  // Small hint if AI is not configured
-  if (GROQ_API_KEYS.length === 0 && GEMINI_API_KEYS.length === 0) {
-    console.warn('⚠️  No AI API keys configured — chatbot will fail.');
-  }
+  if (!razorpayReady) console.warn('⚠️  Razorpay env vars missing — payments will fail.');
+  if (!fcmReady) console.warn('⚠️  FCM env vars missing — push notifications will fail.');
+  if (GROQ_API_KEYS.length === 0 && GEMINI_API_KEYS.length === 0) console.warn('⚠️  No AI API keys configured — chatbot will fail.');
 });
 
-// ============================================================
-//  GRACEFUL SHUTDOWN
-// ============================================================
 process.on('SIGTERM', async () => {
   console.log('🛑 SIGTERM received. Shutting down gracefully…');
-  try {
-    await mongoose.connection.close();
-    console.log('✅ MongoDB connection closed');
-  } catch (e) {
-    console.error('Error closing MongoDB:', e.message);
-  }
+  try { await mongoose.connection.close(); console.log('✅ MongoDB connection closed'); } catch (e) { console.error('Error closing MongoDB:', e.message); }
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('🛑 SIGINT received. Shutting down gracefully…');
-  try {
-    await mongoose.connection.close();
-    console.log('✅ MongoDB connection closed');
-  } catch (e) {
-    console.error('Error closing MongoDB:', e.message);
-  }
+  try { await mongoose.connection.close(); console.log('✅ MongoDB connection closed'); } catch (e) { console.error('Error closing MongoDB:', e.message); }
   process.exit(0);
 });
 
-/* ============================================================
-   NOTE: Frontend helpers (openLeaderboardModal, loadLeaderboard,
-   adminSearchGamification, adminSaveGamification) were previously
-   appended at the bottom of this file by mistake — they are FRONTEND
-   functions and do NOT belong in the backend. Removing them here to
-   keep index.js strictly backend. Move them to your frontend JS file.
-   ============================================================ */
-
 // ============================================================
-//  END OF FILE — index.js v5.1.0
+//  END OF FILE — index.js v5.2.0
 // ============================================================
