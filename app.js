@@ -89,7 +89,7 @@ let sessionCheckInterval = null;
 let userSubscription = { tier: 'free', expiresAt: null };
 
 /* ============================================================
-   ★ CUSTOM LAYOUT FIX INJECTION (UPDATED & MOBILE-FRIENDLY)
+   ★ CUSTOM LAYOUT FIX INJECTION & MOBILE SCROLL FIX
    ============================================================ */
 (function injectLayoutFix() {
   if (document.getElementById('bm-custom-layout-fix')) return;
@@ -106,6 +106,13 @@ let userSubscription = { tier: 'free', expiresAt: null };
     /* Badges Container */
     .welcome .row.no-flex { display: flex !important; flex-wrap: wrap !important; justify-content: flex-end !important; gap: 6px !important; max-width: 180px; }
 
+    /* ★ FIX: Collapsible Card Scroll Margin so header isn't cut off */
+    .collapsible-card { scroll-margin-top: 100px !important; }
+    
+    /* Clickable Stats */
+    .clickable-stat { cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .clickable-stat:active { transform: scale(0.97); }
+
     /* ★ MOBILE FIX: Screens smaller than 550px */
     @media (max-width: 550px) {
         .welcome { flex-direction: column !important; gap: 8px !important; }
@@ -117,7 +124,6 @@ let userSubscription = { tier: 'free', expiresAt: null };
             padding-left: 0 !important; 
             width: 100% !important; 
         }
-        /* Mobile par date aur time ko ek line mein clean dikhane ke liye */
         .welcome .meta { flex-direction: row !important; white-space: nowrap !important; font-size: 11px !important; }
         .welcome-left h2 { font-size: 17px !important; white-space: normal !important; line-height: 1.2 !important; }
     }
@@ -375,11 +381,30 @@ function navigateStudentMenu(key){
       case 'portals': targetId = 'quickPortalsCard'; break;
     }
     if (action === 'workingdays') { openWorkingDays(); return; }
+    
+    // Minimize all collapsible cards first
+    document.querySelectorAll('.collapsible-card').forEach(card => {
+        const body = card.querySelector('.collapsible-body');
+        const arrow = card.querySelector('.collapse-arrow');
+        if (body) { body.classList.remove('open'); }
+        if (arrow) { arrow.style.transform = 'rotate(0deg)'; }
+    });
+
     const el = document.getElementById(targetId);
     if (el) {
       if (el.style.display === 'none' && ['reports', 'portals', 'notes', 'assignments', 'exams', 'announcements'].includes(key)) el.style.display = 'block';
+      
+      // Auto-maximize target card if it's collapsible
+      if (el.classList.contains('collapsible-card')) {
+          const body = el.querySelector('.collapsible-body');
+          const arrow = el.querySelector('.collapse-arrow');
+          if (body) body.classList.add('open');
+          if (arrow) arrow.style.transform = 'rotate(180deg)';
+      }
+      
       const rect = el.getBoundingClientRect();
-      const top = window.pageYOffset + rect.top - 80;
+      // Increased offset to 120 so the minimize button is easily tappable on mobile
+      const top = window.pageYOffset + rect.top - 120; 
       window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
     }
     populateStudentMenu();
@@ -432,7 +457,11 @@ function navigateAdminMenu(key){
       }
       if (targetId) {
         const el = document.getElementById(targetId);
-        if (el) { const rect = el.getBoundingClientRect(); const top = window.pageYOffset + rect.top - 90; window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' }); }
+        if (el) { 
+            const rect = el.getBoundingClientRect(); 
+            const top = window.pageYOffset + rect.top - 120; 
+            window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' }); 
+        }
       }
       populateAdminMenu();
     }, 220);
@@ -891,7 +920,6 @@ async function fetchUserSubscription() {
 function updateSubscriptionBadge() {
   let badge = $('subBadge');
   if (!badge) {
-    // Inject badge near roleBadge
     const rb = $('roleBadge');
     if (rb && rb.parentElement) {
       badge = document.createElement('span');
@@ -940,7 +968,6 @@ function renderSubscriptionPlans() {
   const body = $('subscriptionBody');
   const currentTier = userSubscription.tier || 'free';
   
-  // ★ FIX: Updated prices to ₹5, ₹10, ₹20
   const plans = [
     { id: 'silver', name: 'Silver', icon: '🥈', price: '₹5', color: '#475569', features: ['PDF Reports (Attendance)', 'Basic Bunk Advisor'] },
     { id: 'gold', name: 'Gold', icon: '🥇', price: '₹10', color: '#b45309', features: ['PDF Reports', 'Bunk Advisor', 'AI Chatbot Access', 'Priority Support'] },
@@ -965,7 +992,7 @@ function renderSubscriptionPlans() {
       btnClass = 'btn-outline';
       disabled = 'disabled';
     } else if (isLowerTier && !isExpired) {
-      btnText = 'Included'; // ★ FIX: Show Included if higher tier is active
+      btnText = 'Included';
       btnClass = 'btn-outline';
       disabled = 'disabled';
     }
@@ -1137,44 +1164,75 @@ async function loadAchievementsData() {
 }
 
 /* ============================================================
-   COLLAPSIBLE CARDS SETUP
+   COLLAPSIBLE CARDS SETUP (UPDATED: DEFAULT MINIMIZED)
    ============================================================ */
 function toggleCardBody(header) {
     const card = header.closest('.collapsible-card');
     const body = card.querySelector('.collapsible-body');
     const arrow = header.querySelector('.collapse-arrow');
-    body.classList.toggle('open');
-    if (body.classList.contains('open')) {
+    if (body) body.classList.toggle('open');
+    if (body && body.classList.contains('open')) {
         if (arrow) arrow.style.transform = 'rotate(180deg)';
     } else {
         if (arrow) arrow.style.transform = 'rotate(0deg)';
     }
 }
 
-function makeCollapsible(id, title, iconSvg, openByDefault = true) {
+function makeCollapsible(id, title, iconSvg, openByDefault = false) {
     const el = document.getElementById(id);
     if (!el || el.classList.contains('collapsible-card')) return;
 
     const originalDisplay = el.style.display || 'block';
 
+    // Remove existing titles aggressively to prevent duplicate titles
+    el.querySelectorAll('.card-title, h3, h2, .section-title').forEach(node => {
+        if (!node.querySelector('button, select, input, a')) {
+            node.remove();
+        }
+    });
+
     const header = document.createElement('div');
     header.className = 'collapsible-header';
     header.onclick = function() { toggleCardBody(this); };
-    header.innerHTML = `<h3>${iconSvg} ${title}</h3><div style="display:flex;align-items:center;gap:8px;"><span class="collapse-arrow" style="font-size:12px;color:var(--slate-400);transition:transform .25s;">▼</span></div>`;
+    header.style.display = 'flex';
+    header.style.justifyContent = 'space-between';
+    header.style.alignItems = 'center';
+    header.style.padding = '16px 18px';
+    header.style.cursor = 'pointer';
     
+    const headerLeft = document.createElement('h3');
+    headerLeft.style.margin = '0';
+    headerLeft.style.display = 'flex';
+    headerLeft.style.alignItems = 'center';
+    headerLeft.style.gap = '8px';
+    headerLeft.style.fontSize = '12px';
+    headerLeft.style.fontWeight = '700';
+    headerLeft.style.color = 'var(--slate-500)';
+    headerLeft.style.textTransform = 'uppercase';
+    headerLeft.style.letterSpacing = '.05em';
+    headerLeft.innerHTML = `${iconSvg} ${title}`;
+
+    const headerRight = document.createElement('div');
+    headerRight.style.display = 'flex';
+    headerRight.style.alignItems = 'center';
+    headerRight.style.gap = '8px';
+    
+    const arrow = document.createElement('span');
+    arrow.className = 'collapse-arrow';
+    arrow.style.fontSize = '12px';
+    arrow.style.color = 'var(--slate-400)';
+    arrow.style.transition = 'transform .25s';
+    arrow.textContent = '▼';
+    if (openByDefault) arrow.style.transform = 'rotate(180deg)';
+    headerRight.appendChild(arrow);
+
+    header.appendChild(headerLeft);
+    header.appendChild(headerRight);
+
     const body = document.createElement('div');
     body.className = 'collapsible-body' + (openByDefault ? ' open' : '');
+    body.style.display = openByDefault ? 'block' : 'none';
     
-    // Remove existing card-title if it only contains text/span (no buttons/selects)
-    const existingTitle = el.querySelector('.card-title');
-    if (existingTitle) {
-        const hasInteractive = existingTitle.querySelector('button, select, input, textarea, a');
-        if (!hasInteractive) {
-            existingTitle.remove();
-        }
-    }
-
-    // Move children
     while (el.firstChild) {
         body.appendChild(el.firstChild);
     }
@@ -1186,22 +1244,32 @@ function makeCollapsible(id, title, iconSvg, openByDefault = true) {
     el.classList.remove('card', 'chart-wrap');
     el.classList.add('collapsible-card');
     el.style.display = originalDisplay;
+
+    // Add CSS to ensure body visibility toggle works if CSS class isn't defined in index.html
+    if (!document.getElementById('collapsible-css-fix')) {
+        const style = document.createElement('style');
+        style.id = 'collapsible-css-fix';
+        style.innerHTML = `.collapsible-body { display: none; } .collapsible-body.open { display: block !important; }`;
+        document.head.appendChild(style);
+    }
 }
 
 function initCollapsibleCards() {
-    makeCollapsible('sec-request', 'Request Attendance', '📩', true);
-    makeCollapsible('sec-notes', 'Notes & Documents', '📚', true);
-    makeCollapsible('sec-assignments', 'Assignments', '📝', true);
-    makeCollapsible('sec-exams', 'Upcoming Exams', '📅', true);
-    makeCollapsible('sec-announcements', 'Announcements', '📢', true);
-    makeCollapsible('sec-chart', 'Attendance Trend', '📊', true);
-    makeCollapsible('sec-timetable', "Today's Timetable", '📅', true);
-    makeCollapsible('sec-calendar', 'Attendance Calendar', '📅', true);
-    makeCollapsible('sec-reports', 'My Reports', '📄', true);
+    // ★ Yahan sabko false kiya gaya hai taaki default minimize rahe
+    makeCollapsible('sec-request', 'Request Attendance', '📩', false);
+    makeCollapsible('sec-notes', 'Notes & Documents', '📚', false);
+    makeCollapsible('sec-assignments', 'Assignments', '📝', false);
+    makeCollapsible('sec-exams', 'Upcoming Exams', '📅', false);
+    makeCollapsible('sec-announcements', 'Announcements', '📢', false);
+    makeCollapsible('sec-chart', 'Attendance Trend', '📊', false);
+    makeCollapsible('sec-timetable', "Today's Timetable", '📅', false);
+    makeCollapsible('sec-calendar', 'Attendance Calendar', '📅', false);
+    makeCollapsible('sec-reports', 'My Reports', '📄', false);
+    makeCollapsible('quickPortalsCard', 'Quick Portals', '🔗', false);
 }
 
 /* ============================================================
-   DASHBOARD
+   DASHBOARD & STATS CLICKABLE LOGIC
    ============================================================ */
 function loadDashboard(){
   const userStr = localStorage.getItem('user'); if (!userStr) return;
@@ -1224,7 +1292,7 @@ function loadDashboard(){
   if (rb) { rb.innerHTML = (roleIcons[currentUser.role] || '') + (currentUser.role === 'admin' ? 'Admin' : currentUser.role === 'faculty' ? 'Faculty' : 'Student'); rb.className = 'pill role-' + currentUser.role; }
   if ($('branchBadge')) $('branchBadge').textContent = currentUser.branch || 'CSE';
   
-  fetchUserSubscription(); // NEW
+  fetchUserSubscription();
 
   const studentMenuBtn = $('studentMenuBtn');
   const adminMenuBtn = $('adminMenuBtn');
@@ -1255,6 +1323,84 @@ function loadDashboard(){
     loadLivePasscodes(); loadApprovedBanner();
     if (passcodeIntervalId) clearInterval(passcodeIntervalId);
     passcodeIntervalId = setInterval(loadLivePasscodes, 30000);
+
+    // Make Stat Boxes Clickable
+    setTimeout(() => {
+        const wdStat = $('statWorkingDays')?.closest('.stat');
+        if (wdStat) { 
+            wdStat.classList.add('clickable-stat'); 
+            wdStat.onclick = openWorkingDays; 
+        }
+        
+        const dpStat = $('statDaysPresent')?.closest('.stat');
+        if (dpStat) { 
+            dpStat.classList.add('clickable-stat'); 
+            dpStat.onclick = () => { 
+                switchTab('tab-mark'); 
+                // Auto open calendar from menu action
+                document.querySelectorAll('.collapsible-card').forEach(c => {
+                    const b = c.querySelector('.collapsible-body');
+                    const a = c.querySelector('.collapse-arrow');
+                    if(b) b.classList.remove('open');
+                    if(a) a.style.transform = 'rotate(0deg)';
+                });
+                const cal = document.getElementById('sec-calendar');
+                if(cal) {
+                    const b = cal.querySelector('.collapsible-body');
+                    const a = cal.querySelector('.collapse-arrow');
+                    if(b) b.classList.add('open');
+                    if(a) a.style.transform = 'rotate(180deg)';
+                    setTimeout(() => cal.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                }
+            }; 
+        }
+        
+        const attStat = $('statAttendance')?.closest('.stat');
+        if (attStat) { 
+            attStat.classList.add('clickable-stat'); 
+            attStat.onclick = () => { 
+                switchTab('tab-mark'); 
+                if (!subjectBreakdownOpen) toggleSubjectBreakdown(); 
+                setTimeout(() => document.getElementById('subjectBreakdownCard')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100); 
+            }; 
+        }
+        
+        const wdpStat = $('statWorkingDaysPct')?.closest('.stat');
+        if (wdpStat) { 
+            wdpStat.classList.add('clickable-stat'); 
+            wdpStat.onclick = () => {
+                showFeedback('info', 'Working Days Analytics', 'Your working days percentage is ' + ($('statWorkingDaysPct')?.textContent || '0%') + '.\n\nThis means you attended college on this percentage of total working days. Keep it above 75%!');
+            }; 
+        }
+        
+        // NEW PREMIUM FEATURE CARD (Gold/Platinum)
+        if (userSubscription.tier === 'platinum' || userSubscription.tier === 'gold') {
+            let premCard = $('premiumAnalyticsCard');
+            if (!premCard) {
+                premCard = document.createElement('div');
+                premCard.id = 'premiumAnalyticsCard';
+                premCard.className = 'card collapsible-card';
+                premCard.style.marginTop = '16px';
+                premCard.innerHTML = `
+                    <div class="collapsible-header" onclick="toggleCardBody(this)" style="display:flex;justify-content:space-between;align-items:center;padding:16px 18px;cursor:pointer;">
+                        <h3 style="margin:0;font-size:12px;font-weight:700;color:var(--slate-500);text-transform:uppercase;letter-spacing:.05em;">💎 Premium Insights</h3>
+                        <span class="collapse-arrow" style="font-size:12px;color:var(--slate-400);transition:transform .25s;">▼</span>
+                    </div>
+                    <div class="collapsible-body" style="padding:18px;display:none;">
+                        <div style="background:linear-gradient(135deg,#f3e8ff,#e9d5ff);border-radius:12px;padding:16px;border:1px solid #d8b4fe;">
+                            <div style="font-weight:800;color:#6d28d9;font-size:14px;margin-bottom:8px;">AI Bunk Predictor</div>
+                            <div style="font-size:12px;color:#4c1d95;line-height:1.5;">You are in the safe zone! But to maintain 85%+ attendance, you should not skip more than 3 lectures next week. Keep up the good work!</div>
+                        </div>
+                    </div>
+                `;
+                const advBox = $('advisorBox');
+                if (advBox && advBox.parentNode) {
+                    advBox.parentNode.insertBefore(premCard, advBox.nextSibling);
+                }
+            }
+        }
+    }, 800);
+
   } else {
     if (studentMenuBtn) studentMenuBtn.style.display = 'none';
     if (adminMenuBtn) adminMenuBtn.style.display = 'flex';
@@ -1310,7 +1456,10 @@ function loadDashboard(){
   setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 250);
   setTimeout(() => { autoInitFCM().catch(()=>{}); }, 2000);
   setTimeout(ensureScrollUnlocked, 500);
-  initCollapsibleCards(); // ★ Initialize collapsible cards
+  
+  // ★ Default minimize collapsible cards on app load
+  setTimeout(initCollapsibleCards, 300); 
+  
   startSessionCheck();
 }
 function updateClock(){
@@ -1333,7 +1482,6 @@ function switchTab(id){
 function showAdmin(id){
   document.querySelectorAll('.subnav-item').forEach(b => b.classList.toggle('active', b.getAttribute('onclick').includes(id)));
   
-  // ★ FIX: Added a-subscriptions and a-gamification here so they hide properly when switching tabs
   ['a-directory','a-attendance','a-requests','a-registrations','a-account','a-reports','a-entry','a-holiday','a-passcode','a-notes','a-fees','a-library','a-results','a-exams','a-alerts','a-tools','a-leave','a-defaulters','a-subscriptions','a-gamification'].forEach(x => { const el = $(x); if (el) el.style.display = 'none'; });
   
   const el = $(id); if (el) { el.style.display = 'block'; el.style.animation = 'tabFadeIn .35s ease'; }
@@ -1754,7 +1902,7 @@ async function loadSubjectBreakdown(){
     else { const res = await fetch(`${API}/api/student/monthly-summary/${currentUser.rollNo}?month=${f}`); const d = await res.json(); stats = d.subjectStats || {}; a = d.totalAttended || 0; c = d.totalConducted || 0; p = d.attendancePercentage || 0; }
     if ($('subjAttendedLine')) $('subjAttendedLine').textContent = `Attended ${a}/${c}`;
     const pe = $('subjPctLine'); if (pe) { pe.textContent = p + '%'; pe.className = 'pct-big ' + (p >= 75 ? 'good' : 'bad'); }
-    const info = $('subjectBreakdownHeaderInfo'); if (info) info.textContent = `${p}%`; // Header text fix
+    const info = $('subjectBreakdownHeaderInfo'); if (info) info.textContent = `${p}%`;
     const e = Object.entries(stats);
     if (!e.length) { l.innerHTML = '<span class="text-xs text-muted">No data</span>'; return; }
     l.innerHTML = e.map(([s, st]) => { let cc = 'bad'; if (st.percentage > 80) cc = 'good'; else if (st.percentage >= 75) cc = 'warn'; return `<span class="chip ${cc}"><span class="chip-name">${s.substring(0,18)}</span><span class="chip-pct">${st.percentage}%</span><span class="chip-count">(${st.present}/${st.total})</span></span>`; }).join('');
@@ -1932,7 +2080,6 @@ async function generateIndividualPDF(studentRoll, studentName, branch, range, mo
   } catch(e) { hideDL(); toast('Failed: ' + e.message, 'error'); }
 }
 async function generateSelfPDF(){ 
-  // FEATURE GATE: Silver+
   if (userSubscription.tier === 'free' || userSubscription.isExpired) {
     return showFeedback('warning', 'Premium Required', 'PDF Reports are a Silver+ feature. Please upgrade your plan.', { buttonText: 'View Plans', onClose: openSubscriptionModal });
   }
@@ -2139,7 +2286,6 @@ async function loadStudentNotes() {
     const notes = Array.isArray(data) ? data : (data.notes || []);
     if (!notes.length) return el.innerHTML = '<div class="empty" style="padding:14px 0;">No notes uploaded yet.</div>';
     
-    // New Row Format with separated View & Download
     el.innerHTML = notes.map(n => `
       <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 14px; border:1px solid var(--slate-200); border-radius:10px; margin-bottom:8px; background:#fff; flex-wrap:wrap;">
         <div style="min-width:0; flex:1;">
@@ -2654,7 +2800,6 @@ function generateThinkingSummary(userMessage){
   return steps;
 }
 async function sendChat(){
-  // FEATURE GATE: AI Chat requires Gold+
   if (currentUser.role === 'student' && (userSubscription.tier === 'free' || userSubscription.tier === 'silver' || userSubscription.isExpired)) {
     return showFeedback('warning', 'Premium Required', 'AI Chatbot is a Gold+ feature. Please upgrade your plan to access it.', { buttonText: 'View Plans', onClose: openSubscriptionModal });
   }
@@ -2691,7 +2836,6 @@ async function sendChat(){
     if (d.threadId) { currentThreadId = d.threadId; fetchChatHistory(); }
     chatGreeted = true;
     
-    // NEW: Catch 403 Subscription Required from backend
     if (res.status === 403 && d.requiresSubscription) {
       typing.remove();
       return showFeedback('warning', 'Premium Required', d.error || 'This feature requires a premium plan.', { buttonText: 'View Plans', onClose: openSubscriptionModal });
@@ -2899,27 +3043,21 @@ window.addEventListener('load', () => {
 /* ============================================================
    ★ NEW: LEADERBOARD & GAMIFICATION (STUDENT & ADMIN)
    ============================================================ */
-
-// Student Side: Open Leaderboard
 function openLeaderboardModal() {
   let modal = $('leaderboardModal');
   if (modal) {
-      // ★ FIX: Dynamically update the title to "College Leaderboards"
       const h3 = modal.querySelector('h3');
       if (h3) h3.innerHTML = '🏆 College Leaderboards';
   }
-  
   openModal('leaderboardModal');
-  loadLeaderboard('attendance'); // Default
+  loadLeaderboard('attendance');
 }
 
-// Fetch and Render Leaderboard
 async function loadLeaderboard(type) {
   const el = $('leaderboardList');
   if (!el) return;
   el.innerHTML = '<div class="empty"><div class="spinner" style="margin:0 auto 8px;"></div>Fetching rankings...</div>';
   
-  // Update button active states (Bina event.target ke)
   const btns = document.querySelectorAll('#leaderboardModal .btn');
   btns.forEach(b => {
     if (b.getAttribute('onclick') && b.getAttribute('onclick').includes(type)) {
@@ -2963,7 +3101,6 @@ async function loadLeaderboard(type) {
   }
 }
 
-// Admin Side: Search Student
 async function adminSearchGamification() {
   const roll = $('gmRollNo').value.trim().toUpperCase();
   if (!roll) return toast('Enter roll no', 'error');
@@ -2987,7 +3124,6 @@ async function adminSearchGamification() {
   }
 }
 
-// Admin Side: Save Changes
 async function adminSaveGamification() {
   const roll = $('gmRollNo').value.trim().toUpperCase();
   const loginStreak = parseInt($('gmLoginStreak').value) || 0;
@@ -3018,10 +3154,6 @@ async function adminSaveGamification() {
   }
 }
 
-
-/* ============================================================
-   ★ NEW: SUBSCRIPTION MANAGEMENT (ADMIN PANEL)
-   ============================================================ */
 async function lookupSubStudent() {
   const roll = $('subMgmtRollNo').value.trim().toUpperCase();
   if (!roll) return toast('Enter roll no', 'error');
@@ -3030,12 +3162,10 @@ async function lookupSubStudent() {
   resEl.style.display = 'none';
 
   try {
-    // Fetch student's profile to verify they exist
     const userRes = await fetch(`${API}/api/student/profile/${roll}`);
     if (!userRes.ok) return toast('Student not found', 'error');
     const user = await userRes.json();
 
-    // Fetch student's current subscription
     const subRes = await fetch(`${API}/api/user/subscription/${roll}`);
     const sub = await subRes.json();
 
@@ -3077,7 +3207,7 @@ async function grantSubscription() {
     
     if (res.ok) {
       showFeedback('success', 'Plan Granted', `${roll} is now a ${tier.toUpperCase()} member.`);
-      lookupSubStudent(); // Refresh info
+      lookupSubStudent();
     } else showFeedback('error', 'Failed', d.error || 'Could not grant');
   } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
 }
@@ -3100,7 +3230,7 @@ async function cancelSubscription() {
     
     if (res.ok) {
       showFeedback('success', 'Cancelled', `Subscription for ${roll} downgraded to Free.`);
-      lookupSubStudent(); // Refresh info
+      lookupSubStudent();
     } else showFeedback('error', 'Failed', d.error || 'Could not cancel');
   } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
 }
