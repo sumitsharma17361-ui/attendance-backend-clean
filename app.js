@@ -1136,6 +1136,69 @@ async function loadAchievementsData() {
   }
 }
 
+/* ============================================================
+   COLLAPSIBLE CARDS SETUP
+   ============================================================ */
+function toggleCardBody(header) {
+    const card = header.closest('.collapsible-card');
+    const body = card.querySelector('.collapsible-body');
+    const arrow = header.querySelector('.collapse-arrow');
+    body.classList.toggle('open');
+    if (body.classList.contains('open')) {
+        if (arrow) arrow.style.transform = 'rotate(180deg)';
+    } else {
+        if (arrow) arrow.style.transform = 'rotate(0deg)';
+    }
+}
+
+function makeCollapsible(id, title, iconSvg, openByDefault = true) {
+    const el = document.getElementById(id);
+    if (!el || el.classList.contains('collapsible-card')) return;
+
+    const originalDisplay = el.style.display || 'block';
+
+    const header = document.createElement('div');
+    header.className = 'collapsible-header';
+    header.onclick = function() { toggleCardBody(this); };
+    header.innerHTML = `<h3>${iconSvg} ${title}</h3><div style="display:flex;align-items:center;gap:8px;"><span class="collapse-arrow" style="font-size:12px;color:var(--slate-400);transition:transform .25s;">▼</span></div>`;
+    
+    const body = document.createElement('div');
+    body.className = 'collapsible-body' + (openByDefault ? ' open' : '');
+    
+    // Remove existing card-title if it only contains text/span (no buttons/selects)
+    const existingTitle = el.querySelector('.card-title');
+    if (existingTitle) {
+        const hasInteractive = existingTitle.querySelector('button, select, input, textarea, a');
+        if (!hasInteractive) {
+            existingTitle.remove();
+        }
+    }
+
+    // Move children
+    while (el.firstChild) {
+        body.appendChild(el.firstChild);
+    }
+    
+    el.innerHTML = '';
+    el.appendChild(header);
+    el.appendChild(body);
+    
+    el.classList.remove('card', 'chart-wrap');
+    el.classList.add('collapsible-card');
+    el.style.display = originalDisplay;
+}
+
+function initCollapsibleCards() {
+    makeCollapsible('sec-request', 'Request Attendance', '📩', true);
+    makeCollapsible('sec-notes', 'Notes & Documents', '📚', true);
+    makeCollapsible('sec-assignments', 'Assignments', '📝', true);
+    makeCollapsible('sec-exams', 'Upcoming Exams', '📅', true);
+    makeCollapsible('sec-announcements', 'Announcements', '📢', true);
+    makeCollapsible('sec-chart', 'Attendance Trend', '📊', true);
+    makeCollapsible('sec-timetable', "Today's Timetable", '📅', true);
+    makeCollapsible('sec-calendar', 'Attendance Calendar', '📅', true);
+    makeCollapsible('sec-reports', 'My Reports', '📄', true);
+}
 
 /* ============================================================
    DASHBOARD
@@ -1247,6 +1310,7 @@ function loadDashboard(){
   setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 250);
   setTimeout(() => { autoInitFCM().catch(()=>{}); }, 2000);
   setTimeout(ensureScrollUnlocked, 500);
+  initCollapsibleCards(); // ★ Initialize collapsible cards
   startSessionCheck();
 }
 function updateClock(){
@@ -2838,6 +2902,13 @@ window.addEventListener('load', () => {
 
 // Student Side: Open Leaderboard
 function openLeaderboardModal() {
+  let modal = $('leaderboardModal');
+  if (modal) {
+      // ★ FIX: Dynamically update the title to "College Leaderboards"
+      const h3 = modal.querySelector('h3');
+      if (h3) h3.innerHTML = '🏆 College Leaderboards';
+  }
+  
   openModal('leaderboardModal');
   loadLeaderboard('attendance'); // Default
 }
