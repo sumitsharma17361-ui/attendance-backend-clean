@@ -1,4 +1,4 @@
-// ================= index.js v5.2 — Full Backend (Razorpay + Subscriptions + Gamification + Streak & Leaderboard Fixes) =================
+// ================= index.js v5.3 — Full Backend (Razorpay + Subscriptions + Gamification + Streak Fixes + Past Recalculate) =================
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -346,7 +346,9 @@ function languageInstruction(lang) {
 // ============================================================
 //  SUBSCRIPTION HELPERS
 // ============================================================
-function getSubscriptionTierRank(tier) { return TIER_ORDER[tier] || 0; }
+function getSubscriptionTierRank(tier) {
+  return TIER_ORDER[tier] || 0;
+}
 
 async function getUserSubscription(rollNo) {
   try {
@@ -433,7 +435,6 @@ async function updateLoginStreak(rollNo) {
     const g = await getOrCreateGamification(rollNo);
     const todayStr = getISTDateString(new Date());
     
-    // FIX: If already logged in today, do nothing and don't add XP
     if (g.lastLoginDate === todayStr) return g;
     
     const isFirstLogin = !g.lastLoginDate;
@@ -466,12 +467,68 @@ async function updateLoginStreak(rollNo) {
   } catch (e) { console.warn('updateLoginStreak error:', e.message); return null; }
 }
 
+// ★ NEW HELPER: Recalculates attendance streak from scratch based on past attendance
+async function recalculateAttendanceStreak(rollNo) {
+  try {
+    const cr = rollNo.toUpperCase();
+    
+    // Get all unique dates where student was present
+    const records = await Attendance.find({ 
+      rollNo: cr, 
+      status: { $in: ['Present', 'Duty Leave'] } 
+    }).select('date').lean();
+
+    if (!records.length) return;
+
+    const uniqueDates = [...new Set(records.map(r => r.date))].sort();
+    if (!uniqueDates.length) return;
+
+    let currentStreak = 1;
+    let maxStreak = 1;
+    let lastDate = uniqueDates[0];
+
+    for (let i = 1; i < uniqueDates.length; i++) {
+      const currentDate = uniqueDates[i];
+      const expectedPrev = await getPreviousWorkingDay(currentDate);
+
+      if (lastDate === expectedPrev) {
+        currentStreak++;
+        if (currentStreak > maxStreak) maxStreak = currentStreak;
+      } else {
+        currentStreak = 1;
+      }
+      lastDate = currentDate;
+    }
+
+    // Check if the streak is still active (latest attendance is today or prev working day)
+    const todayStr = getISTDateString(new Date());
+    const latestDate = uniqueDates[uniqueDates.length - 1];
+    const expectedActivePrev = await getPreviousWorkingDay(todayStr);
+
+    let finalStreak = maxStreak;
+    if (latestDate !== todayStr && latestDate !== expectedActivePrev) {
+       finalStreak = 0; // Streak broken
+    } else {
+       finalStreak = currentStreak; // Active streak
+    }
+
+    const g = await getOrCreateGamification(cr);
+    g.attendanceStreak = finalStreak;
+    g.lastAttendanceDate = latestDate;
+    await g.save();
+
+    return finalStreak;
+  } catch (e) {
+    console.warn('recalculateAttendanceStreak error:', e.message);
+    return 0;
+  }
+}
+
 async function updateAttendanceStreak(rollNo) {
   try {
     const g = await getOrCreateGamification(rollNo);
     const todayStr = getISTDateString(new Date());
     
-    // FIX: If already marked today, do nothing and don't add XP
     if (g.lastAttendanceDate === todayStr) return g;
     
     const isFirst = !g.lastAttendanceDate;
@@ -1275,7 +1332,7 @@ app.get('/health', (req, res) => res.json({
   ai: { primary: { provider: 'groq', model: GROQ_MODEL, keys: GROQ_API_KEYS.length }, fallback: { provider: 'gemini', model: GEMINI_MODEL, keys: GEMINI_API_KEYS.length, discovered: _geminiModelsCache.list.length } },
   fcm: { ready: fcmReady, projectId: process.env.FIREBASE_PROJECT_ID || null },
   razorpay: { ready: razorpayReady, keyId: process.env.RAZORPAY_KEY_ID ? process.env.RAZORPAY_KEY_ID.substring(0, 8) + '...' : null },
-  version: '5.2',
+  version: '5.3',
   timestamp: new Date().toISOString()
 }));
 
@@ -1400,6 +1457,10 @@ app.get('/api/user/subscription/:rollNo', async (req, res) => {
 app.get('/api/student/achievements/:rollNo', async (req, res) => {
   try {
     const cr = (req.params.rollNo || '').trim().toUpperCase();
+    
+    // ★ FIX: Auto-Recalculate attendance streak from history
+    await recalculateAttendanceStreak(cr);
+
     const g = await getOrCreateGamification(cr);
     res.json({
       loginStreak: g.loginStreak || 0,
@@ -1410,11 +1471,19 @@ app.get('/api/student/achievements/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ★ FIXED: Robust Leaderboard Query
+// ★ FIXED: Leaderboard with Auto-Recalculate & robust query
 app.get('/api/leaderboard/:type', async (req, res) => {
   try {
     const type = req.params.type; // 'login' or 'attendance'
     const sortField = type === 'login' ? 'loginStreak' : 'attendanceStreak';
+
+    // ★ FIX: Recalculate streaks for all students on the fly for attendance
+    if (type === 'attendance') {
+      const allStudents = await User.find({ role: 'student' }).select('rollNo').lean();
+      for (const s of allStudents) {
+        await recalculateAttendanceStreak(s.rollNo);
+      }
+    }
 
     const students = await User.find({ role: 'student' }).select('rollNo name branch').lean();
     const studentRolls = students.map(s => s.rollNo);
@@ -2147,7 +2216,6 @@ app.post('/api/auth/verify-session', async (req, res) => {
 
     if (user.activeSession !== token) return res.status(401).json({ sessionInvalid: true, error: 'You were logged out because you signed in on another device.' });
 
-    // ★ FIX: Auto-update login streak on app open (verify session)
     if (user.role === 'student') {
       updateLoginStreak(user.rollNo).catch(() => {});
     }
@@ -2532,9 +2600,9 @@ app.post('/api/requests/review/:id', async (req, res) => {
       request.reviewHistory.push({ action: 'Approved', by: req1.rollNo, at: new Date(), note: note || '', reviewedSubjects: markedSubjects });
       await request.save();
       
-      // ★ FIX: Only update streak if the approved date is TODAY
-      if (markedCount > 0 && request.date === getISTDateString(new Date())) {
-        updateAttendanceStreak(request.rollNo).catch(() => {});
+      // ★ FIX: Recalculate streak instead of update so gaps are filled and past dates don't break it
+      if (markedCount > 0) {
+        recalculateAttendanceStreak(request.rollNo).catch(() => {});
       }
       
       sendPushToRollNo(request.rollNo, '✅ Attendance Request Approved', `${request.date} — ${markedCount} lecture(s) marked.`, { type: 'request_approved' }).catch(() => {});
@@ -2612,6 +2680,9 @@ app.post('/api/requests/bulk-review', async (req, res) => {
           request.reviewHistory.push({ action: 'Approved', by: req1.rollNo, at: new Date(), note: note || '', reviewedSubjects: subjectsToMark });
           await request.save();
           totalMarked += marked;
+          
+          if (marked > 0) recalculateAttendanceStreak(request.rollNo).catch(() => {});
+          
           sendPushToRollNo(request.rollNo, '✅ Request Approved', `${request.date} — ${marked} lecture(s) marked.`, { type: 'request_approved' }).catch(() => {});
           results.push({ id, status: 'Approved', marked });
         }
@@ -3301,11 +3372,7 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
     if (already.length > 0) msg += `. Already: ${already.join(', ')}`;
     if (marked > 0) {
       sendPushToRollNo(tr, '✅ Attendance Marked by Admin', `${req1.name} marked you for ${marked} subject(s) on ${date}`, { type: 'admin_manual_mark', date, markedBy: req1.name }).catch(() => {});
-      
-      // ★ FIX: Only update streak if the date is TODAY
-      if (date === getISTDateString(new Date())) {
-        updateAttendanceStreak(tr).catch(() => {});
-      }
+      recalculateAttendanceStreak(tr).catch(() => {});
     }
     res.status(201).json({ message: msg, markedSubjects: markedSubs, alreadyMarked: already, total: marked });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -3496,11 +3563,7 @@ app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
       tMarked += mk; tSkipped += sk;
       if (mk > 0) {
         sendPushToRollNo(s.rollNo, '✅ Bulk Marked by Admin', `${req1.name} marked you for ${mk} lecture(s)`, { type: 'admin_bulk_mark', markedBy: req1.name }).catch(() => {});
-        
-        // ★ FIX: Only update streak if today is in the dates array
-        if (dates.includes(getISTDateString(new Date()))) {
-          updateAttendanceStreak(s.rollNo).catch(() => {});
-        }
+        recalculateAttendanceStreak(s.rollNo).catch(() => {});
       }
     }
     res.json({ message: `✅ ${tMarked} new, ${tSkipped} skipped.`, results });
@@ -3618,6 +3681,7 @@ app.post('/api/leave/action/:id', async (req, res) => {
         }
         cur.setDate(cur.getDate() + 1);
       }
+      recalculateAttendanceStreak(leave.rollNo).catch(() => {});
     }
     sendPushToRollNo(leave.rollNo, action === 'Approved' ? '✅ Leave Approved' : '❌ Leave Rejected', `${leave.fromDate} → ${leave.toDate}${adminNote ? ' — ' + adminNote : ''}`, { type: 'leave_review' }).catch(() => {});
     res.json({ message: `✅ Leave ${action.toLowerCase()} for ${leave.studentName}` });
@@ -5287,7 +5351,7 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, async () => {
   console.log('');
   console.log('╔══════════════════════════════════════════════════════╗');
-  console.log('║       🎓 BM GROUP ERP BACKEND · v5.2.0              ║');
+  console.log('║       🎓 BM GROUP ERP BACKEND · v5.3.0              ║');
   console.log('╠══════════════════════════════════════════════════════╣');
   console.log(`║  🚀 Port: ${String(PORT).padEnd(44)}║`);
   console.log(`║  🌍 TZ:   ${String(process.env.TZ || 'Asia/Kolkata').padEnd(44)}║`);
@@ -5296,11 +5360,11 @@ app.listen(PORT, async () => {
   console.log(`║  🔥 FCM:  ${(fcmReady ? 'READY ✅' : 'DISABLED ⚠️').padEnd(43)}║`);
   console.log(`║  💳 Pay:  ${(razorpayReady ? 'Razorpay READY ✅' : 'Razorpay DISABLED ⚠️').padEnd(43)}║`);
   console.log('╠══════════════════════════════════════════════════════╣');
-  console.log('║  ✨ NEW in v5.2:                                     ║');
+  console.log('║  ✨ NEW in v5.3:                                     ║');
   console.log('║     • Fixed Login Streak on app open (verify-session)║');
   console.log('║     • Fixed Leaderboard missing data issue          ║');
   console.log('║     • Fixed XP adding on multiple logins same day   ║');
-  console.log('║     • Past attendance approval no longer breaks streak║');
+  console.log('║     • Recalculate Attendance Streak (fixes past dates)║');
   console.log('╚══════════════════════════════════════════════════════╝');
   console.log('');
 
@@ -5326,5 +5390,5 @@ process.on('SIGINT', async () => {
 });
 
 // ============================================================
-//  END OF FILE — index.js v5.2.0
+//  END OF FILE — index.js v5.3.0
 // ============================================================
