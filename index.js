@@ -1,4 +1,4 @@
-// ================= index.js v5.3 — Full Backend (Razorpay + Subscriptions + Gamification + Streak Fixes + Past Recalculate) =================
+// ================= index.js v5.3.1 — Full Backend (Razorpay + Subscriptions + Gamification + Streak Fixes + Past Recalculate + Performance Fixes) =================
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -430,6 +430,22 @@ async function getPreviousWorkingDay(dateStr) {
   return d.toISOString().split('T')[0];
 }
 
+// ★ NEW: Optimized helper to prevent DB calls inside loop
+async function getPreviousWorkingDayOptimized(dateStr, holidaySet) {
+  let d = new Date(dateStr + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() - 1);
+  while (true) {
+    const ds = d.toISOString().split('T')[0];
+    const dow = d.getUTCDay();
+    if (dow === 0 || dow === 6 || holidaySet.has(ds)) {
+      d.setUTCDate(d.getUTCDate() - 1);
+      continue;
+    }
+    break;
+  }
+  return d.toISOString().split('T')[0];
+}
+
 async function updateLoginStreak(rollNo) {
   try {
     const g = await getOrCreateGamification(rollNo);
@@ -467,21 +483,19 @@ async function updateLoginStreak(rollNo) {
   } catch (e) { console.warn('updateLoginStreak error:', e.message); return null; }
 }
 
-// ★ NEW HELPER: Recalculates attendance streak from scratch based on past attendance
+// ★ FIXED: Optimized recalculateAttendanceStreak (Fetches holidays ONCE)
 async function recalculateAttendanceStreak(rollNo) {
   try {
     const cr = rollNo.toUpperCase();
-    
-    // Get all unique dates where student was present
-    const records = await Attendance.find({ 
-      rollNo: cr, 
-      status: { $in: ['Present', 'Duty Leave'] } 
-    }).select('date').lean();
-
+    const records = await Attendance.find({ rollNo: cr, status: { $in: ['Present', 'Duty Leave'] } }).select('date').lean();
     if (!records.length) return;
 
     const uniqueDates = [...new Set(records.map(r => r.date))].sort();
     if (!uniqueDates.length) return;
+
+    // Fetch holidays ONCE before the loop
+    const holidays = await Holiday.find({}).select('date').lean();
+    const holidaySet = new Set(holidays.map(h => h.date));
 
     let currentStreak = 1;
     let maxStreak = 1;
@@ -489,7 +503,7 @@ async function recalculateAttendanceStreak(rollNo) {
 
     for (let i = 1; i < uniqueDates.length; i++) {
       const currentDate = uniqueDates[i];
-      const expectedPrev = await getPreviousWorkingDay(currentDate);
+      const expectedPrev = await getPreviousWorkingDayOptimized(currentDate, holidaySet);
 
       if (lastDate === expectedPrev) {
         currentStreak++;
@@ -500,23 +514,21 @@ async function recalculateAttendanceStreak(rollNo) {
       lastDate = currentDate;
     }
 
-    // Check if the streak is still active (latest attendance is today or prev working day)
     const todayStr = getISTDateString(new Date());
     const latestDate = uniqueDates[uniqueDates.length - 1];
-    const expectedActivePrev = await getPreviousWorkingDay(todayStr);
+    const expectedActivePrev = await getPreviousWorkingDayOptimized(todayStr, holidaySet);
 
     let finalStreak = maxStreak;
     if (latestDate !== todayStr && latestDate !== expectedActivePrev) {
-       finalStreak = 0; // Streak broken
+       finalStreak = 0;
     } else {
-       finalStreak = currentStreak; // Active streak
+       finalStreak = currentStreak; 
     }
 
     const g = await getOrCreateGamification(cr);
     g.attendanceStreak = finalStreak;
     g.lastAttendanceDate = latestDate;
     await g.save();
-
     return finalStreak;
   } catch (e) {
     console.warn('recalculateAttendanceStreak error:', e.message);
@@ -1332,7 +1344,7 @@ app.get('/health', (req, res) => res.json({
   ai: { primary: { provider: 'groq', model: GROQ_MODEL, keys: GROQ_API_KEYS.length }, fallback: { provider: 'gemini', model: GEMINI_MODEL, keys: GEMINI_API_KEYS.length, discovered: _geminiModelsCache.list.length } },
   fcm: { ready: fcmReady, projectId: process.env.FIREBASE_PROJECT_ID || null },
   razorpay: { ready: razorpayReady, keyId: process.env.RAZORPAY_KEY_ID ? process.env.RAZORPAY_KEY_ID.substring(0, 8) + '...' : null },
-  version: '5.3',
+  version: '5.3.1',
   timestamp: new Date().toISOString()
 }));
 
@@ -1471,31 +1483,36 @@ app.get('/api/student/achievements/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ★ FIXED: Leaderboard with Auto-Recalculate & robust query
+// ★ FIXED: Leaderboard with Branch filter, only active students, parallel recalculation
 app.get('/api/leaderboard/:type', async (req, res) => {
   try {
     const type = req.params.type; // 'login' or 'attendance'
+    const branchFilter = (req.query.branch || 'ALL').toUpperCase();
     const sortField = type === 'login' ? 'loginStreak' : 'attendanceStreak';
 
-    // ★ FIX: Recalculate streaks for all students on the fly for attendance
+    let query = { role: 'student' };
+    if (branchFilter !== 'ALL') query.branch = branchFilter;
+
+    const students = await User.find(query).select('rollNo name branch').lean();
+    const studentRolls = students.map(s => s.rollNo);
+
     if (type === 'attendance') {
-      const allStudents = await User.find({ role: 'student' }).select('rollNo').lean();
-      for (const s of allStudents) {
-        await recalculateAttendanceStreak(s.rollNo);
-      }
+      // ★ ONLY fetch students who actually have attendance records (Skip 0% students)
+      const activeRolls = await Attendance.distinct('rollNo', { 
+        rollNo: { $in: studentRolls },
+        status: { $in: ['Present', 'Duty Leave'] } 
+      });
+      // ★ Recalculate in parallel instead of blocking loop
+      await Promise.all(activeRolls.map(r => recalculateAttendanceStreak(r)));
     }
 
-    const students = await User.find({ role: 'student' }).select('rollNo name branch').lean();
-    const studentRolls = students.map(s => s.rollNo);
-    
-    // Removed 'excludedFromLeaderboard: false' from Query to prevent missing data
     const gamifications = await Gamification.find({ rollNo: { $in: studentRolls } })
-                                           .sort({ [sortField]: -1 })
-                                           .limit(50)
-                                           .lean();
+      .sort({ [sortField]: -1 })
+      .limit(50)
+      .lean();
 
     const leaderboard = gamifications
-      .filter(g => g.excludedFromLeaderboard !== true) // Check in JS safely
+      .filter(g => g.excludedFromLeaderboard !== true && (g[sortField] || 0) > 0)
       .map(g => {
         const u = students.find(s => s.rollNo === g.rollNo);
         return {
@@ -1505,8 +1522,7 @@ app.get('/api/leaderboard/:type', async (req, res) => {
           streak: g[sortField] || 0,
           xp: g.totalXp || 0
         };
-      })
-      .filter(l => l.streak > 0);
+      });
 
     res.json(leaderboard);
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -2600,7 +2616,6 @@ app.post('/api/requests/review/:id', async (req, res) => {
       request.reviewHistory.push({ action: 'Approved', by: req1.rollNo, at: new Date(), note: note || '', reviewedSubjects: markedSubjects });
       await request.save();
       
-      // ★ FIX: Recalculate streak instead of update so gaps are filled and past dates don't break it
       if (markedCount > 0) {
         recalculateAttendanceStreak(request.rollNo).catch(() => {});
       }
@@ -5221,6 +5236,7 @@ function scheduleLibraryReminder() {
   }, 60 * 1000);
 }
 
+// ★ FIXED: Don't send class reminders on holidays
 function scheduleClassReminders() {
   setInterval(async () => {
     try {
@@ -5228,6 +5244,12 @@ function scheduleClassReminders() {
       const now = new Date();
       const day = now.getDay();
       if (day === 0 || day === 6) return;
+      
+      // ★ FIX: Don't send notifications on Holidays
+      const todayStr = getISTDateString(now);
+      const hol = await Holiday.findOne({ date: todayStr });
+      if (hol) return; // Stop execution if today is a holiday
+
       const istMin = getISTMinutes(now);
 
       for (const branch of ['CSE', 'AIDS']) {
@@ -5351,7 +5373,7 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, async () => {
   console.log('');
   console.log('╔══════════════════════════════════════════════════════╗');
-  console.log('║       🎓 BM GROUP ERP BACKEND · v5.3.0              ║');
+  console.log('║       🎓 BM GROUP ERP BACKEND · v5.3.1              ║');
   console.log('╠══════════════════════════════════════════════════════╣');
   console.log(`║  🚀 Port: ${String(PORT).padEnd(44)}║`);
   console.log(`║  🌍 TZ:   ${String(process.env.TZ || 'Asia/Kolkata').padEnd(44)}║`);
@@ -5360,11 +5382,11 @@ app.listen(PORT, async () => {
   console.log(`║  🔥 FCM:  ${(fcmReady ? 'READY ✅' : 'DISABLED ⚠️').padEnd(43)}║`);
   console.log(`║  💳 Pay:  ${(razorpayReady ? 'Razorpay READY ✅' : 'Razorpay DISABLED ⚠️').padEnd(43)}║`);
   console.log('╠══════════════════════════════════════════════════════╣');
-  console.log('║  ✨ NEW in v5.3:                                     ║');
-  console.log('║     • Fixed Login Streak on app open (verify-session)║');
-  console.log('║     • Fixed Leaderboard missing data issue          ║');
-  console.log('║     • Fixed XP adding on multiple logins same day   ║');
-  console.log('║     • Recalculate Attendance Streak (fixes past dates)║');
+  console.log('║  ✨ NEW in v5.3.1:                                   ║');
+  console.log('║     • Fixed 10s Leaderboard load (parallel fetch)   ║');
+  console.log('║     • Fixed Attendance Streak (no DB loop inside)   ║');
+  console.log('║     • Fixed Holiday Class Notifications             ║');
+  console.log('║     • Branch filter support for Leaderboard         ║');
   console.log('╚══════════════════════════════════════════════════════╝');
   console.log('');
 
@@ -5390,5 +5412,5 @@ process.on('SIGINT', async () => {
 });
 
 // ============================================================
-//  END OF FILE — index.js v5.3.0
+//  END OF FILE — index.js v5.3.1
 // ============================================================
