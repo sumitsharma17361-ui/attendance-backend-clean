@@ -1,6 +1,6 @@
 // ============================================================
 // firebase-messaging-sw.js — Service Worker for Push Notifications
-// BM Group ERP · v4.4
+// BM Group ERP · v4.5 (Deep Linking + Fixed App Icons)
 // Handles: attendance, notes, docs, fees, library, exams,
 //          results, announcements, device resets, undo alerts,
 //          emergency broadcasts, passcode publishes
@@ -23,6 +23,7 @@ const messaging = firebase.messaging();
 // ============================================================
 //  ICON / BADGE (inline SVG data URIs — no external fetch needed)
 // ============================================================
+// Large Icon (App Icon) - Colored
 const ICON_URL = 'data:image/svg+xml;utf8,' + encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
      <rect width="100" height="100" rx="22" fill="#2563eb"/>
@@ -31,10 +32,10 @@ const ICON_URL = 'data:image/svg+xml;utf8,' + encodeURIComponent(
    </svg>`
 );
 
+// Badge (Status bar) - MUST be pure white with transparent background for Android
 const BADGE_URL = 'data:image/svg+xml;utf8,' + encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-     <circle cx="50" cy="50" r="50" fill="#2563eb"/>
-     <text x="50" y="66" font-size="46" text-anchor="middle" fill="white"
+     <text x="50" y="68" font-size="46" text-anchor="middle" fill="white"
            font-family="Arial,sans-serif" font-weight="900">BM</text>
    </svg>`
 );
@@ -517,6 +518,9 @@ function buildTitle(emoji, rawTitle) {
 function getNotificationTargetUrl(data) {
   const type = data?.type || '';
   const baseUrl = data?.url || data?.link || '/';
+  
+  if (data.url && data.url !== '/') return data.url; // Direct URL provided
+
   switch (type) {
     case 'passcode':
     case 'attendance_reminder':
@@ -642,14 +646,13 @@ messaging.onBackgroundMessage((payload) => {
 });
 
 // ============================================================
-//  NOTIFICATION CLICK HANDLER
+//  NOTIFICATION CLICK HANDLER (Deep Linking + App Open)
 // ============================================================
 self.addEventListener('notificationclick', (event) => {
   console.log('[SW] Notification clicked:', event.notification);
   const notif = event.notification;
   const notifData = notif.data || {};
   const action = event.action || 'default';
-  const targetUrl = notifData.url || getNotificationTargetUrl(notifData);
   const type = notifData.type || '';
 
   event.notification.close();
@@ -660,6 +663,9 @@ self.addEventListener('notificationclick', (event) => {
     return;
   }
 
+  // Get target URL (Deep Link or Direct Download)
+  const targetUrl = notifData.url || getNotificationTargetUrl(notifData);
+  
   // Build absolute target URL (respect app base path)
   let absoluteTarget;
   try {
@@ -667,6 +673,8 @@ self.addEventListener('notificationclick', (event) => {
   } catch (e) {
     absoluteTarget = self.location.origin + '/';
   }
+
+  const finalTarget = (action === 'download' && notifData.downloadUrl) ? notifData.downloadUrl : absoluteTarget;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
@@ -681,17 +689,14 @@ self.addEventListener('notificationclick', (event) => {
               data: notifData,
               action,
               type,
-              targetUrl: absoluteTarget
+              targetUrl: finalTarget
             });
+            
             if ('focus' in client) {
               return client.focus().then((focusedClient) => {
-                // After focus, navigate if different
+                // After focus, navigate to specific tab
                 if (focusedClient && 'navigate' in focusedClient) {
-                  const currentPath = new URL(focusedClient.url).pathname;
-                  const targetPath = new URL(absoluteTarget).pathname;
-                  if (currentPath !== targetPath) {
-                    return focusedClient.navigate(absoluteTarget);
-                  }
+                  return focusedClient.navigate(finalTarget);
                 }
                 return focusedClient;
               });
@@ -703,11 +708,11 @@ self.addEventListener('notificationclick', (event) => {
 
       // No client found → open a new window
       if (clients.openWindow) {
-        return clients.openWindow(absoluteTarget);
+        return clients.openWindow(finalTarget);
       }
     }).catch((err) => {
       console.error('[SW] notificationclick error:', err);
-      if (clients.openWindow) return clients.openWindow(absoluteTarget);
+      if (clients.openWindow) return clients.openWindow(finalTarget);
     })
   );
 });
@@ -807,12 +812,12 @@ self.addEventListener('message', (event) => {
 //  INSTALL & ACTIVATE
 // ============================================================
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing v4.4...');
+  console.log('[SW] Installing v4.5...');
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activated v4.4');
+  console.log('[SW] Activated v4.5');
   event.waitUntil(
     (async () => {
       // Take control of all clients immediately
@@ -868,5 +873,5 @@ self.addEventListener('fetch', (event) => {
 // ============================================================
 //  LOG
 // ============================================================
-console.log('%c[SW] BM Group ERP — Service Worker v4.4 ready ✅', 'color:#10b981;font-weight:900;font-size:14px;');
+console.log('%c[SW] BM Group ERP — Service Worker v4.5 ready ✅', 'color:#10b981;font-weight:900;font-size:14px;');
 console.log('[SW] Handles: attendance, notes, docs, fees, library, exams, results, emergency alerts');
