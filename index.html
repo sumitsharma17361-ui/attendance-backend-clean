@@ -43,6 +43,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <!-- ★ RAZORPAY SCRIPT ADDED HERE -->
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<!-- ★ NEW: LENIS SMOOTH SCROLL -->
+<script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1.0.19/bundled/lenis.min.js"></script>
 </head>
 <body>
 
@@ -1215,8 +1217,8 @@
   </div>
 </div>
 
-<!-- ★ NEW: Leaderboard Modal -->
-<div class="modal-backdrop safe-top-modal" id="leaderboardModal" style="z-index: 9500;">
+<!-- ★ NEW: Leaderboard Modal (Pushed Down to avoid header conflict) -->
+<div class="modal-backdrop safe-top-modal" id="leaderboardModal" style="z-index: 9500; padding-top: 120px !important;">
   <div class="modal wide">
     <div class="modal-header">
       <div><h3>🏆 Global Leaderboards</h3><p class="text-xs text-muted" style="margin-top:4px;">Top performing students</p></div>
