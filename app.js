@@ -87,6 +87,7 @@ let passcodeCountdownInterval = null;
 let pendingUndoApprovalId = null;
 let sessionCheckInterval = null;
 let userSubscription = { tier: 'free', expiresAt: null };
+let leaderboardCache = { attendance: null, login: null }; // ★ Cache for Leaderboard
 
 /* ============================================================
    ★ CUSTOM LAYOUT FIX INJECTION & MOBILE SCROLL FIX
@@ -403,7 +404,6 @@ function navigateStudentMenu(key){
       }
       
       const rect = el.getBoundingClientRect();
-      // Increased offset to 120 so the minimize button is easily tappable on mobile
       const top = window.pageYOffset + rect.top - 120; 
       window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
     }
@@ -767,19 +767,22 @@ function scrollToTop(){ window.scrollTo({ top: 0, behavior: 'smooth' }); }
 function handleScrollFab(){ const f = $('scrollTopFab'); if (!f) return; if (window.scrollY > 300) f.classList.add('show'); else f.classList.remove('show'); }
 window.addEventListener('scroll', handleScrollFab, { passive: true });
 
+/* ============================================================
+   ★ UPDATED: SCROLL REVEAL ANIMATIONS
+   ============================================================ */
 function initScrollAnimations(){
   const targets = document.querySelectorAll('.stat, .card, .working-days-cta, .chart-wrap, .advisor, .passcode-card, .collapsible-card, .attendance-actions-card, .approved-banner, .welcome, .portal-grid .portal, .subject-summary-line');
-  targets.forEach(el => { if (!el.classList.contains('animate-on-scroll')) el.classList.add('animate-on-scroll'); });
+  targets.forEach(el => { if (!el.classList.contains('reveal-on-scroll')) el.classList.add('reveal-on-scroll'); });
   const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('visible'); observer.unobserve(entry.target); } });
-  }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
-  document.querySelectorAll('.animate-on-scroll:not(.visible)').forEach(el => observer.observe(el));
+    entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('is-visible'); observer.unobserve(entry.target); } });
+  }, { threshold: 0.1, rootMargin: '0px 0px -20px 0px' });
+  document.querySelectorAll('.reveal-on-scroll:not(.is-visible)').forEach(el => observer.observe(el));
 }
 function observeNewContent(){
   const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('visible'); observer.unobserve(entry.target); } });
-  }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
-  document.querySelectorAll('.animate-on-scroll:not(.visible)').forEach(el => observer.observe(el));
+    entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('is-visible'); observer.unobserve(entry.target); } });
+  }, { threshold: 0.1, rootMargin: '0px 0px -20px 0px' });
+  document.querySelectorAll('.reveal-on-scroll:not(.is-visible)').forEach(el => observer.observe(el));
 }
 
 /* ============================================================
@@ -1303,6 +1306,10 @@ function loadDashboard(){
   const repSec = $('sec-reports');
   const qpCard = $('quickPortalsCard');
   const aaCard = $('attendanceActionsCard');
+  const notesSec = $('sec-notes');
+  const assignSec = $('sec-assignments');
+  const examsSec = $('sec-exams');
+  const annSec = $('sec-announcements');
 
   if ($('adminMenuName')) $('adminMenuName').textContent = currentUser.name;
   if ($('adminMenuRoll')) $('adminMenuRoll').textContent = (currentUser.rollNo || '') + ' · ' + (currentUser.role === 'admin' ? 'Admin' : 'Faculty');
@@ -1314,12 +1321,12 @@ function loadDashboard(){
     if ($('menuUserName')) $('menuUserName').textContent = currentUser.name;
     if ($('menuUserRoll')) $('menuUserRoll').textContent = (currentUser.rollNo || '') + ' · ' + (currentUser.branch || 'CSE');
     populateStudentMenu();
-    if (reqSec) reqSec.style.display = 'block';
-    if (advBox) advBox.style.display = 'flex';
-    if (sbCard) sbCard.style.display = 'block';
-    if (repSec) repSec.style.display = 'block';
-    if (qpCard) qpCard.style.display = 'block';
-    if (aaCard) aaCard.style.display = 'block';
+    
+    // ★ FIX: Notes, assignments, exams, announcements ab display block hain taaki refresh par gayab na hon
+    [reqSec, advBox, sbCard, repSec, qpCard, aaCard, notesSec, assignSec, examsSec, annSec].forEach(el => {
+      if (el) el.style.display = (el === advBox) ? 'flex' : 'block';
+    });
+
     loadLivePasscodes(); loadApprovedBanner();
     if (passcodeIntervalId) clearInterval(passcodeIntervalId);
     passcodeIntervalId = setInterval(loadLivePasscodes, 30000);
@@ -1337,7 +1344,6 @@ function loadDashboard(){
             dpStat.classList.add('clickable-stat'); 
             dpStat.onclick = () => { 
                 switchTab('tab-mark'); 
-                // Auto open calendar from menu action
                 document.querySelectorAll('.collapsible-card').forEach(c => {
                     const b = c.querySelector('.collapsible-body');
                     const a = c.querySelector('.collapse-arrow');
@@ -1409,6 +1415,10 @@ function loadDashboard(){
     if (sbCard) sbCard.style.display = 'none';
     if (qpCard) qpCard.style.display = 'none';
     if (aaCard) aaCard.style.display = 'none';
+    if (notesSec) notesSec.style.display = 'none';
+    if (assignSec) assignSec.style.display = 'none';
+    if (examsSec) examsSec.style.display = 'none';
+    if (annSec) annSec.style.display = 'none';
     populateAdminMenu();
   }
 
@@ -1457,7 +1467,6 @@ function loadDashboard(){
   setTimeout(() => { autoInitFCM().catch(()=>{}); }, 2000);
   setTimeout(ensureScrollUnlocked, 500);
   
-  // ★ Default minimize collapsible cards on app load
   setTimeout(initCollapsibleCards, 300); 
   
   startSessionCheck();
@@ -3053,11 +3062,11 @@ function openLeaderboardModal() {
   loadLeaderboard('attendance');
 }
 
-async function loadLeaderboard(type) {
+async function loadLeaderboard(type, forceRefresh = false) {
   const el = $('leaderboardList');
   if (!el) return;
-  el.innerHTML = '<div class="empty"><div class="spinner" style="margin:0 auto 8px;"></div>Fetching rankings...</div>';
   
+  // UI Toggle
   const btns = document.querySelectorAll('#leaderboardModal .btn');
   btns.forEach(b => {
     if (b.getAttribute('onclick') && b.getAttribute('onclick').includes(type)) {
@@ -3069,36 +3078,52 @@ async function loadLeaderboard(type) {
     }
   });
 
+  // ★ CACHING LOGIC: Only fetch if empty or forced
+  if (leaderboardCache[type] && !forceRefresh) {
+     renderLeaderboardData(leaderboardCache[type], type, el);
+     return;
+  }
+
+  el.innerHTML = '<div class="empty"><div class="spinner" style="margin:0 auto 8px;"></div>Fetching rankings...</div>';
+
   try {
     const res = await fetch(`${API}/api/leaderboard/${type}`);
     const data = await res.json();
     
-    if (!res.ok || !data.length) return el.innerHTML = '<div class="empty">No data available yet.</div>';
+    if (!res.ok || !data.length) {
+      el.innerHTML = '<div class="empty">No data available yet.</div>';
+      return;
+    }
     
-    el.innerHTML = data.map((s, i) => {
-      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
-      const isMe = currentUser && currentUser.rollNo === s.rollNo;
-      const bg = isMe ? 'background:var(--brand-50); border-color:var(--brand-300);' : 'background:#fff; border-color:var(--slate-200);';
-      
-      return `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-radius:12px; border:1px solid; ${bg}">
-          <div style="display:flex; align-items:center; gap:12px;">
-            <div style="font-size:18px; font-weight:900; width:24px; text-align:center;">${medal}</div>
-            <div>
-              <div style="font-weight:800; font-size:13px; color:var(--slate-900);">${escapeHtml(s.name)} ${isMe ? '(You)' : ''}</div>
-              <div style="font-size:11px; color:var(--slate-500);">${s.rollNo} • ${s.branch}</div>
-            </div>
-          </div>
-          <div style="text-align:right;">
-            <div style="font-size:18px; font-weight:900; color:${type === 'login' ? '#b45309' : '#047857'};">${s.streak} 🔥</div>
-            <div style="font-size:10px; color:var(--slate-400); font-weight:700;">DAYS</div>
-          </div>
-        </div>
-      `;
-    }).join('');
+    leaderboardCache[type] = data;
+    renderLeaderboardData(data, type, el);
   } catch (e) {
     el.innerHTML = '<div class="empty">Network error</div>';
   }
+}
+
+function renderLeaderboardData(data, type, el) {
+  el.innerHTML = data.map((s, i) => {
+    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
+    const isMe = currentUser && currentUser.rollNo === s.rollNo;
+    const bg = isMe ? 'background:var(--brand-50); border-color:var(--brand-300);' : 'background:#fff; border-color:var(--slate-200);';
+    
+    return `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-radius:12px; border:1px solid; ${bg}">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="font-size:18px; font-weight:900; width:24px; text-align:center;">${medal}</div>
+          <div>
+            <div style="font-weight:800; font-size:13px; color:var(--slate-900);">${escapeHtml(s.name)} ${isMe ? '(You)' : ''}</div>
+            <div style="font-size:11px; color:var(--slate-500);">${s.rollNo} • ${s.branch}</div>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:18px; font-weight:900; color:${type === 'login' ? '#b45309' : '#047857'};">${s.streak} 🔥</div>
+          <div style="font-size:10px; color:var(--slate-400); font-weight:700;">DAYS</div>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 async function adminSearchGamification() {
@@ -3234,3 +3259,22 @@ async function cancelSubscription() {
     } else showFeedback('error', 'Failed', d.error || 'Could not cancel');
   } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
 }
+
+/* ============================================================
+   ★ NEW: LENIS SMOOTH SCROLL INITIALIZATION
+   ============================================================ */
+document.addEventListener("DOMContentLoaded", () => {
+  if (typeof Lenis !== 'undefined') {
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smooth: true,
+      touchMultiplier: 2
+    });
+    function raf(time) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+    requestAnimationFrame(raf);
+  }
+});
