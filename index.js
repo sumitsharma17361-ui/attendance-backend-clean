@@ -1472,6 +1472,7 @@ app.get('/api/student/achievements/:rollNo', async (req, res) => {
     
     // ★ FIX: Auto-Recalculate attendance streak from history
     await recalculateAttendanceStreak(cr);
+    await updateLoginStreak(cr);
 
     const g = await getOrCreateGamification(cr);
     res.json({
@@ -1549,8 +1550,26 @@ app.post('/api/admin/gamification/update', async (req, res) => {
     let g = await Gamification.findOne({ rollNo: cr });
     if (!g) g = new Gamification({ rollNo: cr });
 
-    if (loginStreak !== undefined) g.loginStreak = parseInt(loginStreak);
-    if (attendanceStreak !== undefined) g.attendanceStreak = parseInt(attendanceStreak);
+    const todayStr = getISTDateString(new Date());
+
+    if (loginStreak !== undefined) {
+      g.loginStreak = parseInt(loginStreak);
+      // ★ FIX: mark today (or last working day) as lastLoginDate
+      // so next day's updateLoginStreak() increments instead of resetting.
+      const todayDate = new Date(todayStr + 'T00:00:00Z');
+      const dow = todayDate.getUTCDay();
+      const isWeekend = (dow === 0 || dow === 6);
+      const isHoliday = await Holiday.findOne({ date: todayStr });
+      if (isWeekend || isHoliday) {
+        g.lastLoginDate = await getPreviousWorkingDay(todayStr);
+      } else {
+        g.lastLoginDate = todayStr;
+      }
+    }
+    if (attendanceStreak !== undefined) {
+      g.attendanceStreak = parseInt(attendanceStreak);
+      g.lastAttendanceDate = todayStr;
+    }
     if (excluded !== undefined) g.excludedFromLeaderboard = excluded;
 
     await g.save();
