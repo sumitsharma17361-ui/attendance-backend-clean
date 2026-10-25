@@ -3032,6 +3032,9 @@ document.addEventListener('DOMContentLoaded', () => {
   setTimeout(runPremiumInit, 120);
   if (localStorage.getItem('token')) loadDashboard();
   if (isMedianApp()) { console.log('[FCM] Median app detected — bridge ready'); if (typeof window.median_library_ready === 'function') { window.median_library_ready(); } }
+
+  // ★ NEW: Deep Linking Handler
+  setTimeout(handleDeepLink, 1500);
 });
 if (document.readyState !== 'loading') { setTimeout(() => handleScrollFab(), 50); setTimeout(runPremiumInit, 200); }
 
@@ -3048,6 +3051,120 @@ window.addEventListener('load', () => {
   document.body.scrollTop = 0;
 });
 
+
+/* ============================================================
+   ★ NEW: DEEP LINKING & FILE "OPEN WITH" HANDLER
+   ============================================================ */
+function handleDeepLink() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const tabParam = urlParams.get('tab');
+  
+  if (tabParam && currentUser) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+    setTimeout(() => {
+      if (tabParam === 'admin') {
+        switchTab('tab-admin');
+        showAdmin('a-account'); // Account requests open karo
+      } else if (tabParam === 'mark') {
+        switchTab('tab-mark');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else if (tabParam === 'notes') {
+        switchTab('tab-mark');
+        const notesSec = $('sec-notes');
+        if(notesSec) {
+            notesSec.style.display = 'block';
+            const body = notesSec.querySelector('.collapsible-body');
+            if(body) body.classList.add('open');
+            notesSec.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+    }, 1000);
+  }
+}
+
+async function downloadAndOpenFile(fileUrl, fileName) {
+  try {
+    showDL("Downloading file...");
+    const response = await fetch(fileUrl);
+    const blob = await response.blob();
+    
+    // 1. If mobile app (Median), use native share/open
+    if (isMedianApp() && window.median && window.median.shareFile) {
+       const reader = new FileReader();
+       reader.onload = function() {
+           const base64 = reader.result.split(',')[1];
+           window.median.shareFile({
+               base64: base64,
+               filename: fileName,
+               mimeType: blob.type
+           });
+           hideDL();
+       };
+       reader.readAsDataURL(blob);
+       return;
+    }
+
+    // 2. Fallback for standard browser: Download + Open in new tab to trigger "Open With"
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    
+    // Attempt to open in new window to trigger Android "Open With" dialog
+    setTimeout(() => {
+        window.open(url, '_blank');
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        hideDL();
+    }, 500);
+
+  } catch (e) {
+    hideDL();
+    toast("Download failed: " + e.message, "error");
+  }
+}
+
+// Listen for messages from Service Worker (Notification clicks)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    const msg = event.data;
+    if (msg && msg.__bmNotificationClick) {
+      if (msg.action === 'download' && msg.downloadUrl) {
+         // Trigger file download and Open With
+         downloadAndOpenFile(msg.downloadUrl, msg.fileName || 'document.pdf');
+      } else if (msg.targetUrl) {
+         // Handle deep links sent from SW
+         const urlParams = new URL(msg.targetUrl).searchParams;
+         const tabParam = urlParams.get('tab');
+         if (tabParam) {
+            window.history.pushState({}, '', `/?tab=${tabParam}`);
+            handleDeepLink();
+         }
+      }
+    }
+  });
+}
+
+/* ============================================================
+   ★ NEW: LENIS SMOOTH SCROLL INITIALIZATION
+   ============================================================ */
+document.addEventListener("DOMContentLoaded", () => {
+  if (typeof Lenis !== 'undefined') {
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smooth: true,
+      touchMultiplier: 2
+    });
+    function raf(time) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+    requestAnimationFrame(raf);
+  }
+});
 
 /* ============================================================
    ★ NEW: LEADERBOARD & GAMIFICATION (STUDENT & ADMIN)
@@ -3259,22 +3376,3 @@ async function cancelSubscription() {
     } else showFeedback('error', 'Failed', d.error || 'Could not cancel');
   } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
 }
-
-/* ============================================================
-   ★ NEW: LENIS SMOOTH SCROLL INITIALIZATION
-   ============================================================ */
-document.addEventListener("DOMContentLoaded", () => {
-  if (typeof Lenis !== 'undefined') {
-    const lenis = new Lenis({
-      duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      smooth: true,
-      touchMultiplier: 2
-    });
-    function raf(time) {
-      lenis.raf(time);
-      requestAnimationFrame(raf);
-    }
-    requestAnimationFrame(raf);
-  }
-});
