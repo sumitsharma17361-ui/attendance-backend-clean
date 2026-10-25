@@ -14,6 +14,17 @@ const FULL_DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Frid
 const FACULTY_NAME_MAP = {'BDA - Big Data Analytics':'Ms. Geeta','ECO - Economics for Engineers':'Ms. Sakshi Yadav','DAA - Design & Analysis of Algorithm':'Ms. Rashmi','FLA - Formal Language & Automata':'Ms. Nisha Yadav','HRM - Human Resource Mgmt':'Mr. Lokesh','CN - Computer Network':'Mr. Chhetrapal','WT - Web Technology':'Mr. Avish Yadav','Internet Lab (Ms. Geeta)':'Ms. Geeta','CN LAB - Computer Network Lab':'Mr. Chhetrapal','DAA LAB - Algorithm Lab':'Ms. Rashmi','WT LAB - Web Technology Lab':'Mr. Avish Yadav','PA - Predictive Analysis':'Ms. Pooja','ML - Machine Learning':'Mr. Harsh','PA LAB - Predictive Analysis Lab':'Ms. Pooja','ML LAB - Machine Learning Lab':'Mr. Harsh','BDA LAB - Big Data Analytics Lab':'Ms. Geeta'};
 const DOWNLOAD_KEYWORDS = ['pdf','download','excel','file','save','print','xlsx','txt','document','report','export','banao','bana do','chahiye','bana','generate'];
 
+// ★ NEW: Professional SVG Icons
+const ICONS = {
+  view: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
+  download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>',
+  cross: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
+  refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>',
+  upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>'
+};
+
 const STUDENT_MENU_ITEMS = [
   { key: 'home', label: 'Home', icon: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
   { key: 'subscription', label: 'Premium Plans', icon: '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>' },
@@ -87,7 +98,7 @@ let passcodeCountdownInterval = null;
 let pendingUndoApprovalId = null;
 let sessionCheckInterval = null;
 let userSubscription = { tier: 'free', expiresAt: null };
-let leaderboardCache = { attendance: null, login: null }; // ★ Cache for Leaderboard
+let leaderboardCache = { attendance: null, login: null };
 
 /* ============================================================
    ★ CUSTOM LAYOUT FIX INJECTION & MOBILE SCROLL FIX
@@ -113,6 +124,12 @@ let leaderboardCache = { attendance: null, login: null }; // ★ Cache for Leade
     /* Clickable Stats */
     .clickable-stat { cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; }
     .clickable-stat:active { transform: scale(0.97); }
+
+    /* SVG Button Icons (Professional Look) */
+    .btn svg { width: 14px; height: 14px; margin-right: 6px; vertical-align: middle; margin-top: -2px; }
+    .btn-xs svg { width: 12px; height: 12px; margin-right: 4px; }
+    .report-btn-group { display: flex; gap: 8px; }
+    .report-btn-group > * { flex: 1; }
 
     /* ★ MOBILE FIX: Screens smaller than 550px */
     @media (max-width: 550px) {
@@ -272,6 +289,26 @@ function togglePassword(){const p = $('password');p.type = p.type === 'password'
 function escapeHtml(t){ const d = document.createElement('div'); d.textContent = String(t==null?'':t); return d.innerHTML; }
 function isDesktop(){ return window.innerWidth >= 641; }
 function isMedianApp(){ return typeof window.median !== 'undefined' && window.median !== null; }
+
+/* ============================================================
+   PDF VIEWER (NEW)
+   ============================================================ */
+function viewPdfBlob(blob) {
+  const url = URL.createObjectURL(blob);
+  const modal = document.createElement('div');
+  modal.className = 'modal-backdrop open safe-top-modal';
+  modal.style.zIndex = '99999';
+  modal.innerHTML = `
+    <div class="modal wide" style="height: 85vh; display: flex; flex-direction: column; max-width: 800px;">
+      <div class="modal-header" style="padding: 12px 18px;">
+        <h3 style="margin:0; font-size: 15px;">📄 Document Preview</h3>
+        <button type="button" class="modal-close" onclick="this.closest('.modal-backdrop').remove(); URL.revokeObjectURL('${url}')">✕</button>
+      </div>
+      <iframe src="${url}" style="flex: 1; width: 100%; border: none; border-bottom-left-radius: var(--radius-lg); border-bottom-right-radius: var(--radius-lg);"></iframe>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
 
 function universalDownload(blob, filename, opts = {}){
   try {
@@ -596,8 +633,8 @@ async function loadRegistrationRequests(){
         </div>
         <div style="margin-top:6px;font-size:10.5px;color:var(--slate-400);">${new Date(r.createdAt).toLocaleString('en-IN')}</div>
         ${isPending ? `<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-success btn-xs" onclick="reviewRegistration('${r._id}','Approved')">✅ Approve</button>
-          <button class="btn btn-danger btn-xs" onclick="reviewRegistration('${r._id}','Rejected')">❌ Reject</button>
+          <button class="btn btn-success btn-xs" onclick="reviewRegistration('${r._id}','Approved')">${ICONS.check} Approve</button>
+          <button class="btn btn-danger btn-xs" onclick="reviewRegistration('${r._id}','Rejected')">${ICONS.cross} Reject</button>
         </div>` : ''}
       </div>`;
     }).join('');
@@ -821,7 +858,13 @@ async function handleAuth(){
       const res = await fetch(`${API}/api/auth/login`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: roll, password, deviceId, deviceName: deviceInfo.name})});
       const data = await res.json();
       hideDL();
-      if (!res.ok) return showFeedback('error', 'Sign-in Failed', data.error || 'Invalid credentials.');
+      if (!res.ok) {
+        // ★ NEW: Handle Unauthorized Device specific error
+        if (data.requiresDeviceReset) {
+          return showFeedback('warning', 'New Device Detected', 'A device reset request has been automatically sent to the Admin. Please wait for approval.', { buttonText: 'OK' });
+        }
+        return showFeedback('error', 'Sign-in Failed', data.error || 'Invalid credentials.');
+      }
       if (data.user.role !== selectedRole) return showFeedback('error', 'Role Mismatch', `Registered as ${data.user.role}, not ${selectedRole}.`);
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
@@ -1407,6 +1450,20 @@ function loadDashboard(){
         }
     }, 800);
 
+    // Update Reports Buttons to Include View
+    setTimeout(() => {
+        if (repSec) {
+            const btnRow = repSec.querySelector('.row:last-child');
+            if (btnRow) {
+                btnRow.innerHTML = `
+                  <button class="btn btn-outline" style="flex:1;" onclick="generateSelfPDF('view')">${ICONS.view} View</button>
+                  <button class="btn btn-primary" style="flex:1;" onclick="generateSelfPDF('download')">${ICONS.download} Download</button>
+                `;
+                btnRow.classList.add('report-btn-group');
+            }
+        }
+    }, 500);
+
   } else {
     if (studentMenuBtn) studentMenuBtn.style.display = 'none';
     if (adminMenuBtn) adminMenuBtn.style.display = 'flex';
@@ -1541,8 +1598,8 @@ async function loadAccountRequests(){
         <div style="margin-top:8px;font-size:11.5px;color:var(--slate-600);">Reason: ${escapeHtml(r.reason || '—')}</div>
         <div style="margin-top:6px;font-size:10.5px;color:var(--slate-400);">${new Date(r.createdAt).toLocaleString('en-IN')}</div>
         ${isPending ? `<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-success btn-xs" onclick="reviewAccountRequest('${r._id}','Approved')">✅ Approve</button>
-          <button class="btn btn-danger btn-xs" onclick="reviewAccountRequest('${r._id}','Rejected')">❌ Reject</button>
+          <button class="btn btn-success btn-xs" onclick="reviewAccountRequest('${r._id}','Approved')">${ICONS.check} Approve</button>
+          <button class="btn btn-danger btn-xs" onclick="reviewAccountRequest('${r._id}','Rejected')">${ICONS.cross} Reject</button>
         </div>` : ''}
       </div>`;
     }).join('');
@@ -1632,7 +1689,7 @@ async function loadAdminRequests(){
         </div>
         <div style="margin-top:10px;font-size:12px;">${ll}${r.subject ? ' · ' + escapeHtml(r.subject) : ''}</div>
         <div style="margin-top:5px;font-size:11.5px;color:var(--slate-600);">Reason: ${escapeHtml(r.reason || '—')}</div>
-        ${r.status === 'Pending' ? `<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-success btn-xs" onclick="approveRequest('${r._id}')">✅ Approve</button><button class="btn btn-danger btn-xs" onclick="rejectRequest('${r._id}')">❌ Reject</button></div>` : `<div style="margin-top:10px;font-size:10.5px;color:var(--slate-500);">Reviewed by ${escapeHtml(r.reviewedBy || '—')}</div>`}
+        ${r.status === 'Pending' ? `<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-success btn-xs" onclick="approveRequest('${r._id}')">${ICONS.check} Approve</button><button class="btn btn-danger btn-xs" onclick="rejectRequest('${r._id}')">${ICONS.cross} Reject</button></div>` : `<div style="margin-top:10px;font-size:10.5px;color:var(--slate-500);">Reviewed by ${escapeHtml(r.reviewedBy || '—')}</div>`}
         ${canUndo ? `<div style="margin-top:10px;"><button class="btn btn-warning btn-xs" onclick="openUndoApproval('${r._id}', '${escapeHtml(r.rollNo)}', '${r.date}', ${remainMin})">↩️ Undo Approval (${remainMin}m left)</button></div>` : ''}
       </div>`;
     }).join('');
@@ -2063,7 +2120,7 @@ async function markActivePeriod(){
   } catch(e){ hideDL(); showFeedback('error', 'Network Error', e.message); }
 }
 
-async function generateIndividualPDF(studentRoll, studentName, branch, range, month, isSelf){
+async function generateIndividualPDF(studentRoll, studentName, branch, range, month, isSelf, action = 'download'){
   showDL('Generating PDF…');
   try {
     await ensureHolidays();
@@ -2085,14 +2142,17 @@ async function generateIndividualPDF(studentRoll, studentName, branch, range, mo
     hideDL();
     if (!blob) return toast('PDF library failed to load','error');
     const filename = `attendance_${studentRoll}_${Date.now()}.pdf`;
-    universalDownload(blob, filename);
+    if (action === 'view') viewPdfBlob(blob);
+    else universalDownload(blob, filename);
   } catch(e) { hideDL(); toast('Failed: ' + e.message, 'error'); }
 }
-async function generateSelfPDF(){ 
+
+async function generateSelfPDF(action = 'download'){ 
   if (userSubscription.tier === 'free' || userSubscription.isExpired) {
     return showFeedback('warning', 'Premium Required', 'PDF Reports are a Silver+ feature. Please upgrade your plan.', { buttonText: 'View Plans', onClose: openSubscriptionModal });
   }
-  const range = $('pdfRangeSelect').value; const month = $('pdfMonthSelect').value; await generateIndividualPDF(currentUser.rollNo, currentUser.name, currentUser.branch || 'CSE', range, month, true); 
+  const range = $('pdfRangeSelect').value; const month = $('pdfMonthSelect').value; 
+  await generateIndividualPDF(currentUser.rollNo, currentUser.name, currentUser.branch || 'CSE', range, month, true, action); 
 }
 
 function getTimetableForBranch(b){ const CSE = { Monday: ['BDA - Big Data Analytics','ECO - Economics for Engineers','DAA - Design & Analysis of Algorithm','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','CN - Computer Network','Sports'], Tuesday: ['WT - Web Technology','ECO - Economics for Engineers','Internet Lab (Ms. Geeta)','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','BDA - Big Data Analytics','Sports'], Wednesday: ['BDA - Big Data Analytics','ECO - Economics for Engineers','FLA - Formal Language & Automata','Sports / Activity','WT - Web Technology','CN LAB - Computer Network Lab'], Thursday: ['BDA - Big Data Analytics','WT - Web Technology','CN - Computer Network','DAA - Design & Analysis of Algorithm','DAA LAB - Algorithm Lab','HRM - Human Resource Mgmt'], Friday: ['DAA - Design & Analysis of Algorithm','CN - Computer Network','FLA - Formal Language & Automata','BDA - Big Data Analytics','WT LAB - Web Technology Lab','Sports'] }; const AIDS = { Monday: ['BDA - Big Data Analytics','ECO - Economics for Engineers','LIB - Library','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','PA - Predictive Analysis','PA - Predictive Analysis','Sports'], Tuesday: ['WT - Web Technology','ECO - Economics for Engineers','PA - Predictive Analysis','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','BDA - Big Data Analytics','ML - Machine Learning'], Wednesday: ['BDA - Big Data Analytics','ECO - Economics for Engineers','FLA - Formal Language & Automata','Sports / Project','WT - Web Technology','PA LAB - Predictive Analysis Lab'], Thursday: ['BDA - Big Data Analytics','WT - Web Technology','ML - Machine Learning','PA - Predictive Analysis','ML LAB - Machine Learning Lab','HRM - Human Resource Mgmt'], Friday: ['ML - Machine Learning','LIB - Library','FLA - Formal Language & Automata','BDA - Big Data Analytics','BDA LAB - Big Data Analytics Lab','Sports'] }; return (b && b.toUpperCase() === 'AIDS') ? AIDS : CSE; }
@@ -2112,23 +2172,24 @@ async function fetchUsers(){
       const rb = u.role === 'admin' ? '<span class="badge badge-warning">Admin</span>' : u.role === 'faculty' ? '<span class="badge badge-info">Faculty</span>' : '<span class="badge badge-neutral">Student</span>';
       const dev = u.boundDeviceName || (u.boundDeviceId ? '<span class="badge badge-success">Bound</span>' : '<span class="badge badge-neutral">—</span>');
       let att = '—'; if (u.role === 'student' && sumMap[u.rollNo]) { const s = sumMap[u.rollNo]; att = `${s.totalAcademicLectures||0}/${s.totalConductedLectures||0} (${s.attendancePercentage||0}%)`; }
-      return `<tr><td><b>${u.rollNo}</b></td><td>${u.name}</td><td>${rb}</td><td>${dev}</td><td>${att}</td><td>${u.role === 'student' ? `<button class="btn btn-outline btn-xs" onclick="viewStudentRecords('${u.rollNo}')">View</button>` : ''}</td></tr>`;
+      return `<tr><td><b>${u.rollNo}</b></td><td>${u.name}</td><td>${rb}</td><td>${dev}</td><td>${att}</td><td>${u.role === 'student' ? `<button class="btn btn-outline btn-xs" onclick="viewStudentRecords('${u.rollNo}')">${ICONS.view} View</button>` : ''}</td></tr>`;
     }).join('');
     const s2 = data.filter(u => u.role === 'student');
     ['singleStudentSelect','reportStudentSelect'].forEach(id => { const el = $(id); if (el) el.innerHTML = '<option value="">Select Student…</option>' + s2.map(s => `<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`).join(''); });
     const teachers = data.filter(u => u.role === 'faculty'); const ts = $('assignTeacher'); if (ts) ts.innerHTML = '<option value="">Select Teacher…</option>' + teachers.map(t => `<option value="${t.rollNo}">${t.rollNo} - ${t.name}</option>`).join('');
   } catch(e){ if ($('directoryBody')) $('directoryBody').innerHTML = '<tr><td colspan="6" class="empty">Network error</td></tr>'; }
 }
-async function viewStudentRecords(r){ try { const res = await fetch(`${API}/api/attendance/student/${r}/${currentUser.rollNo}`); const data = await res.json(); if (!res.ok) return toast(data.error || 'Failed','error'); const g = {}; data.forEach(x => { if (!g[x.date]) g[x.date] = []; g[x.date].push(x); }); const dates = Object.keys(g).sort((a,b)=>b.localeCompare(a)); let html = `<div class="modal-backdrop open safe-top-modal" id="viewRecordsModal"><div class="modal wide"><div class="modal-header"><div><h3>Attendance – ${r}</h3><p class="text-xs text-muted" style="margin-top:4px;">${data.length} records</p></div><button type="button" class="modal-close" onclick="document.getElementById('viewRecordsModal').remove()">✕</button></div><div class="modal-body">`; dates.forEach(d => { html += `<div style="margin-bottom:16px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><b>${fmtDatePretty(d)}</b><button class="btn btn-danger btn-xs" onclick="deleteAllDate('${r}','${d}')">Delete All</button></div>`; g[d].forEach(x => { html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--slate-50);border-radius:8px;margin:4px 0;font-size:12px;"><div>${x.subject} <span class="badge badge-success">${x.status}</span></div><button class="btn btn-danger btn-xs" onclick="deleteRecord('${x._id}')">Del</button></div>`; }); html += `</div>`; }); html += `</div></div></div>`; const div = document.createElement('div'); div.innerHTML = html; document.body.appendChild(div.firstElementChild); } catch(e){ toast('Failed','error'); } }
+async function viewStudentRecords(r){ try { const res = await fetch(`${API}/api/attendance/student/${r}/${currentUser.rollNo}`); const data = await res.json(); if (!res.ok) return toast(data.error || 'Failed','error'); const g = {}; data.forEach(x => { if (!g[x.date]) g[x.date] = []; g[x.date].push(x); }); const dates = Object.keys(g).sort((a,b)=>b.localeCompare(a)); let html = `<div class="modal-backdrop open safe-top-modal" id="viewRecordsModal"><div class="modal wide"><div class="modal-header"><div><h3>Attendance – ${r}</h3><p class="text-xs text-muted" style="margin-top:4px;">${data.length} records</p></div><button type="button" class="modal-close" onclick="document.getElementById('viewRecordsModal').remove()">✕</button></div><div class="modal-body">`; dates.forEach(d => { html += `<div style="margin-bottom:16px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><b>${fmtDatePretty(d)}</b><button class="btn btn-danger btn-xs" onclick="deleteAllDate('${r}','${d}')">${ICONS.trash} Delete All</button></div>`; g[d].forEach(x => { html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--slate-50);border-radius:8px;margin:4px 0;font-size:12px;"><div>${x.subject} <span class="badge badge-success">${x.status}</span></div><button class="btn btn-danger btn-xs" onclick="deleteRecord('${x._id}')">${ICONS.trash} Del</button></div>`; }); html += `</div>`; }); html += `</div></div></div>`; const div = document.createElement('div'); div.innerHTML = html; document.body.appendChild(div.firstElementChild); } catch(e){ toast('Failed','error'); } }
 async function deleteRecord(id){ if (!confirm('Delete?')) return; try { const res = await fetch(`${API}/api/attendance/delete/${id}/${currentUser.rollNo}`, {method:'DELETE'}); if (res.ok) { toast('Deleted','success'); const m = $('viewRecordsModal'); if (m) m.remove(); loadAllAttendance(); } } catch(e){} }
 async function deleteAllDate(r, d){ if (!confirm('Delete all records for this date?')) return; try { const res = await fetch(`${API}/api/attendance/delete-day/${r}/${d}/${currentUser.rollNo}`, {method:'DELETE'}); if (res.ok) { toast('Deleted','success'); const m = $('viewRecordsModal'); if (m) m.remove(); loadAllAttendance(); } } catch(e){} }
-async function loadAllAttendance(){ try { const res = await fetch(`${API}/api/attendance/all/${currentUser.rollNo}`); const data = await res.json(); const fr = ($('filterRoll').value||'').toUpperCase(); const fd = $('filterDate').value; let filtered = data; if (fr) filtered = filtered.filter(r => r.rollNo.includes(fr)); if (fd) filtered = filtered.filter(r => r.date === fd); const tb = $('allAttendanceBody'); if (!tb) return; if (filtered.length === 0) return tb.innerHTML = '<tr><td colspan="7" class="empty">No records</td></tr>'; window._allRecords = filtered; tb.innerHTML = filtered.slice(0,200).map(r => `<tr><td><input type="checkbox" class="rec-cb" data-id="${r._id}"></td><td>${fmtDatePretty(r.date)}</td><td><b>${r.rollNo}</b></td><td>${r.studentName||''}</td><td>${r.subject}</td><td><span class="badge ${r.status==='Present'?'badge-success':r.status==='Duty Leave'?'badge-warning':'badge-danger'}">${r.status}</span></td><td><button class="btn btn-danger btn-xs" onclick="deleteRecord('${r._id}')">Del</button></td></tr>`).join(''); } catch(e){ if ($('allAttendanceBody')) $('allAttendanceBody').innerHTML = '<tr><td colspan="7" class="empty">Network error</td></tr>'; } observeNewContent(); }
+async function loadAllAttendance(){ try { const res = await fetch(`${API}/api/attendance/all/${currentUser.rollNo}`); const data = await res.json(); const fr = ($('filterRoll').value||'').toUpperCase(); const fd = $('filterDate').value; let filtered = data; if (fr) filtered = filtered.filter(r => r.rollNo.includes(fr)); if (fd) filtered = filtered.filter(r => r.date === fd); const tb = $('allAttendanceBody'); if (!tb) return; if (filtered.length === 0) return tb.innerHTML = '<tr><td colspan="7" class="empty">No records</td></tr>'; window._allRecords = filtered; tb.innerHTML = filtered.slice(0,200).map(r => `<tr><td><input type="checkbox" class="rec-cb" data-id="${r._id}"></td><td>${fmtDatePretty(r.date)}</td><td><b>${r.rollNo}</b></td><td>${r.studentName||''}</td><td>${r.subject}</td><td><span class="badge ${r.status==='Present'?'badge-success':r.status==='Duty Leave'?'badge-warning':'badge-danger'}">${r.status}</span></td><td><button class="btn btn-danger btn-xs" onclick="deleteRecord('${r._id}')">${ICONS.trash} Del</button></td></tr>`).join(''); } catch(e){ if ($('allAttendanceBody')) $('allAttendanceBody').innerHTML = '<tr><td colspan="7" class="empty">Network error</td></tr>'; } observeNewContent(); }
 function toggleAll(){ document.querySelectorAll('.rec-cb').forEach(cb => cb.checked = $('selectAll').checked); }
 async function deleteSelected(){ const ids = Array.from(document.querySelectorAll('.rec-cb:checked')).map(cb => cb.dataset.id); if (!ids.length) return toast('Select records','error'); if (!confirm(`Delete ${ids.length}?`)) return; let ok = 0; for (const id of ids) { try { const r = await fetch(`${API}/api/attendance/delete/${id}/${currentUser.rollNo}`, {method:'DELETE'}); if (r.ok) ok++; } catch(e){} } toast(`Deleted ${ok}`,'success'); loadAllAttendance(); }
 function initReports(){ const s = $('singleStudentMonth'); if (s && !s.innerHTML.trim()) s.innerHTML = [6,7,8,9,10,11].map(m=>`<option value="${m}">${MONTH_NAMES[m]} 2026</option>`).join(''); }
 function toggleSingleMonth(){ const el = $('singleStudentMonth'); if (el) el.style.display = $('singleStudentRange').value === 'SELECTED_MONTH' ? 'block' : 'none'; }
 function downloadSingle(){ const roll = $('singleStudentSelect').value; if (!roll) return toast('Select student','error'); const range = $('singleStudentRange').value; const month = $('singleStudentMonth').value; toast('Downloading CSV…','info'); window.location.href = `${API}/api/export/student-attendance/${currentUser.rollNo}?studentRollNo=${roll}&range=${range}&month=${month}`; }
-async function generateClassReport(){
+
+async function generateClassReport(action = 'download'){
   const s = $('classStart').value, e = $('classEnd').value, b = $('classBranch').value;
   if (!s || !e) return toast('Select dates','error');
   showDL('Generating…');
@@ -2140,12 +2201,34 @@ async function generateClassReport(){
     const blob = generatePDFBlob('Class Attendance Report', `${b === 'ALL' ? 'All Branches' : b} – 5th Semester`, [`Range: ${fmtDatePretty(s)} to ${fmtDatePretty(e)}`], ['S.No', 'Roll', 'Name', 'Present', '%'], rows, null);
     hideDL();
     if (!blob) return toast('PDF library failed','error');
-    universalDownload(blob, `class_report_${b}_${Date.now()}.pdf`);
+    if (action === 'view') viewPdfBlob(blob);
+    else universalDownload(blob, `class_report_${b}_${Date.now()}.pdf`);
   } catch(e){ hideDL(); toast('Failed: ' + e.message,'error'); }
 }
+
 function toggleAdminReportRange(){ const e = $('adminReportMonth'); if (e) e.style.display = $('adminReportRange').value === 'SELECTED_MONTH' ? 'block' : 'none'; }
 async function exportGrid(){ const r = window._allRecords || await fetch(`${API}/api/attendance/all/${currentUser.rollNo}`).then(x=>x.json()); const sel = $('exportRange').value; const hol = await fetch(`${API}/api/holidays`).then(x=>x.json()); const hS = new Set(hol.map(h => (h.date||'').split('T')[0])); const start = sel === 'ALL_SEMESTER' ? new Date(2026,6,15) : new Date(2026, parseInt(sel), 1); let end = sel === 'ALL_SEMESTER' ? new Date(2026,11,31) : new Date(2026, parseInt(sel)+1, 0); const today = new Date(); if (end > today) end = today; const days = []; let cur = new Date(start); while (cur <= end) { days.push(fmtDate(cur)); cur.setDate(cur.getDate()+1); } const bs = {}; r.forEach(x => { if (!bs[x.rollNo]) bs[x.rollNo] = { name: x.studentName||'', dates: {} }; if (!bs[x.rollNo].dates[x.date]) bs[x.rollNo].dates[x.date] = []; bs[x.rollNo].dates[x.date].push(x.status); }); let csv = 'Roll,Name,' + days.map(d => `${d}`).join(',') + ',Total\n'; Object.keys(bs).sort().forEach(roll => { const s = bs[roll]; let total = 0, row = `"${roll}","${s.name}"`; days.forEach(d => { const dow = new Date(d).getDay(); if (dow === 0 || dow === 6) { row += ',OFF'; return; } if (hS.has(d)) { row += ',H'; return; } const st = s.dates[d] || []; if (st.some(x => x === 'Present' || x === 'Duty Leave')) { row += ',P'; total++; } else row += ',A'; }); row += `,${total}`; csv += row + '\n'; }); download(csv, `attendance_grid.csv`); }
-async function generateStudentReport(f){ const r = $('reportStudentSelect').value; if (!r) return toast('Select student','error'); const rng = $('adminReportRange').value; const m = $('adminReportMonth').value; if (f === 'pdf') { let sn = r, b = 'CSE'; try { const pR = await fetch(`${API}/api/student/profile/${r}`); if (pR.ok) { const p = await pR.json(); sn = p.name || r; b = p.branch || 'CSE'; } } catch(e){} await generateIndividualPDF(r, sn, b, rng, m, false); } else { const recs = await fetch(`${API}/api/attendance/student/${r}/${currentUser.rollNo}`).then(x=>x.json()); if (!recs || !recs.length) return toast('No records','error'); const r2 = getRangeForSelection(rng, m); const filtered = recs.filter(x => x.date >= r2.start && x.date <= r2.end); let csv = `Student Report\nStudent: ${r}\nRange: ${r2.start} to ${r2.end}\n\nDate,Subject,Status\n`; filtered.forEach(x => { csv += `${x.date},${x.subject},${x.status}\n`; }); download(csv, `report_${r}_${rng}.csv`); } }
+
+async function generateStudentReport(f, action = 'download'){ 
+  const r = $('reportStudentSelect').value; 
+  if (!r) return toast('Select student','error'); 
+  const rng = $('adminReportRange').value; 
+  const m = $('adminReportMonth').value; 
+  if (f === 'pdf') { 
+    let sn = r, b = 'CSE'; 
+    try { const pR = await fetch(`${API}/api/student/profile/${r}`); if (pR.ok) { const p = await pR.json(); sn = p.name || r; b = p.branch || 'CSE'; } } catch(e){} 
+    await generateIndividualPDF(r, sn, b, rng, m, false, action); 
+  } else { 
+    const recs = await fetch(`${API}/api/attendance/student/${r}/${currentUser.rollNo}`).then(x=>x.json()); 
+    if (!recs || !recs.length) return toast('No records','error'); 
+    const r2 = getRangeForSelection(rng, m); 
+    const filtered = recs.filter(x => x.date >= r2.start && x.date <= r2.end); 
+    let csv = `Student Report\nStudent: ${r}\nRange: ${r2.start} to ${r2.end}\n\nDate,Subject,Status\n`; 
+    filtered.forEach(x => { csv += `${x.date},${x.subject},${x.status}\n`; }); 
+    download(csv, `report_${r}_${rng}.csv`); 
+  } 
+}
+
 function initEntry(){ setBranch(currentManualBranch); if ($('manualDate')) $('manualDate').value = fmtDate(new Date()); loadBulkStudents(); }
 function setBranch(b){ currentManualBranch = b; if ($('branchCSE')) $('branchCSE').className = 'btn ' + (b === 'CSE' ? 'btn-primary' : 'btn-outline') + ' btn-sm'; if ($('branchAIDS')) $('branchAIDS').className = 'btn ' + (b === 'AIDS' ? 'btn-primary' : 'btn-outline') + ' btn-sm'; loadSubjects(); }
 function loadSubjects(){ const date = $('manualDate').value; if (!date) return; const d = new Date(date); const dayName = FULL_DAY_NAMES[d.getDay()]; const subs = (getTimetableForBranch(currentManualBranch)[dayName] || []).filter(s => !s.includes('Sports') && !s.includes('LIB') && !s.includes('Library')); if ($('subjectCheckboxes')) $('subjectCheckboxes').innerHTML = `<label style="grid-column:span 2;display:flex;align-items:center;gap:8px;padding:9px;background:var(--slate-100);border-radius:9px;font-size:11.5px;font-weight:700;cursor:pointer;"><input type="checkbox" onchange="selectAllSubjects(this.checked)"> Select All (${subs.length})</label>` + subs.map(s => `<label style="display:flex;align-items:center;gap:8px;padding:7px 11px;background:var(--slate-50);border-radius:7px;font-size:11.5px;cursor:pointer;"><input type="checkbox" class="sub-cb" value="${s}"> ${s}</label>`).join(''); validateBranch(); }
@@ -2172,7 +2255,7 @@ async function bulkMarkPreview(){ const students = Array.from(document.querySele
 async function confirmBulkMark(){ if (!pendingBulkAction || pendingBulkAction.type !== 'mark') return; closeModal('bulkMarkModal'); showDL('Marking…'); try { const res = await fetch(`${API}/api/admin/bulk-mark-attendance`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, studentRollNos: pendingBulkAction.students, dates: selectedBulkDates, subjects: []})}); const d = await res.json(); hideDL(); if (res.ok) { showFeedback('success','Bulk Marked',d.message||'Attendance marked.'); sendPushNotification('✅ Bulk Marked', `${pendingBulkAction.students.length} students × ${selectedBulkDates.length} dates`, { type: 'bulk_mark' }); } else showFeedback('error','Failed',d.error||'Could not mark'); } catch(e){ hideDL(); showFeedback('error','Network Error',e.message); } pendingBulkAction = null; }
 async function bulkDeletePreview(){ const students = Array.from(document.querySelectorAll('.bulk-stu:checked')).map(cb => ({roll: cb.value, name: cb.dataset.name})); if (!students.length) return toast('Select students','error'); if (!selectedBulkDates.length) return toast('Add dates','error'); let s = `<div style="margin-bottom:14px;padding:14px;background:var(--rose-50);border:1px solid #fecdd3;border-radius:10px;"><div style="font-size:13.5px;font-weight:800;color:var(--rose-700);">Confirm Delete</div><div style="font-size:12.5px;color:var(--rose-700);margin-top:5px;"><b>${students.length}</b> students × <b>${selectedBulkDates.length}</b> dates</div></div>`; $('bulkDeleteSummary').innerHTML = s; pendingBulkAction = { type: 'delete', students: students.map(x=>x.roll) }; openModal('bulkDeleteModal'); }
 async function confirmBulkDelete(){ if (!pendingBulkAction || pendingBulkAction.type !== 'delete') return; closeModal('bulkDeleteModal'); showDL('Deleting…'); try { const res = await fetch(`${API}/api/admin/bulk-delete-attendance`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, studentRollNos: pendingBulkAction.students, dates: selectedBulkDates})}); const d = await res.json(); hideDL(); if (res.ok) showFeedback('success','Deleted',d.message||'Records deleted.'); else showFeedback('error','Failed',d.error||'Could not delete'); } catch(e){ hideDL(); showFeedback('error','Network Error',e.message); } pendingBulkAction = null; }
-async function loadHolidays(){ try { const data = await ensureHolidays(); selectedHolidayDates.clear(); if ($('holidayList')) $('holidayList').innerHTML = data.length ? data.map(h => { const d = (h.date||'').split('T')[0]; return `<div class="holiday-row"><label style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;min-width:0;"><input type="checkbox" class="holiday-cb" value="${d}" onchange="toggleHolidaySelect('${d}', this.checked)"> <b>${fmtDatePretty(d)}</b> · ${h.reason}</label><button class="btn btn-danger btn-xs" onclick="deleteHoliday('${d}')">Delete</button></div>`; }).join('') : '<div class="empty">No holidays</div>'; } catch(e){} observeNewContent(); }
+async function loadHolidays(){ try { const data = await ensureHolidays(); selectedHolidayDates.clear(); if ($('holidayList')) $('holidayList').innerHTML = data.length ? data.map(h => { const d = (h.date||'').split('T')[0]; return `<div class="holiday-row"><label style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;min-width:0;"><input type="checkbox" class="holiday-cb" value="${d}" onchange="toggleHolidaySelect('${d}', this.checked)"> <b>${fmtDatePretty(d)}</b> · ${h.reason}</label><button class="btn btn-danger btn-xs" onclick="deleteHoliday('${d}')">${ICONS.trash} Delete</button></div>`; }).join('') : '<div class="empty">No holidays</div>'; } catch(e){} observeNewContent(); }
 function toggleHolidaySelect(d, c){ if (c) selectedHolidayDates.add(d); else selectedHolidayDates.delete(d); }
 async function deleteSelectedHolidays(){ if (selectedHolidayDates.size === 0) return toast('Select holidays','error'); if (!confirm(`Delete ${selectedHolidayDates.size}?`)) return; showDL('Deleting…'); let ok = 0; for (const d of selectedHolidayDates) { try { const res = await fetch(`${API}/api/admin/holiday/${d}`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})}); if (res.ok) ok++; } catch(e){} } hideDL(); toast(`Deleted ${ok}`,'success'); globalHolidays = []; await ensureHolidays(); loadHolidays(); }
 async function declareHoliday(){ const d = $('holidayDate').value, r = $('holidayReason').value.trim(); if (!d || !r) return toast('Enter date and reason','error'); try { const res = await fetch(`${API}/api/admin/holiday`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, date: d, reason: r})}); const x = await res.json(); if (res.ok) { showFeedback('success','Holiday Declared',`${fmtDatePretty(d)} — ${r}`); $('holidayReason').value = ''; globalHolidays = []; await ensureHolidays(); loadHolidays(); } else showFeedback('error','Failed',x.error||'Could not declare'); } catch(e){ showFeedback('error','Network Error',e.message); } }
@@ -2278,12 +2361,12 @@ async function updateRoll(){ const o = $('oldRoll').value.trim().toUpperCase(), 
 async function resetPassword(){ const r = $('pwResetRoll').value.trim().toUpperCase(), p = $('pwResetPass').value.trim(); if (!r) return toast('Enter ID','error'); try { const res = await fetch(`${API}/api/admin/reset-password`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, targetRollNo: r, newPassword: p})}); const d = await res.json(); if (res.ok) { showFeedback('success','Password Reset',`${r} password reset.`); $('pwResetRoll').value=''; $('pwResetPass').value=''; } else showFeedback('error','Failed',d.error||'Could not reset'); } catch(e){ showFeedback('error','Network Error',e.message); } }
 async function deleteUser(){ const r = $('deleteRoll').value.trim().toUpperCase(); if (!r) return toast('Enter ID','error'); if (!confirm('Permanently delete this account?')) return; try { const res = await fetch(`${API}/api/admin/delete-user`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, targetRollNo: r})}); const d = await res.json(); if (res.ok) { showFeedback('success','Deleted',`${r} has been deleted.`); $('deleteRoll').value = ''; fetchUsers(); } else showFeedback('error','Failed',d.error||'Could not delete'); } catch(e){ showFeedback('error','Network Error',e.message); } }
 async function impersonate(){ const r = $('impRollInput').value.trim().toUpperCase(); if (!r) return toast('Enter roll','error'); try { const res = await fetch(`${API}/api/admin/login-as-student`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, targetRollNo: r})}); const d = await res.json(); if (res.ok) { localStorage.setItem('BM_ORIG_TOKEN', localStorage.getItem('token')); localStorage.setItem('BM_ORIG_USER', localStorage.getItem('user')); localStorage.setItem('token', d.token); localStorage.setItem('user', JSON.stringify(d.user)); location.reload(); } else toast(d.error,'error'); } catch(e){} }
-async function loadLeaveRequests(){ try { const data = await fetch(`${API}/api/leave/requests/${currentUser.rollNo}`).then(x=>x.json()); const el = $('leaveRequestsList'); if (!data || !data.length) return el.innerHTML = '<div class="empty">No requests</div>'; el.innerHTML = data.map(l => `<div style="padding:12px 0;border-bottom:1px solid var(--slate-100);"><div style="display:flex;justify-content:space-between;align-items:center;"><b>${l.studentName}</b> <span class="badge ${l.status==='Approved'?'badge-success':l.status==='Rejected'?'badge-danger':'badge-warning'}">${l.status}</span></div><div class="text-xs text-muted" style="margin-top:4px;">${l.rollNo} · ${fmtDatePretty(l.fromDate)} → ${fmtDatePretty(l.toDate)}</div><div class="text-xs mt-1">${l.reason}</div>${l.status === 'Pending' ? `<div class="row mt-1"><button class="btn btn-success btn-xs" onclick="reviewLeave('${l._id}','Approved')">Approve</button><button class="btn btn-danger btn-xs" onclick="reviewLeave('${l._id}','Rejected')">Reject</button></div>` : ''}</div>`).join(''); } catch(e){} observeNewContent(); }
+async function loadLeaveRequests(){ try { const data = await fetch(`${API}/api/leave/requests/${currentUser.rollNo}`).then(x=>x.json()); const el = $('leaveRequestsList'); if (!data || !data.length) return el.innerHTML = '<div class="empty">No requests</div>'; el.innerHTML = data.map(l => `<div style="padding:12px 0;border-bottom:1px solid var(--slate-100);"><div style="display:flex;justify-content:space-between;align-items:center;"><b>${l.studentName}</b> <span class="badge ${l.status==='Approved'?'badge-success':l.status==='Rejected'?'badge-danger':'badge-warning'}">${l.status}</span></div><div class="text-xs text-muted" style="margin-top:4px;">${l.rollNo} · ${fmtDatePretty(l.fromDate)} → ${fmtDatePretty(l.toDate)}</div><div class="text-xs mt-1">${l.reason}</div>${l.status === 'Pending' ? `<div class="row mt-1"><button class="btn btn-success btn-xs" onclick="reviewLeave('${l._id}','Approved')">${ICONS.check} Approve</button><button class="btn btn-danger btn-xs" onclick="reviewLeave('${l._id}','Rejected')">${ICONS.cross} Reject</button></div>` : ''}</div>`).join(''); } catch(e){} observeNewContent(); }
 async function reviewLeave(id, action){ const n = prompt(`Note for ${action}:`) || ''; try { const res = await fetch(`${API}/api/leave/action/${id}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, action, adminNote: n})}); if (res.ok) { toast('Done','success'); loadLeaveRequests(); } } catch(e){} }
 async function loadDefaulters(){ const t = $('defThreshold').value || 75; try { const data = await fetch(`${API}/api/admin/defaulters/${currentUser.rollNo}?threshold=${t}`).then(x=>x.json()); const el = $('defaulterList'); if (!data.defaulters || !data.defaulters.length) return el.innerHTML = '<div class="empty">None below threshold</div>'; el.innerHTML = data.defaulters.map(s => `<div style="padding:10px 0;border-bottom:1px solid var(--slate-100);"><b>${s.rollNo}</b> · ${s.name} · ${s.branch} · <span class="badge badge-danger">${s.pct}%</span></div>`).join(''); } catch(e){} observeNewContent(); }
 
 /* ============================================================
-   NOTES & DOCUMENTS (FIXED UI)
+   NOTES & DOCUMENTS (FIXED UI & SVG)
    ============================================================ */
 async function loadStudentNotes() {
   const el = $('studentNotesList'); if (!el) return;
@@ -2302,8 +2385,8 @@ async function loadStudentNotes() {
           <div style="font-size:11px; color:var(--slate-500);">${escapeHtml(n.subject || '—')} · ${escapeHtml(n.branch || 'ALL')} · ${new Date(n.createdAt).toLocaleDateString('en-IN')}</div>
         </div>
         <div style="display:flex; gap:6px; flex-shrink:0;">
-          <a href="${API}${n.viewUrl}" target="_blank" class="btn btn-outline btn-xs" style="padding:5px 10px;">👁️ View</a>
-          <a href="${API}${n.downloadUrl}" class="btn btn-success btn-xs" style="padding:5px 10px;">📥 Download</a>
+          <a href="${API}${n.viewUrl}" target="_blank" class="btn btn-outline btn-xs" style="padding:5px 10px;">${ICONS.view} View</a>
+          <a href="${API}${n.downloadUrl}" class="btn btn-success btn-xs" style="padding:5px 10px;">${ICONS.download} Download</a>
         </div>
       </div>
     `).join('');
@@ -2374,9 +2457,9 @@ async function loadAdminNotes() {
           <div style="font-size:11px;color:var(--slate-500);">${escapeHtml(n.subject)} · ${escapeHtml(n.branch)} · ${new Date(n.createdAt).toLocaleDateString('en-IN')}</div>
         </div>
         <div style="display:flex; gap:6px;">
-          <a href="${API}${n.viewUrl}" target="_blank" class="btn btn-outline btn-xs">👁️ View</a>
-          <a href="${API}${n.downloadUrl}" class="btn btn-success btn-xs">📥 Download</a>
-          <button class="btn btn-danger btn-xs" onclick="deleteNote('${n._id}')">🗑️</button>
+          <a href="${API}${n.viewUrl}" target="_blank" class="btn btn-outline btn-xs">${ICONS.view} View</a>
+          <a href="${API}${n.downloadUrl}" class="btn btn-success btn-xs">${ICONS.download} Download</a>
+          <button class="btn btn-danger btn-xs" onclick="deleteNote('${n._id}')">${ICONS.trash} Delete</button>
         </div>
       </div>
     `).join('');
@@ -2407,7 +2490,7 @@ async function loadDocRequests() {
     
     el.innerHTML = reqs.map(r => {
       const fileHtml = r.fileName 
-        ? `<div style="margin-top:6px;"><button class="btn btn-success btn-xs" onclick="downloadDocReqFile('${r._id}')">📥 Download File</button> <span style="font-size:10px;color:var(--slate-500);margin-left:4px;">${escapeHtml(r.fileName)}</span></div>` 
+        ? `<div style="margin-top:6px;"><button class="btn btn-outline btn-xs" onclick="downloadDocReqFile('${r._id}', 'view')">${ICONS.view} View File</button> <button class="btn btn-success btn-xs" onclick="downloadDocReqFile('${r._id}', 'download')">${ICONS.download} Download</button> <span style="font-size:10px;color:var(--slate-500);margin-left:4px;">${escapeHtml(r.fileName)}</span></div>` 
         : '';
       
       return `
@@ -2417,8 +2500,8 @@ async function loadDocRequests() {
         ${r.reason ? `<div style="font-size:11px;color:var(--slate-600);margin-top:5px;">Reason: ${escapeHtml(r.reason)}</div>` : ''}
         ${fileHtml}
         <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
-          <button class="btn btn-success btn-xs" onclick="approveDocRequest('${r._id}')">✅ Fulfil</button>
-          <button class="btn btn-danger btn-xs" onclick="rejectDocRequest('${r._id}')">❌ Reject</button>
+          <button class="btn btn-success btn-xs" onclick="approveDocRequest('${r._id}')">${ICONS.check} Fulfil</button>
+          <button class="btn btn-danger btn-xs" onclick="rejectDocRequest('${r._id}')">${ICONS.cross} Reject</button>
         </div>
       </div>
     `;
@@ -2426,8 +2509,8 @@ async function loadDocRequests() {
   } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
 }
 
-async function downloadDocReqFile(reqId) {
-  showDL('Downloading…');
+async function downloadDocReqFile(reqId, action = 'download') {
+  showDL('Processing…');
   try {
     const res = await fetch(`${API}/api/notes/request-file/${reqId}`);
     const data = await res.json();
@@ -2440,10 +2523,11 @@ async function downloadDocReqFile(reqId) {
     const byteArray = new Uint8Array(byteNumbers);
     const blob = new Blob([byteArray], {type: data.mimeType || 'application/octet-stream'});
     
-    universalDownload(blob, data.fileName || 'document.pdf');
+    if (action === 'view') viewPdfBlob(blob);
+    else universalDownload(blob, data.fileName || 'document.pdf');
   } catch (e) {
     hideDL();
-    toast('Download failed: ' + e.message, 'error');
+    toast('Failed: ' + e.message, 'error');
   }
 }
 
@@ -2684,7 +2768,7 @@ async function fetchTeacherStudents(){
     const fr = $('facReportStudent');
     if (fr) fr.innerHTML = '<option value="">Select Student…</option>' + data.map(s=>`<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`).join('');
     $('facTotalStudents').textContent = data.length;
-    tb.innerHTML = data.map(s => `<tr><td><b>${s.rollNo}</b></td><td>${s.name}</td><td><button class="btn btn-outline btn-xs" onclick="viewStudentRecords('${s.rollNo}')">View</button></td></tr>`).join('');
+    tb.innerHTML = data.map(s => `<tr><td><b>${s.rollNo}</b></td><td>${s.name}</td><td><button class="btn btn-outline btn-xs" onclick="viewStudentRecords('${s.rollNo}')">${ICONS.view} View</button></td></tr>`).join('');
     const sorted = data.sort((a,b) => a.rollNo.localeCompare(b.rollNo, undefined, {numeric: true}));
     $('facBulkStudents').innerHTML = `<label class="bulk-select-item" style="font-weight:700;border-bottom:1px solid var(--slate-200);margin-bottom:6px;padding-bottom:8px;"><input type="checkbox" onchange="document.querySelectorAll('.fac-bulk-stu').forEach(c=>c.checked=this.checked)"><span class="bulk-name" style="font-weight:700;color:var(--slate-900);">Select All (${sorted.length})</span></label>` + sorted.map(s => `<label class="bulk-select-item"><input type="checkbox" class="fac-bulk-stu" value="${escapeHtml(s.rollNo)}" data-name="${escapeHtml(s.name)}"><span class="bulk-roll">${escapeHtml(s.rollNo)}</span><span class="bulk-name">${escapeHtml(s.name)}</span></label>`).join('');
     const today = fmtDate(new Date());
@@ -2740,7 +2824,40 @@ function removeFacBulkDate(d){ facSelectedBulkDates = facSelectedBulkDates.filte
 async function facBulkMark(){ const students = Array.from(document.querySelectorAll('.fac-bulk-stu:checked')).map(cb => cb.value); if (!students.length) return toast('Select students','error'); if (!facSelectedBulkDates.length) return toast('Add dates','error'); const status = $('facBulkStatus').value; if (!confirm(`Mark ${status} for ${students.length} students × ${facSelectedBulkDates.length} dates?`)) return; showDL('Marking bulk…'); try { const res = await fetch(`${API}/api/teacher/bulk-mark-attendance`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, studentRollNos: students, dates: facSelectedBulkDates, status }) }); const d = await res.json(); hideDL(); if (res.ok) { showFeedback('success','Bulk Marked',d.message || 'Attendance marked.'); sendPushNotification('✅ Bulk Marked', `${students.length} students × ${facSelectedBulkDates.length} dates`, { type: 'fac_bulk' }); facSelectedBulkDates = []; renderFacBulkDates(); fetchTeacherStudents(); loadFacultyRecent(); } else showFeedback('error','Failed',d.error || 'Could not mark'); } catch(e){ hideDL(); showFeedback('error','Network Error',e.message); } }
 async function facBulkDelete(){ const students = Array.from(document.querySelectorAll('.fac-bulk-stu:checked')).map(cb => cb.value); if (!students.length) return toast('Select students','error'); if (!facSelectedBulkDates.length) return toast('Add dates','error'); if (!confirm(`Delete ${students.length} students × ${facSelectedBulkDates.length} dates?`)) return; showDL('Deleting…'); try { const res = await fetch(`${API}/api/teacher/bulk-delete-attendance`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, studentRollNos: students, dates: facSelectedBulkDates }) }); const d = await res.json(); hideDL(); if (res.ok) { showFeedback('success','Deleted',d.message || 'Records deleted.'); facSelectedBulkDates = []; renderFacBulkDates(); fetchTeacherStudents(); loadFacultyRecent(); } else showFeedback('error','Failed',d.error || 'Could not delete'); } catch(e){ hideDL(); showFeedback('error','Network Error',e.message); } }
 function toggleFacMonth(){ const v = $('facReportRange').value; $('facReportMonth').style.display = v === 'SELECTED_MONTH' ? 'block' : 'none'; $('facCustomRangeRow').style.display = v === 'CUSTOM' ? 'flex' : 'none'; }
-async function facReport(fmt){ const roll = $('facReportStudent').value; if (!roll) return toast('Select student','error'); const range = $('facReportRange').value; showDL('Generating…'); try { const records = await fetch(`${API}/api/attendance/student/${roll}/${currentUser.rollNo}`).then(r=>r.json()); const subs = window._facSubs || []; let filtered = records.filter(r => subs.includes(r.subject)); let startStr, endStr; if (range === 'FULL_SEMESTER') { startStr = '2026-07-15'; endStr = '2026-12-31'; } else if (range === 'CURRENT_MONTH') { const r = getCurrentMonthRangeStrings(); startStr = r.start; endStr = r.end; } else if (range === 'SELECTED_MONTH') { const r = getMonthRangeStrings(parseInt($('facReportMonth').value)); startStr = r.start; endStr = r.end; } else { const s = $('facReportStart').value, e = $('facReportEnd').value; if (!s || !e) { hideDL(); return toast('Pick dates','error'); } startStr = s; endStr = e; } const todayStr = fmtDate(new Date()); if (endStr > todayStr) endStr = todayStr; filtered = filtered.filter(r => r.date >= startStr && r.date <= endStr); if (filtered.length === 0) { hideDL(); return toast('No records in range','error'); } if (fmt === 'pdf') { const blob = generatePDFBlob('Teacher Report', `${roll} · ${currentUser.name}`, [`Range: ${startStr} → ${endStr}`], ['Date','Subject','Status'], filtered.map(r => [fmtDatePretty(r.date), r.subject, r.status]), null); hideDL(); if (!blob) return toast('PDF library failed','error'); universalDownload(blob, `teacher_report_${roll}_${Date.now()}.pdf`); } else { let csv = `Teacher Report\nStudent: ${roll}\nTeacher: ${currentUser.name}\nRange: ${startStr} to ${endStr}\n\nDate,Subject,Status\n`; filtered.forEach(r => { csv += `${r.date},${r.subject},${r.status}\n`; }); download(csv, `teacher_report_${roll}.csv`); hideDL(); } } catch(e){ hideDL(); toast('Failed: ' + e.message,'error'); } }
+
+async function facReport(fmt, action = 'download'){ 
+  const roll = $('facReportStudent').value; 
+  if (!roll) return toast('Select student','error'); 
+  const range = $('facReportRange').value; 
+  showDL('Generating…'); 
+  try { 
+    const records = await fetch(`${API}/api/attendance/student/${roll}/${currentUser.rollNo}`).then(r=>r.json()); 
+    const subs = window._facSubs || []; 
+    let filtered = records.filter(r => subs.includes(r.subject)); 
+    let startStr, endStr; 
+    if (range === 'FULL_SEMESTER') { startStr = '2026-07-15'; endStr = '2026-12-31'; } 
+    else if (range === 'CURRENT_MONTH') { const r = getCurrentMonthRangeStrings(); startStr = r.start; endStr = r.end; } 
+    else if (range === 'SELECTED_MONTH') { const r = getMonthRangeStrings(parseInt($('facReportMonth').value)); startStr = r.start; endStr = r.end; } 
+    else { const s = $('facReportStart').value, e = $('facReportEnd').value; if (!s || !e) { hideDL(); return toast('Pick dates','error'); } startStr = s; endStr = e; } 
+    const todayStr = fmtDate(new Date()); 
+    if (endStr > todayStr) endStr = todayStr; 
+    filtered = filtered.filter(r => r.date >= startStr && r.date <= endStr); 
+    if (filtered.length === 0) { hideDL(); return toast('No records in range','error'); } 
+    if (fmt === 'pdf') { 
+      const blob = generatePDFBlob('Teacher Report', `${roll} · ${currentUser.name}`, [`Range: ${startStr} → ${endStr}`], ['Date','Subject','Status'], filtered.map(r => [fmtDatePretty(r.date), r.subject, r.status]), null); 
+      hideDL(); 
+      if (!blob) return toast('PDF library failed','error'); 
+      if (action === 'view') viewPdfBlob(blob);
+      else universalDownload(blob, `teacher_report_${roll}_${Date.now()}.pdf`); 
+    } else { 
+      let csv = `Teacher Report\nStudent: ${roll}\nTeacher: ${currentUser.name}\nRange: ${startStr} to ${endStr}\n\nDate,Subject,Status\n`; 
+      filtered.forEach(r => { csv += `${r.date},${r.subject},${r.status}\n`; }); 
+      download(csv, `teacher_report_${roll}.csv`); 
+      hideDL(); 
+    } 
+  } catch(e){ hideDL(); toast('Failed: ' + e.message,'error'); } 
+}
+
 async function applyLeave(){ const f = $('leaveFrom').value, t = $('leaveTo').value, r = $('leaveReason').value.trim(); if (!f || !t || !r) return showFeedback('warning','Missing Fields','Dates and reason are required.'); try { const res = await fetch(`${API}/api/leave/apply`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo, fromDate:f, toDate:t, reason:r, leaveType:$('leaveType').value})}); const d = await res.json(); if (res.ok) { $('leaveReason').value = ''; loadMyLeaves(); showFeedback('success','Leave Applied',`${fmtDatePretty(f)} → ${fmtDatePretty(t)}\n\nDuty leave will be marked after admin approval.`); } else showFeedback('error','Failed',d.error||'Could not apply'); } catch(e){ showFeedback('error','Network Error',e.message); } }
 async function loadMyLeaves(){ try { const data = await fetch(`${API}/api/leave/my/${currentUser.rollNo}`).then(x=>x.json()); const el = $('myLeaveList'); el.innerHTML = data.length ? data.map(l => `<div style="padding:10px 0;border-bottom:1px solid var(--slate-100);"><div style="display:flex;justify-content:space-between;"><b>${fmtDatePretty(l.fromDate)} → ${fmtDatePretty(l.toDate)}</b> <span class="badge ${l.status==='Approved'?'badge-success':l.status==='Rejected'?'badge-danger':'badge-warning'}">${l.status}</span></div><div class="text-xs text-muted mt-1">${l.leaveType}: ${l.reason}</div></div>`).join('') : '<div class="empty">No applications</div>'; } catch(e){} observeNewContent(); }
 
@@ -2916,7 +3033,7 @@ function appendChat(role, text, renderMD, showDL2, tSec, umsg){
     const stepsHtml = steps.map(s => `<span class="tb-step">${escapeHtml(s)}</span>`).join('');
     thoughtHtml = `<div class="thought-badge" onclick="this.classList.toggle('expanded')"><div class="tb-head"><svg class="tb-icon" viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-6.88 17.24c.42.38.68.93.68 1.5V22h12.4v-1.26c0-.57.26-1.12.68-1.5A10 10 0 0 0 12 2z"/></svg><span class="tb-text">Thought for <b>${tSec}</b>s</span><svg class="tb-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div><div class="tb-body">${stepsHtml}</div></div>`;
   }
-  if (role === 'bot') { actions = `<div class="msg-actions"><button class="msg-action-btn" onclick="copyMessageText(this, '${id}')"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy</button>`; if (showDL2) actions += `<button class="msg-action-btn download-btn" onclick="toggleDownloadMenu(event, '${id}')"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download</button><div class="dl-menu" id="dlmenu_${id}"><div class="dl-menu-title">Download as</div><button onclick="downloadMessagePDF('${id}')">PDF</button><button onclick="downloadMessageTXT('${id}')">Text File</button><button onclick="downloadMessageExcel('${id}')">Excel</button></div>`; actions += `</div>`; }
+  if (role === 'bot') { actions = `<div class="msg-actions"><button class="msg-action-btn" onclick="copyMessageText(this, '${id}')"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy</button>`; if (showDL2) actions += `<button class="msg-action-btn download-btn" onclick="toggleDownloadMenu(event, '${id}')"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download</button><div class="dl-menu" id="dlmenu_${id}"><div class="dl-menu-title">Download as</div><button onclick="downloadMessagePDF('${id}', 'view')">${ICONS.view} View</button><button onclick="downloadMessagePDF('${id}', 'download')">${ICONS.download} PDF</button><button onclick="downloadMessageTXT('${id}')">📄 Text File</button><button onclick="downloadMessageExcel('${id}')">📊 Excel</button></div>`; actions += `</div>`; }
   else if (role === 'user') actions = `<div class="msg-actions"><button class="msg-action-btn" onclick="copyMessageText(this, '${id}')"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy</button></div>`;
   div.innerHTML = `${thoughtHtml}<div class="bubble" id="${id}" data-raw="${encodeURIComponent(text)}">${content}<span class="time">${time}</span></div>${actions}`;
   $('chatMsgs').appendChild(div); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
@@ -2924,7 +3041,8 @@ function appendChat(role, text, renderMD, showDL2, tSec, umsg){
 function copyMessageText(btn, id){ const el = document.getElementById(id); if (!el) return; const raw = decodeURIComponent(el.dataset.raw || el.innerText); const t = raw.replace(/<span class="time">.*<\/span>$/, '').trim(); if (navigator.clipboard) navigator.clipboard.writeText(t).then(() => { const o = btn.innerHTML; btn.classList.add('copied'); btn.innerHTML = '✓ Copied'; setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = o; }, 1800); }); }
 function toggleDownloadMenu(e, msgId){ if (e && e.stopPropagation) e.stopPropagation(); const menuId = 'dlmenu_' + msgId; const menu = document.getElementById(menuId); if (!menu) return; if (openDownloadMenuId && openDownloadMenuId !== menuId) { const old = document.getElementById(openDownloadMenuId); if (old) old.classList.remove('open'); } if (menu.classList.contains('open')) { menu.classList.remove('open'); openDownloadMenuId = null; return; } const btn = e.currentTarget || e.target; const r = btn.getBoundingClientRect(); menu.style.visibility = 'hidden'; menu.classList.add('open'); const mr = menu.getBoundingClientRect(); let top = r.bottom + 6, left = r.left; if (top + mr.height > window.innerHeight - 12) top = r.top - mr.height - 6; if (left + mr.width > window.innerWidth - 12) left = window.innerWidth - mr.width - 12; if (left < 12) left = 12; if (top < 12) top = 12; menu.style.position = 'fixed'; menu.style.top = top + 'px'; menu.style.left = left + 'px'; menu.style.bottom = 'auto'; menu.style.right = 'auto'; menu.style.visibility = ''; openDownloadMenuId = menuId; }
 function getMessageText(msgId){ const el = document.getElementById(msgId); if (!el) return ''; return decodeURIComponent(el.dataset.raw || ''); }
-function downloadMessagePDF(msgId){
+
+function downloadMessagePDF(msgId, action = 'download'){
   try {
     const text = getMessageText(msgId); if (!text) return toast('Nothing to download','error');
     const JsPDF = ensureJsPDF(); if (!JsPDF) return;
@@ -2937,10 +3055,12 @@ function downloadMessagePDF(msgId){
     const pageH = doc.internal.pageSize.height;
     lines.forEach(line => { if (y > pageH - 15) { doc.addPage(); y = 20; } doc.text(line, 14, y); y += 5.5; });
     const blob = doc.output('blob');
-    universalDownload(blob, `bm-bot-${Date.now()}.pdf`);
+    if (action === 'view') viewPdfBlob(blob);
+    else universalDownload(blob, `bm-bot-${Date.now()}.pdf`);
     const menu = document.getElementById('dlmenu_' + msgId); if (menu) menu.classList.remove('open'); openDownloadMenuId = null;
   } catch(e) { toast('Failed: ' + e.message, 'error'); }
 }
+
 function downloadMessageTXT(msgId){ try { const text = getMessageText(msgId); if (!text) return toast('Nothing','error'); const blob = new Blob([text], { type: 'text/plain;charset=utf-8' }); universalDownload(blob, `bm-bot-${Date.now()}.txt`); const m = document.getElementById('dlmenu_' + msgId); if (m) m.classList.remove('open'); openDownloadMenuId = null; } catch(e){ toast('Failed','error'); } }
 function downloadMessageExcel(msgId){ try { const text = getMessageText(msgId); if (!text) return toast('Nothing','error'); const XLSX = window.XLSX; if (!XLSX) return toast('Excel library not loaded','error'); const wb = XLSX.utils.book_new(); const rows = text.split('\n').map(l => [l]); const ws = XLSX.utils.aoa_to_sheet(rows); XLSX.utils.book_append_sheet(wb, ws, 'BM Bot'); const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }); const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); universalDownload(blob, `bm-bot-${Date.now()}.xlsx`); const m = document.getElementById('dlmenu_' + msgId); if (m) m.classList.remove('open'); openDownloadMenuId = null; } catch(e){ toast('Failed','error'); } }
 function renderMarkdown(text){ if (!text) return ''; let html = escapeHtml(text); html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>'); html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>'); html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>'); html = html.replace(/\*\*([^*]+?)\*\*/g, '<strong>$1</strong>'); html = html.replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, '$1<em>$2</em>'); html = html.replace(/`([^`]+)`/g, '<code>$1</code>'); html = html.replace(/\n{2,}/g, '<br><br>'); html = html.replace(/\n/g, '<br>'); return html; }
@@ -3131,17 +3251,42 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('message', (event) => {
     const msg = event.data;
     if (msg && msg.__bmNotificationClick) {
+      // 1. If Download action
       if (msg.action === 'download' && msg.downloadUrl) {
-         // Trigger file download and Open With
          downloadAndOpenFile(msg.downloadUrl, msg.fileName || 'document.pdf');
-      } else if (msg.targetUrl) {
-         // Handle deep links sent from SW
-         const urlParams = new URL(msg.targetUrl).searchParams;
-         const tabParam = urlParams.get('tab');
-         if (tabParam) {
-            window.history.pushState({}, '', `/?tab=${tabParam}`);
-            handleDeepLink();
-         }
+         return;
+      }
+      
+      // 2. Deep Link Fix for Median App
+      if (msg.targetUrl) {
+        try {
+          const urlObj = new URL(msg.targetUrl);
+          const tabParam = urlObj.searchParams.get('tab');
+          
+          if (tabParam) {
+            // App.js ko bolo ki wo specific tab khole
+            setTimeout(() => {
+              if (tabParam === 'admin') {
+                switchTab('tab-admin');
+                showAdmin('a-account'); // Direct Account requests
+              } else if (tabParam === 'notes') {
+                switchTab('tab-mark');
+                const notesSec = $('sec-notes');
+                if(notesSec) {
+                    notesSec.style.display = 'block';
+                    const body = notesSec.querySelector('.collapsible-body');
+                    if(body) body.classList.add('open');
+                    notesSec.scrollIntoView({ behavior: 'smooth' });
+                }
+              } else if (tabParam === 'mark') {
+                switchTab('tab-mark');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            }, 500); // Wait for app to load
+          }
+        } catch (e) {
+          console.log("Deep link parse error", e);
+        }
       }
     }
   });
