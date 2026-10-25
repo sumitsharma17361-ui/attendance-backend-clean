@@ -1,6 +1,6 @@
 // ============================================================
 // firebase-messaging-sw.js — Service Worker for Push Notifications
-// BM Group ERP · v4.5 (Deep Linking + Fixed App Icons)
+// BM Group ERP · v5.0 (Deep Linking + Custom App Icon + Open With)
 // Handles: attendance, notes, docs, fees, library, exams,
 //          results, announcements, device resets, undo alerts,
 //          emergency broadcasts, passcode publishes
@@ -21,18 +21,13 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // ============================================================
-//  ICON / BADGE (inline SVG data URIs — no external fetch needed)
+//  ICON / BADGE (Custom App Icon + White Status Bar Icon)
 // ============================================================
-// Large Icon (App Icon) - Colored
-const ICON_URL = 'data:image/svg+xml;utf8,' + encodeURIComponent(
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-     <rect width="100" height="100" rx="22" fill="#2563eb"/>
-     <text x="50" y="68" font-size="46" text-anchor="middle" fill="white"
-           font-family="Arial,sans-serif" font-weight="900">BM</text>
-   </svg>`
-);
+// Large Icon (App Icon) - Colored (Aapka Diya Hua URL)
+const ICON_URL = 'https://media.collegedekho.com/media/img/institute/logo/College_logo.png';
 
 // Badge (Status bar) - MUST be pure white with transparent background for Android
+// Android requires a monochrome white icon for the status bar, otherwise it shows a square/airplane
 const BADGE_URL = 'data:image/svg+xml;utf8,' + encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
      <text x="50" y="68" font-size="46" text-anchor="middle" fill="white"
@@ -603,8 +598,8 @@ messaging.onBackgroundMessage((payload) => {
   // Build options
   const options = {
     body: rawBody,
-    icon: ICON_URL,
-    badge: BADGE_URL,
+    icon: ICON_URL, // Custom App Icon from URL
+    badge: BADGE_URL, // White SVG
     image: data.image || undefined,
     vibrate: cfg.vibrate || [200, 100, 200],
     requireInteraction: !!cfg.requireInteraction,
@@ -646,7 +641,7 @@ messaging.onBackgroundMessage((payload) => {
 });
 
 // ============================================================
-//  NOTIFICATION CLICK HANDLER (Deep Linking + App Open)
+//  NOTIFICATION CLICK HANDLER
 // ============================================================
 self.addEventListener('notificationclick', (event) => {
   console.log('[SW] Notification clicked:', event.notification);
@@ -663,17 +658,16 @@ self.addEventListener('notificationclick', (event) => {
     return;
   }
 
-  // Get target URL (Deep Link or Direct Download)
-  const targetUrl = notifData.url || getNotificationTargetUrl(notifData);
-  
   // Build absolute target URL (respect app base path)
   let absoluteTarget;
   try {
-    absoluteTarget = new URL(targetUrl, self.location.origin).href;
+    absoluteTarget = new URL(notifData.url || getNotificationTargetUrl(notifData), self.location.origin).href;
   } catch (e) {
     absoluteTarget = self.location.origin + '/';
   }
 
+  // If it's a download request, prioritize opening the direct URL in a new window 
+  // to trigger Android's native "Open With" file handler.
   const finalTarget = (action === 'download' && notifData.downloadUrl) ? notifData.downloadUrl : absoluteTarget;
 
   event.waitUntil(
@@ -683,7 +677,7 @@ self.addEventListener('notificationclick', (event) => {
         try {
           const clientUrl = new URL(client.url);
           if (clientUrl.origin === self.location.origin) {
-            // Focus and send postMessage so the app can react
+            // Send postMessage so the app can react
             client.postMessage({
               __bmNotificationClick: true,
               data: notifData,
@@ -692,9 +686,13 @@ self.addEventListener('notificationclick', (event) => {
               targetUrl: finalTarget
             });
             
-            if ('focus' in client) {
+            // If downloading, open a new window so Android triggers "Open With"
+            if (action === 'download') {
+              if (clients.openWindow) return clients.openWindow(finalTarget);
+            } 
+            // Otherwise, focus the app and navigate to the specific tab
+            else if ('focus' in client) {
               return client.focus().then((focusedClient) => {
-                // After focus, navigate to specific tab
                 if (focusedClient && 'navigate' in focusedClient) {
                   return focusedClient.navigate(finalTarget);
                 }
@@ -812,12 +810,12 @@ self.addEventListener('message', (event) => {
 //  INSTALL & ACTIVATE
 // ============================================================
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing v4.5...');
+  console.log('[SW] Installing v5.0...');
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activated v4.5');
+  console.log('[SW] Activated v5.0');
   event.waitUntil(
     (async () => {
       // Take control of all clients immediately
@@ -873,5 +871,5 @@ self.addEventListener('fetch', (event) => {
 // ============================================================
 //  LOG
 // ============================================================
-console.log('%c[SW] BM Group ERP — Service Worker v4.5 ready ✅', 'color:#10b981;font-weight:900;font-size:14px;');
+console.log('%c[SW] BM Group ERP — Service Worker v5.0 ready ✅', 'color:#10b981;font-weight:900;font-size:14px;');
 console.log('[SW] Handles: attendance, notes, docs, fees, library, exams, results, emergency alerts');
