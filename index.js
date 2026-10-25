@@ -2211,8 +2211,23 @@ app.post('/api/auth/login', async (req, res) => {
       if (correctBranch && user.branch !== correctBranch) user.branch = correctBranch;
 
       if (user.boundDeviceId && user.boundDeviceId !== deviceId) {
-        return res.status(403).json({ error: '⛔ Unauthorized Device! You can only login from your registered phone. Please use "Reset Device" if you changed your phone.' });
-      }
+  // ★ Auto-create account request for admin & send notification
+  const existingReq = await AccountRequest.findOne({ rollNo: cleanRoll, type: 'device_reset', status: 'Pending' });
+  if (!existingReq) {
+    await AccountRequest.create({ 
+      rollNo: cleanRoll, 
+      type: 'device_reset', 
+      reason: `Auto-request: New device login attempt detected. Device: ${deviceName || 'Unknown'}` 
+    });
+    sendPushToRole('admin', '📱 Unauthorized Device Alert', `${user.name} (${cleanRoll}) tried to login from a new device. Reset request created automatically.`, { type: 'account_request' }).catch(() => {});
+  }
+  
+  return res.status(403).json({ 
+    error: '⛔ Unauthorized Device! A reset request has been automatically sent to the admin. Please wait for approval.',
+    requiresDeviceReset: true 
+  });
+}
+
 
       if (!user.boundDeviceId && deviceId) {
         user.boundDeviceId = deviceId;
