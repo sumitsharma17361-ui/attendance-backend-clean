@@ -1217,7 +1217,7 @@
   </div>
 </div>
 
-<!-- ★ NEW: Leaderboard Modal (Pushed Down to avoid header conflict) -->
+<!-- ★ UPDATED: Leaderboard Modal — Login Streak replaced with Overall Percentage -->
 <div class="modal-backdrop safe-top-modal" id="leaderboardModal" style="z-index: 9500; padding-top: 120px !important;">
   <div class="modal wide">
     <div class="modal-header">
@@ -1226,8 +1226,8 @@
     </div>
     <div class="modal-body" style="padding-top:10px;">
       <div style="display:flex; gap:8px; margin-bottom:16px;">
-        <button class="btn btn-primary btn-sm" style="flex:1;" onclick="loadLeaderboard('attendance')">🔥 Attendance Streak</button>
-        <button class="btn btn-outline btn-sm" style="flex:1;" onclick="loadLeaderboard('login')">📅 Login Streak</button>
+        <button class="btn btn-primary btn-sm" style="flex:1;" onclick="loadLeaderboard('attendance')">🔥 Current Streak</button>
+        <button class="btn btn-outline btn-sm" style="flex:1;" onclick="loadLeaderboard('percentage')">📊 Overall Percentage</button>
       </div>
       <div id="leaderboardList" style="display:flex; flex-direction:column; gap:8px;">
         <div class="empty">Loading...</div>
