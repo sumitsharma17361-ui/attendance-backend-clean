@@ -1,4 +1,4 @@
-// ================= index.js v5.3.1 — Full Backend (Razorpay + Subscriptions + Gamification + Streak Fixes + Past Recalculate + Performance Fixes) =================
+// ================= index.js v5.3.2 — Full Backend (Razorpay + Subscriptions + Gamification + Streak Fixes + Past Recalculate + Performance Fixes) =================
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -1672,6 +1672,26 @@ app.post('/api/admin/bulk-reset-device', async (req, res) => {
 // ============================================================
 //  NOTES & DOCUMENTS
 // ============================================================
+// ★ NEW HELPER: Force correct MIME type for inline viewing
+function getSafeMimeType(fileName, originalMime) {
+  if (!fileName) return originalMime || 'application/octet-stream';
+  const ext = fileName.split('.').pop().toLowerCase();
+  if (ext === 'pdf') return 'application/pdf';
+  if (ext === 'png') return 'image/png';
+  if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+  if (ext === 'gif') return 'image/gif';
+  if (ext === 'webp') return 'image/webp';
+  if (ext === 'txt') return 'text/plain';
+  if (ext === 'mp4') return 'video/mp4';
+  if (ext === 'mp3') return 'audio/mpeg';
+  
+  // If original is octet-stream, try to guess from extension, otherwise fallback to original
+  if (!originalMime || originalMime === 'application/octet-stream') {
+    return 'application/octet-stream'; // Let browser handle it as download if it's a completely unknown binary
+  }
+  return originalMime;
+}
+
 app.get('/api/notes/:branch', async (req, res) => {
   try {
     const branch = (req.params.branch || 'CSE').toUpperCase();
@@ -1688,7 +1708,11 @@ app.get('/api/notes/view/:noteId', async (req, res) => {
   try {
     const file = await NotesFile.findOne({ noteId: req.params.noteId });
     if (!file) return res.status(404).json({ error: 'File not found' });
-    res.setHeader('Content-Type', file.mimeType || 'application/octet-stream');
+    
+    // ★ FIX: Ensure mobile browsers recognize PDF/Images to open inline
+    const safeMime = getSafeMimeType(file.fileName, file.mimeType);
+    
+    res.setHeader('Content-Type', safeMime);
     res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(file.fileName)}"`);
     res.setHeader('Content-Length', file.data.length);
     res.send(file.data);
@@ -1863,8 +1887,11 @@ app.get('/api/notes/request-file/:reqId', async (req, res) => {
       const noteId = docReq.adminNote.replace('noteId:', '');
       const file = await NotesFile.findOne({ noteId });
       if (!file) return res.status(404).json({ error: 'File not found' });
-      res.setHeader('Content-Type', file.mimeType || 'application/octet-stream');
-      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.fileName)}"`);
+      
+      const safeMime = getSafeMimeType(file.fileName, file.mimeType);
+      
+      res.setHeader('Content-Type', safeMime);
+      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(file.fileName)}"`);
       return res.send(file.data);
     }
     res.status(404).json({ error: 'No file attached' });
@@ -5407,7 +5434,7 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, async () => {
   console.log('');
   console.log('╔══════════════════════════════════════════════════════╗');
-  console.log('║       🎓 BM GROUP ERP BACKEND · v5.3.1              ║');
+  console.log('║       🎓 BM GROUP ERP BACKEND · v5.3.2              ║');
   console.log('╠══════════════════════════════════════════════════════╣');
   console.log(`║  🚀 Port: ${String(PORT).padEnd(44)}║`);
   console.log(`║  🌍 TZ:   ${String(process.env.TZ || 'Asia/Kolkata').padEnd(44)}║`);
@@ -5416,11 +5443,10 @@ app.listen(PORT, async () => {
   console.log(`║  🔥 FCM:  ${(fcmReady ? 'READY ✅' : 'DISABLED ⚠️').padEnd(43)}║`);
   console.log(`║  💳 Pay:  ${(razorpayReady ? 'Razorpay READY ✅' : 'Razorpay DISABLED ⚠️').padEnd(43)}║`);
   console.log('╠══════════════════════════════════════════════════════╣');
-  console.log('║  ✨ NEW in v5.3.1:                                   ║');
-  console.log('║     • Fixed 10s Leaderboard load (parallel fetch)   ║');
-  console.log('║     • Fixed Attendance Streak (no DB loop inside)   ║');
-  console.log('║     • Fixed Holiday Class Notifications             ║');
-  console.log('║     • Branch filter support for Leaderboard         ║');
+  console.log('║  ✨ NEW in v5.3.2:                                   ║');
+  console.log('║     • Fixed Note PDF View (Inline on Mobile)        ║');
+  console.log('║     • Fixed Leaderboard Fast Load (No DB loop)      ║');
+  console.log('║     • Uses Lecture-wise Attendance Streak           ║');
   console.log('╚══════════════════════════════════════════════════════╝');
   console.log('');
 
@@ -5446,5 +5472,5 @@ process.on('SIGINT', async () => {
 });
 
 // ============================================================
-//  END OF FILE — index.js v5.3.1
+//  END OF FILE — index.js v5.3.2
 // ============================================================
