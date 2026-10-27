@@ -98,7 +98,7 @@ let passcodeCountdownInterval = null;
 let pendingUndoApprovalId = null;
 let sessionCheckInterval = null;
 let userSubscription = { tier: 'free', expiresAt: null };
-let leaderboardCache = { attendance: null, login: null };
+let leaderboardCache = { attendance: null, login: null, percentage: null };
 
 /* ============================================================
    ★ CUSTOM LAYOUT FIX INJECTION & MOBILE SCROLL FIX
@@ -2385,7 +2385,7 @@ async function loadStudentNotes() {
           <div style="font-size:11px; color:var(--slate-500);">${escapeHtml(n.subject || '—')} · ${escapeHtml(n.branch || 'ALL')} · ${new Date(n.createdAt).toLocaleDateString('en-IN')}</div>
         </div>
         <div style="display:flex; gap:6px; flex-shrink:0;">
-          <a href="${API}${n.viewUrl}" target="_blank" class="btn btn-outline btn-xs" style="padding:5px 10px;">${ICONS.view} View</a>
+          <button onclick="openDocumentPreview('${n._id}')" class="btn btn-outline btn-xs" style="padding:5px 10px;">${ICONS.view} View</button>
           <a href="${API}${n.downloadUrl}" class="btn btn-success btn-xs" style="padding:5px 10px;">${ICONS.download} Download</a>
         </div>
       </div>
@@ -2457,7 +2457,7 @@ async function loadAdminNotes() {
           <div style="font-size:11px;color:var(--slate-500);">${escapeHtml(n.subject)} · ${escapeHtml(n.branch)} · ${new Date(n.createdAt).toLocaleDateString('en-IN')}</div>
         </div>
         <div style="display:flex; gap:6px;">
-          <a href="${API}${n.viewUrl}" target="_blank" class="btn btn-outline btn-xs">${ICONS.view} View</a>
+          <button onclick="openDocumentPreview('${n._id}')" class="btn btn-outline btn-xs">${ICONS.view} View</button>
           <a href="${API}${n.downloadUrl}" class="btn btn-success btn-xs">${ICONS.download} Download</a>
           <button class="btn btn-danger btn-xs" onclick="deleteNote('${n._id}')">${ICONS.trash} Delete</button>
         </div>
@@ -2490,7 +2490,7 @@ async function loadDocRequests() {
     
     el.innerHTML = reqs.map(r => {
       const fileHtml = r.fileName 
-        ? `<div style="margin-top:6px;"><button class="btn btn-outline btn-xs" onclick="downloadDocReqFile('${r._id}', 'view')">${ICONS.view} View File</button> <button class="btn btn-success btn-xs" onclick="downloadDocReqFile('${r._id}', 'download')">${ICONS.download} Download</button> <span style="font-size:10px;color:var(--slate-500);margin-left:4px;">${escapeHtml(r.fileName)}</span></div>` 
+        ? `<div style="margin-top:6px;"><button class="btn btn-outline btn-xs" onclick="openDocReqPreview('${r._id}')">${ICONS.view} View File</button> <button class="btn btn-success btn-xs" onclick="downloadDocReqFile('${r._id}', 'download')">${ICONS.download} Download</button> <span style="font-size:10px;color:var(--slate-500);margin-left:4px;">${escapeHtml(r.fileName)}</span></div>` 
         : '';
       
       return `
@@ -2525,6 +2525,37 @@ async function downloadDocReqFile(reqId, action = 'download') {
     
     if (action === 'view') viewPdfBlob(blob);
     else universalDownload(blob, data.fileName || 'document.pdf');
+  } catch (e) {
+    hideDL();
+    toast('Failed: ' + e.message, 'error');
+  }
+}
+
+/* ============================================================
+   ★ NEW: DOCUMENT PREVIEW HELPERS (FIX for blank download issue)
+   ============================================================ */
+async function openDocumentPreview(noteId) {
+  showDL('Loading document…');
+  try {
+    const res = await fetch(`${API}/api/notes/view/${noteId}`);
+    if (!res.ok) throw new Error('Failed to load');
+    const blob = await res.blob();
+    hideDL();
+    viewPdfBlob(blob);
+  } catch (e) {
+    hideDL();
+    toast('Failed: ' + e.message, 'error');
+  }
+}
+
+async function openDocReqPreview(reqId) {
+  showDL('Loading document…');
+  try {
+    const res = await fetch(`${API}/api/notes/request-file/${reqId}`);
+    if (!res.ok) throw new Error('Failed to load');
+    const blob = await res.blob();
+    hideDL();
+    viewPdfBlob(blob);
   } catch (e) {
     hideDL();
     toast('Failed: ' + e.message, 'error');
@@ -3204,11 +3235,10 @@ function handleDeepLink() {
 
 async function downloadAndOpenFile(fileUrl, fileName) {
   try {
-    showDL("Downloading file...");
+    showDL("Loading file...");
     const response = await fetch(fileUrl);
     const blob = await response.blob();
     
-    // 1. If mobile app (Median), use native share/open
     if (isMedianApp() && window.median && window.median.shareFile) {
        const reader = new FileReader();
        reader.onload = function() {
@@ -3224,25 +3254,13 @@ async function downloadAndOpenFile(fileUrl, fileName) {
        return;
     }
 
-    // 2. Fallback for standard browser: Download + Open in new tab to trigger "Open With"
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    
-    // Attempt to open in new window to trigger Android "Open With" dialog
-    setTimeout(() => {
-        window.open(url, '_blank');
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        hideDL();
-    }, 500);
+    // ★ FIX: Standard browser — preview inline using viewPdfBlob instead of forcing download
+    hideDL();
+    viewPdfBlob(blob);
 
   } catch (e) {
     hideDL();
-    toast("Download failed: " + e.message, "error");
+    toast("Failed: " + e.message, "error");
   }
 }
 
@@ -3370,6 +3388,11 @@ function renderLeaderboardData(data, type, el) {
     const isMe = currentUser && currentUser.rollNo === s.rollNo;
     const bg = isMe ? 'background:var(--brand-50); border-color:var(--brand-300);' : 'background:#fff; border-color:var(--slate-200);';
     
+    // Agar type attendance hai to streak dikhao, agar percentage hai to % dikhao
+    const rightValue = type === 'percentage' ? `${s.streak}%` : `${s.streak} 🔥`;
+    const rightLabel = type === 'percentage' ? 'SCORE' : 'DAYS';
+    const color = type === 'percentage' ? '#2563eb' : '#047857';
+
     return `
       <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-radius:12px; border:1px solid; ${bg}">
         <div style="display:flex; align-items:center; gap:12px;">
@@ -3380,8 +3403,8 @@ function renderLeaderboardData(data, type, el) {
           </div>
         </div>
         <div style="text-align:right;">
-          <div style="font-size:18px; font-weight:900; color:${type === 'login' ? '#b45309' : '#047857'};">${s.streak} 🔥</div>
-          <div style="font-size:10px; color:var(--slate-400); font-weight:700;">DAYS</div>
+          <div style="font-size:18px; font-weight:900; color:${color};">${rightValue}</div>
+          <div style="font-size:10px; color:var(--slate-400); font-weight:700;">${rightLabel}</div>
         </div>
       </div>
     `;
