@@ -1,4 +1,4 @@
-// ================= index.js v5.3.2 — Full Backend (Razorpay + Subscriptions + Gamification + Streak Fixes + Past Recalculate + Performance Fixes) =================
+// ================= index.js v5.3.3 — Full Backend (New Timetable + Faculty + Leaderboard Fix + Notification Fix) =================
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -305,14 +305,14 @@ const SUBJECT_ALIAS_MAP = {
   'DAA - Design & Analysis of Algorithm': 'DAA - Design & Analysis of Algorithm', 'FLA - Formal Language & Automata': 'FLA - Formal Language & Automata',
   'HRM - Human Resource Mgmt': 'HRM - Human Resource Mgmt', 'CN - Computer Network': 'CN - Computer Network', 'WT - Web Technology': 'WT - Web Technology',
   'CN LAB - Computer Network Lab': 'CN LAB - Computer Network Lab', 'DAA LAB - Algorithm Lab': 'DAA LAB - Algorithm Lab',
-  'WT LAB - Web Technology Lab': 'WT LAB - Web Technology Lab', 'Internet Lab (Ms. Geeta)': 'Internet Lab (Ms. Geeta)',
+  'WT LAB - Web Technology Lab': 'WT LAB - Web Technology Lab', 'Internet Lab': 'Internet Lab',
   'PA - Predictive Analysis': 'PA - Predictive Analysis', 'ML - Machine Learning': 'ML - Machine Learning',
   'PA LAB - Predictive Analysis Lab': 'PA LAB - Predictive Analysis Lab', 'ML LAB - Machine Learning Lab': 'ML LAB - Machine Learning Lab',
   'BDA LAB - Big Data Analytics Lab': 'BDA LAB - Big Data Analytics Lab', 'LIB - Library': 'LIB - Library', 'Sports': 'Sports',
   'BDA': 'BDA - Big Data Analytics', 'ECO': 'ECO - Economics for Engineers', 'DAA': 'DAA - Design & Analysis of Algorithm',
   'FLA': 'FLA - Formal Language & Automata', 'HRM': 'HRM - Human Resource Mgmt', 'CN': 'CN - Computer Network', 'WT': 'WT - Web Technology',
   'CN LAB': 'CN LAB - Computer Network Lab', 'DAA LAB': 'DAA LAB - Algorithm Lab', 'WT LAB': 'WT LAB - Web Technology Lab',
-  'Internet': 'Internet Lab (Ms. Geeta)', 'Internet Lab': 'Internet Lab (Ms. Geeta)', 'PA': 'PA - Predictive Analysis',
+  'Internet': 'Internet Lab', 'PA': 'PA - Predictive Analysis',
   'ML': 'ML - Machine Learning', 'PA LAB': 'PA LAB - Predictive Analysis Lab', 'ML LAB': 'ML LAB - Machine Learning Lab',
   'BDA LAB': 'BDA LAB - Big Data Analytics Lab', 'LIB': 'LIB - Library'
 };
@@ -430,7 +430,6 @@ async function getPreviousWorkingDay(dateStr) {
   return d.toISOString().split('T')[0];
 }
 
-// ★ NEW: Optimized helper to prevent DB calls inside loop
 async function getPreviousWorkingDayOptimized(dateStr, holidaySet) {
   let d = new Date(dateStr + 'T00:00:00Z');
   d.setUTCDate(d.getUTCDate() - 1);
@@ -483,7 +482,6 @@ async function updateLoginStreak(rollNo) {
   } catch (e) { console.warn('updateLoginStreak error:', e.message); return null; }
 }
 
-// ★ FIXED: Optimized recalculateAttendanceStreak (Fetches holidays ONCE)
 async function recalculateAttendanceStreak(rollNo) {
   try {
     const cr = rollNo.toUpperCase();
@@ -493,7 +491,6 @@ async function recalculateAttendanceStreak(rollNo) {
     const uniqueDates = [...new Set(records.map(r => r.date))].sort();
     if (!uniqueDates.length) return;
 
-    // Fetch holidays ONCE before the loop
     const holidays = await Holiday.find({}).select('date').lean();
     const holidaySet = new Set(holidays.map(h => h.date));
 
@@ -570,40 +567,40 @@ async function updateAttendanceStreak(rollNo) {
 }
 
 // ============================================================
-//  TIMETABLE
+//  TIMETABLE (UPDATED AS PER NEW IMAGE)
 // ============================================================
 const CSE_TIME_TABLE = {
-  Monday: [{ subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'DAA - Design & Analysis of Algorithm', faculty: 'Ms. Rashmi' }, { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' }, { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }, { subject: 'CN - Computer Network', faculty: 'Mr. Chhetrapal' }, { subject: 'Sports', faculty: 'Sports Dept' }],
-  Tuesday: [{ subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'Internet Lab (Ms. Geeta)', faculty: 'Ms. Geeta' }, { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' }, { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }, { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'Sports', faculty: 'Sports Dept' }],
-  Wednesday: [{ subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' }, { subject: 'Sports / Activity', faculty: 'Sports Dept' }, { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' }, { subject: 'CN LAB - Computer Network Lab', faculty: 'Mr. Chhetrapal' }],
-  Thursday: [{ subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' }, { subject: 'CN - Computer Network', faculty: 'Mr. Chhetrapal' }, { subject: 'DAA - Design & Analysis of Algorithm', faculty: 'Ms. Rashmi' }, { subject: 'DAA LAB - Algorithm Lab', faculty: 'Ms. Rashmi' }, { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }],
-  Friday: [{ subject: 'DAA - Design & Analysis of Algorithm', faculty: 'Ms. Rashmi' }, { subject: 'CN - Computer Network', faculty: 'Mr. Chhetrapal' }, { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' }, { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'WT LAB - Web Technology Lab', faculty: 'Mr. Avish Yadav' }, { subject: 'Sports', faculty: 'Sports Dept' }],
+  Monday: [{ subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Geeta' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'DAA - Design & Analysis of Algorithm', faculty: 'Ms. Rashmi' }, { subject: 'LIB - Library', faculty: 'Library Staff' }, { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }, { subject: 'CN - Computer Network', faculty: 'Mr. Ravinshu' }, { subject: 'Sports', faculty: 'Sports Dept' }],
+  Tuesday: [{ subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'Internet Lab', faculty: 'Ms. Rashmi' }, { subject: 'LIB - Library', faculty: 'Library Staff' }, { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }, { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Geeta' }, { subject: 'Sports', faculty: 'Sports Dept' }],
+  Wednesday: [{ subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Geeta' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'BDA - Big Data Analytics', faculty: 'Mr. Harsh' }, { subject: 'LIB - Library', faculty: 'Library Staff' }, { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' }, { subject: 'CN LAB - Computer Network Lab', faculty: 'Mr. Ravinshu' }],
+  Thursday: [{ subject: 'BDA - Big Data Analytics', faculty: 'Mr. Harsh' }, { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' }, { subject: 'CN - Computer Network', faculty: 'Mr. Ravinshu' }, { subject: 'DAA - Design & Analysis of Algorithm', faculty: 'Ms. Rashmi' }, { subject: 'DAA LAB - Algorithm Lab', faculty: 'Ms. Rashmi' }, { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }],
+  Friday: [{ subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Geeta' }, { subject: 'CN - Computer Network', faculty: 'Mr. Ravinshu' }, { subject: 'LIB - Library', faculty: 'Library Staff' }, { subject: 'DAA - Design & Analysis of Algorithm', faculty: 'Ms. Rashmi' }, { subject: 'WT LAB - Web Technology Lab', faculty: 'Mr. Avish Yadav' }, { subject: 'BDA - Big Data Analytics', faculty: 'Mr. Harsh' }],
   Saturday: [], Sunday: []
 };
 
 const AIDS_TIME_TABLE = {
-  Monday: [{ subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'LIB - Library', faculty: 'Library Staff' }, { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' }, { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }, { subject: 'PA - Predictive Analysis', faculty: 'Ms. Pooja' }, { subject: 'Sports', faculty: 'Sports Dept' }],
-  Tuesday: [{ subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'PA - Predictive Analysis', faculty: 'Ms. Pooja' }, { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' }, { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }, { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'ML - Machine Learning', faculty: 'Mr. Harsh' }],
-  Wednesday: [{ subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' }, { subject: 'Sports / Project', faculty: 'Sports Dept' }, { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' }, { subject: 'PA LAB - Predictive Analysis Lab', faculty: 'Ms. Pooja' }],
-  Thursday: [{ subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' }, { subject: 'ML - Machine Learning', faculty: 'Mr. Harsh' }, { subject: 'PA - Predictive Analysis', faculty: 'Ms. Pooja' }, { subject: 'ML LAB - Machine Learning Lab', faculty: 'Mr. Harsh' }, { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }],
-  Friday: [{ subject: 'ML - Machine Learning', faculty: 'Mr. Harsh' }, { subject: 'LIB - Library', faculty: 'Library Staff' }, { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' }, { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'BDA LAB - Big Data Analytics Lab', faculty: 'Ms. Geeta' }, { subject: 'Sports', faculty: 'Sports Dept' }],
+  Monday: [{ subject: 'FLA - Formal Language & Automata', faculty: 'Mr. Ravinshu' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'ML - Machine Learning', faculty: 'Mr. Harsh' }, { subject: 'LIB - Library', faculty: 'Library Staff' }, { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }, { subject: 'PA - Predictive Analysis', faculty: 'Ms. Pooja' }, { subject: 'Sports', faculty: 'Sports Dept' }],
+  Tuesday: [{ subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'PA - Predictive Analysis', faculty: 'Ms. Pooja' }, { subject: 'LIB - Library', faculty: 'Library Staff' }, { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }, { subject: 'FLA - Formal Language & Automata', faculty: 'Mr. Ravinshu' }, { subject: 'ML - Machine Learning', faculty: 'Mr. Harsh' }],
+  Wednesday: [{ subject: 'FLA - Formal Language & Automata', faculty: 'Mr. Ravinshu' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'LIB - Library', faculty: 'Library Staff' }, { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' }, { subject: 'PA LAB - Predictive Analysis Lab', faculty: 'Ms. Pooja' }],
+  Thursday: [{ subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' }, { subject: 'LIB - Library', faculty: 'Library Staff' }, { subject: 'PA - Predictive Analysis', faculty: 'Ms. Pooja' }, { subject: 'ML LAB - Machine Learning Lab', faculty: 'Ms. Manshi' }, { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }],
+  Friday: [{ subject: 'FLA - Formal Language & Automata', faculty: 'Mr. Ravinshu' }, { subject: 'BDA LAB - Big Data Analytics Lab', faculty: 'Ms. Geeta' }, { subject: 'ML - Machine Learning', faculty: 'Mr. Harsh' }, { subject: 'Internet Lab', faculty: 'Ms. Geeta' }, { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }],
   Saturday: [], Sunday: []
 };
 
 const CSE_SCHEDULE = {
-  1: [{ start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1", faculty:"Ms. Geeta" }, { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" }, { start:"10:50", end:"11:35", subject:"DAA - Design & Analysis of Algorithm", period:"P3", faculty:"Ms. Rashmi" }, { start:"11:35", end:"12:20", subject:"FLA - Formal Language & Automata", period:"P4", faculty:"Ms. Nisha Yadav" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"13:50", subject:"HRM - Human Resource Mgmt", period:"P6", faculty:"Mr. Lokesh" }, { start:"13:50", end:"14:35", subject:"CN - Computer Network", period:"P7", faculty:"Mr. Chhetrapal" }, { start:"14:35", end:"15:20", subject:"Sports", period:"P8", faculty:"Sports Dept" }],
-  2: [{ start:"09:20", end:"10:05", subject:"WT - Web Technology", period:"P1", faculty:"Mr. Avish Yadav" }, { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" }, { start:"10:50", end:"11:35", subject:"Internet Lab (Ms. Geeta)", period:"P3", faculty:"Ms. Geeta" }, { start:"11:35", end:"12:20", subject:"FLA - Formal Language & Automata", period:"P4", faculty:"Ms. Nisha Yadav" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"13:50", subject:"HRM - Human Resource Mgmt", period:"P6", faculty:"Mr. Lokesh" }, { start:"13:50", end:"14:35", subject:"BDA - Big Data Analytics", period:"P7", faculty:"Ms. Geeta" }, { start:"14:35", end:"15:20", subject:"Sports", period:"P8", faculty:"Sports Dept" }],
-  3: [{ start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1", faculty:"Ms. Geeta" }, { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" }, { start:"10:50", end:"11:35", subject:"FLA - Formal Language & Automata", period:"P3", faculty:"Ms. Nisha Yadav" }, { start:"11:35", end:"12:20", subject:"Sports / Activity", period:"P4", faculty:"Sports Dept" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"13:50", subject:"WT - Web Technology", period:"P6", faculty:"Mr. Avish Yadav" }, { start:"13:50", end:"15:20", subject:"CN LAB - Computer Network Lab", period:"P7-P8", faculty:"Mr. Chhetrapal" }],
-  4: [{ start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1", faculty:"Ms. Geeta" }, { start:"10:05", end:"10:50", subject:"WT - Web Technology", period:"P2", faculty:"Mr. Avish Yadav" }, { start:"10:50", end:"11:35", subject:"CN - Computer Network", period:"P3", faculty:"Mr. Chhetrapal" }, { start:"11:35", end:"12:20", subject:"DAA - Design & Analysis of Algorithm", period:"P4", faculty:"Ms. Rashmi" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"14:35", subject:"DAA LAB - Algorithm Lab", period:"P6-P7", faculty:"Ms. Rashmi" }, { start:"14:35", end:"15:20", subject:"HRM - Human Resource Mgmt", period:"P8", faculty:"Mr. Lokesh" }],
-  5: [{ start:"09:20", end:"10:05", subject:"DAA - Design & Analysis of Algorithm", period:"P1", faculty:"Ms. Rashmi" }, { start:"10:05", end:"10:50", subject:"CN - Computer Network", period:"P2", faculty:"Mr. Chhetrapal" }, { start:"10:50", end:"11:35", subject:"FLA - Formal Language & Automata", period:"P3", faculty:"Ms. Nisha Yadav" }, { start:"11:35", end:"12:20", subject:"BDA - Big Data Analytics", period:"P4", faculty:"Ms. Geeta" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"14:35", subject:"WT LAB - Web Technology Lab", period:"P6-P7", faculty:"Mr. Avish Yadav" }, { start:"14:35", end:"15:20", subject:"Sports", period:"P8", faculty:"Sports Dept" }]
+  1: [{ start:"09:20", end:"10:05", subject:"FLA - Formal Language & Automata", period:"P1", faculty:"Ms. Geeta" }, { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" }, { start:"10:50", end:"11:35", subject:"DAA - Design & Analysis of Algorithm", period:"P3", faculty:"Ms. Rashmi" }, { start:"11:35", end:"12:20", subject:"LIB - Library", period:"P4", faculty:"Library Staff" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"13:50", subject:"HRM - Human Resource Mgmt", period:"P6", faculty:"Mr. Lokesh" }, { start:"13:50", end:"14:35", subject:"CN - Computer Network", period:"P7", faculty:"Mr. Ravinshu" }, { start:"14:35", end:"15:20", subject:"Sports", period:"P8", faculty:"Sports Dept" }],
+  2: [{ start:"09:20", end:"10:05", subject:"WT - Web Technology", period:"P1", faculty:"Mr. Avish Yadav" }, { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" }, { start:"10:50", end:"11:35", subject:"Internet Lab", period:"P3", faculty:"Ms. Rashmi" }, { start:"11:35", end:"12:20", subject:"LIB - Library", period:"P4", faculty:"Library Staff" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"13:50", subject:"HRM - Human Resource Mgmt", period:"P6", faculty:"Mr. Lokesh" }, { start:"13:50", end:"14:35", subject:"FLA - Formal Language & Automata", period:"P7", faculty:"Ms. Geeta" }, { start:"14:35", end:"15:20", subject:"Sports", period:"P8", faculty:"Sports Dept" }],
+  3: [{ start:"09:20", end:"10:05", subject:"FLA - Formal Language & Automata", period:"P1", faculty:"Ms. Geeta" }, { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" }, { start:"10:50", end:"11:35", subject:"BDA - Big Data Analytics", period:"P3", faculty:"Mr. Harsh" }, { start:"11:35", end:"12:20", subject:"LIB - Library", period:"P4", faculty:"Library Staff" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"13:50", subject:"WT - Web Technology", period:"P6", faculty:"Mr. Avish Yadav" }, { start:"13:50", end:"15:20", subject:"CN LAB - Computer Network Lab", period:"P7-P8", faculty:"Mr. Ravinshu" }],
+  4: [{ start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1", faculty:"Mr. Harsh" }, { start:"10:05", end:"10:50", subject:"WT - Web Technology", period:"P2", faculty:"Mr. Avish Yadav" }, { start:"10:50", end:"11:35", subject:"CN - Computer Network", period:"P3", faculty:"Mr. Ravinshu" }, { start:"11:35", end:"12:20", subject:"DAA - Design & Analysis of Algorithm", period:"P4", faculty:"Ms. Rashmi" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"14:35", subject:"DAA LAB - Algorithm Lab", period:"P6-P7", faculty:"Ms. Rashmi" }, { start:"14:35", end:"15:20", subject:"HRM - Human Resource Mgmt", period:"P8", faculty:"Mr. Lokesh" }],
+  5: [{ start:"09:20", end:"10:05", subject:"FLA - Formal Language & Automata", period:"P1", faculty:"Ms. Geeta" }, { start:"10:05", end:"10:50", subject:"CN - Computer Network", period:"P2", faculty:"Mr. Ravinshu" }, { start:"10:50", end:"11:35", subject:"LIB - Library", period:"P3", faculty:"Library Staff" }, { start:"11:35", end:"12:20", subject:"DAA - Design & Analysis of Algorithm", period:"P4", faculty:"Ms. Rashmi" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"14:35", subject:"WT LAB - Web Technology Lab", period:"P6-P7", faculty:"Mr. Avish Yadav" }, { start:"14:35", end:"15:20", subject:"BDA - Big Data Analytics", period:"P8", faculty:"Mr. Harsh" }]
 };
 
 const AIDS_SCHEDULE = {
-  1: [{ start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1", faculty:"Ms. Geeta" }, { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" }, { start:"10:50", end:"11:35", subject:"LIB - Library", period:"P3", faculty:"Library Staff" }, { start:"11:35", end:"12:20", subject:"FLA - Formal Language & Automata", period:"P4", faculty:"Ms. Nisha Yadav" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"13:50", subject:"HRM - Human Resource Mgmt", period:"P6", faculty:"Mr. Lokesh" }, { start:"13:50", end:"14:35", subject:"PA - Predictive Analysis", period:"P7", faculty:"Ms. Pooja" }, { start:"14:35", end:"15:20", subject:"Sports", period:"P8", faculty:"Sports Dept" }],
-  2: [{ start:"09:20", end:"10:05", subject:"WT - Web Technology", period:"P1", faculty:"Mr. Avish Yadav" }, { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" }, { start:"10:50", end:"11:35", subject:"PA - Predictive Analysis", period:"P3", faculty:"Ms. Pooja" }, { start:"11:35", end:"12:20", subject:"FLA - Formal Language & Automata", period:"P4", faculty:"Ms. Nisha Yadav" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"13:50", subject:"HRM - Human Resource Mgmt", period:"P6", faculty:"Mr. Lokesh" }, { start:"13:50", end:"14:35", subject:"BDA - Big Data Analytics", period:"P7", faculty:"Ms. Geeta" }, { start:"14:35", end:"15:20", subject:"ML - Machine Learning", period:"P8", faculty:"Mr. Harsh" }],
-  3: [{ start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1", faculty:"Ms. Geeta" }, { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" }, { start:"10:50", end:"11:35", subject:"FLA - Formal Language & Automata", period:"P3", faculty:"Ms. Nisha Yadav" }, { start:"11:35", end:"12:20", subject:"Sports / Project", period:"P4", faculty:"Sports Dept" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"13:50", subject:"WT - Web Technology", period:"P6", faculty:"Mr. Avish Yadav" }, { start:"13:50", end:"15:20", subject:"PA LAB - Predictive Analysis Lab", period:"P7-P8", faculty:"Ms. Pooja" }],
-  4: [{ start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1", faculty:"Ms. Geeta" }, { start:"10:05", end:"10:50", subject:"WT - Web Technology", period:"P2", faculty:"Mr. Avish Yadav" }, { start:"10:50", end:"11:35", subject:"ML - Machine Learning", period:"P3", faculty:"Mr. Harsh" }, { start:"11:35", end:"12:20", subject:"PA - Predictive Analysis", period:"P4", faculty:"Ms. Pooja" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"14:35", subject:"ML LAB - Machine Learning Lab", period:"P6-P7", faculty:"Mr. Harsh" }, { start:"14:35", end:"15:20", subject:"HRM - Human Resource Mgmt", period:"P8", faculty:"Mr. Lokesh" }],
-  5: [{ start:"09:20", end:"10:05", subject:"ML - Machine Learning", period:"P1", faculty:"Mr. Harsh" }, { start:"10:05", end:"10:50", subject:"LIB - Library", period:"P2", faculty:"Library Staff" }, { start:"10:50", end:"11:35", subject:"FLA - Formal Language & Automata", period:"P3", faculty:"Ms. Nisha Yadav" }, { start:"11:35", end:"12:20", subject:"BDA - Big Data Analytics", period:"P4", faculty:"Ms. Geeta" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"14:35", subject:"BDA LAB - Big Data Analytics Lab", period:"P6-P7", faculty:"Ms. Geeta" }, { start:"14:35", end:"15:20", subject:"Sports", period:"P8", faculty:"Sports Dept" }]
+  1: [{ start:"09:20", end:"10:05", subject:"FLA - Formal Language & Automata", period:"P1", faculty:"Mr. Ravinshu" }, { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" }, { start:"10:50", end:"11:35", subject:"ML - Machine Learning", period:"P3", faculty:"Mr. Harsh" }, { start:"11:35", end:"12:20", subject:"LIB - Library", period:"P4", faculty:"Library Staff" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"13:50", subject:"HRM - Human Resource Mgmt", period:"P6", faculty:"Mr. Lokesh" }, { start:"13:50", end:"14:35", subject:"PA - Predictive Analysis", period:"P7", faculty:"Ms. Pooja" }, { start:"14:35", end:"15:20", subject:"Sports", period:"P8", faculty:"Sports Dept" }],
+  2: [{ start:"09:20", end:"10:05", subject:"WT - Web Technology", period:"P1", faculty:"Mr. Avish Yadav" }, { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" }, { start:"10:50", end:"11:35", subject:"PA - Predictive Analysis", period:"P3", faculty:"Ms. Pooja" }, { start:"11:35", end:"12:20", subject:"LIB - Library", period:"P4", faculty:"Library Staff" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"13:50", subject:"HRM - Human Resource Mgmt", period:"P6", faculty:"Mr. Lokesh" }, { start:"13:50", end:"14:35", subject:"FLA - Formal Language & Automata", period:"P7", faculty:"Mr. Ravinshu" }, { start:"14:35", end:"15:20", subject:"ML - Machine Learning", period:"P8", faculty:"Mr. Harsh" }],
+  3: [{ start:"09:20", end:"10:05", subject:"FLA - Formal Language & Automata", period:"P1", faculty:"Mr. Ravinshu" }, { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" }, { start:"10:50", end:"11:35", subject:"BDA - Big Data Analytics", period:"P3", faculty:"Ms. Geeta" }, { start:"11:35", end:"12:20", subject:"LIB - Library", period:"P4", faculty:"Library Staff" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"13:50", subject:"WT - Web Technology", period:"P6", faculty:"Mr. Avish Yadav" }, { start:"13:50", end:"15:20", subject:"PA LAB - Predictive Analysis Lab", period:"P7-P8", faculty:"Ms. Pooja" }],
+  4: [{ start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1", faculty:"Ms. Geeta" }, { start:"10:05", end:"10:50", subject:"WT - Web Technology", period:"P2", faculty:"Mr. Avish Yadav" }, { start:"10:50", end:"11:35", subject:"LIB - Library", period:"P3", faculty:"Library Staff" }, { start:"11:35", end:"12:20", subject:"PA - Predictive Analysis", period:"P4", faculty:"Ms. Pooja" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"14:35", subject:"ML LAB - Machine Learning Lab", period:"P6-P7", faculty:"Ms. Manshi" }, { start:"14:35", end:"15:20", subject:"HRM - Human Resource Mgmt", period:"P8", faculty:"Mr. Lokesh" }],
+  5: [{ start:"09:20", end:"10:05", subject:"FLA - Formal Language & Automata", period:"P1", faculty:"Mr. Ravinshu" }, { start:"10:05", end:"11:35", subject:"BDA LAB - Big Data Analytics Lab", period:"P2-P3", faculty:"Ms. Geeta" }, { start:"11:35", end:"12:20", subject:"ML - Machine Learning", period:"P4", faculty:"Mr. Harsh" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"14:35", subject:"Internet Lab", period:"P6-P7", faculty:"Ms. Geeta" }, { start:"14:35", end:"15:20", subject:"BDA - Big Data Analytics", period:"P8", faculty:"Ms. Geeta" }]
 };
 
 function getTimetableForBranch(branch) { if (branch && branch.toUpperCase() === 'AIDS') return AIDS_TIME_TABLE; return CSE_TIME_TABLE; }
@@ -711,7 +708,7 @@ async function incrementFailedAttempts(rollNo) {
 async function generateTeacherId(subject) {
   const CODE_MAP = {
     'BDA - Big Data Analytics':'BDA','ECO - Economics for Engineers':'ECO','DAA - Design & Analysis of Algorithm':'DAA','FLA - Formal Language & Automata':'FLA',
-    'HRM - Human Resource Mgmt':'HRM','CN - Computer Network':'CN','WT - Web Technology':'WT','Internet Lab (Ms. Geeta)':'INT',
+    'HRM - Human Resource Mgmt':'HRM','CN - Computer Network':'CN','WT - Web Technology':'WT','Internet Lab':'INT',
     'CN LAB - Computer Network Lab':'CNL','DAA LAB - Algorithm Lab':'DAAL','WT LAB - Web Technology Lab':'WTL','LIB - Library':'LIB',
     'PA - Predictive Analysis':'PA','ML - Machine Learning':'ML','PA LAB - Predictive Analysis Lab':'PAL','ML LAB - Machine Learning Lab':'MLL',
     'BDA LAB - Big Data Analytics Lab':'BDAL','Sports':'SPT'
@@ -1344,7 +1341,7 @@ app.get('/health', (req, res) => res.json({
   ai: { primary: { provider: 'groq', model: GROQ_MODEL, keys: GROQ_API_KEYS.length }, fallback: { provider: 'gemini', model: GEMINI_MODEL, keys: GEMINI_API_KEYS.length, discovered: _geminiModelsCache.list.length } },
   fcm: { ready: fcmReady, projectId: process.env.FIREBASE_PROJECT_ID || null },
   razorpay: { ready: razorpayReady, keyId: process.env.RAZORPAY_KEY_ID ? process.env.RAZORPAY_KEY_ID.substring(0, 8) + '...' : null },
-  version: '5.3.1',
+  version: '5.3.3',
   timestamp: new Date().toISOString()
 }));
 
@@ -1470,7 +1467,6 @@ app.get('/api/student/achievements/:rollNo', async (req, res) => {
   try {
     const cr = (req.params.rollNo || '').trim().toUpperCase();
     
-    // ★ FIX: Auto-Recalculate attendance streak from history
     await recalculateAttendanceStreak(cr);
     await updateLoginStreak(cr);
 
@@ -1484,26 +1480,45 @@ app.get('/api/student/achievements/:rollNo', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ★ FIXED: Leaderboard with Branch filter, only active students, parallel recalculation
+// ★ FIXED: Leaderboard Percentage Tab
 app.get('/api/leaderboard/:type', async (req, res) => {
   try {
-    const type = req.params.type; // 'login' or 'attendance'
+    const type = req.params.type; // 'login' or 'attendance' or 'percentage'
     const branchFilter = (req.query.branch || 'ALL').toUpperCase();
-    const sortField = type === 'login' ? 'loginStreak' : 'attendanceStreak';
-
+    
     let query = { role: 'student' };
     if (branchFilter !== 'ALL') query.branch = branchFilter;
-
     const students = await User.find(query).select('rollNo name branch').lean();
+
+    // ★ NEW FIX: Agar type 'percentage' hai, toh actual attendance calculate karo
+    if (type === 'percentage') {
+      const results = await Promise.all(students.map(async (s) => {
+        const summary = await getStudentSummary(s.rollNo);
+        if (!summary) return null;
+        return {
+          rollNo: s.rollNo,
+          name: s.name,
+          branch: s.branch,
+          percentage: summary.attendancePercentage,
+          present: summary.totalAcademicLectures,
+          total: summary.totalConductedLectures
+        };
+      }));
+      
+      const validResults = results.filter(r => r !== null);
+      validResults.sort((a, b) => b.percentage - a.percentage);
+      return res.json(validResults.slice(0, 50));
+    }
+
+    // Purana code (streak ke liye)
+    const sortField = type === 'login' ? 'loginStreak' : 'attendanceStreak';
     const studentRolls = students.map(s => s.rollNo);
 
     if (type === 'attendance') {
-      // ★ ONLY fetch students who actually have attendance records (Skip 0% students)
       const activeRolls = await Attendance.distinct('rollNo', { 
         rollNo: { $in: studentRolls },
         status: { $in: ['Present', 'Duty Leave'] } 
       });
-      // ★ Recalculate in parallel instead of blocking loop
       await Promise.all(activeRolls.map(r => recalculateAttendanceStreak(r)));
     }
 
@@ -1554,8 +1569,6 @@ app.post('/api/admin/gamification/update', async (req, res) => {
 
     if (loginStreak !== undefined) {
       g.loginStreak = parseInt(loginStreak);
-      // ★ FIX: mark today (or last working day) as lastLoginDate
-      // so next day's updateLoginStreak() increments instead of resetting.
       const todayDate = new Date(todayStr + 'T00:00:00Z');
       const dow = todayDate.getUTCDay();
       const isWeekend = (dow === 0 || dow === 6);
@@ -1672,7 +1685,6 @@ app.post('/api/admin/bulk-reset-device', async (req, res) => {
 // ============================================================
 //  NOTES & DOCUMENTS
 // ============================================================
-// ★ NEW HELPER: Force correct MIME type for inline viewing
 function getSafeMimeType(fileName, originalMime) {
   if (!fileName) return originalMime || 'application/octet-stream';
   const ext = fileName.split('.').pop().toLowerCase();
@@ -1685,9 +1697,8 @@ function getSafeMimeType(fileName, originalMime) {
   if (ext === 'mp4') return 'video/mp4';
   if (ext === 'mp3') return 'audio/mpeg';
   
-  // If original is octet-stream, try to guess from extension, otherwise fallback to original
   if (!originalMime || originalMime === 'application/octet-stream') {
-    return 'application/octet-stream'; // Let browser handle it as download if it's a completely unknown binary
+    return 'application/octet-stream'; 
   }
   return originalMime;
 }
@@ -1704,12 +1715,12 @@ app.get('/api/notes/:branch', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ★ FIX: View button strictly inline
 app.get('/api/notes/view/:noteId', async (req, res) => {
   try {
     const file = await NotesFile.findOne({ noteId: req.params.noteId });
     if (!file) return res.status(404).json({ error: 'File not found' });
     
-    // ★ FIX: Ensure mobile browsers recognize PDF/Images to open inline
     const safeMime = getSafeMimeType(file.fileName, file.mimeType);
     
     res.setHeader('Content-Type', safeMime);
@@ -1905,6 +1916,18 @@ app.get('/api/announcements/:branch', async (req, res) => {
   try {
     const branch = (req.params.branch || 'CSE').toUpperCase();
     res.json(await Announcement.find({ $or: [{ branch: 'ALL' }, { branch }] }).sort({ createdAt: -1 }).limit(50).lean());
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ★ NEW: Clear announcements endpoint
+app.post('/api/admin/clear-announcements', async (req, res) => {
+  try {
+    const { requesterRollNo, branch } = req.body;
+    const user = await User.findOne({ rollNo: requesterRollNo.trim().toUpperCase() });
+    if (!user || (user.role !== 'admin' && user.role !== 'faculty')) return res.status(403).json({ error: 'Admin/Faculty only' });
+    const filter = (branch && branch !== 'ALL') ? { branch } : {};
+    const result = await Announcement.deleteMany(filter);
+    res.json({ message: `Cleared ${result.deletedCount} announcements.` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -2238,7 +2261,6 @@ app.post('/api/auth/login', async (req, res) => {
       if (correctBranch && user.branch !== correctBranch) user.branch = correctBranch;
 
       if (user.boundDeviceId && user.boundDeviceId !== deviceId) {
-  // ★ Auto-create account request for admin & send notification
   const existingReq = await AccountRequest.findOne({ rollNo: cleanRoll, type: 'device_reset', status: 'Pending' });
   if (!existingReq) {
     await AccountRequest.create({ 
@@ -5297,7 +5319,7 @@ function scheduleLibraryReminder() {
   }, 60 * 1000);
 }
 
-// ★ FIXED: Don't send class reminders on holidays
+// ★ FIXED: Class Reminders per branch with explicit branch tag
 function scheduleClassReminders() {
   setInterval(async () => {
     try {
@@ -5306,10 +5328,9 @@ function scheduleClassReminders() {
       const day = now.getDay();
       if (day === 0 || day === 6) return;
       
-      // ★ FIX: Don't send notifications on Holidays
       const todayStr = getISTDateString(now);
       const hol = await Holiday.findOne({ date: todayStr });
-      if (hol) return; // Stop execution if today is a holiday
+      if (hol) return;
 
       const istMin = getISTMinutes(now);
 
@@ -5326,7 +5347,7 @@ function scheduleClassReminders() {
 
           if (istMin === startMins - 10) {
             try {
-              await sendPushToBranch(branch, '⏰ Class in 10 Minutes!', `${mapToCanonical(slot.subject)} starts at ${slot.start} (${slot.faculty}). Get ready!`, { type: 'class_reminder_student', subject: slot.subject, time: slot.start });
+              await sendPushToBranch(branch, `⏰ [${branch}] Class in 10 Minutes!`, `${mapToCanonical(slot.subject)} starts at ${slot.start} (${slot.faculty}). Get ready!`, { type: 'class_reminder_student', subject: slot.subject, time: slot.start });
             } catch (e) {}
           }
 
@@ -5335,7 +5356,7 @@ function scheduleClassReminders() {
               const facultyUsers = await User.find({ role: 'faculty', fcmToken: { $ne: null }, facultySubject: mapToCanonical(slot.subject) }).select('rollNo name fcmToken').lean();
               for (const f of facultyUsers) {
                 try {
-                  await sendPushNotification(f.fcmToken, '⏰ Class in 5 Minutes', `${mapToCanonical(slot.subject)} at ${slot.start} (${branch} branch)`, { type: 'class_reminder_faculty', subject: slot.subject, time: slot.start });
+                  await sendPushNotification(f.fcmToken, '⏰ Class in 5 Minutes', `[${branch}] ${mapToCanonical(slot.subject)} at ${slot.start}`, { type: 'class_reminder_faculty', subject: slot.subject, time: slot.start, branch });
                 } catch (e) {}
               }
             } catch (e) {}
@@ -5434,7 +5455,7 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, async () => {
   console.log('');
   console.log('╔══════════════════════════════════════════════════════╗');
-  console.log('║       🎓 BM GROUP ERP BACKEND · v5.3.2              ║');
+  console.log('║       🎓 BM GROUP ERP BACKEND · v5.3.3              ║');
   console.log('╠══════════════════════════════════════════════════════╣');
   console.log(`║  🚀 Port: ${String(PORT).padEnd(44)}║`);
   console.log(`║  🌍 TZ:   ${String(process.env.TZ || 'Asia/Kolkata').padEnd(44)}║`);
@@ -5443,10 +5464,12 @@ app.listen(PORT, async () => {
   console.log(`║  🔥 FCM:  ${(fcmReady ? 'READY ✅' : 'DISABLED ⚠️').padEnd(43)}║`);
   console.log(`║  💳 Pay:  ${(razorpayReady ? 'Razorpay READY ✅' : 'Razorpay DISABLED ⚠️').padEnd(43)}║`);
   console.log('╠══════════════════════════════════════════════════════╣');
-  console.log('║  ✨ NEW in v5.3.2:                                   ║');
-  console.log('║     • Fixed Note PDF View (Inline on Mobile)        ║');
-  console.log('║     • Fixed Leaderboard Fast Load (No DB loop)      ║');
-  console.log('║     • Uses Lecture-wise Attendance Streak           ║');
+  console.log('║  ✨ NEW in v5.3.3:                                   ║');
+  console.log('║     • Fixed Timetable & Faculty per new images      ║');
+  console.log('║     • Fixed Leaderboard Percentage tab (Backend)    ║');
+  console.log('║     • Fixed Notes View (inline Content-Disposition) ║');
+  console.log('║     • Added Announcement Clear API                  ║');
+  console.log('║     • Branch-specific class reminders               ║');
   console.log('╚══════════════════════════════════════════════════════╝');
   console.log('');
 
@@ -5472,5 +5495,5 @@ process.on('SIGINT', async () => {
 });
 
 // ============================================================
-//  END OF FILE — index.js v5.3.2
+//  END OF FILE — index.js v5.3.3
 // ============================================================
