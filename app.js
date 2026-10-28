@@ -299,35 +299,46 @@ function isDesktop(){ return window.innerWidth >= 641; }
 function isMedianApp(){ return typeof window.median !== 'undefined' && window.median !== null; }
 
 /* ============================================================
-   PDF VIEWER (FIXED BLANK VIEW ISSUE)
+   PDF VIEWER (FIXED BLANK VIEW ISSUE USING PDF.JS)
    ============================================================ */
 function viewPdfBlob(blob, fileName = 'document.pdf') {
-  // Force correct MIME type if it's generic octet-stream (Fixes mobile browser downloading instead of viewing)
+  // Force correct MIME type if generic octet-stream
   if (!blob.type || blob.type === 'application/octet-stream') {
     const ext = fileName.split('.').pop().toLowerCase();
     if (ext === 'pdf') blob = new Blob([blob], { type: 'application/pdf' });
     else if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) blob = new Blob([blob], { type: `image/${ext === 'jpg' ? 'jpeg' : ext}` });
   }
 
-  const url = URL.createObjectURL(blob);
   const isImage = blob.type.startsWith('image/');
   const isPdf = blob.type === 'application/pdf';
-  
-  let contentHtml = '';
+
   if (isImage) {
-    contentHtml = `<img src="${url}" style="max-width: 100%; max-height: 100%; object-fit: contain;" />`;
-  } else if (isPdf) {
-  // Mobile WebView mein download rokne ke liye object tag use kar rahe hain
-  contentHtml = `<object data="${url}#toolbar=0&navpanes=0&scrollbar=0" type="application/pdf" style="width: 100%; height: 100%;">
-    <embed src="${url}#toolbar=0&navpanes=0&scrollbar=0" type="application/pdf" style="width: 100%; height: 100%;" />
-  </object>`;
-} else {
-    contentHtml = `<div style="padding: 20px; text-align: center; color: var(--slate-600);">
-        <p style="margin-bottom: 16px;">Preview is not available for this file type.</p>
-        <a href="${url}" download="${fileName}" class="btn btn-primary">Download File</a>
-      </div>`;
+    const url = URL.createObjectURL(blob);
+    const modal = document.createElement('div');
+    modal.className = 'modal-backdrop open safe-top-modal';
+    modal.style.zIndex = '99999';
+    modal.innerHTML = `
+      <div class="modal wide" style="height: 85vh; display: flex; flex-direction: column; max-width: 900px; padding: 0;">
+        <div class="modal-header" style="padding: 12px 18px; border-bottom: 1px solid var(--slate-200); margin: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0;">
+          <h3 style="margin:0; font-size: 15px;">📄 Document Preview</h3>
+          <button type="button" class="modal-close" onclick="this.closest('.modal-backdrop').remove(); URL.revokeObjectURL('${url}')">✕</button>
+        </div>
+        <div style="flex: 1; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f8fafc;">
+          <img src="${url}" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    return;
   }
 
+  if (isPdf) {
+    renderPdfWithPdfJs(blob);
+    return;
+  }
+
+  // Fallback for other types
+  const url = URL.createObjectURL(blob);
   const modal = document.createElement('div');
   modal.className = 'modal-backdrop open safe-top-modal';
   modal.style.zIndex = '99999';
@@ -338,11 +349,80 @@ function viewPdfBlob(blob, fileName = 'document.pdf') {
         <button type="button" class="modal-close" onclick="this.closest('.modal-backdrop').remove(); URL.revokeObjectURL('${url}')">✕</button>
       </div>
       <div style="flex: 1; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f8fafc; padding: 10px;">
-        ${contentHtml}
+        <div style="padding: 20px; text-align: center; color: var(--slate-600);">
+          <p style="margin-bottom: 16px;">Preview is not available for this file type.</p>
+          <a href="${url}" download="${fileName}" class="btn btn-primary">Download File</a>
+        </div>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
+}
+
+// ★ NEW: Render PDF to Canvas using PDF.js (Works on Android WebView)
+async function renderPdfWithPdfJs(blob) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-backdrop open safe-top-modal';
+  modal.style.zIndex = '99999';
+  modal.innerHTML = `
+    <div class="modal wide" style="height: 85vh; display: flex; flex-direction: column; max-width: 900px; padding: 0;">
+      <div class="modal-header" style="padding: 12px 18px; border-bottom: 1px solid var(--slate-200); margin: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0;">
+        <h3 style="margin:0; font-size: 15px;">📄 Document Preview</h3>
+        <button type="button" class="modal-close" onclick="this.closest('.modal-backdrop').remove()">✕</button>
+      </div>
+      <div style="flex: 1; overflow: auto; background: #525659; display: flex; flex-direction: column; align-items: center; padding: 10px;" id="pdf-canvas-container">
+        <div class="spinner" style="margin-top: 20px; border-top-color: white;"></div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const container = modal.querySelector('#pdf-canvas-container');
+  
+  try {
+    // Dynamically load PDF.js
+    if (!window.pdfjsLib) {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    }
+
+    const arrayBuffer = await blob.arrayBuffer();
+    const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    
+    container.innerHTML = ''; // Clear spinner
+    
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      
+      // Scale dynamically based on screen width
+      const unscaledViewport = page.getViewport({ scale: 1 });
+      const containerWidth = container.clientWidth - 20;
+      const scale = containerWidth / unscaledViewport.width;
+      const viewport = page.getViewport({ scale: scale });
+      
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+      canvas.style.marginBottom = '10px';
+      canvas.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+      
+      container.appendChild(canvas);
+      
+      await page.render({
+        canvasContext: context,
+        viewport: viewport
+      }).promise;
+    }
+  } catch (e) {
+    container.innerHTML = `<div style="color: white; text-align: center; margin-top: 20px;">Failed to render PDF: ${escapeHtml(e.message)}</div>`;
+  }
 }
 
 function universalDownload(blob, filename, opts = {}){
@@ -2619,24 +2699,16 @@ async function downloadDocReqFile(reqId, action = 'download') {
    ============================================================ */
 async function openDocumentPreview(noteId) {
   showDL('Loading document…');
-  const directUrl = `${API}/api/notes/view/${noteId}`;
-  hideDL();
-  
-  const modal = document.createElement('div');
-  modal.className = 'modal-backdrop open safe-top-modal';
-  modal.style.zIndex = '99999';
-  modal.innerHTML = `
-    <div class="modal wide" style="height: 85vh; display: flex; flex-direction: column; max-width: 900px; padding: 0;">
-      <div class="modal-header" style="padding: 12px 18px; border-bottom: 1px solid var(--slate-200); margin: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0;">
-        <h3 style="margin:0; font-size: 15px;">📄 Document Preview</h3>
-        <button type="button" class="modal-close" onclick="this.closest('.modal-backdrop').remove()">✕</button>
-      </div>
-      <div style="flex: 1; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f8fafc;">
-        <iframe src="https://docs.google.com/gview?url=${encodeURIComponent(directUrl)}&embedded=true" style="width: 100%; height: 100%; border: none;"></iframe>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
+  try {
+    const res = await fetch(`${API}/api/notes/view/${noteId}`);
+    if (!res.ok) throw new Error('Failed to load');
+    const blob = await res.blob();
+    hideDL();
+    viewPdfBlob(blob, `document_${noteId}.pdf`);
+  } catch (e) {
+    hideDL();
+    toast('Failed: ' + e.message, 'error');
+  }
 }
 
 async function openDocReqPreview(reqId) {
@@ -2646,7 +2718,7 @@ async function openDocReqPreview(reqId) {
     if (!res.ok) throw new Error('Failed to load');
     const blob = await res.blob();
     hideDL();
-    viewPdfBlob(blob, `document_${reqId}.pdf`); // ★ Passing filename
+    viewPdfBlob(blob, `document_${reqId}.pdf`); 
   } catch (e) {
     hideDL();
     toast('Failed: ' + e.message, 'error');
