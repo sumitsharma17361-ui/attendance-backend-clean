@@ -1,4 +1,4 @@
-// ================= index.js v5.3.3 — Full Backend (New Timetable + Faculty + Leaderboard Fix + Notification Fix) =================
+// ================= index.js v5.3.4 — Full Backend (Date-Based Timetable + All Fixes) =================
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -39,7 +39,6 @@ try {
   razorpayReady = false;
 }
 
-// Tier prices (INR per month, in paise for Razorpay)
 const TIER_PRICES_PAISE = { silver: 500, gold: 1000, platinum: 1900 };
 const TIER_PRICES_RUPEES = { silver: 5, gold: 10, platinum: 19 };
 const TIER_ORDER = { free: 0, silver: 1, gold: 2, platinum: 3 };
@@ -276,6 +275,7 @@ const COLLEGE_CLOSE_HOUR = 15;
 const SEMESTER_START = new Date('2026-07-15T00:00:00+05:30');
 const SEMESTER_END = new Date('2026-12-31T23:59:59+05:30');
 const UNDO_WINDOW_MS = 5 * 60 * 1000;
+const TIMETABLE_CHANGE_DATE = '2026-10-28'; // ★ NEW: Cutoff date for old/new timetable
 
 if (!MONGO_URI) { console.error('❌ MONGO_URI missing'); process.exit(1); }
 
@@ -567,9 +567,18 @@ async function updateAttendanceStreak(rollNo) {
 }
 
 // ============================================================
-//  TIMETABLE (UPDATED AS PER NEW IMAGE)
+//  TIMETABLE (OLD & NEW DATE-BASED LOGIC)
 // ============================================================
-const CSE_TIME_TABLE = {
+const OLD_CSE_TIME_TABLE = {
+  Monday: [{ subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'DAA - Design & Analysis of Algorithm', faculty: 'Ms. Rashmi' }, { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' }, { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }, { subject: 'CN - Computer Network', faculty: 'Mr. Chhetrapal' }, { subject: 'Sports', faculty: 'Sports Dept' }],
+  Tuesday: [{ subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'Internet Lab', faculty: 'Ms. Geeta' }, { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' }, { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }, { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'Sports', faculty: 'Sports Dept' }],
+  Wednesday: [{ subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' }, { subject: 'Sports / Activity', faculty: 'Sports Dept' }, { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' }, { subject: 'CN LAB - Computer Network Lab', faculty: 'Mr. Chhetrapal' }],
+  Thursday: [{ subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' }, { subject: 'CN - Computer Network', faculty: 'Mr. Chhetrapal' }, { subject: 'DAA - Design & Analysis of Algorithm', faculty: 'Ms. Rashmi' }, { subject: 'DAA LAB - Algorithm Lab', faculty: 'Ms. Rashmi' }, { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }],
+  Friday: [{ subject: 'DAA - Design & Analysis of Algorithm', faculty: 'Ms. Rashmi' }, { subject: 'CN - Computer Network', faculty: 'Mr. Chhetrapal' }, { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' }, { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'WT LAB - Web Technology Lab', faculty: 'Mr. Avish Yadav' }, { subject: 'Sports', faculty: 'Sports Dept' }],
+  Saturday: [], Sunday: []
+};
+
+const NEW_CSE_TIME_TABLE = {
   Monday: [{ subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Geeta' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'DAA - Design & Analysis of Algorithm', faculty: 'Ms. Rashmi' }, { subject: 'LIB - Library', faculty: 'Library Staff' }, { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }, { subject: 'CN - Computer Network', faculty: 'Mr. Ravinshu' }, { subject: 'Sports', faculty: 'Sports Dept' }],
   Tuesday: [{ subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'Internet Lab', faculty: 'Ms. Rashmi' }, { subject: 'LIB - Library', faculty: 'Library Staff' }, { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }, { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Geeta' }, { subject: 'Sports', faculty: 'Sports Dept' }],
   Wednesday: [{ subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Geeta' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'BDA - Big Data Analytics', faculty: 'Mr. Harsh' }, { subject: 'LIB - Library', faculty: 'Library Staff' }, { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' }, { subject: 'CN LAB - Computer Network Lab', faculty: 'Mr. Ravinshu' }],
@@ -578,7 +587,16 @@ const CSE_TIME_TABLE = {
   Saturday: [], Sunday: []
 };
 
-const AIDS_TIME_TABLE = {
+const OLD_AIDS_TIME_TABLE = {
+  Monday: [{ subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'LIB - Library', faculty: 'Library Staff' }, { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' }, { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }, { subject: 'PA - Predictive Analysis', faculty: 'Ms. Pooja' }, { subject: 'Sports', faculty: 'Sports Dept' }],
+  Tuesday: [{ subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'PA - Predictive Analysis', faculty: 'Ms. Pooja' }, { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' }, { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }, { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'ML - Machine Learning', faculty: 'Mr. Harsh' }],
+  Wednesday: [{ subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' }, { subject: 'Sports / Project', faculty: 'Sports Dept' }, { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' }, { subject: 'PA LAB - Predictive Analysis Lab', faculty: 'Ms. Pooja' }],
+  Thursday: [{ subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' }, { subject: 'ML - Machine Learning', faculty: 'Mr. Harsh' }, { subject: 'PA - Predictive Analysis', faculty: 'Ms. Pooja' }, { subject: 'ML LAB - Machine Learning Lab', faculty: 'Mr. Harsh' }, { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }],
+  Friday: [{ subject: 'ML - Machine Learning', faculty: 'Mr. Harsh' }, { subject: 'LIB - Library', faculty: 'Library Staff' }, { subject: 'FLA - Formal Language & Automata', faculty: 'Ms. Nisha Yadav' }, { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'BDA LAB - Big Data Analytics Lab', faculty: 'Ms. Geeta' }, { subject: 'Sports', faculty: 'Sports Dept' }],
+  Saturday: [], Sunday: []
+};
+
+const NEW_AIDS_TIME_TABLE = {
   Monday: [{ subject: 'FLA - Formal Language & Automata', faculty: 'Mr. Ravinshu' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'ML - Machine Learning', faculty: 'Mr. Harsh' }, { subject: 'LIB - Library', faculty: 'Library Staff' }, { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }, { subject: 'PA - Predictive Analysis', faculty: 'Ms. Pooja' }, { subject: 'Sports', faculty: 'Sports Dept' }],
   Tuesday: [{ subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'PA - Predictive Analysis', faculty: 'Ms. Pooja' }, { subject: 'LIB - Library', faculty: 'Library Staff' }, { subject: 'HRM - Human Resource Mgmt', faculty: 'Mr. Lokesh' }, { subject: 'FLA - Formal Language & Automata', faculty: 'Mr. Ravinshu' }, { subject: 'ML - Machine Learning', faculty: 'Mr. Harsh' }],
   Wednesday: [{ subject: 'FLA - Formal Language & Automata', faculty: 'Mr. Ravinshu' }, { subject: 'ECO - Economics for Engineers', faculty: 'Ms. Sakshi Yadav' }, { subject: 'BDA - Big Data Analytics', faculty: 'Ms. Geeta' }, { subject: 'LIB - Library', faculty: 'Library Staff' }, { subject: 'WT - Web Technology', faculty: 'Mr. Avish Yadav' }, { subject: 'PA LAB - Predictive Analysis Lab', faculty: 'Ms. Pooja' }],
@@ -587,7 +605,15 @@ const AIDS_TIME_TABLE = {
   Saturday: [], Sunday: []
 };
 
-const CSE_SCHEDULE = {
+const OLD_CSE_SCHEDULE = {
+  1: [{ start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1", faculty:"Ms. Geeta" }, { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" }, { start:"10:50", end:"11:35", subject:"DAA - Design & Analysis of Algorithm", period:"P3", faculty:"Ms. Rashmi" }, { start:"11:35", end:"12:20", subject:"FLA - Formal Language & Automata", period:"P4", faculty:"Ms. Nisha Yadav" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"13:50", subject:"HRM - Human Resource Mgmt", period:"P6", faculty:"Mr. Lokesh" }, { start:"13:50", end:"14:35", subject:"CN - Computer Network", period:"P7", faculty:"Mr. Chhetrapal" }, { start:"14:35", end:"15:20", subject:"Sports", period:"P8", faculty:"Sports Dept" }],
+  2: [{ start:"09:20", end:"10:05", subject:"WT - Web Technology", period:"P1", faculty:"Mr. Avish Yadav" }, { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" }, { start:"10:50", end:"11:35", subject:"Internet Lab", period:"P3", faculty:"Ms. Geeta" }, { start:"11:35", end:"12:20", subject:"FLA - Formal Language & Automata", period:"P4", faculty:"Ms. Nisha Yadav" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"13:50", subject:"HRM - Human Resource Mgmt", period:"P6", faculty:"Mr. Lokesh" }, { start:"13:50", end:"14:35", subject:"BDA - Big Data Analytics", period:"P7", faculty:"Ms. Geeta" }, { start:"14:35", end:"15:20", subject:"Sports", period:"P8", faculty:"Sports Dept" }],
+  3: [{ start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1", faculty:"Ms. Geeta" }, { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" }, { start:"10:50", end:"11:35", subject:"FLA - Formal Language & Automata", period:"P3", faculty:"Ms. Nisha Yadav" }, { start:"11:35", end:"12:20", subject:"Sports / Activity", period:"P4", faculty:"Sports Dept" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"13:50", subject:"WT - Web Technology", period:"P6", faculty:"Mr. Avish Yadav" }, { start:"13:50", end:"15:20", subject:"CN LAB - Computer Network Lab", period:"P7-P8", faculty:"Mr. Chhetrapal" }],
+  4: [{ start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1", faculty:"Ms. Geeta" }, { start:"10:05", end:"10:50", subject:"WT - Web Technology", period:"P2", faculty:"Mr. Avish Yadav" }, { start:"10:50", end:"11:35", subject:"CN - Computer Network", period:"P3", faculty:"Mr. Chhetrapal" }, { start:"11:35", end:"12:20", subject:"DAA - Design & Analysis of Algorithm", period:"P4", faculty:"Ms. Rashmi" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"14:35", subject:"DAA LAB - Algorithm Lab", period:"P6-P7", faculty:"Ms. Rashmi" }, { start:"14:35", end:"15:20", subject:"HRM - Human Resource Mgmt", period:"P8", faculty:"Mr. Lokesh" }],
+  5: [{ start:"09:20", end:"10:05", subject:"DAA - Design & Analysis of Algorithm", period:"P1", faculty:"Ms. Rashmi" }, { start:"10:05", end:"10:50", subject:"CN - Computer Network", period:"P2", faculty:"Mr. Chhetrapal" }, { start:"10:50", end:"11:35", subject:"FLA - Formal Language & Automata", period:"P3", faculty:"Ms. Nisha Yadav" }, { start:"11:35", end:"12:20", subject:"BDA - Big Data Analytics", period:"P4", faculty:"Ms. Geeta" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"14:35", subject:"WT LAB - Web Technology Lab", period:"P6-P7", faculty:"Mr. Avish Yadav" }, { start:"14:35", end:"15:20", subject:"Sports", period:"P8", faculty:"Sports Dept" }]
+};
+
+const NEW_CSE_SCHEDULE = {
   1: [{ start:"09:20", end:"10:05", subject:"FLA - Formal Language & Automata", period:"P1", faculty:"Ms. Geeta" }, { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" }, { start:"10:50", end:"11:35", subject:"DAA - Design & Analysis of Algorithm", period:"P3", faculty:"Ms. Rashmi" }, { start:"11:35", end:"12:20", subject:"LIB - Library", period:"P4", faculty:"Library Staff" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"13:50", subject:"HRM - Human Resource Mgmt", period:"P6", faculty:"Mr. Lokesh" }, { start:"13:50", end:"14:35", subject:"CN - Computer Network", period:"P7", faculty:"Mr. Ravinshu" }, { start:"14:35", end:"15:20", subject:"Sports", period:"P8", faculty:"Sports Dept" }],
   2: [{ start:"09:20", end:"10:05", subject:"WT - Web Technology", period:"P1", faculty:"Mr. Avish Yadav" }, { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" }, { start:"10:50", end:"11:35", subject:"Internet Lab", period:"P3", faculty:"Ms. Rashmi" }, { start:"11:35", end:"12:20", subject:"LIB - Library", period:"P4", faculty:"Library Staff" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"13:50", subject:"HRM - Human Resource Mgmt", period:"P6", faculty:"Mr. Lokesh" }, { start:"13:50", end:"14:35", subject:"FLA - Formal Language & Automata", period:"P7", faculty:"Ms. Geeta" }, { start:"14:35", end:"15:20", subject:"Sports", period:"P8", faculty:"Sports Dept" }],
   3: [{ start:"09:20", end:"10:05", subject:"FLA - Formal Language & Automata", period:"P1", faculty:"Ms. Geeta" }, { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" }, { start:"10:50", end:"11:35", subject:"BDA - Big Data Analytics", period:"P3", faculty:"Mr. Harsh" }, { start:"11:35", end:"12:20", subject:"LIB - Library", period:"P4", faculty:"Library Staff" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"13:50", subject:"WT - Web Technology", period:"P6", faculty:"Mr. Avish Yadav" }, { start:"13:50", end:"15:20", subject:"CN LAB - Computer Network Lab", period:"P7-P8", faculty:"Mr. Ravinshu" }],
@@ -595,7 +621,15 @@ const CSE_SCHEDULE = {
   5: [{ start:"09:20", end:"10:05", subject:"FLA - Formal Language & Automata", period:"P1", faculty:"Ms. Geeta" }, { start:"10:05", end:"10:50", subject:"CN - Computer Network", period:"P2", faculty:"Mr. Ravinshu" }, { start:"10:50", end:"11:35", subject:"LIB - Library", period:"P3", faculty:"Library Staff" }, { start:"11:35", end:"12:20", subject:"DAA - Design & Analysis of Algorithm", period:"P4", faculty:"Ms. Rashmi" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"14:35", subject:"WT LAB - Web Technology Lab", period:"P6-P7", faculty:"Mr. Avish Yadav" }, { start:"14:35", end:"15:20", subject:"BDA - Big Data Analytics", period:"P8", faculty:"Mr. Harsh" }]
 };
 
-const AIDS_SCHEDULE = {
+const OLD_AIDS_SCHEDULE = {
+  1: [{ start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1", faculty:"Ms. Geeta" }, { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" }, { start:"10:50", end:"11:35", subject:"LIB - Library", period:"P3", faculty:"Library Staff" }, { start:"11:35", end:"12:20", subject:"FLA - Formal Language & Automata", period:"P4", faculty:"Ms. Nisha Yadav" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"13:50", subject:"HRM - Human Resource Mgmt", period:"P6", faculty:"Mr. Lokesh" }, { start:"13:50", end:"14:35", subject:"PA - Predictive Analysis", period:"P7", faculty:"Ms. Pooja" }, { start:"14:35", end:"15:20", subject:"Sports", period:"P8", faculty:"Sports Dept" }],
+  2: [{ start:"09:20", end:"10:05", subject:"WT - Web Technology", period:"P1", faculty:"Mr. Avish Yadav" }, { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" }, { start:"10:50", end:"11:35", subject:"PA - Predictive Analysis", period:"P3", faculty:"Ms. Pooja" }, { start:"11:35", end:"12:20", subject:"FLA - Formal Language & Automata", period:"P4", faculty:"Ms. Nisha Yadav" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"13:50", subject:"HRM - Human Resource Mgmt", period:"P6", faculty:"Mr. Lokesh" }, { start:"13:50", end:"14:35", subject:"BDA - Big Data Analytics", period:"P7", faculty:"Ms. Geeta" }, { start:"14:35", end:"15:20", subject:"ML - Machine Learning", period:"P8", faculty:"Mr. Harsh" }],
+  3: [{ start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1", faculty:"Ms. Geeta" }, { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" }, { start:"10:50", end:"11:35", subject:"FLA - Formal Language & Automata", period:"P3", faculty:"Ms. Nisha Yadav" }, { start:"11:35", end:"12:20", subject:"Sports / Project", period:"P4", faculty:"Sports Dept" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"13:50", subject:"WT - Web Technology", period:"P6", faculty:"Mr. Avish Yadav" }, { start:"13:50", end:"15:20", subject:"PA LAB - Predictive Analysis Lab", period:"P7-P8", faculty:"Ms. Pooja" }],
+  4: [{ start:"09:20", end:"10:05", subject:"BDA - Big Data Analytics", period:"P1", faculty:"Ms. Geeta" }, { start:"10:05", end:"10:50", subject:"WT - Web Technology", period:"P2", faculty:"Mr. Avish Yadav" }, { start:"10:50", end:"11:35", subject:"ML - Machine Learning", period:"P3", faculty:"Mr. Harsh" }, { start:"11:35", end:"12:20", subject:"PA - Predictive Analysis", period:"P4", faculty:"Ms. Pooja" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"14:35", subject:"ML LAB - Machine Learning Lab", period:"P6-P7", faculty:"Mr. Harsh" }, { start:"14:35", end:"15:20", subject:"HRM - Human Resource Mgmt", period:"P8", faculty:"Mr. Lokesh" }],
+  5: [{ start:"09:20", end:"10:05", subject:"ML - Machine Learning", period:"P1", faculty:"Mr. Harsh" }, { start:"10:05", end:"10:50", subject:"LIB - Library", period:"P2", faculty:"Library Staff" }, { start:"10:50", end:"11:35", subject:"FLA - Formal Language & Automata", period:"P3", faculty:"Ms. Nisha Yadav" }, { start:"11:35", end:"12:20", subject:"BDA - Big Data Analytics", period:"P4", faculty:"Ms. Geeta" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"14:35", subject:"BDA LAB - Big Data Analytics Lab", period:"P6-P7", faculty:"Ms. Geeta" }, { start:"14:35", end:"15:20", subject:"Sports", period:"P8", faculty:"Sports Dept" }]
+};
+
+const NEW_AIDS_SCHEDULE = {
   1: [{ start:"09:20", end:"10:05", subject:"FLA - Formal Language & Automata", period:"P1", faculty:"Mr. Ravinshu" }, { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" }, { start:"10:50", end:"11:35", subject:"ML - Machine Learning", period:"P3", faculty:"Mr. Harsh" }, { start:"11:35", end:"12:20", subject:"LIB - Library", period:"P4", faculty:"Library Staff" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"13:50", subject:"HRM - Human Resource Mgmt", period:"P6", faculty:"Mr. Lokesh" }, { start:"13:50", end:"14:35", subject:"PA - Predictive Analysis", period:"P7", faculty:"Ms. Pooja" }, { start:"14:35", end:"15:20", subject:"Sports", period:"P8", faculty:"Sports Dept" }],
   2: [{ start:"09:20", end:"10:05", subject:"WT - Web Technology", period:"P1", faculty:"Mr. Avish Yadav" }, { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" }, { start:"10:50", end:"11:35", subject:"PA - Predictive Analysis", period:"P3", faculty:"Ms. Pooja" }, { start:"11:35", end:"12:20", subject:"LIB - Library", period:"P4", faculty:"Library Staff" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"13:50", subject:"HRM - Human Resource Mgmt", period:"P6", faculty:"Mr. Lokesh" }, { start:"13:50", end:"14:35", subject:"FLA - Formal Language & Automata", period:"P7", faculty:"Mr. Ravinshu" }, { start:"14:35", end:"15:20", subject:"ML - Machine Learning", period:"P8", faculty:"Mr. Harsh" }],
   3: [{ start:"09:20", end:"10:05", subject:"FLA - Formal Language & Automata", period:"P1", faculty:"Mr. Ravinshu" }, { start:"10:05", end:"10:50", subject:"ECO - Economics for Engineers", period:"P2", faculty:"Ms. Sakshi Yadav" }, { start:"10:50", end:"11:35", subject:"BDA - Big Data Analytics", period:"P3", faculty:"Ms. Geeta" }, { start:"11:35", end:"12:20", subject:"LIB - Library", period:"P4", faculty:"Library Staff" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"13:50", subject:"WT - Web Technology", period:"P6", faculty:"Mr. Avish Yadav" }, { start:"13:50", end:"15:20", subject:"PA LAB - Predictive Analysis Lab", period:"P7-P8", faculty:"Ms. Pooja" }],
@@ -603,12 +637,22 @@ const AIDS_SCHEDULE = {
   5: [{ start:"09:20", end:"10:05", subject:"FLA - Formal Language & Automata", period:"P1", faculty:"Mr. Ravinshu" }, { start:"10:05", end:"11:35", subject:"BDA LAB - Big Data Analytics Lab", period:"P2-P3", faculty:"Ms. Geeta" }, { start:"11:35", end:"12:20", subject:"ML - Machine Learning", period:"P4", faculty:"Mr. Harsh" }, { start:"12:20", end:"13:05", subject:"Lunch Break", period:"LUNCH", faculty:"-" }, { start:"13:05", end:"14:35", subject:"Internet Lab", period:"P6-P7", faculty:"Ms. Geeta" }, { start:"14:35", end:"15:20", subject:"BDA - Big Data Analytics", period:"P8", faculty:"Ms. Geeta" }]
 };
 
-function getTimetableForBranch(branch) { if (branch && branch.toUpperCase() === 'AIDS') return AIDS_TIME_TABLE; return CSE_TIME_TABLE; }
-function getScheduleForBranch(branch) { return (branch && branch.toUpperCase() === 'AIDS') ? AIDS_SCHEDULE : CSE_SCHEDULE; }
+function getTimetableForBranch(branch, dateStr = null) {
+  const isOld = dateStr && dateStr < TIMETABLE_CHANGE_DATE;
+  if (branch && branch.toUpperCase() === 'AIDS') return isOld ? OLD_AIDS_TIME_TABLE : NEW_AIDS_TIME_TABLE;
+  return isOld ? OLD_CSE_TIME_TABLE : NEW_CSE_TIME_TABLE;
+}
+
+function getScheduleForBranch(branch, dateStr = null) {
+  const isOld = dateStr && dateStr < TIMETABLE_CHANGE_DATE;
+  return (branch && branch.toUpperCase() === 'AIDS') ? (isOld ? OLD_AIDS_SCHEDULE : NEW_AIDS_SCHEDULE) : (isOld ? OLD_CSE_SCHEDULE : NEW_CSE_SCHEDULE);
+}
+
 function getCurrentPeriod(branch = 'CSE') {
   const now = new Date(); const day = now.getDay();
   if (day === 0 || day === 6) return null;
-  const schedule = getScheduleForBranch(branch);
+  const todayStr = getISTDateString(now);
+  const schedule = getScheduleForBranch(branch, todayStr);
   const daySchedule = schedule[day] || [];
   const mins = getISTMinutes(now);
   for (let slot of daySchedule) {
@@ -618,6 +662,7 @@ function getCurrentPeriod(branch = 'CSE') {
   }
   return null;
 }
+
 function getScheduleForDate(dateStr, branch = 'CSE') {
   const parts = dateStr.split('-');
   const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
@@ -625,17 +670,19 @@ function getScheduleForDate(dateStr, branch = 'CSE') {
   const dayName = dayNames[d.getDay()];
   if (dayName === 'Saturday' || dayName === 'Sunday') return { isBlocked: true, dayName, schedule: [] };
   const dowIndex = d.getDay();
-  const schedule = getScheduleForBranch(branch);
+  const schedule = getScheduleForBranch(branch, dateStr);
   return { isBlocked: false, dayName, schedule: schedule[dowIndex] || [] };
 }
+
 function getTimetableForDate(dateStr, branch = 'CSE') {
   const parts = dateStr.split('-');
   const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const dayName = dayNames[d.getDay()];
   if (dayName === 'Saturday' || dayName === 'Sunday') return [];
-  return getTimetableForBranch(branch)[dayName] || [];
+  return getTimetableForBranch(branch, dateStr)[dayName] || [];
 }
+
 function getStrictTimetableResponse(dateStr, branch) {
   const parts = dateStr.split('-');
   const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
@@ -1017,7 +1064,6 @@ async function getStudentSummary(rollNo) {
     const user = await User.findOne({ rollNo });
     if (!user) return null;
     const branch = getBranchFromRoll(rollNo) || user.branch || 'CSE';
-    const timetable = getTimetableForBranch(branch);
     const allRecords = await Attendance.find({ rollNo }).lean();
     const holidays = await Holiday.find({}).lean();
     const holidaySet = new Set(holidays.map(h => (h.date || '').toString().split('T')[0]));
@@ -1028,13 +1074,7 @@ async function getStudentSummary(rollNo) {
     let totalConducted = 0;
     const subjectStats = {};
     const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    const dayAcad = {};
-    for (let d = 0; d < 7; d++) {
-      const dayName = dayNameMap[d];
-      const subs = timetable[dayName] || [];
-      const acad = subs.filter(e => !e.subject.includes("LIB") && !e.subject.includes("Library") && !e.subject.includes("Sports"));
-      dayAcad[dayName] = [...new Set(acad.map(e => mapToCanonical(e.subject)))];
-    }
+    
     while (current <= today) {
       const ds = getISTDateString(current);
       if (ds > todayStr) { current.setDate(current.getDate() + 1); continue; }
@@ -1042,8 +1082,8 @@ async function getStudentSummary(rollNo) {
       const isWknd = (dow === 0 || dow === 6);
       const isHoliday = holidaySet.has(ds);
       if (!isWknd && !isHoliday) {
-        const dayName = dayNameMap[dow];
-        const acad = dayAcad[dayName] || [];
+        const daySchedule = getScheduleForDate(ds, branch);
+        const acad = [...new Set(daySchedule.schedule.filter(s => s.period !== 'LUNCH').map(s => mapToCanonical(s.subject)).filter(s => !s.includes('LIB') && !s.includes('Sports')))];
         totalConducted += acad.length;
         acad.forEach(sub => { if (!subjectStats[sub]) subjectStats[sub] = { total: 0, present: 0 }; subjectStats[sub].total++; });
       }
@@ -1089,7 +1129,7 @@ async function getBunkAdvisor(rollNo) {
 
   const user = await User.findOne({ rollNo }).select('branch').lean();
   const branch = getBranchFromRoll(rollNo) || (user && user.branch) || 'CSE';
-  const avgLecturesPerDay = (branch === 'AIDS') ? 5.4 : 5.8;
+  const avgLecturesPerDay = (branch === 'AIDS') ? 5.2 : 5.2;
   const remainingLectures = Math.round(remainingWorkingDays * avgLecturesPerDay);
 
   const totalSemesterLectures = total + remainingLectures;
@@ -1341,7 +1381,7 @@ app.get('/health', (req, res) => res.json({
   ai: { primary: { provider: 'groq', model: GROQ_MODEL, keys: GROQ_API_KEYS.length }, fallback: { provider: 'gemini', model: GEMINI_MODEL, keys: GEMINI_API_KEYS.length, discovered: _geminiModelsCache.list.length } },
   fcm: { ready: fcmReady, projectId: process.env.FIREBASE_PROJECT_ID || null },
   razorpay: { ready: razorpayReady, keyId: process.env.RAZORPAY_KEY_ID ? process.env.RAZORPAY_KEY_ID.substring(0, 8) + '...' : null },
-  version: '5.3.3',
+  version: '5.3.4',
   timestamp: new Date().toISOString()
 }));
 
@@ -2601,11 +2641,9 @@ app.post('/api/attendance/mark-live', async (req, res) => {
     const passDoc = await Passcode.findOne({ passcode: passcode.trim(), type, expiresAt: { $gt: new Date() }, enabled: true });
     if (!passDoc) return res.status(400).json({ error: '❌ Invalid passcode.' });
     if (type === 'full_day') {
-      const tt = getTimetableForBranch(branch);
-      const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-      const dayName = days[new Date().getDay()];
+      const schedule = getScheduleForDate(todayStr, branch);
       const acadSet = new Set();
-      (tt[dayName] || []).forEach(e => { const s = mapToCanonical(e.subject); if (!s.includes("LIB") && !s.includes("Sports")) acadSet.add(s); });
+      schedule.schedule.forEach(e => { const s = mapToCanonical(e.subject); if (e.period !== 'LUNCH' && !s.includes("LIB") && !s.includes("Sports")) acadSet.add(s); });
       const acad = Array.from(acadSet);
       if (!acad.length) return res.status(400).json({ error: 'No academic subjects today.' });
       let marked = 0, skipped = 0;
@@ -2920,8 +2958,8 @@ app.post('/api/teacher/bulk-mark-attendance', async (req, res) => {
       for (const date of dates) {
         const ds = await checkDateStatus(date);
         if (ds.isBlocked) continue;
-        const dayName = ds.dayName;
-        const daySubjects = (getTimetableForBranch(b)[dayName] || []).map(x => mapToCanonical(x.subject)).filter(x => subjects.includes(x));
+        const schedule = getScheduleForDate(date, b);
+        const daySubjects = schedule.schedule.filter(s => s.period !== 'LUNCH').map(x => mapToCanonical(x.subject)).filter(x => subjects.includes(x));
         const uniq = [...new Set(daySubjects.filter(x => !x.includes('LIB') && !x.includes('Sports')))];
         for (const sub of uniq) {
           try { const ex = await Attendance.findOne({ rollNo: s.rollNo, subject: sub, date }); if (!ex) { await Attendance.create({ rollNo: s.rollNo, studentName: s.name, subject: sub, date, status: status || 'Present', location: null, ipAddress: 'fac-bulk', isVerified: false, branch: b, markedBy: requesterRollNo }); mk++; } else sk++; }
@@ -3089,11 +3127,9 @@ app.post('/api/attendance/mark-fullday', async (req, res) => {
     const user = await User.findOne({ rollNo: cr });
     if (!user) return res.status(404).json({ error: 'Not found!' });
     const branch = getBranchFromRoll(cr) || user.branch || 'CSE';
-    const tt = getTimetableForBranch(branch);
-    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    const dayName = days[new Date().getDay()];
+    const schedule = getScheduleForDate(todayDate, branch);
     const acadSet = new Set();
-    (tt[dayName] || []).forEach(e => { const s = mapToCanonical(e.subject); if (!s.includes("LIB") && !s.includes("Sports")) acadSet.add(s); });
+    schedule.schedule.forEach(e => { const s = mapToCanonical(e.subject); if (e.period !== 'LUNCH' && !s.includes("LIB") && !s.includes("Sports")) acadSet.add(s); });
     const acad = Array.from(acadSet);
     let marked = 0, skipped = 0;
     for (const sub of acad) {
@@ -3212,15 +3248,14 @@ app.get('/api/student/trend/:rollNo', async (req, res) => {
     const user = await User.findOne({ rollNo: cr });
     if (!user) return res.status(404).json({ error: 'Not found' });
     const branch = getBranchFromRoll(cr) || user.branch || 'CSE';
-    const tt = getTimetableForBranch(branch);
     const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const holidays = await Holiday.find({}).lean();
     const holidaySet = new Set(holidays.map(h => (h.date || '').toString().split('T')[0]));
     const todayStr = getISTDateString(new Date());
     const mode = (req.query.mode || 'monthly').toLowerCase();
     async function computeDay(dateStr, dayName) {
-      const rawAcad = (tt[dayName] || []).map(e => mapToCanonical(e.subject)).filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports'));
-      const acad = [...new Set(rawAcad)];
+      const schedule = getScheduleForDate(dateStr, branch);
+      const acad = [...new Set(schedule.schedule.filter(s => s.period !== 'LUNCH').map(s => mapToCanonical(s.subject)).filter(s => !s.includes('LIB') && !s.includes('Library') && !s.includes('Sports')))];
       const conducted = acad.length;
       if (conducted === 0) return { attended: 0, conducted: 0 };
       const recs = await Attendance.find({ rollNo: cr, date: dateStr, status: { $in: ['Present', 'Duty Leave'] } }).lean();
@@ -3385,7 +3420,6 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
     const user = await User.findOne({ rollNo: cr });
     if (!user) return res.status(404).json({ error: 'Not found' });
     const branch = getBranchFromRoll(cr) || user.branch || 'CSE';
-    const tt = getTimetableForBranch(branch);
     const startD = new Date(2026, m, 1);
     const endD = new Date(2026, m + 1, 0);
     const startStr = getISTDateString(startD);
@@ -3405,8 +3439,8 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
       if (ds < semesterStartStr) { cur.setDate(cur.getDate() + 1); continue; }
       const dow = cur.getDay();
       if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) {
-        const dayName = dayNameMap[dow];
-        const daySubs = [...new Set((tt[dayName] || []).map(e => mapToCanonical(e.subject)))];
+        const daySchedule = getScheduleForDate(ds, branch);
+        const daySubs = [...new Set(daySchedule.schedule.filter(s => s.period !== 'LUNCH').map(e => mapToCanonical(e.subject)))];
         daySubs.forEach(sub => { if (!sub.includes('Sports') && !sub.includes('LIB')) { subSet.add(sub); totalConducted++; } });
       }
       cur.setDate(cur.getDate() + 1);
@@ -3420,8 +3454,8 @@ app.get('/api/student/monthly-summary/:rollNo', async (req, res) => {
       if (ds < semesterStartStr) { cur.setDate(cur.getDate() + 1); continue; }
       const dow = cur.getDay();
       if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) {
-        const dayName = dayNameMap[dow];
-        const daySubs = [...new Set((tt[dayName] || []).map(e => mapToCanonical(e.subject)))];
+        const daySchedule = getScheduleForDate(ds, branch);
+        const daySubs = [...new Set(daySchedule.schedule.filter(s => s.period !== 'LUNCH').map(e => mapToCanonical(e.subject)))];
         daySubs.forEach(sub => { if (stats[sub]) stats[sub].total++; });
       }
       cur.setDate(cur.getDate() + 1);
@@ -3452,12 +3486,10 @@ app.post('/api/admin/manual-attendance-bulk', async (req, res) => {
     if (!user) return res.status(404).json({ error: `Roll ${tr} not registered!` });
     const actualBranch = getBranchFromRoll(tr) || user.branch || 'CSE';
     let marked = 0, markedSubs = [], already = [];
-    const tt = getTimetableForBranch(actualBranch);
+    const schedule = getScheduleForDate(date, actualBranch);
     let toMark = subjects;
     if (!toMark || toMark.length === 0) {
-      const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-      const dayName = days[dobj.getDay()];
-      toMark = (tt[dayName] || []).filter(e => !e.subject.includes("LIB") && !e.subject.includes("Sports")).map(e => mapToCanonical(e.subject));
+      toMark = schedule.schedule.filter(e => e.period !== 'LUNCH').map(e => mapToCanonical(e.subject)).filter(s => !s.includes("LIB") && !s.includes("Sports"));
     }
     const uniq = [...new Set(toMark.map(s => mapToCanonical(s)).filter(s => !s.includes('LIB') && !s.includes('Sports')))];
     for (let sub of uniq) {
@@ -3573,7 +3605,7 @@ app.get('/api/export/student-attendance/:requesterRollNo', async (req, res) => {
 app.get('/api/timetable/subjects', async (req, res) => {
   try {
     const set = new Set();
-    ['Monday','Tuesday','Wednesday','Thursday','Friday'].forEach(day => { CSE_TIME_TABLE[day].forEach(e => set.add(mapToCanonical(e.subject))); AIDS_TIME_TABLE[day].forEach(e => set.add(mapToCanonical(e.subject))); });
+    ['Monday','Tuesday','Wednesday','Thursday','Friday'].forEach(day => { NEW_CSE_TIME_TABLE[day].forEach(e => set.add(mapToCanonical(e.subject))); NEW_AIDS_TIME_TABLE[day].forEach(e => set.add(mapToCanonical(e.subject))); });
     res.json([...set].sort());
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -3610,14 +3642,14 @@ app.get('/api/admin/class-attendance-report', async (req, res) => {
     const dayNameMap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const result = await Promise.all(students.map(async s => {
       const b = getBranchFromRoll(s.rollNo) || s.branch || 'CSE';
-      const tt = getTimetableForBranch(b);
       let totalCond = 0;
       let cur = new Date(start);
       while (cur <= end) {
         const ds = getISTDateString(cur);
         const dow = cur.getDay();
         if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) {
-          const daySubs = [...new Set((tt[dayNameMap[dow]] || []).map(e => mapToCanonical(e.subject)))];
+          const daySchedule = getScheduleForDate(ds, b);
+          const daySubs = [...new Set(daySchedule.schedule.filter(s => s.period !== 'LUNCH').map(e => mapToCanonical(e.subject)))];
           daySubs.forEach(sub => { if (!sub.includes('Sports') && !sub.includes('LIB')) totalCond++; });
         }
         cur.setDate(cur.getDate() + 1);
@@ -3643,13 +3675,12 @@ app.post('/api/admin/bulk-mark-attendance', async (req, res) => {
     const results = []; let tMarked = 0, tSkipped = 0;
     for (const s of students) {
       const b = getBranchFromRoll(s.rollNo) || s.branch || 'CSE';
-      const tt = getTimetableForBranch(b);
       let mk = 0, sk = 0;
       for (const date of dates) {
         const ds = await checkDateStatus(date);
         if (ds.isBlocked) continue;
-        const dayName = ds.dayName;
-        let toMark = subjects && subjects.length > 0 ? subjects : (tt[dayName] || []).map(x => mapToCanonical(x.subject));
+        const schedule = getScheduleForDate(date, b);
+        let toMark = subjects && subjects.length > 0 ? subjects : schedule.schedule.filter(s => s.period !== 'LUNCH').map(x => mapToCanonical(x.subject));
         const uniq = [...new Set(toMark.filter(x => !x.includes('LIB') && !x.includes('Sports')))];
         for (const sub of uniq) {
           const ex = await Attendance.findOne({ rollNo: s.rollNo, subject: sub, date });
@@ -3769,8 +3800,8 @@ app.post('/api/leave/action/:id', async (req, res) => {
         const ds = getISTDateString(cur);
         const dsStatus = await checkDateStatus(ds);
         if (!dsStatus.isBlocked) {
-          const tt = getTimetableForBranch(b)[dsStatus.dayName] || [];
-          const daySubs = [...new Set(tt.map(e => mapToCanonical(e.subject)))];
+          const schedule = getScheduleForDate(ds, b);
+          const daySubs = [...new Set(schedule.schedule.filter(s => s.period !== 'LUNCH').map(e => mapToCanonical(e.subject)))];
           for (const sub of daySubs) {
             if (sub.includes('LIB') || sub.includes('Sports')) continue;
             const ex = await Attendance.findOne({ rollNo: leave.rollNo, subject: sub, date: ds });
@@ -4152,7 +4183,8 @@ async function executeDbAction(intent, userContext, threadId = null) {
     let totalMarked = 0, totalSkipped = 0;
     for (const s of students) {
       const b = getBranchFromRoll(s.rollNo) || s.branch || 'CSE';
-      const daySubjects = (getTimetableForBranch(b)[dsC.dayName] || []).map(mapToCanonical).filter(x => subjects.includes(x));
+      const schedule = getScheduleForDate(parsed.date, b);
+      const daySubjects = schedule.schedule.filter(s => s.period !== 'LUNCH').map(x => mapToCanonical(x.subject)).filter(x => subjects.includes(x));
       const uniq = [...new Set(daySubjects.filter(x => !x.includes('LIB') && !x.includes('Sports')))];
       for (const sub of uniq) {
         try { const ex = await Attendance.findOne({ rollNo: s.rollNo, subject: sub, date: parsed.date }); if (!ex) { await Attendance.create({ rollNo: s.rollNo, studentName: s.name, subject: sub, date: parsed.date, status: parsed.status, location: null, ipAddress: 'nlp-bulk', isVerified: false, branch: b }); totalMarked++; } else totalSkipped++; }
@@ -4498,7 +4530,7 @@ async function executeDbAction(intent, userContext, threadId = null) {
     const user = await User.findOne({ rollNo: d.rollNo.toUpperCase(), role: 'student' });
     if (!user) return { error: 'Student not found.' };
     const b = getBranchFromRoll(user.rollNo) || user.branch || 'CSE';
-    let toMark = d.subjects?.length ? d.subjects : (getTimetableForBranch(b)[ds.dayName] || []).map(x => mapToCanonical(x.subject));
+    let toMark = d.subjects?.length ? d.subjects : (getScheduleForDate(d.date, b).schedule.filter(s => s.period !== 'LUNCH').map(x => mapToCanonical(x.subject)));
     const uniq = [...new Set(toMark.map(mapToCanonical).filter(s => !s.includes('LIB') && !s.includes('Sports')))];
     let marked = 0;
     for (const sub of uniq) { try { const ex = await Attendance.findOne({ rollNo: user.rollNo, subject: sub, date: d.date }); if (!ex) { await Attendance.create({ rollNo: user.rollNo, studentName: user.name, subject: sub, date: d.date, status: d.status || 'Present', location: null, ipAddress: 'chat-manual', isVerified: false, branch: b }); marked++; } } catch (e) {} }
@@ -4515,7 +4547,7 @@ async function executeDbAction(intent, userContext, threadId = null) {
       for (const date of d.dates) {
         const ds = await checkDateStatus(date);
         if (ds.isBlocked) continue;
-        let toMark = d.subjects?.length ? d.subjects : (getTimetableForBranch(b)[ds.dayName] || []).map(x => mapToCanonical(x.subject));
+        let toMark = d.subjects?.length ? d.subjects : (getScheduleForDate(date, b).schedule.filter(s => s.period !== 'LUNCH').map(x => mapToCanonical(x.subject)));
         const uniq = [...new Set(toMark.map(mapToCanonical).filter(x => !x.includes('LIB') && !x.includes('Sports')))];
         for (const sub of uniq) { try { const ex = await Attendance.findOne({ rollNo: s.rollNo, subject: sub, date }); if (!ex) { await Attendance.create({ rollNo: s.rollNo, studentName: s.name, subject: sub, date, status: 'Present', location: null, ipAddress: 'chat-bulk', isVerified: false, branch: b }); marked++; } else skipped++; } catch (e) { if (e.code === 11000) skipped++; } }
       }
@@ -4737,11 +4769,9 @@ app.post('/api/ai/chat', async (req, res) => {
             const lectureType = pending.data.lectureType || 'full_day';
             let replyText = '';
             if (lectureType === 'full_day') {
-              const tt = getTimetableForBranch(userBranch);
-              const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-              const dayName = days[new Date().getDay()];
+              const schedule = getScheduleForDate(todayStr, userBranch);
               const acadSet = new Set();
-              (tt[dayName] || []).forEach(e => { const s = mapToCanonical(e.subject); if (!s.includes('LIB') && !s.includes('Sports')) acadSet.add(s); });
+              schedule.schedule.forEach(e => { const s = mapToCanonical(e.subject); if (e.period !== 'LUNCH' && !s.includes('LIB') && !s.includes('Sports')) acadSet.add(s); });
               const acad = Array.from(acadSet);
               if (!acad.length) { await clearPending(cr); return sendJson({ reply: 'No academic subjects today.', threadId: effectiveThreadId, aiOk: true, usedDatabase: true }); }
               let marked = 0, skipped = 0;
@@ -5078,9 +5108,8 @@ function scheduleDailySummary() {
       for (const s of students) {
         try {
           const b = getBranchFromRoll(s.rollNo) || s.branch || 'CSE';
-          const tt = getTimetableForBranch(b);
-          const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][day];
-          const acad = [...new Set((tt[dayName] || []).filter(x => !x.subject.includes('LIB') && !x.subject.includes('Sports')).map(x => mapToCanonical(x.subject)))];
+          const schedule = getScheduleForDate(todayStr, b);
+          const acad = [...new Set(schedule.schedule.filter(s => s.period !== 'LUNCH').map(x => mapToCanonical(x.subject)).filter(x => !x.includes('LIB') && !x.includes('Sports')))];
           const recs = await Attendance.find({ rollNo: s.rollNo, date: todayStr, status: { $in: ['Present', 'Duty Leave'] } }).lean();
           const pSet = new Set(recs.map(r => mapToCanonical(r.subject)));
           let pCount = 0;
@@ -5335,7 +5364,7 @@ function scheduleClassReminders() {
       const istMin = getISTMinutes(now);
 
       for (const branch of ['CSE', 'AIDS']) {
-        const schedule = getScheduleForBranch(branch);
+        const schedule = getScheduleForBranch(branch, todayStr);
         const daySchedule = schedule[day] || [];
 
         for (const slot of daySchedule) {
@@ -5455,7 +5484,7 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, async () => {
   console.log('');
   console.log('╔══════════════════════════════════════════════════════╗');
-  console.log('║       🎓 BM GROUP ERP BACKEND · v5.3.3              ║');
+  console.log('║       🎓 BM GROUP ERP BACKEND · v5.3.4              ║');
   console.log('╠══════════════════════════════════════════════════════╣');
   console.log(`║  🚀 Port: ${String(PORT).padEnd(44)}║`);
   console.log(`║  🌍 TZ:   ${String(process.env.TZ || 'Asia/Kolkata').padEnd(44)}║`);
@@ -5464,12 +5493,9 @@ app.listen(PORT, async () => {
   console.log(`║  🔥 FCM:  ${(fcmReady ? 'READY ✅' : 'DISABLED ⚠️').padEnd(43)}║`);
   console.log(`║  💳 Pay:  ${(razorpayReady ? 'Razorpay READY ✅' : 'Razorpay DISABLED ⚠️').padEnd(43)}║`);
   console.log('╠══════════════════════════════════════════════════════╣');
-  console.log('║  ✨ NEW in v5.3.3:                                   ║');
-  console.log('║     • Fixed Timetable & Faculty per new images      ║');
-  console.log('║     • Fixed Leaderboard Percentage tab (Backend)    ║');
-  console.log('║     • Fixed Notes View (inline Content-Disposition) ║');
-  console.log('║     • Added Announcement Clear API                  ║');
-  console.log('║     • Branch-specific class reminders               ║');
+  console.log('║  ✨ NEW in v5.3.4:                                   ║');
+  console.log('║     • Date-Based Timetable (Past vs New logic)      ║');
+  console.log('║     • Fixed Past Attendance Percentages             ║');
   console.log('╚══════════════════════════════════════════════════════╝');
   console.log('');
 
@@ -5495,5 +5521,5 @@ process.on('SIGINT', async () => {
 });
 
 // ============================================================
-//  END OF FILE — index.js v5.3.3
+//  END OF FILE — index.js v5.3.4
 // ============================================================
