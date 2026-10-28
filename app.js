@@ -359,7 +359,7 @@ function viewPdfBlob(blob, fileName = 'document.pdf') {
   document.body.appendChild(modal);
 }
 
-// ★ NEW: Render PDF to Canvas using PDF.js (Works on Android WebView)
+// ★ NEW: Render PDF to Canvas using PDF.js (Works on Android WebView with High-DPI Fix)
 async function renderPdfWithPdfJs(blob) {
   const modal = document.createElement('div');
   modal.className = 'modal-backdrop open safe-top-modal';
@@ -397,27 +397,41 @@ async function renderPdfWithPdfJs(blob) {
     
     container.innerHTML = ''; // Clear spinner
     
+    // ★ FIX: High DPI / Retina Display Scaling Factor for Crystal Clear PDF
+    const dpr = window.devicePixelRatio || 1; 
+    
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       
-      // Scale dynamically based on screen width
       const unscaledViewport = page.getViewport({ scale: 1 });
       const containerWidth = container.clientWidth - 20;
-      const scale = containerWidth / unscaledViewport.width;
-      const viewport = page.getViewport({ scale: scale });
+      
+      // Base scale based on screen width
+      const baseScale = containerWidth / unscaledViewport.width;
+      
+      // Apply DPR for sharp rendering
+      const cssViewport = page.getViewport({ scale: baseScale });
+      const renderViewport = page.getViewport({ scale: baseScale * dpr });
       
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d');
-      canvas.height = viewport.height;
-      canvas.width = viewport.width;
+      
+      // Set actual canvas resolution (High Res)
+      canvas.height = renderViewport.height;
+      canvas.width = renderViewport.width;
+      
+      // Set CSS display size (Normal size)
+      canvas.style.width = `${cssViewport.width}px`;
+      canvas.style.height = `${cssViewport.height}px`;
       canvas.style.marginBottom = '10px';
       canvas.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
       
       container.appendChild(canvas);
       
+      // Render using the high-res viewport
       await page.render({
         canvasContext: context,
-        viewport: viewport
+        viewport: renderViewport
       }).promise;
     }
   } catch (e) {
