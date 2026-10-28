@@ -11,7 +11,7 @@ const SEMESTER_START = new Date(2026, 6, 15);
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const FULL_DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-const FACULTY_NAME_MAP = {'BDA - Big Data Analytics':'Ms. Geeta','ECO - Economics for Engineers':'Ms. Sakshi Yadav','DAA - Design & Analysis of Algorithm':'Ms. Rashmi','FLA - Formal Language & Automata':'Ms. Nisha Yadav','HRM - Human Resource Mgmt':'Mr. Lokesh','CN - Computer Network':'Mr. Chhetrapal','WT - Web Technology':'Mr. Avish Yadav','Internet Lab (Ms. Geeta)':'Ms. Geeta','CN LAB - Computer Network Lab':'Mr. Chhetrapal','DAA LAB - Algorithm Lab':'Ms. Rashmi','WT LAB - Web Technology Lab':'Mr. Avish Yadav','PA - Predictive Analysis':'Ms. Pooja','ML - Machine Learning':'Mr. Harsh','PA LAB - Predictive Analysis Lab':'Ms. Pooja','ML LAB - Machine Learning Lab':'Mr. Harsh','BDA LAB - Big Data Analytics Lab':'Ms. Geeta'};
+const FACULTY_NAME_MAP = {'BDA - Big Data Analytics':'Ms. Geeta','ECO - Economics for Engineers':'Ms. Sakshi Yadav','DAA - Design & Analysis of Algorithm':'Ms. Rashmi','FLA - Formal Language & Automata':'Ms. Nisha Yadav','HRM - Human Resource Mgmt':'Mr. Lokesh','CN - Computer Network':'Mr. Chhetrapal','WT - Web Technology':'Mr. Avish Yadav','Internet Lab':'Ms. Geeta','CN LAB - Computer Network Lab':'Mr. Chhetrapal','DAA LAB - Algorithm Lab':'Ms. Rashmi','WT LAB - Web Technology Lab':'Mr. Avish Yadav','PA - Predictive Analysis':'Ms. Pooja','ML - Machine Learning':'Mr. Harsh','PA LAB - Predictive Analysis Lab':'Ms. Pooja','ML LAB - Machine Learning Lab':'Mr. Harsh','BDA LAB - Big Data Analytics Lab':'Ms. Geeta'};
 const DOWNLOAD_KEYWORDS = ['pdf','download','excel','file','save','print','xlsx','txt','document','report','export','banao','bana do','chahiye','bana','generate'];
 
 // ★ NEW: Professional SVG Icons
@@ -101,7 +101,7 @@ let userSubscription = { tier: 'free', expiresAt: null };
 let leaderboardCache = { attendance: null, login: null, percentage: null };
 
 /* ============================================================
-   ★ CUSTOM LAYOUT FIX INJECTION & MOBILE SCROLL FIX
+   ★ CUSTOM LAYOUT FIX INJECTION & MOBILE SCROLL FIX & MODAL FIX
    ============================================================ */
 (function injectLayoutFix() {
   if (document.getElementById('bm-custom-layout-fix')) return;
@@ -130,6 +130,14 @@ let leaderboardCache = { attendance: null, login: null, percentage: null };
     .btn-xs svg { width: 12px; height: 12px; margin-right: 4px; }
     .report-btn-group { display: flex; gap: 8px; }
     .report-btn-group > * { flex: 1; }
+
+    /* ★ FIX: Modal Positioning (Premium Plans & Working Days header stuck) */
+    .modal-backdrop { align-items: center !important; padding-top: 20px !important; padding-bottom: 20px !important; }
+    .safe-top-modal { padding-top: calc(60px + env(safe-area-inset-top)) !important; }
+    .modal { margin: auto !important; }
+    @media (max-width: 640px) {
+        .safe-top-modal { padding-top: calc(80px + env(safe-area-inset-top)) !important; }
+    }
 
     /* ★ MOBILE FIX: Screens smaller than 550px */
     @media (max-width: 550px) {
@@ -291,20 +299,44 @@ function isDesktop(){ return window.innerWidth >= 641; }
 function isMedianApp(){ return typeof window.median !== 'undefined' && window.median !== null; }
 
 /* ============================================================
-   PDF VIEWER (NEW)
+   PDF VIEWER (FIXED BLANK VIEW ISSUE)
    ============================================================ */
-function viewPdfBlob(blob) {
+function viewPdfBlob(blob, fileName = 'document.pdf') {
+  // Force correct MIME type if it's generic octet-stream (Fixes mobile browser downloading instead of viewing)
+  if (!blob.type || blob.type === 'application/octet-stream') {
+    const ext = fileName.split('.').pop().toLowerCase();
+    if (ext === 'pdf') blob = new Blob([blob], { type: 'application/pdf' });
+    else if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) blob = new Blob([blob], { type: `image/${ext === 'jpg' ? 'jpeg' : ext}` });
+  }
+
   const url = URL.createObjectURL(blob);
+  const isImage = blob.type.startsWith('image/');
+  const isPdf = blob.type === 'application/pdf';
+  
+  let contentHtml = '';
+  if (isImage) {
+    contentHtml = `<img src="${url}" style="max-width: 100%; max-height: 100%; object-fit: contain;" />`;
+  } else if (isPdf) {
+    contentHtml = `<iframe src="${url}" style="width: 100%; height: 100%; border: none;"></iframe>`;
+  } else {
+    contentHtml = `<div style="padding: 20px; text-align: center; color: var(--slate-600);">
+        <p style="margin-bottom: 16px;">Preview is not available for this file type.</p>
+        <a href="${url}" download="${fileName}" class="btn btn-primary">Download File</a>
+      </div>`;
+  }
+
   const modal = document.createElement('div');
   modal.className = 'modal-backdrop open safe-top-modal';
   modal.style.zIndex = '99999';
   modal.innerHTML = `
-    <div class="modal wide" style="height: 85vh; display: flex; flex-direction: column; max-width: 800px;">
-      <div class="modal-header" style="padding: 12px 18px;">
+    <div class="modal wide" style="height: 85vh; display: flex; flex-direction: column; max-width: 900px; padding: 0;">
+      <div class="modal-header" style="padding: 12px 18px; border-bottom: 1px solid var(--slate-200); margin: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0;">
         <h3 style="margin:0; font-size: 15px;">📄 Document Preview</h3>
         <button type="button" class="modal-close" onclick="this.closest('.modal-backdrop').remove(); URL.revokeObjectURL('${url}')">✕</button>
       </div>
-      <iframe src="${url}" style="flex: 1; width: 100%; border: none; border-bottom-left-radius: var(--radius-lg); border-bottom-right-radius: var(--radius-lg);"></iframe>
+      <div style="flex: 1; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f8fafc; padding: 10px;">
+        ${contentHtml}
+      </div>
     </div>
   `;
   document.body.appendChild(modal);
@@ -1216,11 +1248,21 @@ function toggleCardBody(header) {
     const card = header.closest('.collapsible-card');
     const body = card.querySelector('.collapsible-body');
     const arrow = header.querySelector('.collapse-arrow');
-    if (body) body.classList.toggle('open');
-    if (body && body.classList.contains('open')) {
-        if (arrow) arrow.style.transform = 'rotate(180deg)';
-    } else {
-        if (arrow) arrow.style.transform = 'rotate(0deg)';
+    
+    if (body) {
+        const isOpening = !body.classList.contains('open');
+        body.classList.toggle('open');
+        
+        if (isOpening) {
+            if (arrow) arrow.style.transform = 'rotate(180deg)';
+            // Lazy load content if needed
+            if (card.id === 'sec-notes') loadStudentNotes();
+            if (card.id === 'sec-assignments') loadStudentAssignments();
+            if (card.id === 'sec-exams') loadStudentExams();
+            if (card.id === 'sec-announcements') loadStudentAnnouncements();
+        } else {
+            if (arrow) arrow.style.transform = 'rotate(0deg)';
+        }
     }
 }
 
@@ -1301,7 +1343,6 @@ function makeCollapsible(id, title, iconSvg, openByDefault = false) {
 }
 
 function initCollapsibleCards() {
-    // ★ Yahan sabko false kiya gaya hai taaki default minimize rahe
     makeCollapsible('sec-request', 'Request Attendance', '📩', false);
     makeCollapsible('sec-notes', 'Notes & Documents', '📚', false);
     makeCollapsible('sec-assignments', 'Assignments', '📝', false);
@@ -1365,7 +1406,7 @@ function loadDashboard(){
     if ($('menuUserRoll')) $('menuUserRoll').textContent = (currentUser.rollNo || '') + ' · ' + (currentUser.branch || 'CSE');
     populateStudentMenu();
     
-    // ★ FIX: Notes, assignments, exams, announcements ab display block hain taaki refresh par gayab na hon
+    // Notes, assignments, exams, announcements ab display block hain taaki refresh par gayab na hon
     [reqSec, advBox, sbCard, repSec, qpCard, aaCard, notesSec, assignSec, examsSec, annSec].forEach(el => {
       if (el) el.style.display = (el === advBox) ? 'flex' : 'block';
     });
@@ -1565,11 +1606,40 @@ function showAdmin(id){
   if (id === 'a-library') loadAllLibrary();
   if (id === 'a-results') loadAdminResults();
   if (id === 'a-exams') loadAdminExams();
-  if (id === 'a-alerts') {}
+  if (id === 'a-alerts') initAnnouncementsUI(); // ★ NEW
   if (id === 'a-tools') initTools();
   if (id === 'a-leave') loadLeaveRequests();
   observeNewContent();
   setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 60);
+}
+
+// ★ NEW: Clear Announcements logic
+function initAnnouncementsUI() {
+    const alertsSection = $('a-alerts');
+    if (alertsSection && !$('clearAnnBtn')) {
+        const clearBtnCard = document.createElement('div');
+        clearBtnCard.className = 'card';
+        clearBtnCard.innerHTML = `
+            <div class="card-title" style="color:#be123c;">🗑️ Clear Announcements</div>
+            <p class="text-xs text-muted mb-2">Remove all announcements for all branches.</p>
+            <button class="btn btn-danger btn-block" id="clearAnnBtn" onclick="clearAllAnnouncements()">Clear All Announcements</button>
+        `;
+        alertsSection.appendChild(clearBtnCard);
+    }
+}
+async function clearAllAnnouncements() {
+    if (!confirm('Clear all announcements?')) return;
+    showDL('Clearing...');
+    try {
+        const res = await fetch(`${API}/api/admin/clear-announcements`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requesterRollNo: currentUser.rollNo, branch: 'ALL' })
+        });
+        hideDL();
+        if (res.ok) { toast('Announcements cleared', 'success'); }
+        else toast('Failed to clear', 'error');
+    } catch(e) { hideDL(); toast('Network error', 'error'); }
 }
 
 async function clearAllRequests(){ if (!confirm('Delete ALL attendance requests? This cannot be undone.')) return; try { const res = await fetch(`${API}/api/admin/clear-requests`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})}); const d = await res.json(); if (res.ok) { showFeedback('success','Cleared', d.message || 'All attendance requests have been deleted.'); loadAdminRequests(); } else showFeedback('error','Failed', d.error || 'Could not clear requests'); } catch(e){ showFeedback('error','Network Error', e.message); } }
@@ -2142,7 +2212,7 @@ async function generateIndividualPDF(studentRoll, studentName, branch, range, mo
     hideDL();
     if (!blob) return toast('PDF library failed to load','error');
     const filename = `attendance_${studentRoll}_${Date.now()}.pdf`;
-    if (action === 'view') viewPdfBlob(blob);
+    if (action === 'view') viewPdfBlob(blob, filename); // ★ Passing filename
     else universalDownload(blob, filename);
   } catch(e) { hideDL(); toast('Failed: ' + e.message, 'error'); }
 }
@@ -2155,8 +2225,18 @@ async function generateSelfPDF(action = 'download'){
   await generateIndividualPDF(currentUser.rollNo, currentUser.name, currentUser.branch || 'CSE', range, month, true, action); 
 }
 
-function getTimetableForBranch(b){ const CSE = { Monday: ['BDA - Big Data Analytics','ECO - Economics for Engineers','DAA - Design & Analysis of Algorithm','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','CN - Computer Network','Sports'], Tuesday: ['WT - Web Technology','ECO - Economics for Engineers','Internet Lab (Ms. Geeta)','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','BDA - Big Data Analytics','Sports'], Wednesday: ['BDA - Big Data Analytics','ECO - Economics for Engineers','FLA - Formal Language & Automata','Sports / Activity','WT - Web Technology','CN LAB - Computer Network Lab'], Thursday: ['BDA - Big Data Analytics','WT - Web Technology','CN - Computer Network','DAA - Design & Analysis of Algorithm','DAA LAB - Algorithm Lab','HRM - Human Resource Mgmt'], Friday: ['DAA - Design & Analysis of Algorithm','CN - Computer Network','FLA - Formal Language & Automata','BDA - Big Data Analytics','WT LAB - Web Technology Lab','Sports'] }; const AIDS = { Monday: ['BDA - Big Data Analytics','ECO - Economics for Engineers','LIB - Library','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','PA - Predictive Analysis','PA - Predictive Analysis','Sports'], Tuesday: ['WT - Web Technology','ECO - Economics for Engineers','PA - Predictive Analysis','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','BDA - Big Data Analytics','ML - Machine Learning'], Wednesday: ['BDA - Big Data Analytics','ECO - Economics for Engineers','FLA - Formal Language & Automata','Sports / Project','WT - Web Technology','PA LAB - Predictive Analysis Lab'], Thursday: ['BDA - Big Data Analytics','WT - Web Technology','ML - Machine Learning','PA - Predictive Analysis','ML LAB - Machine Learning Lab','HRM - Human Resource Mgmt'], Friday: ['ML - Machine Learning','LIB - Library','FLA - Formal Language & Automata','BDA - Big Data Analytics','BDA LAB - Big Data Analytics Lab','Sports'] }; return (b && b.toUpperCase() === 'AIDS') ? AIDS : CSE; }
-function getScheduleForBranch(b){ const CSE = { 1:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'DAA - Design & Analysis of Algorithm',period:'P3'},{start:'11:35',end:'12:20',subject:'FLA - Formal Language & Automata',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'CN - Computer Network',period:'P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}], 2:[{start:'09:20',end:'10:05',subject:'WT - Web Technology',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'Internet Lab (Ms. Geeta)',period:'P3'},{start:'11:35',end:'12:20',subject:'FLA - Formal Language & Automata',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'BDA - Big Data Analytics',period:'P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}], 3:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'FLA - Formal Language & Automata',period:'P3'},{start:'11:35',end:'12:20',subject:'Sports / Activity',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'WT - Web Technology',period:'P6'},{start:'13:50',end:'15:20',subject:'CN LAB - Computer Network Lab',period:'P7-P8'}], 4:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'WT - Web Technology',period:'P2'},{start:'10:50',end:'11:35',subject:'CN - Computer Network',period:'P3'},{start:'11:35',end:'12:20',subject:'DAA - Design & Analysis of Algorithm',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'DAA LAB - Algorithm Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'HRM - Human Resource Mgmt',period:'P8'}], 5:[{start:'09:20',end:'10:05',subject:'DAA - Design & Analysis of Algorithm',period:'P1'},{start:'10:05',end:'10:50',subject:'CN - Computer Network',period:'P2'},{start:'10:50',end:'11:35',subject:'FLA - Formal Language & Automata',period:'P3'},{start:'11:35',end:'12:20',subject:'BDA - Big Data Analytics',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'WT LAB - Web Technology Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}] }; const AIDS = { 1:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'LIB - Library',period:'P3'},{start:'11:35',end:'12:20',subject:'FLA - Formal Language & Automata',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'PA - Predictive Analysis',period:'P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}], 2:[{start:'09:20',end:'10:05',subject:'WT - Web Technology',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'PA - Predictive Analysis',period:'P3'},{start:'11:35',end:'12:20',subject:'FLA - Formal Language & Automata',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'BDA - Big Data Analytics',period:'P7'},{start:'14:35',end:'15:20',subject:'ML - Machine Learning',period:'P8'}], 3:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'FLA - Formal Language & Automata',period:'P3'},{start:'11:35',end:'12:20',subject:'Sports / Project',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'WT - Web Technology',period:'P6'},{start:'13:50',end:'15:20',subject:'PA LAB - Predictive Analysis Lab',period:'P7-P8'}], 4:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'WT - Web Technology',period:'P2'},{start:'10:50',end:'11:35',subject:'ML - Machine Learning',period:'P3'},{start:'11:35',end:'12:20',subject:'PA - Predictive Analysis',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'ML LAB - Machine Learning Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'HRM - Human Resource Mgmt',period:'P8'}], 5:[{start:'09:20',end:'10:05',subject:'ML - Machine Learning',period:'P1'},{start:'10:05',end:'10:50',subject:'LIB - Library',period:'P2'},{start:'10:50',end:'11:35',subject:'FLA - Formal Language & Automata',period:'P3'},{start:'11:35',end:'12:20',subject:'BDA - Big Data Analytics',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'BDA LAB - Big Data Analytics Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}] }; return (b && b.toUpperCase() === 'AIDS') ? AIDS : CSE; }
+function getTimetableForBranch(b){ 
+  const CSE = { Monday: ['FLA - Formal Language & Automata','ECO - Economics for Engineers','DAA - Design & Analysis of Algorithm','LIB - Library','HRM - Human Resource Mgmt','CN - Computer Network','Sports'], Tuesday: ['WT - Web Technology','ECO - Economics for Engineers','Internet Lab','LIB - Library','HRM - Human Resource Mgmt','FLA - Formal Language & Automata','Sports'], Wednesday: ['FLA - Formal Language & Automata','ECO - Economics for Engineers','BDA - Big Data Analytics','LIB - Library','WT - Web Technology','CN LAB - Computer Network Lab'], Thursday: ['BDA - Big Data Analytics','WT - Web Technology','CN - Computer Network','DAA - Design & Analysis of Algorithm','DAA LAB - Algorithm Lab','HRM - Human Resource Mgmt'], Friday: ['FLA - Formal Language & Automata','CN - Computer Network','LIB - Library','DAA - Design & Analysis of Algorithm','WT LAB - Web Technology Lab','BDA - Big Data Analytics'] }; 
+  const AIDS = { Monday: ['FLA - Formal Language & Automata','ECO - Economics for Engineers','ML - Machine Learning','LIB - Library','HRM - Human Resource Mgmt','PA - Predictive Analysis','Sports'], Tuesday: ['WT - Web Technology','ECO - Economics for Engineers','PA - Predictive Analysis','LIB - Library','HRM - Human Resource Mgmt','FLA - Formal Language & Automata','ML - Machine Learning'], Wednesday: ['FLA - Formal Language & Automata','ECO - Economics for Engineers','BDA - Big Data Analytics','LIB - Library','WT - Web Technology','PA LAB - Predictive Analysis Lab'], Thursday: ['BDA - Big Data Analytics','WT - Web Technology','LIB - Library','PA - Predictive Analysis','ML LAB - Machine Learning Lab','HRM - Human Resource Mgmt'], Friday: ['FLA - Formal Language & Automata','BDA LAB - Big Data Analytics Lab','ML - Machine Learning','Internet Lab','BDA - Big Data Analytics'] }; 
+  return (b && b.toUpperCase() === 'AIDS') ? AIDS : CSE; 
+}
+
+function getScheduleForBranch(b){ 
+  const CSE = { 1:[{start:'09:20',end:'10:05',subject:'FLA - Formal Language & Automata',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'DAA - Design & Analysis of Algorithm',period:'P3'},{start:'11:35',end:'12:20',subject:'LIB - Library',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'CN - Computer Network',period:'P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}], 2:[{start:'09:20',end:'10:05',subject:'WT - Web Technology',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'Internet Lab',period:'P3'},{start:'11:35',end:'12:20',subject:'LIB - Library',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'FLA - Formal Language & Automata',period:'P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}], 3:[{start:'09:20',end:'10:05',subject:'FLA - Formal Language & Automata',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'BDA - Big Data Analytics',period:'P3'},{start:'11:35',end:'12:20',subject:'LIB - Library',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'WT - Web Technology',period:'P6'},{start:'13:50',end:'15:20',subject:'CN LAB - Computer Network Lab',period:'P7-P8'}], 4:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'WT - Web Technology',period:'P2'},{start:'10:50',end:'11:35',subject:'CN - Computer Network',period:'P3'},{start:'11:35',end:'12:20',subject:'DAA - Design & Analysis of Algorithm',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'DAA LAB - Algorithm Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'HRM - Human Resource Mgmt',period:'P8'}], 5:[{start:'09:20',end:'10:05',subject:'FLA - Formal Language & Automata',period:'P1'},{start:'10:05',end:'10:50',subject:'CN - Computer Network',period:'P2'},{start:'10:50',end:'11:35',subject:'LIB - Library',period:'P3'},{start:'11:35',end:'12:20',subject:'DAA - Design & Analysis of Algorithm',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'WT LAB - Web Technology Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'BDA - Big Data Analytics',period:'P8'}] }; 
+  const AIDS = { 1:[{start:'09:20',end:'10:05',subject:'FLA - Formal Language & Automata',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'ML - Machine Learning',period:'P3'},{start:'11:35',end:'12:20',subject:'LIB - Library',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'PA - Predictive Analysis',period:'P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}], 2:[{start:'09:20',end:'10:05',subject:'WT - Web Technology',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'PA - Predictive Analysis',period:'P3'},{start:'11:35',end:'12:20',subject:'LIB - Library',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'FLA - Formal Language & Automata',period:'P7'},{start:'14:35',end:'15:20',subject:'ML - Machine Learning',period:'P8'}], 3:[{start:'09:20',end:'10:05',subject:'FLA - Formal Language & Automata',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'BDA - Big Data Analytics',period:'P3'},{start:'11:35',end:'12:20',subject:'LIB - Library',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'WT - Web Technology',period:'P6'},{start:'13:50',end:'15:20',subject:'PA LAB - Predictive Analysis Lab',period:'P7-P8'}], 4:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'WT - Web Technology',period:'P2'},{start:'10:50',end:'11:35',subject:'LIB - Library',period:'P3'},{start:'11:35',end:'12:20',subject:'PA - Predictive Analysis',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'ML LAB - Machine Learning Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'HRM - Human Resource Mgmt',period:'P8'}], 5:[{start:'09:20',end:'10:05',subject:'FLA - Formal Language & Automata',period:'P1'},{start:'10:05',end:'11:35',subject:'BDA LAB - Big Data Analytics Lab',period:'P2-P3'},{start:'11:35',end:'12:20',subject:'ML - Machine Learning',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'Internet Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'BDA - Big Data Analytics',period:'P8'}] }; 
+  return (b && b.toUpperCase() === 'AIDS') ? AIDS : CSE; 
+}
+
 function initAdmin(){ const t = fmtDate(new Date()); if ($('manualDate')) $('manualDate').value = t; if ($('holidayDate')) $('holidayDate').value = t; if ($('classStart')) $('classStart').value = '2026-07-15'; if ($('classEnd')) $('classEnd').value = t; const ssm = $('singleStudentMonth'); if (ssm && !ssm.innerHTML.trim()) ssm.innerHTML = [6,7,8,9,10,11].map(m=>`<option value="${m}">${MONTH_NAMES[m]} 2026</option>`).join(''); setBranch('CSE'); loadHolidays(); }
 
 async function fetchUsers(){
@@ -2271,7 +2351,7 @@ async function publishPasscode(){ const type = $('pubPassType').value; const dm 
 async function fixAllAttendanceSubjects(isTest){ const tr = isTest ? ($('fixAllTestRoll').value || '').trim().toUpperCase() : ''; if (isTest && !tr) return toast('Test roll required','error'); if (!confirm(isTest ? `Test on ${tr}?` : 'DESTRUCTIVE! Continue?')) return; const se = $('fixAllStatus'), re = $('fixAllReport'); se.textContent = isTest ? `Testing ${tr}…` : 'Scanning…'; re.innerHTML = ''; showDL(isTest ? `Testing ${tr}…` : 'Fixing…'); try { const body = { requesterRollNo: currentUser.rollNo }; if (isTest) body.testRollNo = tr; const res = await fetch(`${API}/api/admin/fix-all-attendance-subjects`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); const d = await res.json(); hideDL(); if (!res.ok) { se.textContent = '❌ ' + (d.error || 'Failed'); return toast(d.error || 'Failed', 'error'); } se.textContent = d.message || 'Done'; let html = `<div style="background:#fff;border:1px solid var(--slate-200);border-radius:10px;padding:14px;font-size:12px;"><div style="font-weight:800;margin-bottom:10px;">${isTest ? 'Test: ' + tr : 'Summary'}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px;background:var(--slate-50);border-radius:8px;"><div>${d.totalStudents || 0} scanned</div><div>${d.removed || 0} removed</div><div>${d.added || 0} added</div><div>${d.renamed || 0} renamed</div><div>${d.deduplicated || 0} deduped</div></div></div>`; re.innerHTML = html; toast(isTest ? `Test done` : `Fix done`, 'success'); if (!isTest) { globalHolidays = []; await ensureHolidays(); if (typeof fetchUsers === 'function') fetchUsers(); } } catch(e) { hideDL(); se.textContent = '❌ ' + e.message; toast('Error: ' + e.message, 'error'); } }
 function initTools(){ toggleFacultyFields(); populateFacultySubjects(); populateAssignSubjects(); loadTeachersForAssign(); loadBulkResetStudents(); }
 function toggleFacultyFields(){ const r = $('toolRole').value; $('facultyFields').style.display = r === 'faculty' ? 'block' : 'none'; if (r === 'faculty') { $('toolRoll').disabled = true; $('toolRoll').value = 'AUTO'; } else { $('toolRoll').disabled = false; $('toolRoll').value = ''; } }
-async function populateFacultySubjects(){ try { const data = await fetch(`${API}/api/timetable/subjects`).then(x=>x.json()); const allowed = ['BDA - Big Data Analytics','ECO - Economics for Engineers','DAA - Design & Analysis of Algorithm','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','CN - Computer Network','WT - Web Technology','Internet Lab (Ms. Geeta)','CN LAB - Computer Network Lab','DAA LAB - Algorithm Lab','WT LAB - Web Technology Lab','PA - Predictive Analysis','ML - Machine Learning','PA LAB - Predictive Analysis Lab','ML LAB - Machine Learning Lab','BDA LAB - Big Data Analytics Lab']; $('facultySubject').innerHTML = '<option value="">Select Subject…</option>' + data.filter(s=>allowed.includes(s)).map(s => `<option value="${s}">${s}</option>`).join(''); $('facultySubject').onchange = function(){ const n = FACULTY_NAME_MAP[this.value]; if (n) $('toolName').value = n; }; } catch(e){} }
+async function populateFacultySubjects(){ try { const data = await fetch(`${API}/api/timetable/subjects`).then(x=>x.json()); const allowed = ['BDA - Big Data Analytics','ECO - Economics for Engineers','DAA - Design & Analysis of Algorithm','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','CN - Computer Network','WT - Web Technology','Internet Lab','CN LAB - Computer Network Lab','DAA LAB - Algorithm Lab','WT LAB - Web Technology Lab','PA - Predictive Analysis','ML - Machine Learning','PA LAB - Predictive Analysis Lab','ML LAB - Machine Learning Lab','BDA LAB - Big Data Analytics Lab']; $('facultySubject').innerHTML = '<option value="">Select Subject…</option>' + data.filter(s=>allowed.includes(s)).map(s => `<option value="${s}">${s}</option>`).join(''); $('facultySubject').onchange = function(){ const n = FACULTY_NAME_MAP[this.value]; if (n) $('toolName').value = n; }; } catch(e){} }
 async function populateAssignSubjects(){ try { const data = await fetch(`${API}/api/timetable/subjects`).then(x=>x.json()); const el = $('assignSubject'); if (el) el.innerHTML = '<option value="">Select Subject…</option>' + data.map(s => `<option value="${s}">${s}</option>`).join(''); } catch(e){} }
 async function loadTeachersForAssign(){ try { const data = await fetch(`${API}/api/admin/all-users/${currentUser.rollNo}`).then(x=>x.json()); const teachers = data.filter(u => u.role === 'faculty'); const el = $('assignTeacher'); if (el) el.innerHTML = '<option value="">Select Teacher…</option>' + teachers.map(t => `<option value="${t.rollNo}">${t.rollNo} - ${t.name}</option>`).join(''); } catch(e){} }
 
@@ -2523,7 +2603,7 @@ async function downloadDocReqFile(reqId, action = 'download') {
     const byteArray = new Uint8Array(byteNumbers);
     const blob = new Blob([byteArray], {type: data.mimeType || 'application/octet-stream'});
     
-    if (action === 'view') viewPdfBlob(blob);
+    if (action === 'view') viewPdfBlob(blob, data.fileName || 'document.pdf');
     else universalDownload(blob, data.fileName || 'document.pdf');
   } catch (e) {
     hideDL();
@@ -2541,7 +2621,7 @@ async function openDocumentPreview(noteId) {
     if (!res.ok) throw new Error('Failed to load');
     const blob = await res.blob();
     hideDL();
-    viewPdfBlob(blob);
+    viewPdfBlob(blob, `document_${noteId}.pdf`); // ★ Passing filename
   } catch (e) {
     hideDL();
     toast('Failed: ' + e.message, 'error');
@@ -2555,7 +2635,7 @@ async function openDocReqPreview(reqId) {
     if (!res.ok) throw new Error('Failed to load');
     const blob = await res.blob();
     hideDL();
-    viewPdfBlob(blob);
+    viewPdfBlob(blob, `document_${reqId}.pdf`); // ★ Passing filename
   } catch (e) {
     hideDL();
     toast('Failed: ' + e.message, 'error');
@@ -3086,7 +3166,7 @@ function downloadMessagePDF(msgId, action = 'download'){
     const pageH = doc.internal.pageSize.height;
     lines.forEach(line => { if (y > pageH - 15) { doc.addPage(); y = 20; } doc.text(line, 14, y); y += 5.5; });
     const blob = doc.output('blob');
-    if (action === 'view') viewPdfBlob(blob);
+    if (action === 'view') viewPdfBlob(blob, `bm-bot-${Date.now()}.pdf`);
     else universalDownload(blob, `bm-bot-${Date.now()}.pdf`);
     const menu = document.getElementById('dlmenu_' + msgId); if (menu) menu.classList.remove('open'); openDownloadMenuId = null;
   } catch(e) { toast('Failed: ' + e.message, 'error'); }
@@ -3256,7 +3336,7 @@ async function downloadAndOpenFile(fileUrl, fileName) {
 
     // ★ FIX: Standard browser — preview inline using viewPdfBlob instead of forcing download
     hideDL();
-    viewPdfBlob(blob);
+    viewPdfBlob(blob, fileName);
 
   } catch (e) {
     hideDL();
@@ -3388,10 +3468,20 @@ function renderLeaderboardData(data, type, el) {
     const isMe = currentUser && currentUser.rollNo === s.rollNo;
     const bg = isMe ? 'background:var(--brand-50); border-color:var(--brand-300);' : 'background:#fff; border-color:var(--slate-200);';
     
-    // Agar type attendance hai to streak dikhao, agar percentage hai to % dikhao
-    const rightValue = type === 'percentage' ? `${s.streak}%` : `${s.streak} 🔥`;
-    const rightLabel = type === 'percentage' ? 'SCORE' : 'DAYS';
-    const color = type === 'percentage' ? '#2563eb' : '#047857';
+    // ★ FIX: Yahan logic change kiya gaya hai
+    let rightValue = '';
+    let rightLabel = '';
+    let color = '';
+
+    if (type === 'percentage') {
+        rightValue = `${s.percentage}%`;
+        rightLabel = `${s.present}/${s.total}`; // 303/366 jaisa dikhega
+        color = '#2563eb'; // Blue color
+    } else {
+        rightValue = `${s.streak} 🔥`;
+        rightLabel = 'DAYS';
+        color = '#047857'; // Green color
+    }
 
     return `
       <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-radius:12px; border:1px solid; ${bg}">
