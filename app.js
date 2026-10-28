@@ -317,8 +317,11 @@ function viewPdfBlob(blob, fileName = 'document.pdf') {
   if (isImage) {
     contentHtml = `<img src="${url}" style="max-width: 100%; max-height: 100%; object-fit: contain;" />`;
   } else if (isPdf) {
-    contentHtml = `<iframe src="${url}" style="width: 100%; height: 100%; border: none;"></iframe>`;
-  } else {
+  // Mobile WebView mein download rokne ke liye object tag use kar rahe hain
+  contentHtml = `<object data="${url}#toolbar=0&navpanes=0&scrollbar=0" type="application/pdf" style="width: 100%; height: 100%;">
+    <embed src="${url}#toolbar=0&navpanes=0&scrollbar=0" type="application/pdf" style="width: 100%; height: 100%;" />
+  </object>`;
+} else {
     contentHtml = `<div style="padding: 20px; text-align: center; color: var(--slate-600);">
         <p style="margin-bottom: 16px;">Preview is not available for this file type.</p>
         <a href="${url}" download="${fileName}" class="btn btn-primary">Download File</a>
@@ -2616,16 +2619,24 @@ async function downloadDocReqFile(reqId, action = 'download') {
    ============================================================ */
 async function openDocumentPreview(noteId) {
   showDL('Loading document…');
-  try {
-    const res = await fetch(`${API}/api/notes/view/${noteId}`);
-    if (!res.ok) throw new Error('Failed to load');
-    const blob = await res.blob();
-    hideDL();
-    viewPdfBlob(blob, `document_${noteId}.pdf`); // ★ Passing filename
-  } catch (e) {
-    hideDL();
-    toast('Failed: ' + e.message, 'error');
-  }
+  const directUrl = `${API}/api/notes/view/${noteId}`;
+  hideDL();
+  
+  const modal = document.createElement('div');
+  modal.className = 'modal-backdrop open safe-top-modal';
+  modal.style.zIndex = '99999';
+  modal.innerHTML = `
+    <div class="modal wide" style="height: 85vh; display: flex; flex-direction: column; max-width: 900px; padding: 0;">
+      <div class="modal-header" style="padding: 12px 18px; border-bottom: 1px solid var(--slate-200); margin: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0;">
+        <h3 style="margin:0; font-size: 15px;">📄 Document Preview</h3>
+        <button type="button" class="modal-close" onclick="this.closest('.modal-backdrop').remove()">✕</button>
+      </div>
+      <div style="flex: 1; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f8fafc;">
+        <iframe src="https://docs.google.com/gview?url=${encodeURIComponent(directUrl)}&embedded=true" style="width: 100%; height: 100%; border: none;"></iframe>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
 }
 
 async function openDocReqPreview(reqId) {
