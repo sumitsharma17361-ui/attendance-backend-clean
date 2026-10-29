@@ -1757,7 +1757,7 @@ function showAdmin(id){
   if (id === 'a-requests') loadAdminRequests();
   if (id === 'a-registrations') loadRegistrationRequests();
   if (id === 'a-account') loadAccountRequests();
-  if (id === 'a-reports') initReports();
+  if (id === 'a-reports') { initReports(); fetchUsers(); }
   if (id === 'a-entry') initEntry();
   if (id === 'a-holiday') loadHolidays();
   if (id === 'a-passcode') loadPasscodes();
