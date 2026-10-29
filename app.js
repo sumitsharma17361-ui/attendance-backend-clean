@@ -1748,6 +1748,27 @@ function switchTab(id){
   observeNewContent();
   setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 60);
 }
+
+
+// Naya function sirf dropdown ke liye (Fast)
+async function fetchStudentsForDropdown() {
+  const select = $('reportStudentSelect');
+  if (!select) return;
+  select.innerHTML = '<option value="">Loading Students…</option>';
+  try {
+    // Yeh direct API se saare users le raha hai (bina summary ke)
+    const data = await fetch(`${API}/api/admin/all-users/${currentUser.rollNo}`).then(x => x.json());
+    const students = data.filter(u => u.role === 'student');
+    
+    // Dropdown mein list bharna
+    select.innerHTML = '<option value="">Select Student…</option>' + 
+      students.sort((a,b) => a.rollNo.localeCompare(b.rollNo, undefined, {numeric: true}))
+      .map(s => `<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`).join('');
+      
+  } catch (e) {
+    select.innerHTML = '<option value="">Error loading</option>';
+  }
+}
 function showAdmin(id){
   document.querySelectorAll('.subnav-item').forEach(b => b.classList.toggle('active', b.getAttribute('onclick').includes(id)));
   ['a-directory','a-attendance','a-requests','a-registrations','a-account','a-reports','a-entry','a-holiday','a-passcode','a-notes','a-fees','a-library','a-results','a-exams','a-alerts','a-tools','a-leave','a-defaulters','a-subscriptions','a-gamification'].forEach(x => { const el = $(x); if (el) el.style.display = 'none'; });
@@ -1757,7 +1778,7 @@ function showAdmin(id){
   if (id === 'a-requests') loadAdminRequests();
   if (id === 'a-registrations') loadRegistrationRequests();
   if (id === 'a-account') loadAccountRequests();
-  if (id === 'a-reports') { initReports(); fetchUsers(); }
+  if (id === 'a-reports') { initReports(); fetchStudentsForDropdown(); }
   if (id === 'a-entry') initEntry();
   if (id === 'a-holiday') loadHolidays();
   if (id === 'a-passcode') loadPasscodes();
