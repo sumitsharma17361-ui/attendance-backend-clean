@@ -175,11 +175,10 @@ body{
   color:var(--slate-800);
   min-height:100vh !important;
   height:auto !important;
-  display:flex;align-items:flex-start;justify-content:center;
+  /* display:flex hata diya, ab default block rahega */
   padding:24px 16px;margin:0;line-height:1.55;
   -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
-  overflow-y:auto !important;
-  overflow-x:hidden !important;
+  overflow-x:hidden !important; /* sirf x hidden rakha hai */
   position:relative;
 }
 
