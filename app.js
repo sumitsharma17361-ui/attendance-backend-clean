@@ -1,3 +1,14 @@
+/* ============================================================
+   ★ SESSION & DEVICE POLICY (v5.1 Fixes)
+   ------------------------------------------------------------
+   - JWT: expires in 7 days (backend: expiresIn '7d')
+   - Session validated every 60s via /api/auth/verify-session
+   - Single-device login: new login invalidates old session
+   - Device ID: persistent in localStorage, PRESERVED on logout
+     (Fix: same-device re-login no longer shows "Unauthorized")
+   - Session time remaining shown in header (real-time countdown)
+   ============================================================ */
+
 /* ★ FIX: disable browser scroll restoration so refresh always starts at top */
 if ('scrollRestoration' in history) {
   history.scrollRestoration = 'manual';
@@ -14,7 +25,8 @@ const FULL_DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Frid
 const FACULTY_NAME_MAP = {'BDA - Big Data Analytics':'Ms. Geeta','ECO - Economics for Engineers':'Ms. Sakshi Yadav','DAA - Design & Analysis of Algorithm':'Ms. Rashmi','FLA - Formal Language & Automata':'Ms. Nisha Yadav','HRM - Human Resource Mgmt':'Mr. Lokesh','CN - Computer Network':'Mr. Chhetrapal','WT - Web Technology':'Mr. Avish Yadav','Internet Lab':'Ms. Geeta','CN LAB - Computer Network Lab':'Mr. Chhetrapal','DAA LAB - Algorithm Lab':'Ms. Rashmi','WT LAB - Web Technology Lab':'Mr. Avish Yadav','PA - Predictive Analysis':'Ms. Pooja','ML - Machine Learning':'Mr. Harsh','PA LAB - Predictive Analysis Lab':'Ms. Pooja','ML LAB - Machine Learning Lab':'Mr. Harsh','BDA LAB - Big Data Analytics Lab':'Ms. Geeta'};
 const DOWNLOAD_KEYWORDS = ['pdf','download','excel','file','save','print','xlsx','txt','document','report','export','banao','bana do','chahiye','bana','generate'];
 
-// ★ NEW: Professional SVG Icons
+const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
 const ICONS = {
   view: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
   download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
@@ -101,45 +113,32 @@ let userSubscription = { tier: 'free', expiresAt: null };
 let leaderboardCache = { attendance: null, login: null, percentage: null };
 
 /* ============================================================
-   ★ CUSTOM LAYOUT FIX INJECTION & MOBILE SCROLL FIX & MODAL FIX
+   ★ CUSTOM LAYOUT FIX INJECTION
    ============================================================ */
 (function injectLayoutFix() {
   if (document.getElementById('bm-custom-layout-fix')) return;
   const style = document.createElement('style');
   style.id = 'bm-custom-layout-fix';
   style.innerHTML = `
-    /* General Layout (Desktop) */
     .welcome { display: flex !important; justify-content: space-between !important; align-items: flex-start !important; gap: 10px !important; flex-wrap: wrap !important; }
     .welcome-left { display: flex !important; align-items: flex-start !important; gap: 12px !important; flex: 1; min-width: 0; }
     .welcome-left > div { min-width: 0; flex: 1; }
     .welcome-left h2 { font-size: 18px !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; margin: 0 0 4px 0 !important; }
     .welcome .meta { display: flex !important; align-items: center !important; gap: 6px !important; font-size: 12px !important; flex-wrap: wrap !important; }
-    
-    /* Badges Container */
     .welcome .row.no-flex { display: flex !important; flex-wrap: wrap !important; justify-content: flex-end !important; gap: 6px !important; max-width: 180px; }
-
-    /* ★ FIX: Collapsible Card Scroll Margin so header isn't cut off */
     .collapsible-card { scroll-margin-top: 100px !important; }
-    
-    /* Clickable Stats */
     .clickable-stat { cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; }
     .clickable-stat:active { transform: scale(0.97); }
-
-    /* SVG Button Icons (Professional Look) */
     .btn svg { width: 14px; height: 14px; margin-right: 6px; vertical-align: middle; margin-top: -2px; }
     .btn-xs svg { width: 12px; height: 12px; margin-right: 4px; }
     .report-btn-group { display: flex; gap: 8px; }
     .report-btn-group > * { flex: 1; }
-
-    /* ★ FIX: Modal Positioning (Premium Plans & Working Days header stuck) */
     .modal-backdrop { align-items: center !important; padding-top: 20px !important; padding-bottom: 20px !important; }
     .safe-top-modal { padding-top: calc(60px + env(safe-area-inset-top)) !important; }
     .modal { margin: auto !important; }
     @media (max-width: 640px) {
         .safe-top-modal { padding-top: calc(80px + env(safe-area-inset-top)) !important; }
     }
-
-    /* ★ MOBILE FIX: Screens smaller than 550px */
     @media (max-width: 550px) {
         .welcome { flex-direction: column !important; gap: 8px !important; }
         .welcome-left { flex-direction: row !important; width: 100% !important; align-items: center !important; }
@@ -153,6 +152,11 @@ let leaderboardCache = { attendance: null, login: null, percentage: null };
         .welcome .meta { flex-direction: row !important; white-space: nowrap !important; font-size: 11px !important; }
         .welcome-left h2 { font-size: 17px !important; white-space: normal !important; line-height: 1.2 !important; }
     }
+    /* PDF Zoom Controls */
+    #pdf-zoom-controls button { user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+    #pdf-zoom-controls button:active { transform: scale(0.92); }
+    /* Session expiry pill */
+    #sessionExpiry { font-size: 10.5px; font-weight: 700; padding: 2px 8px; background: var(--slate-100); border-radius: 99px; color: var(--slate-500); }
   `;
   document.head.appendChild(style);
 })();
@@ -177,11 +181,15 @@ function getDeviceInfo() {
   return { name: `${name} (${screenInfo})`, ua, screen: screenInfo };
 }
 
+/* ★ FIX 3: Persistent Device ID — survives logout, so same-device re-login works */
 function getOrCreateDeviceId() {
   let id = localStorage.getItem('BM_DEVICE_ID');
   if (!id) {
     id = 'DEV_' + Date.now() + '_' + Math.random().toString(36).slice(2,10);
     localStorage.setItem('BM_DEVICE_ID', id);
+    console.log('[Device] Generated new device ID:', id);
+  } else {
+    console.log('[Device] Reusing existing device ID:', id);
   }
   return id;
 }
@@ -299,10 +307,9 @@ function isDesktop(){ return window.innerWidth >= 641; }
 function isMedianApp(){ return typeof window.median !== 'undefined' && window.median !== null; }
 
 /* ============================================================
-   PDF VIEWER (FIXED BLANK VIEW ISSUE USING PDF.JS)
+   ★ FIX 1: PDF VIEWER WITH SMOOTH ZOOM (Pinch + Buttons + Double-tap)
    ============================================================ */
 function viewPdfBlob(blob, fileName = 'document.pdf') {
-  // Force correct MIME type if generic octet-stream
   if (!blob.type || blob.type === 'application/octet-stream') {
     const ext = fileName.split('.').pop().toLowerCase();
     if (ext === 'pdf') blob = new Blob([blob], { type: 'application/pdf' });
@@ -313,31 +320,14 @@ function viewPdfBlob(blob, fileName = 'document.pdf') {
   const isPdf = blob.type === 'application/pdf';
 
   if (isImage) {
-    const url = URL.createObjectURL(blob);
-    const modal = document.createElement('div');
-    modal.className = 'modal-backdrop open safe-top-modal';
-    modal.style.zIndex = '99999';
-    modal.innerHTML = `
-      <div class="modal wide" style="height: 85vh; display: flex; flex-direction: column; max-width: 900px; padding: 0;">
-        <div class="modal-header" style="padding: 12px 18px; border-bottom: 1px solid var(--slate-200); margin: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0;">
-          <h3 style="margin:0; font-size: 15px;">📄 Document Preview</h3>
-          <button type="button" class="modal-close" onclick="this.closest('.modal-backdrop').remove(); URL.revokeObjectURL('${url}')">✕</button>
-        </div>
-        <div style="flex: 1; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f8fafc;">
-          <img src="${url}" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
-        </div>
-      </div>
-    `;
-    document.body.appendChild(modal);
+    renderImageViewer(blob, fileName);
     return;
   }
-
   if (isPdf) {
     renderPdfWithPdfJs(blob);
     return;
   }
 
-  // Fallback for other types
   const url = URL.createObjectURL(blob);
   const modal = document.createElement('div');
   modal.className = 'modal-backdrop open safe-top-modal';
@@ -359,28 +349,152 @@ function viewPdfBlob(blob, fileName = 'document.pdf') {
   document.body.appendChild(modal);
 }
 
-// ★ NEW: Render PDF to Canvas using PDF.js (Works on Android WebView with High-DPI Fix)
-async function renderPdfWithPdfJs(blob) {
+/* ★ NEW: Image viewer with pinch-zoom + buttons */
+function renderImageViewer(blob, fileName) {
+  const url = URL.createObjectURL(blob);
   const modal = document.createElement('div');
   modal.className = 'modal-backdrop open safe-top-modal';
   modal.style.zIndex = '99999';
   modal.innerHTML = `
-    <div class="modal wide" style="height: 85vh; display: flex; flex-direction: column; max-width: 900px; padding: 0;">
-      <div class="modal-header" style="padding: 12px 18px; border-bottom: 1px solid var(--slate-200); margin: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0;">
-        <h3 style="margin:0; font-size: 15px;">📄 Document Preview</h3>
-        <button type="button" class="modal-close" onclick="this.closest('.modal-backdrop').remove()">✕</button>
+    <div class="modal wide" style="height: 90vh; display: flex; flex-direction: column; max-width: 900px; padding: 0;">
+      <div class="modal-header" style="padding: 12px 18px; border-bottom: 1px solid var(--slate-200); margin: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+        <h3 style="margin:0; font-size: 15px;">🖼️ Image Preview</h3>
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <div id="img-zoom-controls" style="display: flex; gap: 4px; align-items: center;">
+            <button type="button" onclick="imgZoomOut()" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--slate-200); background: #fff; cursor: pointer; font-weight: 800; font-size: 16px;">−</button>
+            <span id="img-zoom-label" style="font-size: 11px; font-weight: 700; color: var(--slate-600); min-width: 44px; text-align: center; font-variant-numeric: tabular-nums;">100%</span>
+            <button type="button" onclick="imgZoomIn()" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--slate-200); background: #fff; cursor: pointer; font-weight: 800; font-size: 16px;">+</button>
+            <button type="button" onclick="imgZoomReset()" style="padding: 0 10px; height: 32px; border-radius: 8px; border: 1px solid var(--slate-200); background: #fff; cursor: pointer; font-size: 11px; font-weight: 700;">↺ Reset</button>
+          </div>
+          <button type="button" class="modal-close" onclick="this.closest('.modal-backdrop').remove(); URL.revokeObjectURL('${url}')">✕</button>
+        </div>
       </div>
-      <div style="flex: 1; overflow: auto; background: #525659; display: flex; flex-direction: column; align-items: center; padding: 10px;" id="pdf-canvas-container">
-        <div class="spinner" style="margin-top: 20px; border-top-color: white;"></div>
+      <div style="flex: 1; overflow: auto; background: #525659; display: flex; justify-content: center; padding: 10px; position: relative; -webkit-overflow-scrolling: touch;" id="img-outer-wrap">
+        <div id="img-zoom-wrap" style="transform-origin: top center; transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: flex-start; justify-content: center; padding: 10px 0;">
+          <img src="${url}" style="max-width: 100%; height: auto; box-shadow: 0 2px 6px rgba(0,0,0,0.3);" />
+        </div>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
 
-  const container = modal.querySelector('#pdf-canvas-container');
-  
+  const container = modal.querySelector('#img-zoom-wrap');
+  const outerWrap = modal.querySelector('#img-outer-wrap');
+  const zoomLabel = modal.querySelector('#img-zoom-label');
+  let zoomLevel = 1;
+  const MIN_ZOOM = 0.5, MAX_ZOOM = 4;
+
+  window.imgZoomIn = () => { zoomLevel = Math.min(MAX_ZOOM, zoomLevel + 0.25); applyImgZoom(true); };
+  window.imgZoomOut = () => { zoomLevel = Math.max(MIN_ZOOM, zoomLevel - 0.25); applyImgZoom(true); };
+  window.imgZoomReset = () => { zoomLevel = 1; applyImgZoom(true); };
+  function applyImgZoom(smooth) {
+    container.style.transition = smooth ? 'transform 0.18s cubic-bezier(0.4, 0, 0.2, 1)' : 'none';
+    container.style.transform = `scale(${zoomLevel})`;
+    zoomLabel.textContent = Math.round(zoomLevel * 100) + '%';
+  }
+
+  attachZoomGestures(outerWrap, container, () => zoomLevel, (z, smooth) => { zoomLevel = z; applyImgZoom(smooth); });
+}
+
+/* ★ NEW: Shared zoom gesture handler (pinch, double-tap, ctrl+wheel) */
+function attachZoomGestures(outerWrap, container, getZoom, setZoom) {
+  const MIN_ZOOM = 0.5, MAX_ZOOM = 4;
+  let initialDistance = 0, initialZoom = 1, pinching = false, lastTap = 0;
+
+  outerWrap.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      initialDistance = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      initialZoom = getZoom();
+      pinching = true;
+    }
+    if (e.touches.length === 1) {
+      const now = Date.now();
+      if (now - lastTap < 300) {
+        const z = getZoom();
+        setZoom(z > 1.1 ? 1 : 2, true);
+        lastTap = 0;
+      } else { lastTap = now; }
+    }
+  }, { passive: true });
+
+  outerWrap.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2) {
+      if (!pinching) {
+        initialDistance = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        initialZoom = getZoom();
+        pinching = true;
+      }
+      if (initialDistance > 0) {
+        if (e.cancelable) e.preventDefault();
+        const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        const scale = dist / initialDistance;
+        setZoom(Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, initialZoom * scale)), false);
+      }
+    }
+  }, { passive: false });
+
+  outerWrap.addEventListener('touchend', (e) => {
+    if (e.touches.length < 2) { pinching = false; initialDistance = 0; }
+  }, { passive: true });
+
+  outerWrap.addEventListener('wheel', (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const z = getZoom();
+      if (e.deltaY < 0) setZoom(Math.min(MAX_ZOOM, z + 0.1), true);
+      else setZoom(Math.max(MIN_ZOOM, z - 0.1), true);
+    }
+  }, { passive: false });
+}
+
+/* ★ FIX 1: PDF renderer with zoom controls */
+async function renderPdfWithPdfJs(blob) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-backdrop open safe-top-modal';
+  modal.style.zIndex = '99999';
+  modal.innerHTML = `
+    <div class="modal wide" style="height: 90vh; display: flex; flex-direction: column; max-width: 900px; padding: 0;">
+      <div class="modal-header" style="padding: 12px 18px; border-bottom: 1px solid var(--slate-200); margin: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+        <h3 style="margin:0; font-size: 15px;">📄 Document Preview</h3>
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <div id="pdf-zoom-controls" style="display: none; gap: 4px; align-items: center;">
+            <button type="button" onclick="pdfZoomOut()" title="Zoom out" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--slate-200); background: #fff; cursor: pointer; font-weight: 800; font-size: 16px;">−</button>
+            <span id="pdf-zoom-label" style="font-size: 11px; font-weight: 700; color: var(--slate-600); min-width: 44px; text-align: center; font-variant-numeric: tabular-nums;">100%</span>
+            <button type="button" onclick="pdfZoomIn()" title="Zoom in" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--slate-200); background: #fff; cursor: pointer; font-weight: 800; font-size: 16px;">+</button>
+            <button type="button" onclick="pdfZoomReset()" title="Reset zoom" style="padding: 0 10px; height: 32px; border-radius: 8px; border: 1px solid var(--slate-200); background: #fff; cursor: pointer; font-size: 11px; font-weight: 700;">↺ Reset</button>
+          </div>
+          <button type="button" class="modal-close" onclick="this.closest('.modal-backdrop').remove()">✕</button>
+        </div>
+      </div>
+      <div style="flex: 1; overflow: auto; background: #525659; display: flex; justify-content: center; padding: 10px; position: relative; -webkit-overflow-scrolling: touch;" id="pdf-outer-wrap">
+        <div id="pdf-zoom-wrap" style="transform-origin: top center; transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 10px 0;">
+          <div class="spinner" style="border-top-color: white; margin-top: 20px;"></div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const container = modal.querySelector('#pdf-zoom-wrap');
+  const outerWrap = modal.querySelector('#pdf-outer-wrap');
+  const controls = modal.querySelector('#pdf-zoom-controls');
+  const zoomLabel = modal.querySelector('#pdf-zoom-label');
+
+  let zoomLevel = 1;
+  const MIN_ZOOM = 0.5, MAX_ZOOM = 4;
+
+  window.pdfZoomIn = () => { zoomLevel = Math.min(MAX_ZOOM, zoomLevel + 0.25); applyPdfZoom(true); };
+  window.pdfZoomOut = () => { zoomLevel = Math.max(MIN_ZOOM, zoomLevel - 0.25); applyPdfZoom(true); };
+  window.pdfZoomReset = () => { zoomLevel = 1; applyPdfZoom(true); };
+  function applyPdfZoom(smooth) {
+    container.style.transition = smooth ? 'transform 0.18s cubic-bezier(0.4, 0, 0.2, 1)' : 'none';
+    container.style.transform = `scale(${zoomLevel})`;
+    zoomLabel.textContent = Math.round(zoomLevel * 100) + '%';
+  }
+
+  attachZoomGestures(outerWrap, container, () => zoomLevel, (z, smooth) => { zoomLevel = z; applyPdfZoom(smooth); });
+
   try {
-    // Dynamically load PDF.js
     if (!window.pdfjsLib) {
       await new Promise((resolve, reject) => {
         const script = document.createElement('script');
@@ -394,45 +508,30 @@ async function renderPdfWithPdfJs(blob) {
 
     const arrayBuffer = await blob.arrayBuffer();
     const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    
-    container.innerHTML = ''; // Clear spinner
-    
-    // ★ FIX: High DPI / Retina Display Scaling Factor for Crystal Clear PDF
-    const dpr = window.devicePixelRatio || 1; 
-    
+    container.innerHTML = '';
+    controls.style.display = 'flex';
+
+    const dpr = window.devicePixelRatio || 1;
+
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
-      
       const unscaledViewport = page.getViewport({ scale: 1 });
-      const containerWidth = container.clientWidth - 20;
-      
-      // Base scale based on screen width
+      const containerWidth = Math.min(outerWrap.clientWidth - 20, 850);
       const baseScale = containerWidth / unscaledViewport.width;
-      
-      // Apply DPR for sharp rendering
       const cssViewport = page.getViewport({ scale: baseScale });
       const renderViewport = page.getViewport({ scale: baseScale * dpr });
-      
+
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d');
-      
-      // Set actual canvas resolution (High Res)
       canvas.height = renderViewport.height;
       canvas.width = renderViewport.width;
-      
-      // Set CSS display size (Normal size)
       canvas.style.width = `${cssViewport.width}px`;
       canvas.style.height = `${cssViewport.height}px`;
-      canvas.style.marginBottom = '10px';
       canvas.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-      
+      canvas.style.background = '#fff';
+
       container.appendChild(canvas);
-      
-      // Render using the high-res viewport
-      await page.render({
-        canvasContext: context,
-        viewport: renderViewport
-      }).promise;
+      await page.render({ canvasContext: context, viewport: renderViewport }).promise;
     }
   } catch (e) {
     container.innerHTML = `<div style="color: white; text-align: center; margin-top: 20px;">Failed to render PDF: ${escapeHtml(e.message)}</div>`;
@@ -548,29 +647,23 @@ function navigateStudentMenu(key){
       case 'portals': targetId = 'quickPortalsCard'; break;
     }
     if (action === 'workingdays') { openWorkingDays(); return; }
-    
-    // Minimize all collapsible cards first
     document.querySelectorAll('.collapsible-card').forEach(card => {
         const body = card.querySelector('.collapsible-body');
         const arrow = card.querySelector('.collapse-arrow');
         if (body) { body.classList.remove('open'); }
         if (arrow) { arrow.style.transform = 'rotate(0deg)'; }
     });
-
     const el = document.getElementById(targetId);
     if (el) {
       if (el.style.display === 'none' && ['reports', 'portals', 'notes', 'assignments', 'exams', 'announcements'].includes(key)) el.style.display = 'block';
-      
-      // Auto-maximize target card if it's collapsible
       if (el.classList.contains('collapsible-card')) {
           const body = el.querySelector('.collapsible-body');
           const arrow = el.querySelector('.collapse-arrow');
           if (body) body.classList.add('open');
           if (arrow) arrow.style.transform = 'rotate(180deg)';
       }
-      
       const rect = el.getBoundingClientRect();
-      const top = window.pageYOffset + rect.top - 120; 
+      const top = window.pageYOffset + rect.top - 120;
       window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
     }
     populateStudentMenu();
@@ -623,10 +716,10 @@ function navigateAdminMenu(key){
       }
       if (targetId) {
         const el = document.getElementById(targetId);
-        if (el) { 
-            const rect = el.getBoundingClientRect(); 
-            const top = window.pageYOffset + rect.top - 120; 
-            window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' }); 
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            const top = window.pageYOffset + rect.top - 120;
+            window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
         }
       }
       populateAdminMenu();
@@ -934,7 +1027,7 @@ function handleScrollFab(){ const f = $('scrollTopFab'); if (!f) return; if (win
 window.addEventListener('scroll', handleScrollFab, { passive: true });
 
 /* ============================================================
-   ★ UPDATED: SCROLL REVEAL ANIMATIONS
+   SCROLL REVEAL ANIMATIONS
    ============================================================ */
 function initScrollAnimations(){
   const targets = document.querySelectorAll('.stat, .card, .working-days-cta, .chart-wrap, .advisor, .passcode-card, .collapsible-card, .attendance-actions-card, .approved-banner, .welcome, .portal-grid .portal, .subject-summary-line');
@@ -988,23 +1081,42 @@ async function handleAuth(){
       const data = await res.json();
       hideDL();
       if (!res.ok) {
-        // ★ NEW: Handle Unauthorized Device specific error
         if (data.requiresDeviceReset) {
-          return showFeedback('warning', 'New Device Detected', 'A device reset request has been automatically sent to the Admin. Please wait for approval.', { buttonText: 'OK' });
+          return showFeedback('warning', 'New Device Detected', 'A device reset request has been automatically sent to the Admin. Please wait for approval, or contact admin to reset your device.', { buttonText: 'OK' });
         }
         return showFeedback('error', 'Sign-in Failed', data.error || 'Invalid credentials.');
       }
       if (data.user.role !== selectedRole) return showFeedback('error', 'Role Mismatch', `Registered as ${data.user.role}, not ${selectedRole}.`);
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('BM_LOGIN_TIME', Date.now().toString()); // ★ Track session start
       loadDashboard();
     }
   } catch(e){ hideDL(); showFeedback('error', 'Network Error', e.message); }
 }
+
+/* ★ FIX 3: Preserve device ID + FCM settings on logout (same-device re-login works) */
 function logout(){
   const oT = localStorage.getItem('BM_ORIG_TOKEN'), oU = localStorage.getItem('BM_ORIG_USER');
-  if (oT && oU) { localStorage.setItem('token', oT); localStorage.setItem('user', oU); localStorage.removeItem('BM_ORIG_TOKEN'); localStorage.removeItem('BM_ORIG_USER'); location.reload(); return; }
-  localStorage.clear(); location.reload();
+  if (oT && oU) {
+    localStorage.setItem('token', oT);
+    localStorage.setItem('user', oU);
+    localStorage.removeItem('BM_ORIG_TOKEN');
+    localStorage.removeItem('BM_ORIG_USER');
+    location.reload();
+    return;
+  }
+  // ★ Preserve persistent keys — critical for device binding to work
+  const preserveKeys = ['BM_DEVICE_ID', 'BM_FCM_ENABLED', 'BM_FCM_TOKEN'];
+  const saved = {};
+  preserveKeys.forEach(k => {
+    const v = localStorage.getItem(k);
+    if (v) saved[k] = v;
+  });
+  localStorage.clear();
+  Object.entries(saved).forEach(([k, v]) => localStorage.setItem(k, v));
+  console.log('[Logout] Preserved:', Object.keys(saved).join(', '));
+  location.reload();
 }
 function switchBack(){
   const oT = localStorage.getItem('BM_ORIG_TOKEN'), oU = localStorage.getItem('BM_ORIG_USER');
@@ -1067,7 +1179,7 @@ async function submitChangePassword(){
 }
 
 /* ============================================================
-   SUBSCRIPTION & PAYMENTS (NEW)
+   SUBSCRIPTION & PAYMENTS
    ============================================================ */
 function loadRazorpayScript() {
   return new Promise((resolve) => {
@@ -1106,9 +1218,7 @@ function updateSubscriptionBadge() {
     }
   }
   if (!badge) return;
-  
-  badge.style.display = 'inline-flex'; 
-  
+  badge.style.display = 'inline-flex';
   const tier = userSubscription.tier || 'free';
   if (tier === 'silver') { badge.textContent = '🥈 Silver'; badge.style.background = '#e2e8f0'; badge.style.color = '#475569'; }
   else if (tier === 'gold') { badge.textContent = '🥇 Gold'; badge.style.background = '#fef3c7'; badge.style.color = '#b45309'; }
@@ -1142,36 +1252,23 @@ function openSubscriptionModal() {
 function renderSubscriptionPlans() {
   const body = $('subscriptionBody');
   const currentTier = userSubscription.tier || 'free';
-  
   const plans = [
     { id: 'silver', name: 'Silver', icon: '🥈', price: '₹5', color: '#475569', features: ['PDF Reports (Attendance)', 'Basic Bunk Advisor'] },
     { id: 'gold', name: 'Gold', icon: '🥇', price: '₹10', color: '#b45309', features: ['PDF Reports', 'Bunk Advisor', 'AI Chatbot Access', 'Priority Support'] },
     { id: 'platinum', name: 'Platinum', icon: '💎', price: '₹20', color: '#6d28d9', features: ['All Gold Features', 'AI File/Image Analysis', 'Unlimited everything', 'Early Access to new features'] }
   ];
-
   const tierRank = { free: 0, silver: 1, gold: 2, platinum: 3 };
   const userRank = tierRank[currentTier] || 0;
-
   let html = '';
   plans.forEach(p => {
     const isCurrent = currentTier === p.id;
     const isExpired = userSubscription.isExpired;
     const isLowerTier = userRank > tierRank[p.id];
-
     let btnText = 'Upgrade Now';
     let btnClass = 'btn-primary';
     let disabled = '';
-
-    if (isCurrent && !isExpired) {
-      btnText = 'Current Plan';
-      btnClass = 'btn-outline';
-      disabled = 'disabled';
-    } else if (isLowerTier && !isExpired) {
-      btnText = 'Included';
-      btnClass = 'btn-outline';
-      disabled = 'disabled';
-    }
-    
+    if (isCurrent && !isExpired) { btnText = 'Current Plan'; btnClass = 'btn-outline'; disabled = 'disabled'; }
+    else if (isLowerTier && !isExpired) { btnText = 'Included'; btnClass = 'btn-outline'; disabled = 'disabled'; }
     html += `
       <div style="border:2px solid ${(isCurrent || isLowerTier) && !isExpired ? p.color : 'var(--slate-200)'};border-radius:14px;padding:16px;margin-bottom:12px;position:relative;background:#fff; ${disabled ? 'opacity:0.8;' : ''}">
         ${(isCurrent || isLowerTier) && !isExpired ? `<span style="position:absolute;top:-10px;right:16px;background:${p.color};color:#fff;font-size:10px;font-weight:800;padding:2px 10px;border-radius:20px;">ACTIVE</span>` : ''}
@@ -1194,7 +1291,6 @@ async function initiatePayment(tier) {
   try {
     const isLoaded = await loadRazorpayScript();
     if (!isLoaded) { hideDL(); return toast('Razorpay SDK failed to load.', 'error'); }
-    
     const res = await fetch(`${API}/api/payment/create-order`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1202,9 +1298,7 @@ async function initiatePayment(tier) {
     });
     const orderData = await res.json();
     hideDL();
-    
     if (!res.ok) return toast(orderData.error || 'Order creation failed', 'error');
-
     const options = {
       key: orderData.key_id,
       amount: orderData.order.amount,
@@ -1212,22 +1306,7 @@ async function initiatePayment(tier) {
       name: "BM Group ERP",
       description: `${tier.toUpperCase()} Subscription - 1 Month`,
       order_id: orderData.order.id,
-      config: {
-        display: {
-          blocks: {
-            upi: {
-              name: "UPI (GPay, PhonePe, Paytm)",
-              instruments: [
-                { method: "upi" }
-              ]
-            }
-          },
-          sequence: ["block.upi", "block.other"],
-          preferences: {
-            show_default_blocks: true
-          }
-        }
-      },
+      config: { display: { blocks: { upi: { name: "UPI (GPay, PhonePe, Paytm)", instruments: [{ method: "upi" }] } }, sequence: ["block.upi", "block.other"], preferences: { show_default_blocks: true } } },
       handler: async function (response) {
         showDL('Verifying payment…');
         const verifyRes = await fetch(`${API}/api/payment/verify`, {
@@ -1241,7 +1320,6 @@ async function initiatePayment(tier) {
         });
         const verifyData = await verifyRes.json();
         hideDL();
-        
         if (verifyData.success) {
           showFeedback('success', 'Payment Successful!', `You are now a ${tier.toUpperCase()} member! Enjoy premium features.`);
           closeModal('subscriptionModal');
@@ -1250,10 +1328,7 @@ async function initiatePayment(tier) {
           toast(verifyData.error || 'Payment verification failed', 'error');
         }
       },
-      prefill: {
-        name: currentUser.name,
-        contact: currentUser.phone || ""
-      },
+      prefill: { name: currentUser.name, contact: currentUser.phone || "" },
       theme: { color: "#2563eb" }
     };
     const rzp = new Razorpay(options);
@@ -1268,7 +1343,7 @@ async function initiatePayment(tier) {
 }
 
 /* ============================================================
-   GAMIFICATION (NEW)
+   GAMIFICATION
    ============================================================ */
 function openAchievementsModal() {
   let modal = $('achievementsModal');
@@ -1300,7 +1375,6 @@ async function loadAchievementsData() {
     const res = await fetch(`${API}/api/student/achievements/${currentUser.rollNo}`);
     if (!res.ok) throw new Error('Failed to load');
     const data = await res.json();
-    
     let html = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
         <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:12px;padding:16px;text-align:center;border:1px solid #fcd34d;">
@@ -1317,7 +1391,6 @@ async function loadAchievementsData() {
       <div class="section-title">Unlocked Badges (${data.unlockedAchievements.length})</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(100px, 1fr));gap:10px;">
     `;
-
     if (data.unlockedAchievements.length === 0) {
       html += `<div style="grid-column:1/-1;" class="empty">No achievements yet. Keep marking attendance and logging in daily!</div>`;
     } else {
@@ -1339,20 +1412,17 @@ async function loadAchievementsData() {
 }
 
 /* ============================================================
-   COLLAPSIBLE CARDS SETUP (UPDATED: DEFAULT MINIMIZED)
+   COLLAPSIBLE CARDS
    ============================================================ */
 function toggleCardBody(header) {
     const card = header.closest('.collapsible-card');
     const body = card.querySelector('.collapsible-body');
     const arrow = header.querySelector('.collapse-arrow');
-    
     if (body) {
         const isOpening = !body.classList.contains('open');
         body.classList.toggle('open');
-        
         if (isOpening) {
             if (arrow) arrow.style.transform = 'rotate(180deg)';
-            // Lazy load content if needed
             if (card.id === 'sec-notes') loadStudentNotes();
             if (card.id === 'sec-assignments') loadStudentAssignments();
             if (card.id === 'sec-exams') loadStudentExams();
@@ -1366,16 +1436,12 @@ function toggleCardBody(header) {
 function makeCollapsible(id, title, iconSvg, openByDefault = false) {
     const el = document.getElementById(id);
     if (!el || el.classList.contains('collapsible-card')) return;
-
     const originalDisplay = el.style.display || 'block';
-
-    // Remove existing titles aggressively to prevent duplicate titles
     el.querySelectorAll('.card-title, h3, h2, .section-title').forEach(node => {
         if (!node.querySelector('button, select, input, a')) {
             node.remove();
         }
     });
-
     const header = document.createElement('div');
     header.className = 'collapsible-header';
     header.onclick = function() { toggleCardBody(this); };
@@ -1384,7 +1450,6 @@ function makeCollapsible(id, title, iconSvg, openByDefault = false) {
     header.style.alignItems = 'center';
     header.style.padding = '16px 18px';
     header.style.cursor = 'pointer';
-    
     const headerLeft = document.createElement('h3');
     headerLeft.style.margin = '0';
     headerLeft.style.display = 'flex';
@@ -1396,12 +1461,10 @@ function makeCollapsible(id, title, iconSvg, openByDefault = false) {
     headerLeft.style.textTransform = 'uppercase';
     headerLeft.style.letterSpacing = '.05em';
     headerLeft.innerHTML = `${iconSvg} ${title}`;
-
     const headerRight = document.createElement('div');
     headerRight.style.display = 'flex';
     headerRight.style.alignItems = 'center';
     headerRight.style.gap = '8px';
-    
     const arrow = document.createElement('span');
     arrow.className = 'collapse-arrow';
     arrow.style.fontSize = '12px';
@@ -1410,27 +1473,18 @@ function makeCollapsible(id, title, iconSvg, openByDefault = false) {
     arrow.textContent = '▼';
     if (openByDefault) arrow.style.transform = 'rotate(180deg)';
     headerRight.appendChild(arrow);
-
     header.appendChild(headerLeft);
     header.appendChild(headerRight);
-
     const body = document.createElement('div');
     body.className = 'collapsible-body' + (openByDefault ? ' open' : '');
     body.style.display = openByDefault ? 'block' : 'none';
-    
-    while (el.firstChild) {
-        body.appendChild(el.firstChild);
-    }
-    
+    while (el.firstChild) { body.appendChild(el.firstChild); }
     el.innerHTML = '';
     el.appendChild(header);
     el.appendChild(body);
-    
     el.classList.remove('card', 'chart-wrap');
     el.classList.add('collapsible-card');
     el.style.display = originalDisplay;
-
-    // Add CSS to ensure body visibility toggle works if CSS class isn't defined in index.html
     if (!document.getElementById('collapsible-css-fix')) {
         const style = document.createElement('style');
         style.id = 'collapsible-css-fix';
@@ -1475,7 +1529,19 @@ function loadDashboard(){
   const rb = $('roleBadge');
   if (rb) { rb.innerHTML = (roleIcons[currentUser.role] || '') + (currentUser.role === 'admin' ? 'Admin' : currentUser.role === 'faculty' ? 'Faculty' : 'Student'); rb.className = 'pill role-' + currentUser.role; }
   if ($('branchBadge')) $('branchBadge').textContent = currentUser.branch || 'CSE';
-  
+
+  /* ★ FIX 4: Session expiry indicator appended to welcome meta */
+  const meta = document.querySelector('.welcome .meta');
+  if (meta && !document.getElementById('sessionExpiry')) {
+    const sep = document.createElement('span');
+    sep.textContent = '·';
+    const expirySpan = document.createElement('span');
+    expirySpan.id = 'sessionExpiry';
+    expirySpan.title = 'Session valid for 7 days from login';
+    meta.appendChild(sep);
+    meta.appendChild(expirySpan);
+  }
+
   fetchUserSubscription();
 
   const studentMenuBtn = $('studentMenuBtn');
@@ -1502,29 +1568,19 @@ function loadDashboard(){
     if ($('menuUserName')) $('menuUserName').textContent = currentUser.name;
     if ($('menuUserRoll')) $('menuUserRoll').textContent = (currentUser.rollNo || '') + ' · ' + (currentUser.branch || 'CSE');
     populateStudentMenu();
-    
-    // Notes, assignments, exams, announcements ab display block hain taaki refresh par gayab na hon
     [reqSec, advBox, sbCard, repSec, qpCard, aaCard, notesSec, assignSec, examsSec, annSec].forEach(el => {
       if (el) el.style.display = (el === advBox) ? 'flex' : 'block';
     });
-
     loadLivePasscodes(); loadApprovedBanner();
     if (passcodeIntervalId) clearInterval(passcodeIntervalId);
     passcodeIntervalId = setInterval(loadLivePasscodes, 30000);
 
-    // Make Stat Boxes Clickable
     setTimeout(() => {
         const wdStat = $('statWorkingDays')?.closest('.stat');
-        if (wdStat) { 
-            wdStat.classList.add('clickable-stat'); 
-            wdStat.onclick = openWorkingDays; 
-        }
-        
+        if (wdStat) { wdStat.classList.add('clickable-stat'); wdStat.onclick = openWorkingDays; }
         const dpStat = $('statDaysPresent')?.closest('.stat');
-        if (dpStat) { 
-            dpStat.classList.add('clickable-stat'); 
-            dpStat.onclick = () => { 
-                switchTab('tab-mark'); 
+        if (dpStat) { dpStat.classList.add('clickable-stat'); dpStat.onclick = () => {
+                switchTab('tab-mark');
                 document.querySelectorAll('.collapsible-card').forEach(c => {
                     const b = c.querySelector('.collapsible-body');
                     const a = c.querySelector('.collapse-arrow');
@@ -1539,28 +1595,18 @@ function loadDashboard(){
                     if(a) a.style.transform = 'rotate(180deg)';
                     setTimeout(() => cal.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
                 }
-            }; 
-        }
-        
+            }; }
         const attStat = $('statAttendance')?.closest('.stat');
-        if (attStat) { 
-            attStat.classList.add('clickable-stat'); 
-            attStat.onclick = () => { 
-                switchTab('tab-mark'); 
-                if (!subjectBreakdownOpen) toggleSubjectBreakdown(); 
-                setTimeout(() => document.getElementById('subjectBreakdownCard')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100); 
-            }; 
-        }
-        
+        if (attStat) { attStat.classList.add('clickable-stat'); attStat.onclick = () => {
+                switchTab('tab-mark');
+                if (!subjectBreakdownOpen) toggleSubjectBreakdown();
+                setTimeout(() => document.getElementById('subjectBreakdownCard')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+            }; }
         const wdpStat = $('statWorkingDaysPct')?.closest('.stat');
-        if (wdpStat) { 
-            wdpStat.classList.add('clickable-stat'); 
-            wdpStat.onclick = () => {
+        if (wdpStat) { wdpStat.classList.add('clickable-stat'); wdpStat.onclick = () => {
                 showFeedback('info', 'Working Days Analytics', 'Your working days percentage is ' + ($('statWorkingDaysPct')?.textContent || '0%') + '.\n\nThis means you attended college on this percentage of total working days. Keep it above 75%!');
-            }; 
-        }
-        
-        // NEW PREMIUM FEATURE CARD (Gold/Platinum)
+            }; }
+
         if (userSubscription.tier === 'platinum' || userSubscription.tier === 'gold') {
             let premCard = $('premiumAnalyticsCard');
             if (!premCard) {
@@ -1581,14 +1627,11 @@ function loadDashboard(){
                     </div>
                 `;
                 const advBox = $('advisorBox');
-                if (advBox && advBox.parentNode) {
-                    advBox.parentNode.insertBefore(premCard, advBox.nextSibling);
-                }
+                if (advBox && advBox.parentNode) { advBox.parentNode.insertBefore(premCard, advBox.nextSibling); }
             }
         }
     }, 800);
 
-    // Update Reports Buttons to Include View
     setTimeout(() => {
         if (repSec) {
             const btnRow = repSec.querySelector('.row:last-child');
@@ -1661,15 +1704,34 @@ function loadDashboard(){
   setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 250);
   setTimeout(() => { autoInitFCM().catch(()=>{}); }, 2000);
   setTimeout(ensureScrollUnlocked, 500);
-  
-  setTimeout(initCollapsibleCards, 300); 
-  
+  setTimeout(initCollapsibleCards, 300);
   startSessionCheck();
 }
+
+/* ★ FIX 4: Real-time session expiry display */
 function updateClock(){
   const n = new Date();
   if ($('currentTime')) $('currentTime').textContent = n.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
   if ($('currentDate')) $('currentDate').textContent = n.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+
+  const loginTime = parseInt(localStorage.getItem('BM_LOGIN_TIME') || '0');
+  const sessionEl = $('sessionExpiry');
+  if (loginTime && sessionEl) {
+    const remainMs = (loginTime + SESSION_DURATION_MS) - Date.now();
+    if (remainMs <= 0) {
+      sessionEl.textContent = '⏰ Expired';
+      sessionEl.style.color = 'var(--rose-600)';
+      sessionEl.style.background = 'var(--rose-50)';
+    } else {
+      const days = Math.floor(remainMs / (24*60*60*1000));
+      const hours = Math.floor((remainMs % (24*60*60*1000)) / (60*60*1000));
+      const mins = Math.floor((remainMs % (60*60*1000)) / 60000);
+      sessionEl.textContent = `Session: ${days}d ${hours}h`;
+      sessionEl.style.color = days < 1 ? 'var(--amber-700)' : 'var(--slate-500)';
+      sessionEl.style.background = days < 1 ? 'var(--amber-50)' : 'var(--slate-100)';
+      sessionEl.title = `Session expires in ${days}d ${hours}h ${mins}m (7 days from login)`;
+    }
+  }
 }
 async function fetchNotices(){
   try { const res = await fetch(`${API}/api/notices`); const data = await res.json(); if (data && data.length) { if ($('noticeText')) $('noticeText').textContent = data[data.length-1].message || 'No new notices'; const nb = $('noticeBanner'); if (nb) nb.style.display = 'flex'; } } catch(e){}
@@ -1685,9 +1747,7 @@ function switchTab(id){
 }
 function showAdmin(id){
   document.querySelectorAll('.subnav-item').forEach(b => b.classList.toggle('active', b.getAttribute('onclick').includes(id)));
-  
   ['a-directory','a-attendance','a-requests','a-registrations','a-account','a-reports','a-entry','a-holiday','a-passcode','a-notes','a-fees','a-library','a-results','a-exams','a-alerts','a-tools','a-leave','a-defaulters','a-subscriptions','a-gamification'].forEach(x => { const el = $(x); if (el) el.style.display = 'none'; });
-  
   const el = $(id); if (el) { el.style.display = 'block'; el.style.animation = 'tabFadeIn .35s ease'; }
   if (id === 'a-directory') fetchUsers();
   if (id === 'a-attendance') loadAllAttendance();
@@ -1703,14 +1763,13 @@ function showAdmin(id){
   if (id === 'a-library') loadAllLibrary();
   if (id === 'a-results') loadAdminResults();
   if (id === 'a-exams') loadAdminExams();
-  if (id === 'a-alerts') initAnnouncementsUI(); // ★ NEW
+  if (id === 'a-alerts') initAnnouncementsUI();
   if (id === 'a-tools') initTools();
   if (id === 'a-leave') loadLeaveRequests();
   observeNewContent();
   setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 60);
 }
 
-// ★ NEW: Clear Announcements logic
 function initAnnouncementsUI() {
     const alertsSection = $('a-alerts');
     if (alertsSection && !$('clearAnnBtn')) {
@@ -1843,7 +1902,7 @@ async function loadAdminRequests(){
     if (status) reqs = reqs.filter(r => (r.status || '') === status);
     if (!reqs.length) return el.innerHTML = '<div class="empty">No requests</div>';
     const now = Date.now();
-    const UNDO_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+    const UNDO_WINDOW_MS = 5 * 60 * 1000;
     el.innerHTML = reqs.map(r => {
       const sc = r.status === 'Approved' ? 'badge-success' : r.status === 'Rejected' ? 'badge-danger' : r.status === 'Partially Approved' ? 'badge-info' : 'badge-warning';
       const ll = r.lectureType === 'full_day' ? '📅 Full Day' : '📖 Single Lecture';
@@ -2309,29 +2368,29 @@ async function generateIndividualPDF(studentRoll, studentName, branch, range, mo
     hideDL();
     if (!blob) return toast('PDF library failed to load','error');
     const filename = `attendance_${studentRoll}_${Date.now()}.pdf`;
-    if (action === 'view') viewPdfBlob(blob, filename); // ★ Passing filename
+    if (action === 'view') viewPdfBlob(blob, filename);
     else universalDownload(blob, filename);
   } catch(e) { hideDL(); toast('Failed: ' + e.message, 'error'); }
 }
 
-async function generateSelfPDF(action = 'download'){ 
+async function generateSelfPDF(action = 'download'){
   if (userSubscription.tier === 'free' || userSubscription.isExpired) {
     return showFeedback('warning', 'Premium Required', 'PDF Reports are a Silver+ feature. Please upgrade your plan.', { buttonText: 'View Plans', onClose: openSubscriptionModal });
   }
-  const range = $('pdfRangeSelect').value; const month = $('pdfMonthSelect').value; 
-  await generateIndividualPDF(currentUser.rollNo, currentUser.name, currentUser.branch || 'CSE', range, month, true, action); 
+  const range = $('pdfRangeSelect').value; const month = $('pdfMonthSelect').value;
+  await generateIndividualPDF(currentUser.rollNo, currentUser.name, currentUser.branch || 'CSE', range, month, true, action);
 }
 
-function getTimetableForBranch(b){ 
-  const CSE = { Monday: ['FLA - Formal Language & Automata','ECO - Economics for Engineers','DAA - Design & Analysis of Algorithm','LIB - Library','HRM - Human Resource Mgmt','CN - Computer Network','Sports'], Tuesday: ['WT - Web Technology','ECO - Economics for Engineers','Internet Lab','LIB - Library','HRM - Human Resource Mgmt','FLA - Formal Language & Automata','Sports'], Wednesday: ['FLA - Formal Language & Automata','ECO - Economics for Engineers','BDA - Big Data Analytics','LIB - Library','WT - Web Technology','CN LAB - Computer Network Lab'], Thursday: ['BDA - Big Data Analytics','WT - Web Technology','CN - Computer Network','DAA - Design & Analysis of Algorithm','DAA LAB - Algorithm Lab','HRM - Human Resource Mgmt'], Friday: ['FLA - Formal Language & Automata','CN - Computer Network','LIB - Library','DAA - Design & Analysis of Algorithm','WT LAB - Web Technology Lab','BDA - Big Data Analytics'] }; 
-  const AIDS = { Monday: ['FLA - Formal Language & Automata','ECO - Economics for Engineers','ML - Machine Learning','LIB - Library','HRM - Human Resource Mgmt','PA - Predictive Analysis','Sports'], Tuesday: ['WT - Web Technology','ECO - Economics for Engineers','PA - Predictive Analysis','LIB - Library','HRM - Human Resource Mgmt','FLA - Formal Language & Automata','ML - Machine Learning'], Wednesday: ['FLA - Formal Language & Automata','ECO - Economics for Engineers','BDA - Big Data Analytics','LIB - Library','WT - Web Technology','PA LAB - Predictive Analysis Lab'], Thursday: ['BDA - Big Data Analytics','WT - Web Technology','LIB - Library','PA - Predictive Analysis','ML LAB - Machine Learning Lab','HRM - Human Resource Mgmt'], Friday: ['FLA - Formal Language & Automata','BDA LAB - Big Data Analytics Lab','ML - Machine Learning','Internet Lab','BDA - Big Data Analytics'] }; 
-  return (b && b.toUpperCase() === 'AIDS') ? AIDS : CSE; 
+function getTimetableForBranch(b){
+  const CSE = { Monday: ['FLA - Formal Language & Automata','ECO - Economics for Engineers','DAA - Design & Analysis of Algorithm','LIB - Library','HRM - Human Resource Mgmt','CN - Computer Network','Sports'], Tuesday: ['WT - Web Technology','ECO - Economics for Engineers','Internet Lab','LIB - Library','HRM - Human Resource Mgmt','FLA - Formal Language & Automata','Sports'], Wednesday: ['FLA - Formal Language & Automata','ECO - Economics for Engineers','BDA - Big Data Analytics','LIB - Library','WT - Web Technology','CN LAB - Computer Network Lab'], Thursday: ['BDA - Big Data Analytics','WT - Web Technology','CN - Computer Network','DAA - Design & Analysis of Algorithm','DAA LAB - Algorithm Lab','HRM - Human Resource Mgmt'], Friday: ['FLA - Formal Language & Automata','CN - Computer Network','LIB - Library','DAA - Design & Analysis of Algorithm','WT LAB - Web Technology Lab','BDA - Big Data Analytics'] };
+  const AIDS = { Monday: ['FLA - Formal Language & Automata','ECO - Economics for Engineers','ML - Machine Learning','LIB - Library','HRM - Human Resource Mgmt','PA - Predictive Analysis','Sports'], Tuesday: ['WT - Web Technology','ECO - Economics for Engineers','PA - Predictive Analysis','LIB - Library','HRM - Human Resource Mgmt','FLA - Formal Language & Automata','ML - Machine Learning'], Wednesday: ['FLA - Formal Language & Automata','ECO - Economics for Engineers','BDA - Big Data Analytics','LIB - Library','WT - Web Technology','PA LAB - Predictive Analysis Lab'], Thursday: ['BDA - Big Data Analytics','WT - Web Technology','LIB - Library','PA - Predictive Analysis','ML LAB - Machine Learning Lab','HRM - Human Resource Mgmt'], Friday: ['FLA - Formal Language & Automata','BDA LAB - Big Data Analytics Lab','ML - Machine Learning','Internet Lab','BDA - Big Data Analytics'] };
+  return (b && b.toUpperCase() === 'AIDS') ? AIDS : CSE;
 }
 
-function getScheduleForBranch(b){ 
-  const CSE = { 1:[{start:'09:20',end:'10:05',subject:'FLA - Formal Language & Automata',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'DAA - Design & Analysis of Algorithm',period:'P3'},{start:'11:35',end:'12:20',subject:'LIB - Library',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'CN - Computer Network',period:'P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}], 2:[{start:'09:20',end:'10:05',subject:'WT - Web Technology',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'Internet Lab',period:'P3'},{start:'11:35',end:'12:20',subject:'LIB - Library',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'FLA - Formal Language & Automata',period:'P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}], 3:[{start:'09:20',end:'10:05',subject:'FLA - Formal Language & Automata',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'BDA - Big Data Analytics',period:'P3'},{start:'11:35',end:'12:20',subject:'LIB - Library',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'WT - Web Technology',period:'P6'},{start:'13:50',end:'15:20',subject:'CN LAB - Computer Network Lab',period:'P7-P8'}], 4:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'WT - Web Technology',period:'P2'},{start:'10:50',end:'11:35',subject:'CN - Computer Network',period:'P3'},{start:'11:35',end:'12:20',subject:'DAA - Design & Analysis of Algorithm',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'DAA LAB - Algorithm Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'HRM - Human Resource Mgmt',period:'P8'}], 5:[{start:'09:20',end:'10:05',subject:'FLA - Formal Language & Automata',period:'P1'},{start:'10:05',end:'10:50',subject:'CN - Computer Network',period:'P2'},{start:'10:50',end:'11:35',subject:'LIB - Library',period:'P3'},{start:'11:35',end:'12:20',subject:'DAA - Design & Analysis of Algorithm',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'WT LAB - Web Technology Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'BDA - Big Data Analytics',period:'P8'}] }; 
-  const AIDS = { 1:[{start:'09:20',end:'10:05',subject:'FLA - Formal Language & Automata',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'ML - Machine Learning',period:'P3'},{start:'11:35',end:'12:20',subject:'LIB - Library',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'PA - Predictive Analysis',period:'P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}], 2:[{start:'09:20',end:'10:05',subject:'WT - Web Technology',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'PA - Predictive Analysis',period:'P3'},{start:'11:35',end:'12:20',subject:'LIB - Library',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'FLA - Formal Language & Automata',period:'P7'},{start:'14:35',end:'15:20',subject:'ML - Machine Learning',period:'P8'}], 3:[{start:'09:20',end:'10:05',subject:'FLA - Formal Language & Automata',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'BDA - Big Data Analytics',period:'P3'},{start:'11:35',end:'12:20',subject:'LIB - Library',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'WT - Web Technology',period:'P6'},{start:'13:50',end:'15:20',subject:'PA LAB - Predictive Analysis Lab',period:'P7-P8'}], 4:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'WT - Web Technology',period:'P2'},{start:'10:50',end:'11:35',subject:'LIB - Library',period:'P3'},{start:'11:35',end:'12:20',subject:'PA - Predictive Analysis',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'ML LAB - Machine Learning Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'HRM - Human Resource Mgmt',period:'P8'}], 5:[{start:'09:20',end:'10:05',subject:'FLA - Formal Language & Automata',period:'P1'},{start:'10:05',end:'11:35',subject:'BDA LAB - Big Data Analytics Lab',period:'P2-P3'},{start:'11:35',end:'12:20',subject:'ML - Machine Learning',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'Internet Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'BDA - Big Data Analytics',period:'P8'}] }; 
-  return (b && b.toUpperCase() === 'AIDS') ? AIDS : CSE; 
+function getScheduleForBranch(b){
+  const CSE = { 1:[{start:'09:20',end:'10:05',subject:'FLA - Formal Language & Automata',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'DAA - Design & Analysis of Algorithm',period:'P3'},{start:'11:35',end:'12:20',subject:'LIB - Library',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'CN - Computer Network',period:'P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}], 2:[{start:'09:20',end:'10:05',subject:'WT - Web Technology',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'Internet Lab',period:'P3'},{start:'11:35',end:'12:20',subject:'LIB - Library',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'FLA - Formal Language & Automata',period:'P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}], 3:[{start:'09:20',end:'10:05',subject:'FLA - Formal Language & Automata',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'BDA - Big Data Analytics',period:'P3'},{start:'11:35',end:'12:20',subject:'LIB - Library',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'WT - Web Technology',period:'P6'},{start:'13:50',end:'15:20',subject:'CN LAB - Computer Network Lab',period:'P7-P8'}], 4:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'WT - Web Technology',period:'P2'},{start:'10:50',end:'11:35',subject:'CN - Computer Network',period:'P3'},{start:'11:35',end:'12:20',subject:'DAA - Design & Analysis of Algorithm',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'DAA LAB - Algorithm Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'HRM - Human Resource Mgmt',period:'P8'}], 5:[{start:'09:20',end:'10:05',subject:'FLA - Formal Language & Automata',period:'P1'},{start:'10:05',end:'10:50',subject:'CN - Computer Network',period:'P2'},{start:'10:50',end:'11:35',subject:'LIB - Library',period:'P3'},{start:'11:35',end:'12:20',subject:'DAA - Design & Analysis of Algorithm',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'WT LAB - Web Technology Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'BDA - Big Data Analytics',period:'P8'}] };
+  const AIDS = { 1:[{start:'09:20',end:'10:05',subject:'FLA - Formal Language & Automata',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'ML - Machine Learning',period:'P3'},{start:'11:35',end:'12:20',subject:'LIB - Library',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'PA - Predictive Analysis',period:'P7'},{start:'14:35',end:'15:20',subject:'Sports',period:'P8'}], 2:[{start:'09:20',end:'10:05',subject:'WT - Web Technology',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'PA - Predictive Analysis',period:'P3'},{start:'11:35',end:'12:20',subject:'LIB - Library',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'HRM - Human Resource Mgmt',period:'P6'},{start:'13:50',end:'14:35',subject:'FLA - Formal Language & Automata',period:'P7'},{start:'14:35',end:'15:20',subject:'ML - Machine Learning',period:'P8'}], 3:[{start:'09:20',end:'10:05',subject:'FLA - Formal Language & Automata',period:'P1'},{start:'10:05',end:'10:50',subject:'ECO - Economics for Engineers',period:'P2'},{start:'10:50',end:'11:35',subject:'BDA - Big Data Analytics',period:'P3'},{start:'11:35',end:'12:20',subject:'LIB - Library',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'13:50',subject:'WT - Web Technology',period:'P6'},{start:'13:50',end:'15:20',subject:'PA LAB - Predictive Analysis Lab',period:'P7-P8'}], 4:[{start:'09:20',end:'10:05',subject:'BDA - Big Data Analytics',period:'P1'},{start:'10:05',end:'10:50',subject:'WT - Web Technology',period:'P2'},{start:'10:50',end:'11:35',subject:'LIB - Library',period:'P3'},{start:'11:35',end:'12:20',subject:'PA - Predictive Analysis',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'ML LAB - Machine Learning Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'HRM - Human Resource Mgmt',period:'P8'}], 5:[{start:'09:20',end:'10:05',subject:'FLA - Formal Language & Automata',period:'P1'},{start:'10:05',end:'11:35',subject:'BDA LAB - Big Data Analytics Lab',period:'P2-P3'},{start:'11:35',end:'12:20',subject:'ML - Machine Learning',period:'P4'},{start:'12:20',end:'13:05',subject:'Lunch Break',period:'LUNCH'},{start:'13:05',end:'14:35',subject:'Internet Lab',period:'P6-P7'},{start:'14:35',end:'15:20',subject:'BDA - Big Data Analytics',period:'P8'}] };
+  return (b && b.toUpperCase() === 'AIDS') ? AIDS : CSE;
 }
 
 function initAdmin(){ const t = fmtDate(new Date()); if ($('manualDate')) $('manualDate').value = t; if ($('holidayDate')) $('holidayDate').value = t; if ($('classStart')) $('classStart').value = '2026-07-15'; if ($('classEnd')) $('classEnd').value = t; const ssm = $('singleStudentMonth'); if (ssm && !ssm.innerHTML.trim()) ssm.innerHTML = [6,7,8,9,10,11].map(m=>`<option value="${m}">${MONTH_NAMES[m]} 2026</option>`).join(''); setBranch('CSE'); loadHolidays(); }
@@ -2386,24 +2445,24 @@ async function generateClassReport(action = 'download'){
 function toggleAdminReportRange(){ const e = $('adminReportMonth'); if (e) e.style.display = $('adminReportRange').value === 'SELECTED_MONTH' ? 'block' : 'none'; }
 async function exportGrid(){ const r = window._allRecords || await fetch(`${API}/api/attendance/all/${currentUser.rollNo}`).then(x=>x.json()); const sel = $('exportRange').value; const hol = await fetch(`${API}/api/holidays`).then(x=>x.json()); const hS = new Set(hol.map(h => (h.date||'').split('T')[0])); const start = sel === 'ALL_SEMESTER' ? new Date(2026,6,15) : new Date(2026, parseInt(sel), 1); let end = sel === 'ALL_SEMESTER' ? new Date(2026,11,31) : new Date(2026, parseInt(sel)+1, 0); const today = new Date(); if (end > today) end = today; const days = []; let cur = new Date(start); while (cur <= end) { days.push(fmtDate(cur)); cur.setDate(cur.getDate()+1); } const bs = {}; r.forEach(x => { if (!bs[x.rollNo]) bs[x.rollNo] = { name: x.studentName||'', dates: {} }; if (!bs[x.rollNo].dates[x.date]) bs[x.rollNo].dates[x.date] = []; bs[x.rollNo].dates[x.date].push(x.status); }); let csv = 'Roll,Name,' + days.map(d => `${d}`).join(',') + ',Total\n'; Object.keys(bs).sort().forEach(roll => { const s = bs[roll]; let total = 0, row = `"${roll}","${s.name}"`; days.forEach(d => { const dow = new Date(d).getDay(); if (dow === 0 || dow === 6) { row += ',OFF'; return; } if (hS.has(d)) { row += ',H'; return; } const st = s.dates[d] || []; if (st.some(x => x === 'Present' || x === 'Duty Leave')) { row += ',P'; total++; } else row += ',A'; }); row += `,${total}`; csv += row + '\n'; }); download(csv, `attendance_grid.csv`); }
 
-async function generateStudentReport(f, action = 'download'){ 
-  const r = $('reportStudentSelect').value; 
-  if (!r) return toast('Select student','error'); 
-  const rng = $('adminReportRange').value; 
-  const m = $('adminReportMonth').value; 
-  if (f === 'pdf') { 
-    let sn = r, b = 'CSE'; 
-    try { const pR = await fetch(`${API}/api/student/profile/${r}`); if (pR.ok) { const p = await pR.json(); sn = p.name || r; b = p.branch || 'CSE'; } } catch(e){} 
-    await generateIndividualPDF(r, sn, b, rng, m, false, action); 
-  } else { 
-    const recs = await fetch(`${API}/api/attendance/student/${r}/${currentUser.rollNo}`).then(x=>x.json()); 
-    if (!recs || !recs.length) return toast('No records','error'); 
-    const r2 = getRangeForSelection(rng, m); 
-    const filtered = recs.filter(x => x.date >= r2.start && x.date <= r2.end); 
-    let csv = `Student Report\nStudent: ${r}\nRange: ${r2.start} to ${r2.end}\n\nDate,Subject,Status\n`; 
-    filtered.forEach(x => { csv += `${x.date},${x.subject},${x.status}\n`; }); 
-    download(csv, `report_${r}_${rng}.csv`); 
-  } 
+async function generateStudentReport(f, action = 'download'){
+  const r = $('reportStudentSelect').value;
+  if (!r) return toast('Select student','error');
+  const rng = $('adminReportRange').value;
+  const m = $('adminReportMonth').value;
+  if (f === 'pdf') {
+    let sn = r, b = 'CSE';
+    try { const pR = await fetch(`${API}/api/student/profile/${r}`); if (pR.ok) { const p = await pR.json(); sn = p.name || r; b = p.branch || 'CSE'; } } catch(e){}
+    await generateIndividualPDF(r, sn, b, rng, m, false, action);
+  } else {
+    const recs = await fetch(`${API}/api/attendance/student/${r}/${currentUser.rollNo}`).then(x=>x.json());
+    if (!recs || !recs.length) return toast('No records','error');
+    const r2 = getRangeForSelection(rng, m);
+    const filtered = recs.filter(x => x.date >= r2.start && x.date <= r2.end);
+    let csv = `Student Report\nStudent: ${r}\nRange: ${r2.start} to ${r2.end}\n\nDate,Subject,Status\n`;
+    filtered.forEach(x => { csv += `${x.date},${x.subject},${x.status}\n`; });
+    download(csv, `report_${r}_${rng}.csv`);
+  }
 }
 
 function initEntry(){ setBranch(currentManualBranch); if ($('manualDate')) $('manualDate').value = fmtDate(new Date()); loadBulkStudents(); }
@@ -2428,10 +2487,168 @@ async function loadBulkStudents(){
 function addBulkDate(){ const d = $('bulkDate').value; if (!d) return toast('Select date','error'); if (selectedBulkDates.includes(d)) return toast('Already added','error'); selectedBulkDates.push(d); renderBulkDates(); }
 function renderBulkDates(){ if ($('bulkDates')) $('bulkDates').innerHTML = selectedBulkDates.map(d => `<span class="chip">${fmtDatePretty(d)} <span onclick="removeBulkDate('${d}')" style="cursor:pointer;color:var(--rose-600);font-weight:800;">×</span></span>`).join(''); }
 function removeBulkDate(d){ selectedBulkDates = selectedBulkDates.filter(x=>x!==d); renderBulkDates(); }
-async function bulkMarkPreview(){ const students = Array.from(document.querySelectorAll('.bulk-stu:checked')).map(cb => ({roll: cb.value, name: cb.dataset.name})); if (!students.length) return toast('Select students','error'); if (!selectedBulkDates.length) return toast('Add dates','error'); let s = `<div style="margin-bottom:14px;padding:14px;background:var(--brand-50);border:1px solid var(--brand-200);border-radius:10px;"><div style="font-size:13.5px;font-weight:800;color:var(--brand-900);">Summary</div><div style="font-size:12.5px;color:var(--brand-700);margin-top:5px;"><b>${students.length}</b> students × <b>${selectedBulkDates.length}</b> dates</div></div>`; s += `<div style="max-height:200px;overflow-y:auto;border:1px solid var(--slate-200);border-radius:10px;padding:8px;">`; students.forEach(st => { s += `<div class="present-row" style="padding:6px 10px;"><b>${escapeHtml(st.roll)}</b><span>${escapeHtml(st.name)}</span></div>`; }); s += `</div>`; $('bulkMarkSummary').innerHTML = s; pendingBulkAction = { type: 'mark', students: students.map(x=>x.roll) }; openModal('bulkMarkModal'); }
-async function confirmBulkMark(){ if (!pendingBulkAction || pendingBulkAction.type !== 'mark') return; closeModal('bulkMarkModal'); showDL('Marking…'); try { const res = await fetch(`${API}/api/admin/bulk-mark-attendance`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, studentRollNos: pendingBulkAction.students, dates: selectedBulkDates, subjects: []})}); const d = await res.json(); hideDL(); if (res.ok) { showFeedback('success','Bulk Marked',d.message||'Attendance marked.'); sendPushNotification('✅ Bulk Marked', `${pendingBulkAction.students.length} students × ${selectedBulkDates.length} dates`, { type: 'bulk_mark' }); } else showFeedback('error','Failed',d.error||'Could not mark'); } catch(e){ hideDL(); showFeedback('error','Network Error',e.message); } pendingBulkAction = null; }
-async function bulkDeletePreview(){ const students = Array.from(document.querySelectorAll('.bulk-stu:checked')).map(cb => ({roll: cb.value, name: cb.dataset.name})); if (!students.length) return toast('Select students','error'); if (!selectedBulkDates.length) return toast('Add dates','error'); let s = `<div style="margin-bottom:14px;padding:14px;background:var(--rose-50);border:1px solid #fecdd3;border-radius:10px;"><div style="font-size:13.5px;font-weight:800;color:var(--rose-700);">Confirm Delete</div><div style="font-size:12.5px;color:var(--rose-700);margin-top:5px;"><b>${students.length}</b> students × <b>${selectedBulkDates.length}</b> dates</div></div>`; $('bulkDeleteSummary').innerHTML = s; pendingBulkAction = { type: 'delete', students: students.map(x=>x.roll) }; openModal('bulkDeleteModal'); }
-async function confirmBulkDelete(){ if (!pendingBulkAction || pendingBulkAction.type !== 'delete') return; closeModal('bulkDeleteModal'); showDL('Deleting…'); try { const res = await fetch(`${API}/api/admin/bulk-delete-attendance`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, studentRollNos: pendingBulkAction.students, dates: selectedBulkDates})}); const d = await res.json(); hideDL(); if (res.ok) showFeedback('success','Deleted',d.message||'Records deleted.'); else showFeedback('error','Failed',d.error||'Could not delete'); } catch(e){ hideDL(); showFeedback('error','Network Error',e.message); } pendingBulkAction = null; }
+
+/* ★ FIX 2: Bulk mark preview shows per-student lecture counts */
+async function bulkMarkPreview(){
+  const students = Array.from(document.querySelectorAll('.bulk-stu:checked')).map(cb => ({roll: cb.value, name: cb.dataset.name || ''}));
+  if (!students.length) return toast('Select students','error');
+  if (!selectedBulkDates.length) return toast('Add dates','error');
+
+  const preview = [];
+  let grandTotal = 0;
+  for (const st of students) {
+    const branch = st.roll.startsWith('24AIDS') ? 'AIDS' : 'CSE';
+    let totalLectures = 0;
+    for (const date of selectedBulkDates) {
+      const dow = new Date(date + 'T00:00:00').getDay();
+      if (dow === 0 || dow === 6) continue;
+      const dayName = FULL_DAY_NAMES[dow];
+      const daySubs = (getTimetableForBranch(branch)[dayName] || []).filter(s => !s.includes('Sports') && !s.includes('LIB') && !s.includes('Library'));
+      totalLectures += daySubs.length;
+    }
+    preview.push({ ...st, branch, totalLectures });
+    grandTotal += totalLectures;
+  }
+
+  let s = `<div style="margin-bottom:14px;padding:14px;background:var(--brand-50);border:1px solid var(--brand-200);border-radius:10px;">
+    <div style="font-size:14px;font-weight:800;color:var(--brand-900);">📋 Bulk Marking Summary</div>
+    <div style="font-size:12.5px;color:var(--brand-700);margin-top:6px;"><b>${students.length}</b> student(s) × <b>${selectedBulkDates.length}</b> date(s)</div>
+    <div style="font-size:12.5px;color:var(--brand-700);margin-top:4px;">🎯 Total lectures to mark: <b>${grandTotal}</b></div>
+    <div style="font-size:11px;color:var(--brand-600);margin-top:6px;font-style:italic;">Review the list below, then confirm to proceed.</div>
+  </div>`;
+  s += `<div style="max-height:280px;overflow-y:auto;border:1px solid var(--slate-200);border-radius:10px;padding:8px;background:#fff;">`;
+  preview.forEach(p => {
+    s += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--slate-100);gap:8px;">
+      <div style="min-width:0;flex:1;">
+        <div style="font-weight:700;font-size:12px;">${escapeHtml(p.roll)} — ${escapeHtml(p.name)}</div>
+        <div style="font-size:10.5px;color:var(--slate-500);">${p.branch}</div>
+      </div>
+      <div style="font-weight:800;color:var(--brand-600);font-size:14px;font-variant-numeric:tabular-nums;">${p.totalLectures}</div>
+    </div>`;
+  });
+  s += `</div>`;
+  $('bulkMarkSummary').innerHTML = s;
+  pendingBulkAction = { type: 'mark', students: students.map(x=>x.roll) };
+  openModal('bulkMarkModal');
+}
+
+async function confirmBulkMark() {
+  if (!pendingBulkAction) return;
+  closeModal('bulkMarkModal');
+
+  /* ★ FIX 2: Faculty bulk mark (uses teacher endpoint) */
+  if (pendingBulkAction.type === 'fac-mark') {
+    showDL('Marking…');
+    try {
+      const res = await fetch(`${API}/api/teacher/bulk-mark-attendance`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requesterRollNo: currentUser.rollNo,
+          studentRollNos: pendingBulkAction.students,
+          dates: facSelectedBulkDates,
+          status: pendingBulkAction.status
+        })
+      });
+      const d = await res.json();
+      hideDL();
+      if (res.ok) {
+        showFeedback('success','Bulk Marked', d.message || 'Attendance marked.');
+        sendPushNotification('✅ Bulk Marked', `${pendingBulkAction.students.length} students × ${facSelectedBulkDates.length} dates`, { type: 'fac_bulk' });
+        facSelectedBulkDates = []; renderFacBulkDates();
+        fetchTeacherStudents(); loadFacultyRecent();
+      } else showFeedback('error','Failed', d.error || 'Could not mark');
+    } catch(e) { hideDL(); showFeedback('error','Network Error', e.message); }
+    pendingBulkAction = null;
+    return;
+  }
+
+  /* ★ FIX 2: Admin bulk mark */
+  if (pendingBulkAction.type === 'mark') {
+    showDL('Marking…');
+    try {
+      const res = await fetch(`${API}/api/admin/bulk-mark-attendance`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requesterRollNo: currentUser.rollNo,
+          studentRollNos: pendingBulkAction.students,
+          dates: selectedBulkDates,
+          subjects: []
+        })
+      });
+      const d = await res.json();
+      hideDL();
+      if (res.ok) {
+        showFeedback('success','Bulk Marked', d.message || 'Attendance marked.');
+        sendPushNotification('✅ Bulk Marked', `${pendingBulkAction.students.length} students × ${selectedBulkDates.length} dates`, { type: 'bulk_mark' });
+      } else showFeedback('error','Failed', d.error || 'Could not mark');
+    } catch(e) { hideDL(); showFeedback('error','Network Error', e.message); }
+    pendingBulkAction = null;
+    return;
+  }
+
+  pendingBulkAction = null;
+}
+
+async function bulkDeletePreview(){
+  const students = Array.from(document.querySelectorAll('.bulk-stu:checked')).map(cb => ({roll: cb.value, name: cb.dataset.name}));
+  if (!students.length) return toast('Select students','error');
+  if (!selectedBulkDates.length) return toast('Add dates','error');
+
+  let grandTotal = 0;
+  const preview = students.map(st => {
+    const branch = st.roll.startsWith('24AIDS') ? 'AIDS' : 'CSE';
+    let count = 0;
+    for (const date of selectedBulkDates) {
+      const dow = new Date(date + 'T00:00:00').getDay();
+      if (dow === 0 || dow === 6) continue;
+      const dayName = FULL_DAY_NAMES[dow];
+      const daySubs = (getTimetableForBranch(branch)[dayName] || []).filter(s => !s.includes('Sports') && !s.includes('LIB') && !s.includes('Library'));
+      count += daySubs.length;
+    }
+    grandTotal += count;
+    return { ...st, branch, count };
+  });
+
+  let s = `<div style="margin-bottom:14px;padding:14px;background:var(--rose-50);border:1px solid #fecdd3;border-radius:10px;">
+    <div style="font-size:14px;font-weight:800;color:var(--rose-700);">⚠️ Confirm Bulk Delete</div>
+    <div style="font-size:12.5px;color:var(--rose-700);margin-top:6px;"><b>${students.length}</b> student(s) × <b>${selectedBulkDates.length}</b> date(s)</div>
+    <div style="font-size:12.5px;color:var(--rose-700);margin-top:4px;">🎯 Total records to delete: <b>~${grandTotal}</b></div>
+    <div style="font-size:11px;color:#9f1239;margin-top:6px;font-weight:600;">⚠️ This action cannot be undone!</div>
+  </div>`;
+  s += `<div style="max-height:200px;overflow-y:auto;border:1px solid var(--slate-200);border-radius:10px;padding:8px;background:#fff;">`;
+  preview.forEach(p => {
+    s += `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-bottom:1px solid var(--slate-100);gap:8px;">
+      <div style="font-weight:700;font-size:12px;">${escapeHtml(p.roll)} — ${escapeHtml(p.name)}</div>
+      <div style="font-weight:800;color:var(--rose-600);font-size:12px;font-variant-numeric:tabular-nums;">${p.count}</div>
+    </div>`;
+  });
+  s += `</div>`;
+
+  $('bulkDeleteSummary').innerHTML = s;
+  pendingBulkAction = { type: 'delete', students: students.map(x=>x.roll) };
+  openModal('bulkDeleteModal');
+}
+
+async function confirmBulkDelete() {
+  if (!pendingBulkAction || pendingBulkAction.type !== 'delete') return;
+  closeModal('bulkDeleteModal');
+  showDL('Deleting…');
+  try {
+    const res = await fetch(`${API}/api/admin/bulk-delete-attendance`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requesterRollNo: currentUser.rollNo, studentRollNos: pendingBulkAction.students, dates: selectedBulkDates })
+    });
+    const d = await res.json();
+    hideDL();
+    if (res.ok) showFeedback('success','Deleted', d.message || 'Records deleted.');
+    else showFeedback('error','Failed', d.error || 'Could not delete');
+  } catch(e) { hideDL(); showFeedback('error','Network Error', e.message); }
+  pendingBulkAction = null;
+}
+
 async function loadHolidays(){ try { const data = await ensureHolidays(); selectedHolidayDates.clear(); if ($('holidayList')) $('holidayList').innerHTML = data.length ? data.map(h => { const d = (h.date||'').split('T')[0]; return `<div class="holiday-row"><label style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;min-width:0;"><input type="checkbox" class="holiday-cb" value="${d}" onchange="toggleHolidaySelect('${d}', this.checked)"> <b>${fmtDatePretty(d)}</b> · ${h.reason}</label><button class="btn btn-danger btn-xs" onclick="deleteHoliday('${d}')">${ICONS.trash} Delete</button></div>`; }).join('') : '<div class="empty">No holidays</div>'; } catch(e){} observeNewContent(); }
 function toggleHolidaySelect(d, c){ if (c) selectedHolidayDates.add(d); else selectedHolidayDates.delete(d); }
 async function deleteSelectedHolidays(){ if (selectedHolidayDates.size === 0) return toast('Select holidays','error'); if (!confirm(`Delete ${selectedHolidayDates.size}?`)) return; showDL('Deleting…'); let ok = 0; for (const d of selectedHolidayDates) { try { const res = await fetch(`${API}/api/admin/holiday/${d}`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})}); if (res.ok) ok++; } catch(e){} } hideDL(); toast(`Deleted ${ok}`,'success'); globalHolidays = []; await ensureHolidays(); loadHolidays(); }
@@ -2543,7 +2760,7 @@ async function reviewLeave(id, action){ const n = prompt(`Note for ${action}:`) 
 async function loadDefaulters(){ const t = $('defThreshold').value || 75; try { const data = await fetch(`${API}/api/admin/defaulters/${currentUser.rollNo}?threshold=${t}`).then(x=>x.json()); const el = $('defaulterList'); if (!data.defaulters || !data.defaulters.length) return el.innerHTML = '<div class="empty">None below threshold</div>'; el.innerHTML = data.defaulters.map(s => `<div style="padding:10px 0;border-bottom:1px solid var(--slate-100);"><b>${s.rollNo}</b> · ${s.name} · ${s.branch} · <span class="badge badge-danger">${s.pct}%</span></div>`).join(''); } catch(e){} observeNewContent(); }
 
 /* ============================================================
-   NOTES & DOCUMENTS (FIXED UI & SVG)
+   NOTES & DOCUMENTS
    ============================================================ */
 async function loadStudentNotes() {
   const el = $('studentNotesList'); if (!el) return;
@@ -2554,7 +2771,6 @@ async function loadStudentNotes() {
     if (!res.ok) return el.innerHTML = `<div class="empty">${escapeHtml(data.error || 'Failed')}</div>`;
     const notes = Array.isArray(data) ? data : (data.notes || []);
     if (!notes.length) return el.innerHTML = '<div class="empty" style="padding:14px 0;">No notes uploaded yet.</div>';
-    
     el.innerHTML = notes.map(n => `
       <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 14px; border:1px solid var(--slate-200); border-radius:10px; margin-bottom:8px; background:#fff; flex-wrap:wrap;">
         <div style="min-width:0; flex:1;">
@@ -2570,8 +2786,8 @@ async function loadStudentNotes() {
   } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
 }
 
-function openDocRequestModal() { 
-  openModal('docRequestModal'); 
+function openDocRequestModal() {
+  openModal('docRequestModal');
   $('docReqTitle').value = ''; $('docReqSubject').value = ''; $('docReqReason').value = ''; $('docReqFile').value = '';
 }
 
@@ -2581,12 +2797,10 @@ async function submitDocRequest() {
   const reason = $('docReqReason').value.trim();
   const fileInput = $('docReqFile');
   const file = fileInput.files[0];
-
   if (!title) return toast('Enter title', 'error');
   if (!subject) return toast('Enter subject', 'error');
   if (!file) return toast('Select a file', 'error');
   if (file.size > 10 * 1024 * 1024) return toast('File too large (max 10MB)', 'error');
-
   showDL('Uploading…');
   try {
     const reader = new FileReader();
@@ -2597,12 +2811,9 @@ async function submitDocRequest() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            rollNo: currentUser.rollNo,
-            title, subject, reason,
+            rollNo: currentUser.rollNo, title, subject, reason,
             branch: currentUser.branch || 'CSE',
-            fileBase64: base64,
-            fileName: file.name,
-            mimeType: file.type || 'application/octet-stream'
+            fileBase64: base64, fileName: file.name, mimeType: file.type || 'application/octet-stream'
           })
         });
         const d = await res.json();
@@ -2664,12 +2875,10 @@ async function loadDocRequests() {
     if (!res.ok) return el.innerHTML = `<div class="empty">${escapeHtml(data.error || 'Failed')}</div>`;
     const reqs = Array.isArray(data) ? data : (data.requests || []);
     if (!reqs.length) return el.innerHTML = '<div class="empty">No pending requests</div>';
-    
     el.innerHTML = reqs.map(r => {
-      const fileHtml = r.fileName 
-        ? `<div style="margin-top:6px;"><button class="btn btn-outline btn-xs" onclick="openDocReqPreview('${r._id}')">${ICONS.view} View File</button> <button class="btn btn-success btn-xs" onclick="downloadDocReqFile('${r._id}', 'download')">${ICONS.download} Download</button> <span style="font-size:10px;color:var(--slate-500);margin-left:4px;">${escapeHtml(r.fileName)}</span></div>` 
+      const fileHtml = r.fileName
+        ? `<div style="margin-top:6px;"><button class="btn btn-outline btn-xs" onclick="openDocReqPreview('${r._id}')">${ICONS.view} View File</button> <button class="btn btn-success btn-xs" onclick="downloadDocReqFile('${r._id}', 'download')">${ICONS.download} Download</button> <span style="font-size:10px;color:var(--slate-500);margin-left:4px;">${escapeHtml(r.fileName)}</span></div>`
         : '';
-      
       return `
       <div style="padding:12px;border:1px solid var(--slate-200);border-radius:10px;margin-bottom:8px;background:#fff;">
         <div style="font-weight:800;font-size:12.5px;">${escapeHtml(r.title)}</div>
@@ -2693,13 +2902,11 @@ async function downloadDocReqFile(reqId, action = 'download') {
     const data = await res.json();
     hideDL();
     if (!res.ok || !data.fileBase64) return toast(data.error || 'File not found', 'error');
-    
     const byteCharacters = atob(data.fileBase64);
     const byteNumbers = new Array(byteCharacters.length);
     for (let i = 0; i < byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
     const byteArray = new Uint8Array(byteNumbers);
     const blob = new Blob([byteArray], {type: data.mimeType || 'application/octet-stream'});
-    
     if (action === 'view') viewPdfBlob(blob, data.fileName || 'document.pdf');
     else universalDownload(blob, data.fileName || 'document.pdf');
   } catch (e) {
@@ -2708,9 +2915,6 @@ async function downloadDocReqFile(reqId, action = 'download') {
   }
 }
 
-/* ============================================================
-   ★ NEW: DOCUMENT PREVIEW HELPERS (FIX for blank download issue)
-   ============================================================ */
 async function openDocumentPreview(noteId) {
   showDL('Loading document…');
   try {
@@ -2732,7 +2936,7 @@ async function openDocReqPreview(reqId) {
     if (!res.ok) throw new Error('Failed to load');
     const blob = await res.blob();
     hideDL();
-    viewPdfBlob(blob, `document_${reqId}.pdf`); 
+    viewPdfBlob(blob, `document_${reqId}.pdf`);
   } catch (e) {
     hideDL();
     toast('Failed: ' + e.message, 'error');
@@ -2787,9 +2991,7 @@ async function uploadNote() {
           body: JSON.stringify({
             requesterRollNo: currentUser.rollNo,
             title, subject, branch,
-            fileBase64: base64,
-            fileName: file.name,
-            mimeType: file.type || 'application/octet-stream'
+            fileBase64: base64, fileName: file.name, mimeType: file.type || 'application/octet-stream'
           })
         });
         const d = await res.json();
@@ -3029,41 +3231,88 @@ async function facMark(){ const s = $('facMarkStudent').value, sub = $('facMarkS
 function facAddBulkDate(){ const d = $('facBulkDate').value; if (!d) return toast('Select date','error'); if (facSelectedBulkDates.includes(d)) return toast('Already added','error'); facSelectedBulkDates.push(d); renderFacBulkDates(); }
 function renderFacBulkDates(){ if ($('facBulkDates')) $('facBulkDates').innerHTML = facSelectedBulkDates.map(d => `<span class="chip">${fmtDatePretty(d)} <span onclick="removeFacBulkDate('${d}')" style="cursor:pointer;color:var(--rose-600);font-weight:800;">×</span></span>`).join(''); }
 function removeFacBulkDate(d){ facSelectedBulkDates = facSelectedBulkDates.filter(x=>x!==d); renderFacBulkDates(); }
-async function facBulkMark(){ const students = Array.from(document.querySelectorAll('.fac-bulk-stu:checked')).map(cb => cb.value); if (!students.length) return toast('Select students','error'); if (!facSelectedBulkDates.length) return toast('Add dates','error'); const status = $('facBulkStatus').value; if (!confirm(`Mark ${status} for ${students.length} students × ${facSelectedBulkDates.length} dates?`)) return; showDL('Marking bulk…'); try { const res = await fetch(`${API}/api/teacher/bulk-mark-attendance`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, studentRollNos: students, dates: facSelectedBulkDates, status }) }); const d = await res.json(); hideDL(); if (res.ok) { showFeedback('success','Bulk Marked',d.message || 'Attendance marked.'); sendPushNotification('✅ Bulk Marked', `${students.length} students × ${facSelectedBulkDates.length} dates`, { type: 'fac_bulk' }); facSelectedBulkDates = []; renderFacBulkDates(); fetchTeacherStudents(); loadFacultyRecent(); } else showFeedback('error','Failed',d.error || 'Could not mark'); } catch(e){ hideDL(); showFeedback('error','Network Error',e.message); } }
+
+/* ★ FIX 2: Faculty bulk mark with proper modal + lecture count */
+async function facBulkMark(){
+  const students = Array.from(document.querySelectorAll('.fac-bulk-stu:checked')).map(cb => ({roll: cb.value, name: cb.dataset.name || ''}));
+  if (!students.length) return toast('Select students','error');
+  if (!facSelectedBulkDates.length) return toast('Add dates','error');
+  const status = $('facBulkStatus').value;
+
+  const subjects = window._facSubs || [];
+  const preview = [];
+  let grandTotal = 0;
+  for (const st of students) {
+    const branch = st.roll.startsWith('24AIDS') ? 'AIDS' : 'CSE';
+    let totalLectures = 0;
+    for (const date of facSelectedBulkDates) {
+      const dow = new Date(date + 'T00:00:00').getDay();
+      if (dow === 0 || dow === 6) continue;
+      const dayName = FULL_DAY_NAMES[dow];
+      const daySubs = (getTimetableForBranch(branch)[dayName] || []).filter(s => subjects.includes(s) && !s.includes('Sports') && !s.includes('LIB') && !s.includes('Library'));
+      totalLectures += daySubs.length;
+    }
+    preview.push({ ...st, branch, totalLectures });
+    grandTotal += totalLectures;
+  }
+
+  let html = `<div style="margin-bottom:14px;padding:14px;background:var(--brand-50);border:1px solid var(--brand-200);border-radius:10px;">
+    <div style="font-size:14px;font-weight:800;color:var(--brand-900);">📋 Faculty Bulk Marking</div>
+    <div style="font-size:12.5px;color:var(--brand-700);margin-top:6px;">Status: <b>${status}</b> · <b>${students.length}</b> student(s) × <b>${facSelectedBulkDates.length}</b> date(s)</div>
+    <div style="font-size:12.5px;color:var(--brand-700);margin-top:4px;">🎯 Total lectures (your subjects): <b>${grandTotal}</b></div>
+    <div style="font-size:11px;color:var(--brand-600);margin-top:6px;font-style:italic;">Only your assigned subjects will be marked.</div>
+  </div>`;
+  html += `<div style="max-height:280px;overflow-y:auto;border:1px solid var(--slate-200);border-radius:10px;padding:8px;background:#fff;">`;
+  preview.forEach(p => {
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--slate-100);gap:8px;">
+      <div style="min-width:0;flex:1;">
+        <div style="font-weight:700;font-size:12px;">${escapeHtml(p.roll)} — ${escapeHtml(p.name)}</div>
+        <div style="font-size:10.5px;color:var(--slate-500);">${p.branch}</div>
+      </div>
+      <div style="font-weight:800;color:var(--brand-600);font-size:14px;font-variant-numeric:tabular-nums;">${p.totalLectures}</div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  $('bulkMarkSummary').innerHTML = html;
+  pendingBulkAction = { type: 'fac-mark', students: students.map(x=>x.roll), status };
+  openModal('bulkMarkModal');
+}
+
 async function facBulkDelete(){ const students = Array.from(document.querySelectorAll('.fac-bulk-stu:checked')).map(cb => cb.value); if (!students.length) return toast('Select students','error'); if (!facSelectedBulkDates.length) return toast('Add dates','error'); if (!confirm(`Delete ${students.length} students × ${facSelectedBulkDates.length} dates?`)) return; showDL('Deleting…'); try { const res = await fetch(`${API}/api/teacher/bulk-delete-attendance`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, studentRollNos: students, dates: facSelectedBulkDates }) }); const d = await res.json(); hideDL(); if (res.ok) { showFeedback('success','Deleted',d.message || 'Records deleted.'); facSelectedBulkDates = []; renderFacBulkDates(); fetchTeacherStudents(); loadFacultyRecent(); } else showFeedback('error','Failed',d.error || 'Could not delete'); } catch(e){ hideDL(); showFeedback('error','Network Error',e.message); } }
 function toggleFacMonth(){ const v = $('facReportRange').value; $('facReportMonth').style.display = v === 'SELECTED_MONTH' ? 'block' : 'none'; $('facCustomRangeRow').style.display = v === 'CUSTOM' ? 'flex' : 'none'; }
 
-async function facReport(fmt, action = 'download'){ 
-  const roll = $('facReportStudent').value; 
-  if (!roll) return toast('Select student','error'); 
-  const range = $('facReportRange').value; 
-  showDL('Generating…'); 
-  try { 
-    const records = await fetch(`${API}/api/attendance/student/${roll}/${currentUser.rollNo}`).then(r=>r.json()); 
-    const subs = window._facSubs || []; 
-    let filtered = records.filter(r => subs.includes(r.subject)); 
-    let startStr, endStr; 
-    if (range === 'FULL_SEMESTER') { startStr = '2026-07-15'; endStr = '2026-12-31'; } 
-    else if (range === 'CURRENT_MONTH') { const r = getCurrentMonthRangeStrings(); startStr = r.start; endStr = r.end; } 
-    else if (range === 'SELECTED_MONTH') { const r = getMonthRangeStrings(parseInt($('facReportMonth').value)); startStr = r.start; endStr = r.end; } 
-    else { const s = $('facReportStart').value, e = $('facReportEnd').value; if (!s || !e) { hideDL(); return toast('Pick dates','error'); } startStr = s; endStr = e; } 
-    const todayStr = fmtDate(new Date()); 
-    if (endStr > todayStr) endStr = todayStr; 
-    filtered = filtered.filter(r => r.date >= startStr && r.date <= endStr); 
-    if (filtered.length === 0) { hideDL(); return toast('No records in range','error'); } 
-    if (fmt === 'pdf') { 
-      const blob = generatePDFBlob('Teacher Report', `${roll} · ${currentUser.name}`, [`Range: ${startStr} → ${endStr}`], ['Date','Subject','Status'], filtered.map(r => [fmtDatePretty(r.date), r.subject, r.status]), null); 
-      hideDL(); 
-      if (!blob) return toast('PDF library failed','error'); 
+async function facReport(fmt, action = 'download'){
+  const roll = $('facReportStudent').value;
+  if (!roll) return toast('Select student','error');
+  const range = $('facReportRange').value;
+  showDL('Generating…');
+  try {
+    const records = await fetch(`${API}/api/attendance/student/${roll}/${currentUser.rollNo}`).then(r=>r.json());
+    const subs = window._facSubs || [];
+    let filtered = records.filter(r => subs.includes(r.subject));
+    let startStr, endStr;
+    if (range === 'FULL_SEMESTER') { startStr = '2026-07-15'; endStr = '2026-12-31'; }
+    else if (range === 'CURRENT_MONTH') { const r = getCurrentMonthRangeStrings(); startStr = r.start; endStr = r.end; }
+    else if (range === 'SELECTED_MONTH') { const r = getMonthRangeStrings(parseInt($('facReportMonth').value)); startStr = r.start; endStr = r.end; }
+    else { const s = $('facReportStart').value, e = $('facReportEnd').value; if (!s || !e) { hideDL(); return toast('Pick dates','error'); } startStr = s; endStr = e; }
+    const todayStr = fmtDate(new Date());
+    if (endStr > todayStr) endStr = todayStr;
+    filtered = filtered.filter(r => r.date >= startStr && r.date <= endStr);
+    if (filtered.length === 0) { hideDL(); return toast('No records in range','error'); }
+    if (fmt === 'pdf') {
+      const blob = generatePDFBlob('Teacher Report', `${roll} · ${currentUser.name}`, [`Range: ${startStr} → ${endStr}`], ['Date','Subject','Status'], filtered.map(r => [fmtDatePretty(r.date), r.subject, r.status]), null);
+      hideDL();
+      if (!blob) return toast('PDF library failed','error');
       if (action === 'view') viewPdfBlob(blob);
-      else universalDownload(blob, `teacher_report_${roll}_${Date.now()}.pdf`); 
-    } else { 
-      let csv = `Teacher Report\nStudent: ${roll}\nTeacher: ${currentUser.name}\nRange: ${startStr} to ${endStr}\n\nDate,Subject,Status\n`; 
-      filtered.forEach(r => { csv += `${r.date},${r.subject},${r.status}\n`; }); 
-      download(csv, `teacher_report_${roll}.csv`); 
-      hideDL(); 
-    } 
-  } catch(e){ hideDL(); toast('Failed: ' + e.message,'error'); } 
+      else universalDownload(blob, `teacher_report_${roll}_${Date.now()}.pdf`);
+    } else {
+      let csv = `Teacher Report\nStudent: ${roll}\nTeacher: ${currentUser.name}\nRange: ${startStr} to ${endStr}\n\nDate,Subject,Status\n`;
+      filtered.forEach(r => { csv += `${r.date},${r.subject},${r.status}\n`; });
+      download(csv, `teacher_report_${roll}.csv`);
+      hideDL();
+    }
+  } catch(e){ hideDL(); toast('Failed: ' + e.message,'error'); }
 }
 
 async function applyLeave(){ const f = $('leaveFrom').value, t = $('leaveTo').value, r = $('leaveReason').value.trim(); if (!f || !t || !r) return showFeedback('warning','Missing Fields','Dates and reason are required.'); try { const res = await fetch(`${API}/api/leave/apply`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo, fromDate:f, toDate:t, reason:r, leaveType:$('leaveType').value})}); const d = await res.json(); if (res.ok) { $('leaveReason').value = ''; loadMyLeaves(); showFeedback('success','Leave Applied',`${fmtDatePretty(f)} → ${fmtDatePretty(t)}\n\nDuty leave will be marked after admin approval.`); } else showFeedback('error','Failed',d.error||'Could not apply'); } catch(e){ showFeedback('error','Network Error',e.message); } }
@@ -3137,7 +3386,6 @@ async function sendChat(){
   if (currentUser.role === 'student' && (userSubscription.tier === 'free' || userSubscription.tier === 'silver' || userSubscription.isExpired)) {
     return showFeedback('warning', 'Premium Required', 'AI Chatbot is a Gold+ feature. Please upgrade your plan to access it.', { buttonText: 'View Plans', onClose: openSubscriptionModal });
   }
-
   const inp = $('chatInput'), msg = inp.value.trim();
   if (!msg && !pendingChatFile) return;
   const btn = $('chatSendBtn'); btn.disabled = true;
@@ -3169,12 +3417,10 @@ async function sendChat(){
     const tSec = stopThinkingTimer(); typing.remove();
     if (d.threadId) { currentThreadId = d.threadId; fetchChatHistory(); }
     chatGreeted = true;
-    
     if (res.status === 403 && d.requiresSubscription) {
       typing.remove();
       return showFeedback('warning', 'Premium Required', d.error || 'This feature requires a premium plan.', { buttonText: 'View Plans', onClose: openSubscriptionModal });
     }
-
     if (d.needsLocation) { pendingLocationRequest = { requestData: d.requestData || {}, explanation: d.explanation, originalMessage: msg }; renderLocationRequest(d.explanation || 'Location required.'); return; }
     if (d.needsLiveMarking) { pendingLocationRequest = { lectureType: d.lectureType || 'full_day', isLive: true, originalMessage: msg }; renderLocationRequest('Live attendance marking — share location.'); return; }
     if (d.requiresConfirmation && d.dbOp) { renderDbConfirmation(d.dbOp, d.reply || d.dbOp.explanation); return; }
@@ -3360,8 +3606,6 @@ document.addEventListener('DOMContentLoaded', () => {
   setTimeout(runPremiumInit, 120);
   if (localStorage.getItem('token')) loadDashboard();
   if (isMedianApp()) { console.log('[FCM] Median app detected — bridge ready'); if (typeof window.median_library_ready === 'function') { window.median_library_ready(); } }
-
-  // ★ NEW: Deep Linking Handler
   setTimeout(handleDeepLink, 1500);
 });
 if (document.readyState !== 'loading') { setTimeout(() => handleScrollFab(), 50); setTimeout(runPremiumInit, 200); }
@@ -3379,24 +3623,18 @@ window.addEventListener('load', () => {
   document.body.scrollTop = 0;
 });
 
-
 /* ============================================================
-   ★ NEW: DEEP LINKING & FILE "OPEN WITH" HANDLER
+   DEEP LINKING & FILE "OPEN WITH" HANDLER
    ============================================================ */
 function handleDeepLink() {
   const urlParams = new URLSearchParams(window.location.search);
   const tabParam = urlParams.get('tab');
-  
   if (tabParam && currentUser) {
     window.history.replaceState({}, document.title, window.location.pathname);
     setTimeout(() => {
-      if (tabParam === 'admin') {
-        switchTab('tab-admin');
-        showAdmin('a-account'); // Account requests open karo
-      } else if (tabParam === 'mark') {
-        switchTab('tab-mark');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else if (tabParam === 'notes') {
+      if (tabParam === 'admin') { switchTab('tab-admin'); showAdmin('a-account'); }
+      else if (tabParam === 'mark') { switchTab('tab-mark'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+      else if (tabParam === 'notes') {
         switchTab('tab-mark');
         const notesSec = $('sec-notes');
         if(notesSec) {
@@ -3415,56 +3653,40 @@ async function downloadAndOpenFile(fileUrl, fileName) {
     showDL("Loading file...");
     const response = await fetch(fileUrl);
     const blob = await response.blob();
-    
     if (isMedianApp() && window.median && window.median.shareFile) {
        const reader = new FileReader();
        reader.onload = function() {
            const base64 = reader.result.split(',')[1];
-           window.median.shareFile({
-               base64: base64,
-               filename: fileName,
-               mimeType: blob.type
-           });
+           window.median.shareFile({ base64: base64, filename: fileName, mimeType: blob.type });
            hideDL();
        };
        reader.readAsDataURL(blob);
        return;
     }
-
-    // ★ FIX: Standard browser — preview inline using viewPdfBlob instead of forcing download
     hideDL();
     viewPdfBlob(blob, fileName);
-
   } catch (e) {
     hideDL();
     toast("Failed: " + e.message, "error");
   }
 }
 
-// Listen for messages from Service Worker (Notification clicks)
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('message', (event) => {
     const msg = event.data;
     if (msg && msg.__bmNotificationClick) {
-      // 1. If Download action
       if (msg.action === 'download' && msg.downloadUrl) {
          downloadAndOpenFile(msg.downloadUrl, msg.fileName || 'document.pdf');
          return;
       }
-      
-      // 2. Deep Link Fix for Median App
       if (msg.targetUrl) {
         try {
           const urlObj = new URL(msg.targetUrl);
           const tabParam = urlObj.searchParams.get('tab');
-          
           if (tabParam) {
-            // App.js ko bolo ki wo specific tab khole
             setTimeout(() => {
-              if (tabParam === 'admin') {
-                switchTab('tab-admin');
-                showAdmin('a-account'); // Direct Account requests
-              } else if (tabParam === 'notes') {
+              if (tabParam === 'admin') { switchTab('tab-admin'); showAdmin('a-account'); }
+              else if (tabParam === 'notes') {
                 switchTab('tab-mark');
                 const notesSec = $('sec-notes');
                 if(notesSec) {
@@ -3477,7 +3699,7 @@ if ('serviceWorker' in navigator) {
                 switchTab('tab-mark');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }
-            }, 500); // Wait for app to load
+            }, 500);
           }
         } catch (e) {
           console.log("Deep link parse error", e);
@@ -3488,7 +3710,7 @@ if ('serviceWorker' in navigator) {
 }
 
 /* ============================================================
-   ★ NEW: LENIS SMOOTH SCROLL INITIALIZATION
+   LENIS SMOOTH SCROLL INITIALIZATION
    ============================================================ */
 document.addEventListener("DOMContentLoaded", () => {
   if (typeof Lenis !== 'undefined') {
@@ -3507,7 +3729,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /* ============================================================
-   ★ NEW: LEADERBOARD & GAMIFICATION (STUDENT & ADMIN)
+   LEADERBOARD & GAMIFICATION
    ============================================================ */
 function openLeaderboardModal() {
   let modal = $('leaderboardModal');
@@ -3522,8 +3744,6 @@ function openLeaderboardModal() {
 async function loadLeaderboard(type, forceRefresh = false) {
   const el = $('leaderboardList');
   if (!el) return;
-  
-  // UI Toggle
   const btns = document.querySelectorAll('#leaderboardModal .btn');
   btns.forEach(b => {
     if (b.getAttribute('onclick') && b.getAttribute('onclick').includes(type)) {
@@ -3534,24 +3754,18 @@ async function loadLeaderboard(type, forceRefresh = false) {
       b.classList.add('btn-outline');
     }
   });
-
-  // ★ CACHING LOGIC: Only fetch if empty or forced
   if (leaderboardCache[type] && !forceRefresh) {
      renderLeaderboardData(leaderboardCache[type], type, el);
      return;
   }
-
   el.innerHTML = '<div class="empty"><div class="spinner" style="margin:0 auto 8px;"></div>Fetching rankings...</div>';
-
   try {
     const res = await fetch(`${API}/api/leaderboard/${type}`);
     const data = await res.json();
-    
     if (!res.ok || !data.length) {
       el.innerHTML = '<div class="empty">No data available yet.</div>';
       return;
     }
-    
     leaderboardCache[type] = data;
     renderLeaderboardData(data, type, el);
   } catch (e) {
@@ -3564,22 +3778,18 @@ function renderLeaderboardData(data, type, el) {
     const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
     const isMe = currentUser && currentUser.rollNo === s.rollNo;
     const bg = isMe ? 'background:var(--brand-50); border-color:var(--brand-300);' : 'background:#fff; border-color:var(--slate-200);';
-    
-    // ★ FIX: Yahan logic change kiya gaya hai
     let rightValue = '';
     let rightLabel = '';
     let color = '';
-
     if (type === 'percentage') {
         rightValue = `${s.percentage}%`;
-        rightLabel = `${s.present}/${s.total}`; // 303/366 jaisa dikhega
-        color = '#2563eb'; // Blue color
+        rightLabel = `${s.present}/${s.total}`;
+        color = '#2563eb';
     } else {
         rightValue = `${s.streak} 🔥`;
         rightLabel = 'DAYS';
-        color = '#047857'; // Green color
+        color = '#047857';
     }
-
     return `
       <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-radius:12px; border:1px solid; ${bg}">
         <div style="display:flex; align-items:center; gap:12px;">
@@ -3601,20 +3811,16 @@ function renderLeaderboardData(data, type, el) {
 async function adminSearchGamification() {
   const roll = $('gmRollNo').value.trim().toUpperCase();
   if (!roll) return toast('Enter roll no', 'error');
-
   const resEl = $('gmResult');
   resEl.style.display = 'none';
-
   try {
     const res = await fetch(`${API}/api/admin/gamification/${roll}`);
     if (!res.ok) return toast('Student not found', 'error');
     const data = await res.json();
-
     $('gmName').textContent = `${data.user.name} (${data.user.rollNo})`;
     $('gmLoginStreak').value = data.gamification.loginStreak || 0;
     $('gmAttendanceStreak').value = data.gamification.attendanceStreak || 0;
     $('gmExcluded').checked = data.gamification.excludedFromLeaderboard || false;
-
     resEl.style.display = 'block';
   } catch (e) {
     toast('Network error', 'error');
@@ -3626,19 +3832,13 @@ async function adminSaveGamification() {
   const loginStreak = parseInt($('gmLoginStreak').value) || 0;
   const attendanceStreak = parseInt($('gmAttendanceStreak').value) || 0;
   const excluded = $('gmExcluded').checked;
-
   showDL('Saving...');
   try {
     const res = await fetch(`${API}/api/admin/gamification/update`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        requesterRollNo: currentUser.rollNo, 
-        targetRollNo: roll, 
-        loginStreak, attendanceStreak, excluded 
-      })
+      body: JSON.stringify({ requesterRollNo: currentUser.rollNo, targetRollNo: roll, loginStreak, attendanceStreak, excluded })
     });
-    
     hideDL();
     if (res.ok) {
       showFeedback('success', 'Updated', 'Streaks and leaderboard status updated successfully.');
@@ -3654,31 +3854,23 @@ async function adminSaveGamification() {
 async function lookupSubStudent() {
   const roll = $('subMgmtRollNo').value.trim().toUpperCase();
   if (!roll) return toast('Enter roll no', 'error');
-  
   const resEl = $('subMgmtResult');
   resEl.style.display = 'none';
-
   try {
     const userRes = await fetch(`${API}/api/student/profile/${roll}`);
     if (!userRes.ok) return toast('Student not found', 'error');
     const user = await userRes.json();
-
     const subRes = await fetch(`${API}/api/user/subscription/${roll}`);
     const sub = await subRes.json();
-
     $('subMgmtName').textContent = `${user.name} (${user.rollNo})`;
-    
     const tier = sub.tier || 'free';
     const isExpired = sub.isExpired;
     const cEl = $('subMgmtCurrent');
-    
     cEl.textContent = isExpired ? `${tier.toUpperCase()} (Expired)` : tier.toUpperCase();
-    
     if (tier === 'platinum' && !isExpired) cEl.className = 'badge badge-purple';
     else if (tier === 'gold' && !isExpired) cEl.className = 'badge badge-warning';
     else if (tier === 'silver' && !isExpired) cEl.className = 'badge badge-info';
     else cEl.className = 'badge badge-neutral';
-
     resEl.style.display = 'block';
   } catch (e) {
     toast('Network error', 'error');
@@ -3689,9 +3881,7 @@ async function grantSubscription() {
   const roll = $('subMgmtRollNo').value.trim().toUpperCase();
   const tier = $('subMgmtNewTier').value;
   if (!roll) return toast('Search a student first', 'error');
-  
   if (!confirm(`Grant ${tier.toUpperCase()} plan to ${roll} for 30 days?`)) return;
-
   showDL('Granting access…');
   try {
     const res = await fetch(`${API}/api/admin/subscription/grant`, {
@@ -3701,7 +3891,6 @@ async function grantSubscription() {
     });
     const d = await res.json();
     hideDL();
-    
     if (res.ok) {
       showFeedback('success', 'Plan Granted', `${roll} is now a ${tier.toUpperCase()} member.`);
       lookupSubStudent();
@@ -3712,9 +3901,7 @@ async function grantSubscription() {
 async function cancelSubscription() {
   const roll = $('subMgmtRollNo').value.trim().toUpperCase();
   if (!roll) return toast('Search a student first', 'error');
-  
   if (!confirm(`Are you sure you want to CANCEL the subscription for ${roll}?`)) return;
-
   showDL('Cancelling…');
   try {
     const res = await fetch(`${API}/api/admin/subscription/cancel`, {
@@ -3724,7 +3911,6 @@ async function cancelSubscription() {
     });
     const d = await res.json();
     hideDL();
-    
     if (res.ok) {
       showFeedback('success', 'Cancelled', `Subscription for ${roll} downgraded to Free.`);
       lookupSubStudent();
