@@ -2655,17 +2655,16 @@ body,
    Belt-and-braces: even if anything above re-locks scroll,
    this block guarantees the page can always scroll.
    ============================================================ */
-html, body {
+html {
   overflow-y: auto !important;
   overflow-x: hidden !important;
   height: auto !important;
-  min-height: 100vh !important;
 }
-
+body {
+  overflow-x: hidden !important;
+}
 body.body-locked {
   overflow-y: auto !important;
-  overflow-x: hidden !important;
-  position: relative !important;
 }
 
 @media (max-width: 640px) {
