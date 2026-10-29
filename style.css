@@ -1,6 +1,7 @@
 /* ============================================================
    BM GROUP ERP · style.css
    v11.0 — ULTRA FLUID + PREMIUM POLISH + DARK MODE + GLASS
+   v11.1 — MOBILE SCROLL FIX (100dvh → auto, overflow-y unlocked)
    ============================================================ */
 
 /* ---------- RESET ---------- */
@@ -150,10 +151,17 @@ button{-webkit-user-select:none;user-select:none;}
   80%{transform:rotate(-4deg);}
 }
 @keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}
+@keyframes borderSpin{100%{filter:hue-rotate(360deg);}}
 
 /* ============================================================
    BODY
    ============================================================ */
+html{
+  height:auto;
+  min-height:100%;
+  overflow-y:auto;
+  overflow-x:hidden;
+}
 body{
   font-family:var(--font);
   background-color:#f1f5f9;
@@ -163,12 +171,21 @@ body{
     radial-gradient(1000px 700px at 50% 118%, rgba(16,185,129,.045), transparent 60%);
   background-attachment:fixed;
   color:var(--slate-800);
-  min-height:100vh;
+  min-height:100vh !important;
+  height:auto !important;
   display:flex;align-items:flex-start;justify-content:center;
   padding:24px 16px;margin:0;line-height:1.55;
   -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
-  overflow-x:hidden;
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
   position:relative;
+}
+
+/* Force-unlock any body-locked state (chat/drawer/modals) so page never freezes */
+body.body-locked{
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  position:relative !important;
 }
 
 body::before{
@@ -1979,11 +1996,28 @@ textarea:focus-visible,[role="button"]:focus-visible,a:focus-visible{
    ============================================================ */
 @media(max-width:640px){
   body::before{display:block;}
-  body{padding:calc(52px + var(--sat)) 12px calc(20px + var(--sab));}
-  .app-body{padding:16px;}
+  body{
+    padding:calc(52px + var(--sat)) 12px calc(20px + var(--sab));
+    min-height:100vh !important;
+    height:auto !important;
+    overflow-y:auto !important;
+    overflow-x:hidden !important;
+  }
+  .app-body{padding:16px;padding-bottom:100px !important;}
   .app-header{padding:14px 16px;}
   .stat{padding:14px;}
   .welcome h2{font-size:18px;}
+
+  /* MOBILE SCROLL FIX — remove 100dvh lock, allow content to grow */
+  .app{
+    border-radius:0 !important;
+    border:none !important;
+    min-height:100vh !important;
+    height:auto !important;
+    box-shadow:none !important;
+    padding-bottom:80px !important;
+    overflow:hidden;
+  }
 
   .chat-panel{
     bottom:calc(88px + var(--sab));right:12px;left:12px;
@@ -2030,6 +2064,9 @@ textarea:focus-visible,[role="button"]:focus-visible,a:focus-visible{
 
   #studentFeesList .stat{padding:10px !important;}
   #studentFeesList .stat-value{font-size:16px !important;}
+
+  /* Hide scrollbars for clean mobile UI */
+  ::-webkit-scrollbar{width:0px;height:0px;background:transparent;}
 }
 
 /* ============================================================
@@ -2093,7 +2130,7 @@ textarea:focus-visible,[role="button"]:focus-visible,a:focus-visible{
 
 
 /* ============================================================
-   ██  MEDIAN WEBVIEW SPECIFIC FIXES (v11.0)
+   ██  MEDIAN WEBVIEW SPECIFIC FIXES (v11.1)
    ============================================================ */
 /* Android WebView momentum scrolling */
 .app-body,
@@ -2140,11 +2177,7 @@ input[type="file"] {
 
 
 /* ============================================================
-   ██  PDF / IMAGE VIEWER CONTROLS (v11.0 — backup for inline)
-   ------------------------------------------------------------
-   The zoom controls are styled inline in app.js (as backup
-   and to survive FOUC). These rules provide consistency if
-   inline styles are stripped by any tooling.
+   ██  PDF / IMAGE VIEWER CONTROLS (v11.0)
    ============================================================ */
 #pdf-zoom-controls,
 #img-zoom-controls {
@@ -2196,7 +2229,6 @@ input[type="file"] {
   border-radius: 2px;
   background: #fff;
 }
-/* Session expiry pill in welcome header (app.js inserts this) */
 #sessionExpiry {
   font-size: 10.5px;
   font-weight: 700;
@@ -2209,11 +2241,11 @@ input[type="file"] {
 
 
 /* ============================================================
-   ██  PREMIUM UPGRADES (v11.0)
+   ██  PREMIUM UPGRADES (v11.1)
    ============================================================ */
 
 /* ============================================================
-   1. AUTO DARK MODE (System Preference)
+   1. AUTO DARK MODE
    ============================================================ */
 @media (prefers-color-scheme: dark) {
   :root {
@@ -2258,12 +2290,8 @@ input[type="file"] {
   }
 }
 
-/* ============================================================
-   1b. DARK MODE SUPPLEMENTS — fix elements that would stay
-       white/light in dark mode
-   ============================================================ */
+/* Dark mode supplements */
 @media (prefers-color-scheme: dark) {
-  /* Header (glass in light, glass darker in dark) */
   .app-header {
     background: rgba(15, 23, 42, 0.85);
     border-bottom-color: rgba(255, 255, 255, 0.06);
@@ -2272,7 +2300,6 @@ input[type="file"] {
     .app-header { background: rgba(15, 23, 42, 0.75); }
   }
 
-  /* Drawer */
   .student-menu-drawer { background: #0f172a; }
   .student-menu-list { background: #0f172a; }
   .student-menu-footer {
@@ -2284,12 +2311,10 @@ input[type="file"] {
   .student-menu-item:hover { background: rgba(255, 255, 255, 0.04); }
   .student-menu-divider { background: rgba(255, 255, 255, 0.06); }
 
-  /* Modal */
   .modal { background: #0f172a; }
   .modal-header,
   .modal-footer { background: #0f172a; border-color: rgba(255, 255, 255, 0.06); }
 
-  /* Tabs */
   .tabs { background: rgba(255, 255, 255, 0.04); }
   .tabs .tab.active {
     background: rgba(255, 255, 255, 0.08);
@@ -2297,7 +2322,6 @@ input[type="file"] {
   }
   .tab:hover:not(.active) { background: rgba(255, 255, 255, 0.03); }
 
-  /* Buttons */
   .btn-outline {
     background: transparent;
     border-color: rgba(255, 255, 255, 0.15);
@@ -2329,7 +2353,6 @@ input[type="file"] {
     color: var(--slate-600);
   }
 
-  /* Toast */
   .toast {
     background: #0f172a;
     border-color: rgba(255, 255, 255, 0.08);
@@ -2337,7 +2360,6 @@ input[type="file"] {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
   }
 
-  /* Chat */
   .chat-head,
   .chat-input {
     background: #0f172a;
@@ -2391,7 +2413,6 @@ input[type="file"] {
     color: var(--brand-300);
   }
 
-  /* Passcode / Admin card */
   .passcode-display { background: rgba(15, 23, 42, 0.7); border-color: rgba(255, 255, 255, 0.08); }
   .passcode-value { color: var(--brand-400); }
   .passcode-card {
@@ -2399,30 +2420,25 @@ input[type="file"] {
     border-color: rgba(255, 255, 255, 0.08);
   }
 
-  /* Table */
   .table-wrap { background: #0f172a; border-color: rgba(255, 255, 255, 0.06); }
   thead th { background: rgba(255, 255, 255, 0.03); border-bottom-color: rgba(255, 255, 255, 0.06); }
   tbody tr:hover { background: rgba(37,99,235,.12); }
   tbody td { border-bottom-color: rgba(255, 255, 255, 0.04); }
 
-  /* Charts */
   .chart-wrap { background: rgba(15, 23, 42, 0.7); border-color: rgba(255, 255, 255, 0.08); }
 
-  /* Advisor */
   .advisor {
     background: linear-gradient(135deg, rgba(37,99,235,.18), rgba(15,23,42,.6));
     border-color: rgba(96,165,250,.3);
     color: var(--slate-800);
   }
 
-  /* Auth */
   .auth-links-grid .auth-link {
     background: rgba(37,99,235,.10);
     border-color: rgba(96,165,250,.25);
     color: var(--brand-300);
   }
 
-  /* Working Days CTA & portals */
   .portal {
     background: rgba(15, 23, 42, 0.7);
     border-color: rgba(255, 255, 255, 0.08);
@@ -2433,7 +2449,6 @@ input[type="file"] {
   }
   .portal span { color: var(--slate-700); }
 
-  /* Calendar */
   .wd-summary-card {
     background: rgba(15, 23, 42, 0.7);
     border-color: rgba(255, 255, 255, 0.06);
@@ -2441,53 +2456,43 @@ input[type="file"] {
   .wd-cell.future { background: rgba(255, 255, 255, 0.02); color: var(--slate-500); }
   .wd-cell.before { background: rgba(255, 255, 255, 0.03); color: var(--slate-500); }
 
-  /* Bulk select */
   .bulk-select-list { background: #0f172a; border-color: rgba(255, 255, 255, 0.08); }
 
-  /* Chips */
   .chip { background: rgba(255, 255, 255, 0.05); color: var(--slate-700); border-color: rgba(255, 255, 255, 0.06); }
 
-  /* Notice banner */
   .notice-banner {
     background: linear-gradient(90deg, rgba(245,158,11,.15), rgba(217,119,6,.10), rgba(245,158,11,.15));
     color: #fcd34d;
     border-bottom-color: rgba(245,158,11,.3);
   }
 
-  /* Pills */
   .pill { background: rgba(255, 255, 255, 0.06); color: var(--slate-600); }
   .pill.role-student { background: rgba(16,185,129,.15); color: #6ee7b7; }
   .pill.role-faculty { background: rgba(37,99,235,.20); color: #93c5fd; }
   .pill.role-admin { background: rgba(245,158,11,.20); color: #fcd34d; }
 
-  /* Impersonation banner keeps amber (visible) */
   .impersonation {
     background: linear-gradient(135deg, rgba(245,158,11,.20), rgba(217,119,6,.25));
     border-bottom-color: rgba(245,158,11,.4);
     color: #fcd34d;
   }
 
-  /* Bulk holiday textarea */
   .bulk-holiday-textarea {
     background: rgba(255, 255, 255, 0.04);
     color: var(--slate-800);
     border-color: rgba(255, 255, 255, 0.10);
   }
 
-  /* Scroll-to-top FAB */
   .scroll-top-fab {
     background: #0f172a;
     border-color: rgba(255, 255, 255, 0.10);
   }
 
-  /* Toast wrap dark */
   .feedback-card { background: #0f172a; }
 
-  /* Subnav active — keep vibrant but slightly deeper */
   .subnav-item:hover { background: rgba(255, 255, 255, 0.04); }
   .subnav { border-bottom-color: rgba(255, 255, 255, 0.06); }
 
-  /* Passcode live box */
   .passcode-live-box {
     background: linear-gradient(135deg, rgba(16,185,129,.12), rgba(15,23,42,.7));
     border-color: rgba(110,231,183,.35);
@@ -2499,13 +2504,11 @@ input[type="file"] {
     border-color: rgba(255, 255, 255, 0.08);
   }
 
-  /* Subject summary line */
   .subject-summary-line {
     background: rgba(255, 255, 255, 0.04);
     border-color: rgba(255, 255, 255, 0.06);
   }
 
-  /* Empty state text */
   .empty { color: var(--slate-500); }
 }
 
@@ -2582,9 +2585,6 @@ input[type="file"] {
     animation: borderSpin 4s linear infinite;
   }
 }
-@keyframes borderSpin {
-  100% { filter: hue-rotate(360deg); }
-}
 
 
 /* ============================================================
@@ -2606,7 +2606,6 @@ input[type="file"] {
     background-clip: text;
   }
 }
-/* Tactile primary button press */
 .btn-primary {
   transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 }
@@ -2626,26 +2625,51 @@ body,
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: none;
 }
-/* Hide scrollbars on mobile for clean UI */
 @media (max-width: 640px) {
   ::-webkit-scrollbar {
     width: 0px;
     height: 0px;
     background: transparent;
   }
-  .app {
-    border-radius: 0;
-    border: none;
-    min-height: 100vh;
-    min-height: 100dvh;
-    box-shadow: none;
-  }
 }
-/* No tap-highlight flash */
 * {
   -webkit-tap-highlight-color: rgba(255, 255, 255, 0) !important;
 }
 
+
 /* ============================================================
-   END OF FILE — style.css v11.0
+   ★ FORCE MOBILE SCROLL FIX (v11.1 — appended)
+   ------------------------------------------------------------
+   Overrides any accidental min-height/overflow lock so the
+   page can always grow vertically and the native scrollbar
+   works. This is the definitive fix for the "page won't
+   scroll on mobile" bug.
+   ============================================================ */
+html, body {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  height: auto !important;
+  min-height: 100vh !important;
+}
+
+body.body-locked {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  position: relative !important;
+}
+
+@media (max-width: 640px) {
+  .app {
+    min-height: 100vh !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding-bottom: 100px !important;
+  }
+  .app-body {
+    padding-bottom: 120px !important; /* space so chat FAB never covers last content */
+  }
+}
+
+/* ============================================================
+   END OF FILE — style.css v11.1
    ============================================================ */
