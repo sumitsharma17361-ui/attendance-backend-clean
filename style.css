@@ -1,6 +1,6 @@
 /* ============================================================
    BM GROUP ERP · style.css
-   v10.0 — ULTRA FLUID + PREMIUM POLISH (Zero Lag)
+   v11.0 — ULTRA FLUID + PREMIUM POLISH + DARK MODE + GLASS
    ============================================================ */
 
 /* ---------- RESET ---------- */
@@ -53,7 +53,7 @@ button{-webkit-user-select:none;user-select:none;}
 }
 
 /* ============================================================
-   KEYFRAMES — ALL GPU-SAFE (transform + opacity only)
+   KEYFRAMES
    ============================================================ */
 @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
@@ -152,7 +152,7 @@ button{-webkit-user-select:none;user-select:none;}
 @keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}
 
 /* ============================================================
-   BODY — soft mesh, NO gradient animation (blobs provide motion)
+   BODY
    ============================================================ */
 body{
   font-family:var(--font);
@@ -203,7 +203,7 @@ button,.btn,.tab,.subnav-item,.portal,.chip,.icon-btn,.mini-btn,.send-btn,
   transition:width .08s linear;
 }
 
-/* ---------- BG BLOBS — GPU-float, desktop only ---------- */
+/* ---------- BG BLOBS ---------- */
 .bg-blobs{display:none;position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
 .bg-blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.26;will-change:transform;}
 .bg-blob:nth-child(1){
@@ -244,7 +244,9 @@ button,.btn,.tab,.subnav-item,.portal,.chip,.icon-btn,.mini-btn,.send-btn,
   background:#fff;
   border-bottom:1px solid var(--slate-200);
   position:relative;z-index:10;
-  transition:box-shadow var(--dur) var(--ease);
+  transition:box-shadow var(--dur) var(--ease),
+             background-color var(--dur) var(--ease),
+             backdrop-filter var(--dur) var(--ease);
 }
 @media(min-width:641px){
   .app-header{
@@ -309,7 +311,7 @@ button,.btn,.tab,.subnav-item,.portal,.chip,.icon-btn,.mini-btn,.send-btn,
 .icon-btn.refreshing{pointer-events:none;opacity:.7;}
 #notifBtn.notif-shake svg{animation:bellShake .8s var(--ease-spring);transform-origin:top center;}
 
-/* ---------- AVATAR (conic ring spin) ---------- */
+/* ---------- AVATAR ---------- */
 .user-avatar{
   width:38px;height:38px;border-radius:50%;
   background:linear-gradient(135deg,var(--brand-500),var(--brand-700));
@@ -423,7 +425,7 @@ input[type="file"]::file-selector-button:hover{background:var(--brand-700);}
 .eye-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;}
 
 /* ============================================================
-   CARDS — cascade entrance
+   CARDS
    ============================================================ */
 .card{
   background:#fff;border:1px solid var(--slate-200);
@@ -448,7 +450,7 @@ input[type="file"]::file-selector-button:hover{background:var(--brand-700);}
 }
 
 /* ============================================================
-   BUTTONS — spring press + ripple + hover lift + fluid shine
+   BUTTONS
    ============================================================ */
 .btn{
   font-weight:700;font-size:12.5px;
@@ -465,7 +467,6 @@ input[type="file"]::file-selector-button:hover{background:var(--brand-700);}
 }
 .btn:active{transform:scale(.97);transition:transform .08s var(--ease-out);}
 
-/* Ripple */
 .btn::after{
   content:'';position:absolute;top:50%;left:50%;
   width:6px;height:6px;border-radius:50%;
@@ -475,7 +476,6 @@ input[type="file"]::file-selector-button:hover{background:var(--brand-700);}
 }
 .btn:active::after{animation:ripple .55s var(--ease-out);}
 
-/* Shine Effect */
 .btn::before{
   content:'';position:absolute;top:0;left:-100%;
   width:50%;height:100%;
@@ -545,7 +545,7 @@ input[type="file"]::file-selector-button:hover{background:var(--brand-700);}
   .btn-outline:hover{background:var(--slate-50);border-color:var(--brand-400);color:var(--brand-700);}
 }
 .btn-outline::after{background:rgba(37,99,235,.22);}
-.btn-outline::before{display:none;} /* No shine for outline */
+.btn-outline::before{display:none;}
 .btn-block{width:100%;}
 .btn-sm{padding:8px 14px;font-size:11.5px;border-radius:9px;}
 .btn-xs{padding:5px 10px;font-size:10.5px;border-radius:7px;}
@@ -635,7 +635,7 @@ input[type="file"]::file-selector-button:hover{background:var(--brand-700);}
 .pill.role-student{background:var(--emerald-50);color:var(--emerald-700);}
 
 /* ============================================================
-   STATS — cascade entrance + number reveal
+   STATS
    ============================================================ */
 .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px;}
 @media(min-width:640px){.stats-grid.cols-4{grid-template-columns:repeat(4,1fr);}}
@@ -682,7 +682,7 @@ input[type="file"]::file-selector-button:hover{background:var(--brand-700);}
 .stat .stat-hint{font-size:10px;color:var(--slate-400);margin-top:2px;font-weight:500;}
 
 /* ============================================================
-   WORKING DAYS CTA — shimmer sweep
+   WORKING DAYS CTA
    ============================================================ */
 .working-days-cta{
   background:linear-gradient(135deg,var(--brand-600),var(--brand-900));
@@ -733,7 +733,7 @@ input[type="file"]::file-selector-button:hover{background:var(--brand-700);}
 .closed-banner svg{width:22px;height:22px;stroke:#78350f;fill:none;stroke-width:2;flex-shrink:0;}
 
 /* ============================================================
-   PASSCODE LIVE BOX — sliding shine
+   PASSCODE LIVE BOX
    ============================================================ */
 .passcode-live-box{
   background:linear-gradient(135deg,#ecfdf5,#f0fdf4);
@@ -1008,7 +1008,7 @@ tbody tr:hover{background:var(--brand-50);}
 }
 
 /* ============================================================
-   DRAWER — cascade stagger on open (GPU-safe)
+   DRAWER
    ============================================================ */
 .student-menu-backdrop{
   position:fixed;inset:0;background:rgba(15,23,42,.5);
@@ -1063,7 +1063,6 @@ tbody tr:hover{background:var(--brand-50);}
 }
 .student-menu-header .menu-user-roll{font-size:10px;opacity:.92;margin-top:2px;font-weight:500;}
 
-/* ★ COMPACT MENU LIST — No scroll required */
 .student-menu-list{
   flex:1;overflow-y:auto;padding:8px 6px;
   display:flex;flex-direction:column;gap:2px;
@@ -1073,7 +1072,6 @@ tbody tr:hover{background:var(--brand-50);}
 .student-menu-list::-webkit-scrollbar{width:4px;}
 .student-menu-list::-webkit-scrollbar-thumb{background:var(--slate-300);border-radius:2px;}
 
-/* ★ COMPACT ITEMS */
 .student-menu-item{
   display:flex;align-items:center;gap:12px;
   padding:11px 14px;
@@ -1098,7 +1096,6 @@ tbody tr:hover{background:var(--brand-50);}
 .student-menu-item .menu-label{flex:1;pointer-events:none;}
 .student-menu-divider{height:1px;background:var(--slate-200);margin:6px 10px;}
 
-/* ★ STAGGER CASCADE */
 .student-menu-drawer.open .student-menu-list > *{
   animation:menuItemIn .35s var(--ease-out) backwards;
 }
@@ -1396,7 +1393,7 @@ tbody tr:hover{background:var(--brand-50);}
 }
 
 /* ============================================================
-   TOAST — spring bounce
+   TOAST
    ============================================================ */
 .toast-wrap{
   position:fixed;top:calc(22px + var(--sat));left:50%;
@@ -1494,7 +1491,7 @@ tbody tr:hover{background:var(--brand-50);}
 .scroll-top-fab svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.5;pointer-events:none;}
 
 /* ============================================================
-   CHAT FAB — subtle float + glow pulse
+   CHAT FAB
    ============================================================ */
 .chat-fab{
   position:fixed;bottom:calc(24px + var(--sab));right:calc(24px + var(--sar));
@@ -1716,7 +1713,6 @@ tbody tr:hover{background:var(--brand-50);}
 .msg-action-btn.copied{background:var(--emerald-50);border-color:#a7f3d0;color:var(--emerald-700);}
 .msg-action-btn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;pointer-events:none;}
 
-/* ---------- THOUGHT BADGE ---------- */
 .thought-badge{
   display:flex;flex-direction:column;
   background:linear-gradient(135deg,#eef2ff,#e0e7ff);
@@ -1750,7 +1746,6 @@ tbody tr:hover{background:var(--brand-50);}
   width:5px;height:5px;border-radius:50%;background:#6366f1;
 }
 
-/* ---------- DL MENU ---------- */
 .dl-menu{
   position:fixed;background:#fff;border:1px solid var(--slate-200);
   border-radius:14px;box-shadow:var(--shadow-lg);
@@ -1775,7 +1770,6 @@ tbody tr:hover{background:var(--brand-50);}
   pointer-events:none;
 }
 
-/* ---------- AI THINKING ---------- */
 .ai-thinking-bubble{
   background:linear-gradient(135deg,#f0f7ff,#fff) !important;
   border:1px solid #bfdbfe !important;
@@ -1814,7 +1808,6 @@ tbody tr:hover{background:var(--brand-50);}
   border-radius:2px;animation:aiBar 1.8s ease-in-out infinite;
 }
 
-/* ---------- CHAT WELCOME ---------- */
 .chat-welcome{
   text-align:center;padding:24px 18px;
   color:var(--slate-500);font-size:12.5px;line-height:1.9;
@@ -1832,7 +1825,6 @@ tbody tr:hover{background:var(--brand-50);}
 .chat-welcome .greeting-emoji svg{width:30px;height:30px;stroke:#d97706;fill:none;stroke-width:2;}
 .chat-welcome b{color:var(--slate-900);}
 
-/* ---------- CHAT INPUT ---------- */
 .chat-input{
   display:flex;gap:10px;padding:14px 16px;
   border-top:1px solid var(--slate-200);background:#fff;
@@ -1905,7 +1897,7 @@ tbody tr:hover{background:var(--brand-50);}
 .voice-indicator.show{display:inline-flex;animation:fadeUpSm .22s var(--ease-out);}
 
 /* ============================================================
-   ANIMATE ON SCROLL (Fluid Scroll Reveal)
+   ANIMATE ON SCROLL
    ============================================================ */
 .animate-on-scroll, .reveal-on-scroll{
   opacity:0;
@@ -2098,3 +2090,562 @@ textarea:focus-visible,[role="button"]:focus-visible,a:focus-visible{
   margin:0 !important;padding:0 !important;height:0 !important;
   overflow:hidden !important;
 }
+
+
+/* ============================================================
+   ██  MEDIAN WEBVIEW SPECIFIC FIXES (v11.0)
+   ============================================================ */
+/* Android WebView momentum scrolling */
+.app-body,
+.chat-msgs,
+.student-menu-list,
+.table-wrap,
+.bulk-select-list,
+.present-list-wrap,
+.chat-sidebar-list,
+#pdf-outer-wrap,
+#img-outer-wrap {
+  -webkit-overflow-scrolling: touch;
+}
+/* Prevent pull-to-refresh in Android WebView (Median) */
+html, body {
+  overscroll-behavior-y: contain;
+}
+/* Android WebView: file input trigger works reliably */
+input[type="file"] {
+  display: block !important;
+  opacity: 1 !important;
+  position: relative !important;
+  z-index: auto !important;
+}
+/* Android WebView: disable long-press context menu inside previews */
+#pdf-zoom-wrap img,
+#img-zoom-wrap img,
+#pdf-zoom-wrap canvas {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: auto;
+}
+/* Stop Android WebView tap-flash on drawer backdrop */
+.student-menu-backdrop,
+.modal-backdrop {
+  -webkit-tap-highlight-color: transparent;
+}
+/* Fix 100vh bug on Android WebView older versions */
+@supports (height: 100dvh) {
+  .student-menu-drawer { height: 100dvh; }
+  .modal-backdrop { min-height: 100dvh; }
+}
+
+
+/* ============================================================
+   ██  PDF / IMAGE VIEWER CONTROLS (v11.0 — backup for inline)
+   ------------------------------------------------------------
+   The zoom controls are styled inline in app.js (as backup
+   and to survive FOUC). These rules provide consistency if
+   inline styles are stripped by any tooling.
+   ============================================================ */
+#pdf-zoom-controls,
+#img-zoom-controls {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+#pdf-zoom-controls button,
+#img-zoom-controls button {
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+  transition: transform 0.1s ease-out, background-color 0.15s ease;
+}
+#pdf-zoom-controls button:active,
+#img-zoom-controls button:active {
+  transform: scale(0.92);
+}
+@media (hover: hover) {
+  #pdf-zoom-controls button:hover,
+  #img-zoom-controls button:hover {
+    background: var(--brand-50, #eff6ff) !important;
+    border-color: var(--brand-300, #93c5fd) !important;
+  }
+}
+#pdf-zoom-label,
+#img-zoom-label {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+#pdf-zoom-wrap,
+#img-zoom-wrap {
+  transform-origin: top center;
+  transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+#pdf-outer-wrap,
+#img-outer-wrap {
+  touch-action: pan-x pan-y pinch-zoom;
+  overscroll-behavior: contain;
+}
+#pdf-zoom-wrap canvas,
+#img-zoom-wrap img {
+  border-radius: 2px;
+  background: #fff;
+}
+/* Session expiry pill in welcome header (app.js inserts this) */
+#sessionExpiry {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  background: var(--slate-100);
+  border-radius: 99px;
+  color: var(--slate-500);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+
+/* ============================================================
+   ██  PREMIUM UPGRADES (v11.0)
+   ============================================================ */
+
+/* ============================================================
+   1. AUTO DARK MODE (System Preference)
+   ============================================================ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --slate-50: #0f172a;
+    --slate-100: #1e293b;
+    --slate-200: #334155;
+    --slate-300: #475569;
+    --slate-400: #64748b;
+    --slate-500: #94a3b8;
+    --slate-600: #cbd5e1;
+    --slate-700: #e2e8f0;
+    --slate-800: #f1f5f9;
+    --slate-900: #f8fafc;
+    --brand-50: #172554;
+    --brand-100: #1e3a8a;
+    --brand-200: #1e40af;
+    --brand-900: #eff6ff;
+  }
+  body {
+    background-color: #020617;
+    color: var(--slate-800);
+    background-image:
+      radial-gradient(1200px 600px at 8% -8%, rgba(37,99,235,.15), transparent 60%),
+      radial-gradient(900px 500px at 108% 8%, rgba(168,85,247,.1), transparent 60%);
+  }
+  .app,
+  .card,
+  .stat,
+  .portal,
+  .modal,
+  .chat-panel,
+  .collapsible-card {
+    background: rgba(15, 23, 42, 0.7);
+    border-color: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+  input, select, textarea, .chat-input-wrap {
+    background: rgba(15, 23, 42, 0.6) !important;
+    color: #fff !important;
+    border-color: var(--slate-300) !important;
+  }
+}
+
+/* ============================================================
+   1b. DARK MODE SUPPLEMENTS — fix elements that would stay
+       white/light in dark mode
+   ============================================================ */
+@media (prefers-color-scheme: dark) {
+  /* Header (glass in light, glass darker in dark) */
+  .app-header {
+    background: rgba(15, 23, 42, 0.85);
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+  }
+  @media (min-width:641px) {
+    .app-header { background: rgba(15, 23, 42, 0.75); }
+  }
+
+  /* Drawer */
+  .student-menu-drawer { background: #0f172a; }
+  .student-menu-list { background: #0f172a; }
+  .student-menu-footer {
+    background: rgba(15, 23, 42, 0.6);
+    border-top-color: rgba(255, 255, 255, 0.06);
+    color: var(--slate-500);
+  }
+  .student-menu-item { color: var(--slate-700); }
+  .student-menu-item:hover { background: rgba(255, 255, 255, 0.04); }
+  .student-menu-divider { background: rgba(255, 255, 255, 0.06); }
+
+  /* Modal */
+  .modal { background: #0f172a; }
+  .modal-header,
+  .modal-footer { background: #0f172a; border-color: rgba(255, 255, 255, 0.06); }
+
+  /* Tabs */
+  .tabs { background: rgba(255, 255, 255, 0.04); }
+  .tabs .tab.active {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--slate-900);
+  }
+  .tab:hover:not(.active) { background: rgba(255, 255, 255, 0.03); }
+
+  /* Buttons */
+  .btn-outline {
+    background: transparent;
+    border-color: rgba(255, 255, 255, 0.15);
+    color: var(--slate-700);
+  }
+  .btn-outline:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--brand-400);
+  }
+  .icon-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: var(--slate-600);
+  }
+  .icon-btn:hover {
+    background: rgba(37,99,235,.20);
+    border-color: var(--brand-400);
+    color: var(--brand-300);
+  }
+  .modal-close {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: var(--slate-600);
+  }
+  .chat-close-btn,
+  .chat-sidebar-toggle {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: var(--slate-600);
+  }
+
+  /* Toast */
+  .toast {
+    background: #0f172a;
+    border-color: rgba(255, 255, 255, 0.08);
+    color: var(--slate-800);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  }
+
+  /* Chat */
+  .chat-head,
+  .chat-input {
+    background: #0f172a;
+    border-color: rgba(255, 255, 255, 0.06);
+  }
+  .chat-msgs { background: #020617; }
+  .chat-main { background: #0f172a; }
+  .chat-sidebar {
+    background: #020617;
+    border-right-color: rgba(255, 255, 255, 0.06);
+  }
+  .chat-sidebar-item:hover { background: rgba(255, 255, 255, 0.04); }
+  .chat-sidebar-item.active { background: rgba(37,99,235,.18); }
+  .chat-input-wrap { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.08); }
+  .chat-input-wrap:focus-within { background: rgba(255, 255, 255, 0.06); }
+  .msg.bot .bubble {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--slate-800);
+    border-color: rgba(255, 255, 255, 0.06);
+  }
+  .msg.bot .bubble code { background: rgba(37,99,235,.18); color: var(--brand-300); }
+  .msg-action-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: var(--slate-600);
+  }
+  .msg-action-btn:hover {
+    background: rgba(37,99,235,.18);
+    border-color: var(--brand-400);
+    color: var(--brand-300);
+  }
+  .ai-thinking-bubble {
+    background: linear-gradient(135deg, rgba(37,99,235,.15), rgba(15,23,42,.8)) !important;
+    border-color: rgba(96,165,250,.3) !important;
+  }
+  .ai-thinking-text { color: var(--brand-300); }
+  .ai-timer { background: rgba(37,99,235,.25); color: var(--brand-300); }
+  .ai-progress-bar { background: rgba(37,99,235,.25); }
+  .ai-progress-bar::after {
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #3b82f6);
+  }
+  .dl-menu {
+    background: #0f172a;
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  .dl-menu button { color: var(--slate-700); }
+  .dl-menu button:hover { background: rgba(37,99,235,.18); color: var(--brand-300); }
+  .thought-badge {
+    background: linear-gradient(135deg, rgba(99,102,241,.15), rgba(79,70,229,.10));
+    border-color: rgba(129,140,248,.3);
+    color: var(--brand-300);
+  }
+
+  /* Passcode / Admin card */
+  .passcode-display { background: rgba(15, 23, 42, 0.7); border-color: rgba(255, 255, 255, 0.08); }
+  .passcode-value { color: var(--brand-400); }
+  .passcode-card {
+    background: linear-gradient(135deg, rgba(15,23,42,.8), rgba(2,6,23,.6));
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  /* Table */
+  .table-wrap { background: #0f172a; border-color: rgba(255, 255, 255, 0.06); }
+  thead th { background: rgba(255, 255, 255, 0.03); border-bottom-color: rgba(255, 255, 255, 0.06); }
+  tbody tr:hover { background: rgba(37,99,235,.12); }
+  tbody td { border-bottom-color: rgba(255, 255, 255, 0.04); }
+
+  /* Charts */
+  .chart-wrap { background: rgba(15, 23, 42, 0.7); border-color: rgba(255, 255, 255, 0.08); }
+
+  /* Advisor */
+  .advisor {
+    background: linear-gradient(135deg, rgba(37,99,235,.18), rgba(15,23,42,.6));
+    border-color: rgba(96,165,250,.3);
+    color: var(--slate-800);
+  }
+
+  /* Auth */
+  .auth-links-grid .auth-link {
+    background: rgba(37,99,235,.10);
+    border-color: rgba(96,165,250,.25);
+    color: var(--brand-300);
+  }
+
+  /* Working Days CTA & portals */
+  .portal {
+    background: rgba(15, 23, 42, 0.7);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  .portal:hover {
+    background: rgba(37,99,235,.18);
+    border-color: var(--brand-400);
+  }
+  .portal span { color: var(--slate-700); }
+
+  /* Calendar */
+  .wd-summary-card {
+    background: rgba(15, 23, 42, 0.7);
+    border-color: rgba(255, 255, 255, 0.06);
+  }
+  .wd-cell.future { background: rgba(255, 255, 255, 0.02); color: var(--slate-500); }
+  .wd-cell.before { background: rgba(255, 255, 255, 0.03); color: var(--slate-500); }
+
+  /* Bulk select */
+  .bulk-select-list { background: #0f172a; border-color: rgba(255, 255, 255, 0.08); }
+
+  /* Chips */
+  .chip { background: rgba(255, 255, 255, 0.05); color: var(--slate-700); border-color: rgba(255, 255, 255, 0.06); }
+
+  /* Notice banner */
+  .notice-banner {
+    background: linear-gradient(90deg, rgba(245,158,11,.15), rgba(217,119,6,.10), rgba(245,158,11,.15));
+    color: #fcd34d;
+    border-bottom-color: rgba(245,158,11,.3);
+  }
+
+  /* Pills */
+  .pill { background: rgba(255, 255, 255, 0.06); color: var(--slate-600); }
+  .pill.role-student { background: rgba(16,185,129,.15); color: #6ee7b7; }
+  .pill.role-faculty { background: rgba(37,99,235,.20); color: #93c5fd; }
+  .pill.role-admin { background: rgba(245,158,11,.20); color: #fcd34d; }
+
+  /* Impersonation banner keeps amber (visible) */
+  .impersonation {
+    background: linear-gradient(135deg, rgba(245,158,11,.20), rgba(217,119,6,.25));
+    border-bottom-color: rgba(245,158,11,.4);
+    color: #fcd34d;
+  }
+
+  /* Bulk holiday textarea */
+  .bulk-holiday-textarea {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--slate-800);
+    border-color: rgba(255, 255, 255, 0.10);
+  }
+
+  /* Scroll-to-top FAB */
+  .scroll-top-fab {
+    background: #0f172a;
+    border-color: rgba(255, 255, 255, 0.10);
+  }
+
+  /* Toast wrap dark */
+  .feedback-card { background: #0f172a; }
+
+  /* Subnav active — keep vibrant but slightly deeper */
+  .subnav-item:hover { background: rgba(255, 255, 255, 0.04); }
+  .subnav { border-bottom-color: rgba(255, 255, 255, 0.06); }
+
+  /* Passcode live box */
+  .passcode-live-box {
+    background: linear-gradient(135deg, rgba(16,185,129,.12), rgba(15,23,42,.7));
+    border-color: rgba(110,231,183,.35);
+  }
+  .passcode-live-box .plb-head,
+  .passcode-live-box .plb-value { color: #6ee7b7; }
+  .passcode-live-box.inactive {
+    background: linear-gradient(135deg, rgba(15,23,42,.6), rgba(2,6,23,.5));
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  /* Subject summary line */
+  .subject-summary-line {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.06);
+  }
+
+  /* Empty state text */
+  .empty { color: var(--slate-500); }
+}
+
+
+/* ============================================================
+   2. ADVANCED GLASSMORPHISM & DEPTH
+   ============================================================ */
+.app-header.scrolled {
+  background: rgba(255, 255, 255, 0.65) !important;
+  -webkit-backdrop-filter: saturate(200%) blur(24px);
+  backdrop-filter: saturate(200%) blur(24px);
+  box-shadow:
+    0 4px 30px rgba(0, 0, 0, 0.05),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+}
+@media (prefers-color-scheme: dark) {
+  .app-header.scrolled {
+    background: rgba(15, 23, 42, 0.65) !important;
+    box-shadow:
+      0 4px 30px rgba(0, 0, 0, 0.3),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+}
+.modal {
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+}
+
+
+/* ============================================================
+   3. ANIMATED GLOW BORDERS FOR CARDS
+   ============================================================ */
+.card,
+.stat,
+.collapsible-card {
+  position: relative;
+  z-index: 1;
+}
+@media (hover: hover) {
+  .card::before,
+  .stat::before,
+  .collapsible-card::before {
+    content: "";
+    position: absolute;
+    inset: -1.5px;
+    border-radius: inherit;
+    background: linear-gradient(
+      135deg,
+      var(--brand-400, #60a5fa),
+      var(--purple-500, #a855f7),
+      var(--emerald-400, #34d399)
+    );
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    padding: 1.5px;
+    pointer-events: none;
+  }
+  .card:hover::before,
+  .stat:hover::before,
+  .collapsible-card:hover::before {
+    opacity: 1;
+    animation: borderSpin 4s linear infinite;
+  }
+}
+@keyframes borderSpin {
+  100% { filter: hue-rotate(360deg); }
+}
+
+
+/* ============================================================
+   4. TYPOGRAPHY UPGRADES: GRADIENT TEXT & BUTTON FEEL
+   ============================================================ */
+.welcome h2,
+.brand-text h1 {
+  background: linear-gradient(135deg, var(--slate-900) 30%, var(--brand-600));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+@media (prefers-color-scheme: dark) {
+  .welcome h2,
+  .brand-text h1 {
+    background: linear-gradient(135deg, #ffffff 30%, var(--brand-300, #93c5fd));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
+/* Tactile primary button press */
+.btn-primary {
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.btn-primary:active {
+  transform: scale(0.95) translateY(2px);
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2) !important;
+}
+
+
+/* ============================================================
+   5. NATIVE MOBILE APP PHYSICS
+   ============================================================ */
+body,
+.app-body,
+.chat-msgs,
+.student-menu-list {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: none;
+}
+/* Hide scrollbars on mobile for clean UI */
+@media (max-width: 640px) {
+  ::-webkit-scrollbar {
+    width: 0px;
+    height: 0px;
+    background: transparent;
+  }
+  .app {
+    border-radius: 0;
+    border: none;
+    min-height: 100vh;
+    min-height: 100dvh;
+    box-shadow: none;
+  }
+}
+/* No tap-highlight flash */
+* {
+  -webkit-tap-highlight-color: rgba(255, 255, 255, 0) !important;
+}
+
+/* ============================================================
+   END OF FILE — style.css v11.0
+   ============================================================ */
