@@ -1320,20 +1320,28 @@ async function callGemini(args) {
 async function callAI(args) {
   const TOTAL_TIMEOUT = 90000;
   const startTime = Date.now();
-  let groqError = null;
-  if (GROQ_API_KEYS.length > 0) {
+  let geminiError = null;
+
+  // ✅ 1. Pehle Gemini try karega
+  if (GEMINI_API_KEYS.length > 0) {
     try {
-      const reply = await callGroq({ ...args, timeoutMs: Math.min(45000, TOTAL_TIMEOUT - (Date.now() - startTime)) });
-      return { reply, provider: 'groq', model: GROQ_MODEL };
-    } catch (err) { groqError = err; }
+      const reply = await callGemini({ ...args, globalTimeoutMs: Math.min(45000, TOTAL_TIMEOUT - (Date.now() - startTime)) });
+      return { reply, provider: 'gemini', model: GEMINI_MODEL };
+    } catch (err) { 
+      geminiError = err; 
+      console.warn('Gemini failed, falling back to Groq:', err.message);
+    }
   }
+
   const remainingTime = TOTAL_TIMEOUT - (Date.now() - startTime);
   if (remainingTime <= 0) throw new Error('AI too slow.');
+  
+  // ✅ 2. Agar Gemini fail ho jaye toh Groq chalega
   try {
-    const reply = await callGemini({ ...args, globalTimeoutMs: remainingTime });
-    return { reply, provider: 'gemini', model: GEMINI_MODEL };
-  } catch (geminiError) {
-    throw new Error(`Both AI providers failed. Groq: ${groqError?.message.substring(0,80)} | Gemini: ${geminiError.message.substring(0,80)}`);
+    const reply = await callGroq({ ...args, timeoutMs: remainingTime });
+    return { reply, provider: 'groq', model: GROQ_MODEL };
+  } catch (groqError) {
+    throw new Error(`Both AI providers failed. Gemini: ${geminiError?.message.substring(0,80)} | Groq: ${groqError.message.substring(0,80)}`);
   }
 }
 
