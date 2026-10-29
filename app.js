@@ -2356,16 +2356,55 @@ async function generateIndividualPDF(studentRoll, studentName, branch, range, mo
     let records = [];
     if (isSelf) records = (globalHistory || []).slice();
     else { const attRes = await fetch(`${API}/api/attendance/student/${studentRoll}/${currentUser.rollNo}`); if (attRes.ok) records = await attRes.json(); else { const err = await attRes.json().catch(()=>({})); hideDL(); return toast(err.error || 'Failed', 'error'); } }
+    
     const rng = getRangeForSelection(range, month);
     records = records.filter(r => r.date >= rng.start && r.date <= rng.end);
     if (!records.length) { hideDL(); return toast('No records for range','error'); }
-    const totalAttended = records.filter(r => r.status === 'Present' || r.status === 'Duty Leave').length;
-    const holidaySet = new Set((globalHolidays || []).map(h => (h.date||'').split('T')[0]));
+
+    // ✅ NAYA FIX: Backend se sahi conducted lectures fetch karo
+    let totalAttended = 0;
     let totalConducted = 0;
-    let cur = new Date(rng.start + 'T00:00:00');
-    const endD = new Date(rng.end + 'T23:59:59');
-    while (cur <= endD) { const ds = fmtDate(cur); const dow = cur.getDay(); if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) { const tt = getTimetableForBranch(branch, ds); const subs = (tt[FULL_DAY_NAMES[dow]] || []).filter(s => !s.includes('Sports') && !s.includes('LIB') && !s.includes('Library')); totalConducted += subs.length; } cur.setDate(cur.getDate()+1); }
-    const pct = totalConducted > 0 ? Math.round((totalAttended/totalConducted)*100) : 0;
+    let pct = 0;
+
+    if (range === 'SELECTED_MONTH' || range === 'CURRENT_MONTH') {
+        const m = range === 'CURRENT_MONTH' ? new Date().getMonth() : parseInt(month);
+        const res = await fetch(`${API}/api/student/monthly-summary/${studentRoll}?month=${m}`);
+        if (res.ok) {
+            const backendData = await res.json();
+            totalAttended = backendData.totalAttended || 0;
+            totalConducted = backendData.totalConducted || 0;
+            pct = backendData.attendancePercentage || 0;
+        }
+    } else {
+        const res = await fetch(`${API}/api/student/summary/${studentRoll}`);
+        if (res.ok) {
+            const backendData = await res.json();
+            totalAttended = backendData.totalAcademicLectures || 0;
+            totalConducted = backendData.totalConductedLectures || 0;
+            pct = backendData.attendancePercentage || 0;
+        }
+    }
+
+    // Fallback agar backend fail ho jaye
+    if (totalConducted === 0) {
+        totalAttended = records.filter(r => r.status === 'Present' || r.status === 'Duty Leave').length;
+        const holidaySet = new Set((globalHolidays || []).map(h => (h.date||'').split('T')[0]));
+        let cur = new Date(rng.start + 'T00:00:00');
+        const endD = new Date(rng.end + 'T23:59:59');
+        while (cur <= endD) { 
+            const ds = fmtDate(cur); 
+            const dow = cur.getDay(); 
+            if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) { 
+                const scheduleObj = getScheduleForBranch(branch); 
+                const daySchedule = scheduleObj[dow] || [];
+                const validLectures = daySchedule.filter(s => s.period !== 'LUNCH' && !s.subject.includes('Sports') && !s.subject.includes('LIB'));
+                totalConducted += validLectures.length; 
+            } 
+            cur.setDate(cur.getDate()+1); 
+        }
+        pct = totalConducted > 0 ? Math.min(100, Math.round((totalAttended/totalConducted)*100)) : 0;
+    }
+
     const blob = generatePDFBlob('Student Attendance Report', `${studentName} (${studentRoll})`, [`Branch: ${branch} · 5th Semester`, `Range: ${fmtDatePretty(rng.start)} → ${fmtDatePretty(rng.end)}`], ['Date', 'Subject', 'Status'], records.sort((a,b) => b.date.localeCompare(a.date)).map(r => [fmtDatePretty(r.date), r.subject, r.status]), [`Attended: ${totalAttended}    |    Conducted: ${totalConducted}    |    Percentage: ${pct}%`]);
     hideDL();
     if (!blob) return toast('PDF library failed to load','error');
