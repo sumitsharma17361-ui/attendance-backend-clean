@@ -19,6 +19,7 @@ if ('scrollRestoration' in history) {
    ============================================================ */
 const API = "https://attendance-backend-clean-l2bu.onrender.com";
 const SEMESTER_START = new Date(2026, 6, 15);
+const TIMETABLE_CHANGE_DATE = '2026-10-28';
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const FULL_DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -89,7 +90,7 @@ const FACULTY_MENU_ITEMS = [
   { key: 'fac-mark', label: 'Mark Student', icon: '<polyline points="20 6 9 17 4 12"/>' },
   { key: 'fac-bulk', label: 'Bulk Actions', icon: '<rect x="3" y="4" width="18" height="18" rx="2"/>' },
   { key: 'fac-students', label: 'My Students', icon: '<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/>' },
-  { key: 'fac-passcode', label: 'Passcode', icon: '<rect width="18" height="11" x="3" y="11" rx="2"/>' },
+  { key: 'fac-passcode', label: 'Passcode', icon: '<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>' },
   { key: 'fac-recent', label: 'Recent Marks', icon: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>' },
   { key: 'fac-reports', label: 'Reports', icon: '<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>' },
   { key: 'divider', divider: true },
@@ -349,7 +350,7 @@ function viewPdfBlob(blob, fileName = 'document.pdf') {
   document.body.appendChild(modal);
 }
 
-/* ★ NEW: Image viewer with pinch-zoom + buttons */
+/* ★ NEW: Image viewer with pinch-zoom + buttons (horizontal scroll fixed) */
 function renderImageViewer(blob, fileName) {
   const url = URL.createObjectURL(blob);
   const modal = document.createElement('div');
@@ -370,7 +371,7 @@ function renderImageViewer(blob, fileName) {
         </div>
       </div>
       <div style="flex: 1; overflow: auto; background: #525659; padding: 10px; position: relative; -webkit-overflow-scrolling: touch;" id="img-outer-wrap">
-        <div id="img-zoom-wrap" style="transform-origin: top center; transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: flex-start; justify-content: center; padding: 10px 0;">
+        <div id="img-zoom-wrap" style="transform-origin: top left; transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1); display: inline-block; padding: 10px;">
           <img src="${url}" style="max-width: 100%; height: auto; box-shadow: 0 2px 6px rgba(0,0,0,0.3);" />
         </div>
       </div>
@@ -447,7 +448,7 @@ function attachZoomGestures(outerWrap, container, getZoom, setZoom) {
   }, { passive: false });
 }
 
-/* ★ FIX 1: PDF renderer with zoom controls */
+/* ★ FIX 1: PDF renderer with zoom controls (horizontal scroll fixed) */
 async function renderPdfWithPdfJs(blob) {
   const modal = document.createElement('div');
   modal.className = 'modal-backdrop open safe-top-modal';
@@ -467,7 +468,7 @@ async function renderPdfWithPdfJs(blob) {
         </div>
       </div>
       <div style="flex: 1; overflow: auto; background: #525659; padding: 10px; position: relative; -webkit-overflow-scrolling: touch;" id="pdf-outer-wrap">
-        <div id="pdf-zoom-wrap" style="transform-origin: top center; transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 10px 0;">
+        <div id="pdf-zoom-wrap" style="transform-origin: top left; transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1); display: inline-block; padding: 10px;">
           <div class="spinner" style="border-top-color: white; margin-top: 20px;"></div>
         </div>
       </div>
@@ -529,6 +530,8 @@ async function renderPdfWithPdfJs(blob) {
       canvas.style.height = `${cssViewport.height}px`;
       canvas.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
       canvas.style.background = '#fff';
+      canvas.style.display = 'block';
+      canvas.style.margin = '0 auto 10px auto';
 
       container.appendChild(canvas);
       await page.render({ canvasContext: context, viewport: renderViewport }).promise;
@@ -2143,7 +2146,7 @@ async function loadRequestSubjects(){
     const dow = dateObj.getDay();
     const dayName = FULL_DAY_NAMES[dow];
     const branch = (currentUser && currentUser.branch) ? currentUser.branch : 'CSE';
-    const daySubs = getTimetableForBranch(branch)[dayName] || [];
+    const daySubs = getTimetableForBranch(branch, d)[dayName] || [];
     const subs = daySubs.filter(x => !x.includes('Sports') && !x.includes('LIB') && !x.includes('Library') && x.toLowerCase() !== 'lunch break');
     if (!subs.length) { s.innerHTML = '<option value="">No lectures scheduled on this day</option>'; if (hint) hint.textContent = `(${dayName} · ${branch})`; return; }
     s.innerHTML = '<option value="">Select subject…</option>' + subs.map(x => `<option value="${x}">${x}</option>`).join('');
@@ -2250,13 +2253,13 @@ async function updateTrend(){
     } else {
       const m = parseInt($('trendMonth').value); const y = 2026;
       const dim = new Date(y, m+1, 0).getDate();
-      const tt = getTimetableForBranch(currentUser.branch || 'CSE');
       const hS = new Set((globalHolidays || []).map(h => (h.date||'').split('T')[0]));
       const today = new Date(); today.setHours(0,0,0,0);
       for (let d = 1; d <= dim; d++) {
         const dt = new Date(y, m, d); dt.setHours(0,0,0,0);
         const ds = fmtDate(dt); const dow = dt.getDay(); labels.push(`${d}`);
         if (dt > today || dt < SEMESTER_START || dow === 0 || dow === 6 || hS.has(ds)) { pctData.push(null); continue; }
+        const tt = getTimetableForBranch(currentUser.branch || 'CSE', ds);
         const subs = (tt[FULL_DAY_NAMES[dow]] || []).filter(s => !s.includes('Sports') && !s.includes('LIB') && !s.includes('Library'));
         const dayRecs = globalHistory.filter(r => r.date === ds);
         const pSubs = new Set(dayRecs.filter(r => r.status === 'Present' || r.status === 'Duty Leave').map(r => r.subject));
@@ -2297,7 +2300,7 @@ async function updatePeriod(){
     if (active && active.period !== 'LUNCH') { if ($('periodLabel')) $('periodLabel').textContent = `${active.start} – ${active.end}`; if ($('periodName')) $('periodName').textContent = active.subject; if ($('markPeriodBtn')) $('markPeriodBtn').disabled = false; window._activeSubject = active.subject; }
     else if (active && active.period === 'LUNCH') { if ($('periodLabel')) $('periodLabel').textContent = 'LUNCH BREAK'; if ($('periodName')) $('periodName').textContent = 'No active lecture'; if ($('markPeriodBtn')) $('markPeriodBtn').disabled = true; window._activeSubject = null; }
     else { if ($('periodLabel')) $('periodLabel').textContent = 'OFF HOURS'; if ($('periodName')) $('periodName').textContent = 'No active lecture'; if ($('markPeriodBtn')) $('markPeriodBtn').disabled = true; window._activeSubject = null; }
-    const todaySubs = getTimetableForBranch(branch)[FULL_DAY_NAMES[dow]] || [];
+    const todaySubs = getTimetableForBranch(branch, today)[FULL_DAY_NAMES[dow]] || [];
     if ($('todayTimetable')) $('todayTimetable').innerHTML = todaySubs.length ? todaySubs.map((s,i) => `<div style="padding:7px 0;border-bottom:1px solid var(--slate-100);display:flex;justify-content:space-between;"><span class="text-xs font-bold text-muted">P${i+1}</span><span style="font-weight:600;">${s}</span></div>`).join('') : 'No classes today';
   } catch(e){}
 }
@@ -2358,11 +2361,10 @@ async function generateIndividualPDF(studentRoll, studentName, branch, range, mo
     if (!records.length) { hideDL(); return toast('No records for range','error'); }
     const totalAttended = records.filter(r => r.status === 'Present' || r.status === 'Duty Leave').length;
     const holidaySet = new Set((globalHolidays || []).map(h => (h.date||'').split('T')[0]));
-    const tt = getTimetableForBranch(branch);
     let totalConducted = 0;
     let cur = new Date(rng.start + 'T00:00:00');
     const endD = new Date(rng.end + 'T23:59:59');
-    while (cur <= endD) { const ds = fmtDate(cur); const dow = cur.getDay(); if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) { const subs = (tt[FULL_DAY_NAMES[dow]] || []).filter(s => !s.includes('Sports') && !s.includes('LIB') && !s.includes('Library')); totalConducted += subs.length; } cur.setDate(cur.getDate()+1); }
+    while (cur <= endD) { const ds = fmtDate(cur); const dow = cur.getDay(); if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) { const tt = getTimetableForBranch(branch, ds); const subs = (tt[FULL_DAY_NAMES[dow]] || []).filter(s => !s.includes('Sports') && !s.includes('LIB') && !s.includes('Library')); totalConducted += subs.length; } cur.setDate(cur.getDate()+1); }
     const pct = totalConducted > 0 ? Math.round((totalAttended/totalConducted)*100) : 0;
     const blob = generatePDFBlob('Student Attendance Report', `${studentName} (${studentRoll})`, [`Branch: ${branch} · 5th Semester`, `Range: ${fmtDatePretty(rng.start)} → ${fmtDatePretty(rng.end)}`], ['Date', 'Subject', 'Status'], records.sort((a,b) => b.date.localeCompare(a.date)).map(r => [fmtDatePretty(r.date), r.subject, r.status]), [`Attended: ${totalAttended}    |    Conducted: ${totalConducted}    |    Percentage: ${pct}%`]);
     hideDL();
@@ -2381,10 +2383,20 @@ async function generateSelfPDF(action = 'download'){
   await generateIndividualPDF(currentUser.rollNo, currentUser.name, currentUser.branch || 'CSE', range, month, true, action);
 }
 
-function getTimetableForBranch(b){
-  const CSE = { Monday: ['FLA - Formal Language & Automata','ECO - Economics for Engineers','DAA - Design & Analysis of Algorithm','LIB - Library','HRM - Human Resource Mgmt','CN - Computer Network','Sports'], Tuesday: ['WT - Web Technology','ECO - Economics for Engineers','Internet Lab','LIB - Library','HRM - Human Resource Mgmt','FLA - Formal Language & Automata','Sports'], Wednesday: ['FLA - Formal Language & Automata','ECO - Economics for Engineers','BDA - Big Data Analytics','LIB - Library','WT - Web Technology','CN LAB - Computer Network Lab'], Thursday: ['BDA - Big Data Analytics','WT - Web Technology','CN - Computer Network','DAA - Design & Analysis of Algorithm','DAA LAB - Algorithm Lab','HRM - Human Resource Mgmt'], Friday: ['FLA - Formal Language & Automata','CN - Computer Network','LIB - Library','DAA - Design & Analysis of Algorithm','WT LAB - Web Technology Lab','BDA - Big Data Analytics'] };
-  const AIDS = { Monday: ['FLA - Formal Language & Automata','ECO - Economics for Engineers','ML - Machine Learning','LIB - Library','HRM - Human Resource Mgmt','PA - Predictive Analysis','Sports'], Tuesday: ['WT - Web Technology','ECO - Economics for Engineers','PA - Predictive Analysis','LIB - Library','HRM - Human Resource Mgmt','FLA - Formal Language & Automata','ML - Machine Learning'], Wednesday: ['FLA - Formal Language & Automata','ECO - Economics for Engineers','BDA - Big Data Analytics','LIB - Library','WT - Web Technology','PA LAB - Predictive Analysis Lab'], Thursday: ['BDA - Big Data Analytics','WT - Web Technology','LIB - Library','PA - Predictive Analysis','ML LAB - Machine Learning Lab','HRM - Human Resource Mgmt'], Friday: ['FLA - Formal Language & Automata','BDA LAB - Big Data Analytics Lab','ML - Machine Learning','Internet Lab','BDA - Big Data Analytics'] };
-  return (b && b.toUpperCase() === 'AIDS') ? AIDS : CSE;
+/* ============================================================
+   TIMETABLE — DATE-AWARE (Oct 28, 2026 switch)
+   ============================================================ */
+function getTimetableForBranch(b, dateStr = null) {
+  const isOld = dateStr && dateStr < TIMETABLE_CHANGE_DATE;
+
+  const OLD_CSE = { Monday: ['BDA - Big Data Analytics','ECO - Economics for Engineers','DAA - Design & Analysis of Algorithm','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','CN - Computer Network','Sports'], Tuesday: ['WT - Web Technology','ECO - Economics for Engineers','Internet Lab','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','BDA - Big Data Analytics','Sports'], Wednesday: ['BDA - Big Data Analytics','ECO - Economics for Engineers','FLA - Formal Language & Automata','Sports / Activity','WT - Web Technology','CN LAB - Computer Network Lab'], Thursday: ['BDA - Big Data Analytics','WT - Web Technology','CN - Computer Network','DAA - Design & Analysis of Algorithm','DAA LAB - Algorithm Lab','HRM - Human Resource Mgmt'], Friday: ['DAA - Design & Analysis of Algorithm','CN - Computer Network','FLA - Formal Language & Automata','BDA - Big Data Analytics','WT LAB - Web Technology Lab','Sports'] };
+  const NEW_CSE = { Monday: ['FLA - Formal Language & Automata','ECO - Economics for Engineers','DAA - Design & Analysis of Algorithm','LIB - Library','HRM - Human Resource Mgmt','CN - Computer Network','Sports'], Tuesday: ['WT - Web Technology','ECO - Economics for Engineers','Internet Lab','LIB - Library','HRM - Human Resource Mgmt','FLA - Formal Language & Automata','Sports'], Wednesday: ['FLA - Formal Language & Automata','ECO - Economics for Engineers','BDA - Big Data Analytics','LIB - Library','WT - Web Technology','CN LAB - Computer Network Lab'], Thursday: ['BDA - Big Data Analytics','WT - Web Technology','CN - Computer Network','DAA - Design & Analysis of Algorithm','DAA LAB - Algorithm Lab','HRM - Human Resource Mgmt'], Friday: ['FLA - Formal Language & Automata','CN - Computer Network','LIB - Library','DAA - Design & Analysis of Algorithm','WT LAB - Web Technology Lab','BDA - Big Data Analytics'] };
+  
+  const OLD_AIDS = { Monday: ['BDA - Big Data Analytics','ECO - Economics for Engineers','LIB - Library','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','PA - Predictive Analysis','Sports'], Tuesday: ['WT - Web Technology','ECO - Economics for Engineers','PA - Predictive Analysis','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','BDA - Big Data Analytics','ML - Machine Learning'], Wednesday: ['BDA - Big Data Analytics','ECO - Economics for Engineers','FLA - Formal Language & Automata','Sports / Project','WT - Web Technology','PA LAB - Predictive Analysis Lab'], Thursday: ['BDA - Big Data Analytics','WT - Web Technology','ML - Machine Learning','PA - Predictive Analysis','ML LAB - Machine Learning Lab','HRM - Human Resource Mgmt'], Friday: ['ML - Machine Learning','LIB - Library','FLA - Formal Language & Automata','BDA - Big Data Analytics','BDA LAB - Big Data Analytics Lab','Sports'] };
+  const NEW_AIDS = { Monday: ['FLA - Formal Language & Automata','ECO - Economics for Engineers','ML - Machine Learning','LIB - Library','HRM - Human Resource Mgmt','PA - Predictive Analysis','Sports'], Tuesday: ['WT - Web Technology','ECO - Economics for Engineers','PA - Predictive Analysis','LIB - Library','HRM - Human Resource Mgmt','FLA - Formal Language & Automata','ML - Machine Learning'], Wednesday: ['FLA - Formal Language & Automata','ECO - Economics for Engineers','BDA - Big Data Analytics','LIB - Library','WT - Web Technology','PA LAB - Predictive Analysis Lab'], Thursday: ['BDA - Big Data Analytics','WT - Web Technology','LIB - Library','PA - Predictive Analysis','ML LAB - Machine Learning Lab','HRM - Human Resource Mgmt'], Friday: ['FLA - Formal Language & Automata','BDA LAB - Big Data Analytics Lab','ML - Machine Learning','Internet Lab','BDA - Big Data Analytics'] };
+
+  if (b && b.toUpperCase() === 'AIDS') return isOld ? OLD_AIDS : NEW_AIDS;
+  return isOld ? OLD_CSE : NEW_CSE;
 }
 
 function getScheduleForBranch(b){
@@ -2467,7 +2479,7 @@ async function generateStudentReport(f, action = 'download'){
 
 function initEntry(){ setBranch(currentManualBranch); if ($('manualDate')) $('manualDate').value = fmtDate(new Date()); loadBulkStudents(); }
 function setBranch(b){ currentManualBranch = b; if ($('branchCSE')) $('branchCSE').className = 'btn ' + (b === 'CSE' ? 'btn-primary' : 'btn-outline') + ' btn-sm'; if ($('branchAIDS')) $('branchAIDS').className = 'btn ' + (b === 'AIDS' ? 'btn-primary' : 'btn-outline') + ' btn-sm'; loadSubjects(); }
-function loadSubjects(){ const date = $('manualDate').value; if (!date) return; const d = new Date(date); const dayName = FULL_DAY_NAMES[d.getDay()]; const subs = (getTimetableForBranch(currentManualBranch)[dayName] || []).filter(s => !s.includes('Sports') && !s.includes('LIB') && !s.includes('Library')); if ($('subjectCheckboxes')) $('subjectCheckboxes').innerHTML = `<label style="grid-column:span 2;display:flex;align-items:center;gap:8px;padding:9px;background:var(--slate-100);border-radius:9px;font-size:11.5px;font-weight:700;cursor:pointer;"><input type="checkbox" onchange="selectAllSubjects(this.checked)"> Select All (${subs.length})</label>` + subs.map(s => `<label style="display:flex;align-items:center;gap:8px;padding:7px 11px;background:var(--slate-50);border-radius:7px;font-size:11.5px;cursor:pointer;"><input type="checkbox" class="sub-cb" value="${s}"> ${s}</label>`).join(''); validateBranch(); }
+function loadSubjects(){ const date = $('manualDate').value; if (!date) return; const d = new Date(date); const dayName = FULL_DAY_NAMES[d.getDay()]; const subs = (getTimetableForBranch(currentManualBranch, date)[dayName] || []).filter(s => !s.includes('Sports') && !s.includes('LIB') && !s.includes('Library')); if ($('subjectCheckboxes')) $('subjectCheckboxes').innerHTML = `<label style="grid-column:span 2;display:flex;align-items:center;gap:8px;padding:9px;background:var(--slate-100);border-radius:9px;font-size:11.5px;font-weight:700;cursor:pointer;"><input type="checkbox" onchange="selectAllSubjects(this.checked)"> Select All (${subs.length})</label>` + subs.map(s => `<label style="display:flex;align-items:center;gap:8px;padding:7px 11px;background:var(--slate-50);border-radius:7px;font-size:11.5px;cursor:pointer;"><input type="checkbox" class="sub-cb" value="${s}"> ${s}</label>`).join(''); validateBranch(); }
 function selectAllSubjects(v){ document.querySelectorAll('.sub-cb').forEach(cb => cb.checked = v); }
 async function validateBranch(){ const r = ($('manualRoll').value||'').toUpperCase(); if (!r) return; try { const p = await fetch(`${API}/api/student/profile/${r}`).then(x=>x.json()); if (p.branch && p.branch !== currentManualBranch) toast(`Warning: Student is in ${p.branch}`,'error'); } catch(e){} }
 async function markManual(){ const r = ($('manualRoll').value||'').trim().toUpperCase(); if (!r) return toast('Enter roll no','error'); const d = $('manualDate').value; const subs = Array.from(document.querySelectorAll('.sub-cb:checked')).map(cb => cb.value); if (!subs.length) return toast('Select subjects','error'); try { const res = await fetch(`${API}/api/admin/manual-attendance-bulk`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, studentRollNo: r, date: d, subjects: subs, status: $('manualStatus').value})}); const x = await res.json(); if (res.ok) { showFeedback('success','Marked',x.message||'Attendance marked.'); sendPushNotification('✅ Attendance Marked', `${r} — ${subs.length} subject(s)`, { type: 'admin_mark' }); selectAllSubjects(false); } else showFeedback('error','Failed',x.error||'Could not mark'); } catch(e){ showFeedback('error','Network Error',e.message); } }
@@ -2503,7 +2515,7 @@ async function bulkMarkPreview(){
       const dow = new Date(date + 'T00:00:00').getDay();
       if (dow === 0 || dow === 6) continue;
       const dayName = FULL_DAY_NAMES[dow];
-      const daySubs = (getTimetableForBranch(branch)[dayName] || []).filter(s => !s.includes('Sports') && !s.includes('LIB') && !s.includes('Library'));
+      const daySubs = (getTimetableForBranch(branch, date)[dayName] || []).filter(s => !s.includes('Sports') && !s.includes('LIB') && !s.includes('Library'));
       totalLectures += daySubs.length;
     }
     preview.push({ ...st, branch, totalLectures });
@@ -2604,7 +2616,7 @@ async function bulkDeletePreview(){
       const dow = new Date(date + 'T00:00:00').getDay();
       if (dow === 0 || dow === 6) continue;
       const dayName = FULL_DAY_NAMES[dow];
-      const daySubs = (getTimetableForBranch(branch)[dayName] || []).filter(s => !s.includes('Sports') && !s.includes('LIB') && !s.includes('Library'));
+      const daySubs = (getTimetableForBranch(branch, date)[dayName] || []).filter(s => !s.includes('Sports') && !s.includes('LIB') && !s.includes('Library'));
       count += daySubs.length;
     }
     grandTotal += count;
@@ -3249,7 +3261,7 @@ async function facBulkMark(){
       const dow = new Date(date + 'T00:00:00').getDay();
       if (dow === 0 || dow === 6) continue;
       const dayName = FULL_DAY_NAMES[dow];
-      const daySubs = (getTimetableForBranch(branch)[dayName] || []).filter(s => subjects.includes(s) && !s.includes('Sports') && !s.includes('LIB') && !s.includes('Library'));
+      const daySubs = (getTimetableForBranch(branch, date)[dayName] || []).filter(s => subjects.includes(s) && !s.includes('Sports') && !s.includes('LIB') && !s.includes('Library'));
       totalLectures += daySubs.length;
     }
     preview.push({ ...st, branch, totalLectures });
@@ -3900,3 +3912,25 @@ async function cancelSubscription() {
     } else showFeedback('error', 'Failed', d.error || 'Could not cancel');
   } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
 }
+
+/* ============================================================
+   ★ SCROLL-LOCK SAFETY NET
+   ============================================================ */
+(function scrollLockGuard() {
+  function hardUnlock() {
+    document.body.classList.remove('body-locked');
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
+  }
+  window.addEventListener('pageshow', hardUnlock);
+  window.addEventListener('load', hardUnlock);
+  setInterval(() => {
+    const chatOpen = document.getElementById('chatPanel')?.classList.contains('open');
+    const modalOpen = document.querySelector('.modal-backdrop.open, .feedback-overlay');
+    const anyDrawerOpen = document.getElementById('studentMenuDrawer')?.classList.contains('open')
+                       || document.getElementById('adminMenuDrawer')?.classList.contains('open');
+    if (!chatOpen && !modalOpen && !anyDrawerOpen && document.body.classList.contains('body-locked')) {
+      hardUnlock();
+    }
+  }, 1500);
+})();
