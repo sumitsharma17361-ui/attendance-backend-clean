@@ -3917,3 +3917,67 @@ async function cancelSubscription() {
     } else showFeedback('error', 'Failed', d.error || 'Could not cancel');
   } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
 }
+
+
+
+/* ============================================================
+   ★ URGENT SCROLL FIX FOR ANDROID WEBVIEW (v11.2)
+   ============================================================ */
+(function fixMobileScrollBug() {
+  const style = document.createElement('style');
+  style.innerHTML = `
+    /* 1. Force enable scroll on HTML and Body */
+    html, body {
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      height: auto !important;
+      position: static !important;
+    }
+    
+    /* 2. Fix the 100dvh bug on Mobile WebView */
+    @media (max-width: 640px) {
+      .app {
+        min-height: 100vh !important; /* Fallback */
+        min-height: auto !important; 
+        height: auto !important;
+        padding-bottom: 100px !important; /* Space for Chat FAB */
+      }
+      .app-body {
+        padding-bottom: 120px !important; /* Extra space so chat button doesn't hide content */
+      }
+    }
+
+    /* 3. Remove any locked classes forcefully */
+    .body-locked {
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+    }
+  `;
+  document.head.appendChild(style);
+
+  // Force unlock function
+  function forceUnlockScroll() {
+    document.body.classList.remove('body-locked');
+    document.body.style.overflow = 'auto';
+    document.documentElement.style.overflow = 'auto';
+    document.body.style.height = 'auto';
+    document.documentElement.style.height = 'auto';
+    document.body.style.position = 'relative';
+  }
+
+  // Run immediately and repeatedly for the first 5 seconds
+  forceUnlockScroll();
+  let count = 0;
+  const timer = setInterval(() => {
+    forceUnlockScroll();
+    count++;
+    if (count > 10) clearInterval(timer);
+  }, 500); // Har 0.5 second mein force unlock karega
+
+  // Also run every time a click happens (in case chat panel closed)
+  document.addEventListener('click', () => {
+    setTimeout(forceUnlockScroll, 100);
+  }, { passive: true });
+  
+  console.log("✅ [MobileScrollFix] Force scroll unlocked!");
+})();
