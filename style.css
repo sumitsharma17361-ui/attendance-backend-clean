@@ -1,6 +1,8 @@
 /* ============================================================
    BM GROUP ERP · style.css
-   v10.0 — ULTRA FLUID + PREMIUM POLISH (Zero Lag)
+   v10.1 — ULTRA FLUID + PREMIUM POLISH (Zero Lag)
+   + MOBILE SCROLL FIX (100dvh → auto, overflow unlocked)
+   + DARK MODE + GLASSMORPHISM + GLOW BORDERS + GRADIENT TEXT
    ============================================================ */
 
 /* ---------- RESET ---------- */
@@ -150,10 +152,18 @@ button{-webkit-user-select:none;user-select:none;}
   80%{transform:rotate(-4deg);}
 }
 @keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}
+@keyframes borderSpin{100%{filter:hue-rotate(360deg);}}
 
 /* ============================================================
-   BODY — soft mesh, NO gradient animation (blobs provide motion)
+   HTML + BODY — SCROLL FIX APPLIED
+   height:auto + overflow-y:auto ensures page can grow and scroll
    ============================================================ */
+html{
+  height:auto !important;
+  min-height:100%;
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+}
 body{
   font-family:var(--font);
   background-color:#f1f5f9;
@@ -163,12 +173,25 @@ body{
     radial-gradient(1000px 700px at 50% 118%, rgba(16,185,129,.045), transparent 60%);
   background-attachment:fixed;
   color:var(--slate-800);
-  min-height:100vh;
+  min-height:100vh !important;
+  height:auto !important;
   display:flex;align-items:flex-start;justify-content:center;
   padding:24px 16px;margin:0;line-height:1.55;
   -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
-  overflow-x:hidden;
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
   position:relative;
+}
+
+/* ★ FORCE SCROLL OVERRIDE — never let body-locked freeze the page */
+body.body-locked{
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  position:relative !important;
+}
+html,body{
+  overflow-y:auto !important;
+  height:auto !important;
 }
 
 body::before{
@@ -244,7 +267,9 @@ button,.btn,.tab,.subnav-item,.portal,.chip,.icon-btn,.mini-btn,.send-btn,
   background:#fff;
   border-bottom:1px solid var(--slate-200);
   position:relative;z-index:10;
-  transition:box-shadow var(--dur) var(--ease);
+  transition:box-shadow var(--dur) var(--ease),
+             background-color var(--dur) var(--ease),
+             backdrop-filter var(--dur) var(--ease);
 }
 @media(min-width:641px){
   .app-header{
@@ -1063,7 +1088,7 @@ tbody tr:hover{background:var(--brand-50);}
 }
 .student-menu-header .menu-user-roll{font-size:10px;opacity:.92;margin-top:2px;font-weight:500;}
 
-/* ★ COMPACT MENU LIST — No scroll required */
+/* ★ COMPACT MENU LIST */
 .student-menu-list{
   flex:1;overflow-y:auto;padding:8px 6px;
   display:flex;flex-direction:column;gap:2px;
@@ -1983,12 +2008,33 @@ textarea:focus-visible,[role="button"]:focus-visible,a:focus-visible{
 #alertMessage{min-height:90px;}
 
 /* ============================================================
-   MOBILE
+   MOBILE — SCROLL FIX APPLIED
    ============================================================ */
 @media(max-width:640px){
   body::before{display:block;}
-  body{padding:calc(52px + var(--sat)) 12px calc(20px + var(--sab));}
-  .app-body{padding:16px;}
+  body{
+    padding:calc(52px + var(--sat)) 12px calc(20px + var(--sab));
+    min-height:100vh !important;
+    height:auto !important;
+    overflow-y:auto !important;
+    overflow-x:hidden !important;
+  }
+
+  /* ★ SCROLL FIX — remove 100dvh lock, allow content to grow */
+  .app{
+    border-radius:0 !important;
+    border:none !important;
+    min-height:100vh !important;
+    height:auto !important;
+    box-shadow:none !important;
+    padding-bottom:80px !important;
+    overflow:visible;
+  }
+  .app-body{
+    padding:16px;
+    padding-bottom:120px !important; /* space so chat FAB never covers last content */
+  }
+
   .app-header{padding:14px 16px;}
   .stat{padding:14px;}
   .welcome h2{font-size:18px;}
@@ -2038,6 +2084,9 @@ textarea:focus-visible,[role="button"]:focus-visible,a:focus-visible{
 
   #studentFeesList .stat{padding:10px !important;}
   #studentFeesList .stat-value{font-size:16px !important;}
+
+  /* Hide scrollbars for clean mobile UI */
+  ::-webkit-scrollbar{width:0px;height:0px;background:transparent;}
 }
 
 /* ============================================================
@@ -2098,3 +2147,540 @@ textarea:focus-visible,[role="button"]:focus-visible,a:focus-visible{
   margin:0 !important;padding:0 !important;height:0 !important;
   overflow:hidden !important;
 }
+
+
+/* ============================================================
+   ██  MEDIAN WEBVIEW SPECIFIC FIXES
+   ============================================================ */
+/* Android WebView momentum scrolling */
+.app-body,
+.chat-msgs,
+.student-menu-list,
+.table-wrap,
+.bulk-select-list,
+.present-list-wrap,
+.chat-sidebar-list,
+#pdf-outer-wrap,
+#img-outer-wrap {
+  -webkit-overflow-scrolling: touch;
+}
+/* Prevent pull-to-refresh in Android WebView (Median) */
+html, body {
+  overscroll-behavior-y: contain;
+}
+/* Android WebView: file input trigger works reliably */
+input[type="file"] {
+  display: block !important;
+  opacity: 1 !important;
+  position: relative !important;
+  z-index: auto !important;
+}
+/* Android WebView: disable long-press context menu inside previews */
+#pdf-zoom-wrap img,
+#img-zoom-wrap img,
+#pdf-zoom-wrap canvas {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: auto;
+}
+/* Stop Android WebView tap-flash on drawer backdrop */
+.student-menu-backdrop,
+.modal-backdrop {
+  -webkit-tap-highlight-color: transparent;
+}
+/* Fix 100vh bug on Android WebView older versions */
+@supports (height: 100dvh) {
+  .student-menu-drawer { height: 100dvh; }
+  .modal-backdrop { min-height: 100dvh; }
+}
+
+
+/* ============================================================
+   ██  PDF / IMAGE VIEWER CONTROLS
+   ============================================================ */
+#pdf-zoom-controls,
+#img-zoom-controls {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+#pdf-zoom-controls button,
+#img-zoom-controls button {
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+  transition: transform 0.1s ease-out, background-color 0.15s ease;
+}
+#pdf-zoom-controls button:active,
+#img-zoom-controls button:active {
+  transform: scale(0.92);
+}
+@media (hover: hover) {
+  #pdf-zoom-controls button:hover,
+  #img-zoom-controls button:hover {
+    background: var(--brand-50, #eff6ff) !important;
+    border-color: var(--brand-300, #93c5fd) !important;
+  }
+}
+#pdf-zoom-label,
+#img-zoom-label {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+#pdf-zoom-wrap,
+#img-zoom-wrap {
+  transform-origin: top center;
+  transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+#pdf-outer-wrap,
+#img-outer-wrap {
+  touch-action: pan-x pan-y pinch-zoom;
+  overscroll-behavior: contain;
+}
+#pdf-zoom-wrap canvas,
+#img-zoom-wrap img {
+  border-radius: 2px;
+  background: #fff;
+}
+#sessionExpiry {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  background: var(--slate-100);
+  border-radius: 99px;
+  color: var(--slate-500);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+
+/* ============================================================
+   ██  NEW PREMIUM UPGRADES
+   ============================================================ */
+
+/* ============================================================
+   1. AUTO DARK MODE (System Preference)
+   ============================================================ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --slate-50: #0f172a;
+    --slate-100: #1e293b;
+    --slate-200: #334155;
+    --slate-300: #475569;
+    --slate-400: #64748b;
+    --slate-500: #94a3b8;
+    --slate-600: #cbd5e1;
+    --slate-700: #e2e8f0;
+    --slate-800: #f1f5f9;
+    --slate-900: #f8fafc;
+    --brand-50: #172554;
+    --brand-100: #1e3a8a;
+    --brand-200: #1e40af;
+    --brand-900: #eff6ff;
+  }
+  body {
+    background-color: #020617;
+    color: var(--slate-800);
+    background-image:
+      radial-gradient(1200px 600px at 8% -8%, rgba(37,99,235,.15), transparent 60%),
+      radial-gradient(900px 500px at 108% 8%, rgba(168,85,247,.1), transparent 60%);
+  }
+  .app,
+  .card,
+  .stat,
+  .portal,
+  .modal,
+  .chat-panel,
+  .collapsible-card {
+    background: rgba(15, 23, 42, 0.7);
+    border-color: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+  input, select, textarea, .chat-input-wrap {
+    background: rgba(15, 23, 42, 0.6) !important;
+    color: #fff !important;
+    border-color: var(--slate-300) !important;
+  }
+}
+
+/* Dark mode supplements — fix white panels */
+@media (prefers-color-scheme: dark) {
+  .app-header {
+    background: rgba(15, 23, 42, 0.85);
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+  }
+  @media (min-width:641px) {
+    .app-header { background: rgba(15, 23, 42, 0.75); }
+  }
+
+  .student-menu-drawer { background: #0f172a; }
+  .student-menu-list { background: #0f172a; }
+  .student-menu-footer {
+    background: rgba(15, 23, 42, 0.6);
+    border-top-color: rgba(255, 255, 255, 0.06);
+    color: var(--slate-500);
+  }
+  .student-menu-item { color: var(--slate-700); }
+  .student-menu-item:hover { background: rgba(255, 255, 255, 0.04); }
+  .student-menu-divider { background: rgba(255, 255, 255, 0.06); }
+
+  .modal { background: #0f172a; }
+  .modal-header,
+  .modal-footer { background: #0f172a; border-color: rgba(255, 255, 255, 0.06); }
+
+  .tabs { background: rgba(255, 255, 255, 0.04); }
+  .tabs .tab.active {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--slate-900);
+  }
+  .tab:hover:not(.active) { background: rgba(255, 255, 255, 0.03); }
+
+  .btn-outline {
+    background: transparent;
+    border-color: rgba(255, 255, 255, 0.15);
+    color: var(--slate-700);
+  }
+  .btn-outline:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--brand-400);
+  }
+  .icon-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: var(--slate-600);
+  }
+  .icon-btn:hover {
+    background: rgba(37,99,235,.20);
+    border-color: var(--brand-400);
+    color: var(--brand-300);
+  }
+  .modal-close {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: var(--slate-600);
+  }
+  .chat-close-btn,
+  .chat-sidebar-toggle {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: var(--slate-600);
+  }
+
+  .toast {
+    background: #0f172a;
+    border-color: rgba(255, 255, 255, 0.08);
+    color: var(--slate-800);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  }
+
+  .chat-head,
+  .chat-input {
+    background: #0f172a;
+    border-color: rgba(255, 255, 255, 0.06);
+  }
+  .chat-msgs { background: #020617; }
+  .chat-main { background: #0f172a; }
+  .chat-sidebar {
+    background: #020617;
+    border-right-color: rgba(255, 255, 255, 0.06);
+  }
+  .chat-sidebar-item:hover { background: rgba(255, 255, 255, 0.04); }
+  .chat-sidebar-item.active { background: rgba(37,99,235,.18); }
+  .chat-input-wrap { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.08); }
+  .chat-input-wrap:focus-within { background: rgba(255, 255, 255, 0.06); }
+  .msg.bot .bubble {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--slate-800);
+    border-color: rgba(255, 255, 255, 0.06);
+  }
+  .msg.bot .bubble code { background: rgba(37,99,235,.18); color: var(--brand-300); }
+  .msg-action-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: var(--slate-600);
+  }
+  .msg-action-btn:hover {
+    background: rgba(37,99,235,.18);
+    border-color: var(--brand-400);
+    color: var(--brand-300);
+  }
+  .ai-thinking-bubble {
+    background: linear-gradient(135deg, rgba(37,99,235,.15), rgba(15,23,42,.8)) !important;
+    border-color: rgba(96,165,250,.3) !important;
+  }
+  .ai-thinking-text { color: var(--brand-300); }
+  .ai-timer { background: rgba(37,99,235,.25); color: var(--brand-300); }
+  .ai-progress-bar { background: rgba(37,99,235,.25); }
+  .ai-progress-bar::after {
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #3b82f6);
+  }
+  .dl-menu {
+    background: #0f172a;
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  .dl-menu button { color: var(--slate-700); }
+  .dl-menu button:hover { background: rgba(37,99,235,.18); color: var(--brand-300); }
+  .thought-badge {
+    background: linear-gradient(135deg, rgba(99,102,241,.15), rgba(79,70,229,.10));
+    border-color: rgba(129,140,248,.3);
+    color: var(--brand-300);
+  }
+
+  .passcode-display { background: rgba(15, 23, 42, 0.7); border-color: rgba(255, 255, 255, 0.08); }
+  .passcode-value { color: var(--brand-400); }
+  .passcode-card {
+    background: linear-gradient(135deg, rgba(15,23,42,.8), rgba(2,6,23,.6));
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .table-wrap { background: #0f172a; border-color: rgba(255, 255, 255, 0.06); }
+  thead th { background: rgba(255, 255, 255, 0.03); border-bottom-color: rgba(255, 255, 255, 0.06); }
+  tbody tr:hover { background: rgba(37,99,235,.12); }
+  tbody td { border-bottom-color: rgba(255, 255, 255, 0.04); }
+
+  .chart-wrap { background: rgba(15, 23, 42, 0.7); border-color: rgba(255, 255, 255, 0.08); }
+
+  .advisor {
+    background: linear-gradient(135deg, rgba(37,99,235,.18), rgba(15,23,42,.6));
+    border-color: rgba(96,165,250,.3);
+    color: var(--slate-800);
+  }
+
+  .auth-links-grid .auth-link {
+    background: rgba(37,99,235,.10);
+    border-color: rgba(96,165,250,.25);
+    color: var(--brand-300);
+  }
+
+  .portal {
+    background: rgba(15, 23, 42, 0.7);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  .portal:hover {
+    background: rgba(37,99,235,.18);
+    border-color: var(--brand-400);
+  }
+  .portal span { color: var(--slate-700); }
+
+  .wd-summary-card {
+    background: rgba(15, 23, 42, 0.7);
+    border-color: rgba(255, 255, 255, 0.06);
+  }
+  .wd-cell.future { background: rgba(255, 255, 255, 0.02); color: var(--slate-500); }
+  .wd-cell.before { background: rgba(255, 255, 255, 0.03); color: var(--slate-500); }
+
+  .bulk-select-list { background: #0f172a; border-color: rgba(255, 255, 255, 0.08); }
+
+  .chip { background: rgba(255, 255, 255, 0.05); color: var(--slate-700); border-color: rgba(255, 255, 255, 0.06); }
+
+  .notice-banner {
+    background: linear-gradient(90deg, rgba(245,158,11,.15), rgba(217,119,6,.10), rgba(245,158,11,.15));
+    color: #fcd34d;
+    border-bottom-color: rgba(245,158,11,.3);
+  }
+
+  .pill { background: rgba(255, 255, 255, 0.06); color: var(--slate-600); }
+  .pill.role-student { background: rgba(16,185,129,.15); color: #6ee7b7; }
+  .pill.role-faculty { background: rgba(37,99,235,.20); color: #93c5fd; }
+  .pill.role-admin { background: rgba(245,158,11,.20); color: #fcd34d; }
+
+  .impersonation {
+    background: linear-gradient(135deg, rgba(245,158,11,.20), rgba(217,119,6,.25));
+    border-bottom-color: rgba(245,158,11,.4);
+    color: #fcd34d;
+  }
+
+  .bulk-holiday-textarea {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--slate-800);
+    border-color: rgba(255, 255, 255, 0.10);
+  }
+
+  .scroll-top-fab {
+    background: #0f172a;
+    border-color: rgba(255, 255, 255, 0.10);
+  }
+
+  .feedback-card { background: #0f172a; }
+
+  .subnav-item:hover { background: rgba(255, 255, 255, 0.04); }
+  .subnav { border-bottom-color: rgba(255, 255, 255, 0.06); }
+
+  .passcode-live-box {
+    background: linear-gradient(135deg, rgba(16,185,129,.12), rgba(15,23,42,.7));
+    border-color: rgba(110,231,183,.35);
+  }
+  .passcode-live-box .plb-head,
+  .passcode-live-box .plb-value { color: #6ee7b7; }
+  .passcode-live-box.inactive {
+    background: linear-gradient(135deg, rgba(15,23,42,.6), rgba(2,6,23,.5));
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .subject-summary-line {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .empty { color: var(--slate-500); }
+}
+
+
+/* ============================================================
+   2. ADVANCED GLASSMORPHISM & DEPTH
+   ============================================================ */
+.app-header.scrolled {
+  background: rgba(255, 255, 255, 0.65) !important;
+  -webkit-backdrop-filter: saturate(200%) blur(24px);
+  backdrop-filter: saturate(200%) blur(24px);
+  box-shadow:
+    0 4px 30px rgba(0, 0, 0, 0.05),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+}
+@media (prefers-color-scheme: dark) {
+  .app-header.scrolled {
+    background: rgba(15, 23, 42, 0.65) !important;
+    box-shadow:
+      0 4px 30px rgba(0, 0, 0, 0.3),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+}
+.modal {
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+}
+
+
+/* ============================================================
+   3. ANIMATED GLOW BORDERS FOR CARDS
+   ============================================================ */
+.card,
+.stat,
+.collapsible-card {
+  position: relative;
+  z-index: 1;
+}
+@media (hover: hover) {
+  .card::before,
+  .stat::before,
+  .collapsible-card::before {
+    content: "";
+    position: absolute;
+    inset: -1.5px;
+    border-radius: inherit;
+    background: linear-gradient(
+      135deg,
+      var(--brand-400, #60a5fa),
+      var(--purple-500, #a855f7),
+      var(--emerald-400, #34d399)
+    );
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    padding: 1.5px;
+    pointer-events: none;
+  }
+  .card:hover::before,
+  .stat:hover::before,
+  .collapsible-card:hover::before {
+    opacity: 1;
+    animation: borderSpin 4s linear infinite;
+  }
+}
+
+
+/* ============================================================
+   4. TYPOGRAPHY UPGRADES: GRADIENT TEXT & BUTTON FEEL
+   ============================================================ */
+.welcome h2,
+.brand-text h1 {
+  background: linear-gradient(135deg, var(--slate-900) 30%, var(--brand-600));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+@media (prefers-color-scheme: dark) {
+  .welcome h2,
+  .brand-text h1 {
+    background: linear-gradient(135deg, #ffffff 30%, var(--brand-300, #93c5fd));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
+.btn-primary {
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.btn-primary:active {
+  transform: scale(0.95) translateY(2px);
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2) !important;
+}
+
+
+/* ============================================================
+   5. NATIVE MOBILE APP PHYSICS
+   ============================================================ */
+body,
+.app-body,
+.chat-msgs,
+.student-menu-list {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: none;
+}
+* {
+  -webkit-tap-highlight-color: rgba(255, 255, 255, 0) !important;
+}
+
+
+/* ============================================================
+   ★ FINAL FORCE MOBILE SCROLL OVERRIDE
+   ------------------------------------------------------------
+   Belt-and-braces: even if anything above re-locks scroll,
+   this block guarantees the page can always scroll.
+   ============================================================ */
+html, body {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  height: auto !important;
+  min-height: 100vh !important;
+}
+
+body.body-locked {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  position: relative !important;
+}
+
+@media (max-width: 640px) {
+  .app {
+    min-height: 100vh !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding-bottom: 100px !important;
+  }
+  .app-body {
+    padding-bottom: 120px !important;
+  }
+}
+
+/* ============================================================
+   END OF FILE — style.css v10.1
+   ============================================================ */
