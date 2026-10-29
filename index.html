@@ -618,9 +618,16 @@
               <option value="6">July 2026</option><option value="7">August 2026</option><option value="8" selected>September 2026</option>
               <option value="9">October 2026</option><option value="10">November 2026</option><option value="11">December 2026</option>
             </select>
-            <div class="row">
-              <button class="btn btn-primary btn-block" onclick="generateStudentReport('pdf')">Download PDF</button>
-            </div>
+            <div class="report-btn-group" style="display:flex; gap:8px;">
+  <button class="btn btn-outline" style="flex:1;" onclick="generateStudentReport('pdf', 'view')">
+    <svg viewBox="0 0 24 24" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;margin-top:-2px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+    View
+  </button>
+  <button class="btn btn-primary" style="flex:1;" onclick="generateStudentReport('pdf', 'download')">
+    <svg viewBox="0 0 24 24" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;margin-top:-2px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+    Download
+  </button>
+</div>
           </div>
           <div class="card">
             <div class="card-title">Class Attendance Report</div>
