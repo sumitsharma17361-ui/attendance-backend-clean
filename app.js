@@ -369,7 +369,7 @@ function renderImageViewer(blob, fileName) {
           <button type="button" class="modal-close" onclick="this.closest('.modal-backdrop').remove(); URL.revokeObjectURL('${url}')">✕</button>
         </div>
       </div>
-      <div style="flex: 1; overflow: auto; background: #525659; display: flex; justify-content: center; padding: 10px; position: relative; -webkit-overflow-scrolling: touch;" id="img-outer-wrap">
+      <div style="flex: 1; overflow: auto; background: #525659; padding: 10px; position: relative; -webkit-overflow-scrolling: touch;" id="img-outer-wrap">
         <div id="img-zoom-wrap" style="transform-origin: top center; transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: flex-start; justify-content: center; padding: 10px 0;">
           <img src="${url}" style="max-width: 100%; height: auto; box-shadow: 0 2px 6px rgba(0,0,0,0.3);" />
         </div>
@@ -466,7 +466,7 @@ async function renderPdfWithPdfJs(blob) {
           <button type="button" class="modal-close" onclick="this.closest('.modal-backdrop').remove()">✕</button>
         </div>
       </div>
-      <div style="flex: 1; overflow: auto; background: #525659; display: flex; justify-content: center; padding: 10px; position: relative; -webkit-overflow-scrolling: touch;" id="pdf-outer-wrap">
+      <div style="flex: 1; overflow: auto; background: #525659; padding: 10px; position: relative; -webkit-overflow-scrolling: touch;" id="pdf-outer-wrap">
         <div id="pdf-zoom-wrap" style="transform-origin: top center; transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 10px 0;">
           <div class="spinner" style="border-top-color: white; margin-top: 20px;"></div>
         </div>
