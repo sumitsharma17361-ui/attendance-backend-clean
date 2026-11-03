@@ -1,9 +1,10 @@
 // ============================================================
 // firebase-messaging-sw.js — Service Worker for Push Notifications
-// BM Group ERP · v5.0 (Deep Linking + Custom App Icon + Open With)
+// BM Group ERP · v6.0 (Deep Linking + Custom App Icon + Open With)
 // Handles: attendance, notes, docs, fees, library, exams,
 //          results, announcements, device resets, undo alerts,
-//          emergency broadcasts, passcode publishes
+//          emergency broadcasts, passcode publishes,
+//          chat marks, subscriptions, achievements, admin bulk
 // ============================================================
 
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
@@ -21,13 +22,13 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // ============================================================
-//  ICON / BADGE (Custom App Icon + White Status Bar Icon)
+//  ICON / BADGE
 // ============================================================
-// Large Icon (App Icon) - Colored (Aapka Diya Hua URL)
+// Large Icon (App Icon) — Colored
 const ICON_URL = 'https://media.collegedekho.com/media/img/institute/logo/College_logo.png';
 
-// Badge (Status bar) - MUST be pure white with transparent background for Android
-// Android requires a monochrome white icon for the status bar, otherwise it shows a square/airplane
+// Badge (Status bar) — MUST be pure white with transparent background
+// Android requires a monochrome white icon for the status bar
 const BADGE_URL = 'data:image/svg+xml;utf8,' + encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
      <text x="50" y="68" font-size="46" text-anchor="middle" fill="white"
@@ -35,457 +36,389 @@ const BADGE_URL = 'data:image/svg+xml;utf8,' + encodeURIComponent(
    </svg>`
 );
 
+// Brand color for Android notification accent
+const BRAND_COLOR = '#2563eb';
+
 // ============================================================
 //  NOTIFICATION TITLE / TAG / ACTIONS PER TYPE
 // ============================================================
 const NOTIFICATION_CONFIG = {
+  // ── Attendance ──
   attendance_marked: {
-    emoji: '✅',
-    tag: 'bm-attendance',
-    requireInteraction: false,
+    emoji: '✅', tag: 'bm-attendance', requireInteraction: false,
     vibrate: [200, 100, 200],
     actions: [{ action: 'view', title: '📊 View' }]
   },
   attendance_reminder: {
-    emoji: '⏰',
-    tag: 'bm-reminder',
-    requireInteraction: true,
+    emoji: '⏰', tag: 'bm-reminder', requireInteraction: true,
     vibrate: [300, 200, 300, 200, 300],
-    actions: [
-      { action: 'mark', title: '✅ Mark Now' },
-      { action: 'dismiss', title: 'Later' }
-    ]
-  },
-  request_approved: {
-    emoji: '✅',
-    tag: 'bm-request',
-    requireInteraction: false,
-    vibrate: [200, 100, 200],
-    actions: [{ action: 'view', title: '📋 View' }]
-  },
-  request_rejected: {
-    emoji: '❌',
-    tag: 'bm-request',
-    requireInteraction: false,
-    vibrate: [300, 200, 300],
-    actions: [{ action: 'view', title: '📋 View' }]
-  },
-  request_undone: {
-    emoji: '↩️',
-    tag: 'bm-request-undo',
-    requireInteraction: true,
-    vibrate: [200, 100, 200, 100, 200],
-    actions: [{ action: 'view', title: '📋 View' }]
-  },
-  passcode: {
-    emoji: '🔐',
-    tag: 'bm-passcode',
-    requireInteraction: true,
-    vibrate: [400, 200, 400, 200, 400],
-    actions: [{ action: 'mark', title: '✅ Mark Now' }]
-  },
-  notice: {
-    emoji: '📢',
-    tag: 'bm-notice',
-    requireInteraction: true,
-    vibrate: [200, 100, 200],
-    actions: [{ action: 'view', title: '📖 Read' }]
-  },
-  holiday_added: {
-    emoji: '🎉',
-    tag: 'bm-holiday',
-    requireInteraction: false,
-    vibrate: [100, 50, 100],
-    actions: [{ action: 'view', title: '📅 Calendar' }]
-  },
-  holiday_cancelled: {
-    emoji: '⚠️',
-    tag: 'bm-holiday',
-    requireInteraction: true,
-    vibrate: [300, 200, 300],
-    actions: [{ action: 'view', title: '📅 Calendar' }]
-  },
-  new_device_login: {
-    emoji: '🔐',
-    tag: 'bm-security',
-    requireInteraction: true,
-    vibrate: [500, 200, 500, 200, 500],
-    actions: [{ action: 'view', title: '⚠️ Check' }]
-  },
-  device_reset: {
-    emoji: '📱',
-    tag: 'bm-device',
-    requireInteraction: false,
-    vibrate: [200, 100, 200],
-    actions: [{ action: 'view', title: '🔐 Login' }]
-  },
-  account_request: {
-    emoji: '🔔',
-    tag: 'bm-account',
-    requireInteraction: true,
-    vibrate: [200, 100, 200],
-    actions: [{ action: 'view', title: '🔍 Review' }]
-  },
-  account_approved: {
-    emoji: '✅',
-    tag: 'bm-account',
-    requireInteraction: false,
-    vibrate: [200, 100, 200],
-    actions: [{ action: 'view', title: '🔍 View' }]
-  },
-  account_rejected: {
-    emoji: '❌',
-    tag: 'bm-account',
-    requireInteraction: false,
-    vibrate: [300, 200, 300],
-    actions: [{ action: 'view', title: '🔍 View' }]
-  },
-  note_added: {
-    emoji: '📚',
-    tag: 'bm-notes',
-    requireInteraction: false,
-    vibrate: [150, 100, 150],
-    actions: [
-      { action: 'view', title: '📖 Open' },
-      { action: 'download', title: '📥 Download' }
-    ]
-  },
-  doc_request: {
-    emoji: '📤',
-    tag: 'bm-doc-request',
-    requireInteraction: true,
-    vibrate: [200, 100, 200],
-    actions: [{ action: 'view', title: '📝 Review' }]
-  },
-  doc_approved: {
-    emoji: '✅',
-    tag: 'bm-doc',
-    requireInteraction: false,
-    vibrate: [200, 100, 200],
-    actions: [{ action: 'view', title: '📚 View Notes' }]
-  },
-  doc_rejected: {
-    emoji: '❌',
-    tag: 'bm-doc',
-    requireInteraction: false,
-    vibrate: [300, 200, 300],
-    actions: [{ action: 'view', title: '📚 View' }]
-  },
-  fee_added: {
-    emoji: '💰',
-    tag: 'bm-fee',
-    requireInteraction: true,
-    vibrate: [300, 150, 300],
-    actions: [
-      { action: 'view', title: '💰 Pay Now' },
-      { action: 'dismiss', title: 'Later' }
-    ]
-  },
-  fee_paid: {
-    emoji: '✅',
-    tag: 'bm-fee',
-    requireInteraction: false,
-    vibrate: [200, 100, 200],
-    actions: [{ action: 'view', title: '✅ View Receipt' }]
-  },
-  fee_reminder: {
-    emoji: '💰',
-    tag: 'bm-fee-reminder',
-    requireInteraction: true,
-    vibrate: [400, 200, 400],
-    actions: [
-      { action: 'view', title: '💰 Pay Now' },
-      { action: 'dismiss', title: 'Later' }
-    ]
-  },
-  book_issued: {
-    emoji: '📚',
-    tag: 'bm-library',
-    requireInteraction: false,
-    vibrate: [150, 100, 150],
-    actions: [{ action: 'view', title: '📖 View' }]
-  },
-  library_due: {
-    emoji: '📚',
-    tag: 'bm-library-due',
-    requireInteraction: true,
-    vibrate: [300, 150, 300],
-    actions: [{ action: 'view', title: '📚 Return' }]
-  },
-  result_published: {
-    emoji: '📊',
-    tag: 'bm-result',
-    requireInteraction: false,
-    vibrate: [200, 100, 200],
-    actions: [{ action: 'view', title: '📊 View Result' }]
-  },
-  new_exam: {
-    emoji: '📝',
-    tag: 'bm-exam',
-    requireInteraction: true,
-    vibrate: [200, 100, 200],
-    actions: [{ action: 'view', title: '📅 View' }]
-  },
-  exam_reminder: {
-    emoji: '📝',
-    tag: 'bm-exam-reminder',
-    requireInteraction: true,
-    vibrate: [300, 200, 300, 200, 300],
-    actions: [{ action: 'view', title: '📅 View' }]
-  },
-  new_assignment: {
-    emoji: '📝',
-    tag: 'bm-assignment',
-    requireInteraction: false,
-    vibrate: [200, 100, 200],
-    actions: [{ action: 'view', title: '📝 View' }]
-  },
-  assignment_deadline: {
-    emoji: '📝',
-    tag: 'bm-assignment-due',
-    requireInteraction: true,
-    vibrate: [300, 150, 300],
-    actions: [{ action: 'view', title: '📝 Submit' }]
-  },
-  faculty_announcement: {
-    emoji: '👨‍🏫',
-    tag: 'bm-announcement',
-    requireInteraction: false,
-    vibrate: [200, 100, 200],
-    actions: [{ action: 'view', title: '📖 Read' }]
-  },
-  emergency: {
-    emoji: '🚨',
-    tag: 'bm-emergency',
-    requireInteraction: true,
-    vibrate: [1000, 500, 1000, 500, 1000, 500, 1000],
-    actions: [{ action: 'view', title: '🚨 Open' }],
-    urgent: true
-  },
-  registration: {
-    emoji: '📝',
-    tag: 'bm-registration',
-    requireInteraction: true,
-    vibrate: [200, 100, 200],
-    actions: [{ action: 'view', title: '👤 Review' }]
-  },
-  attendance_request: {
-    emoji: '📩',
-    tag: 'bm-att-req',
-    requireInteraction: true,
-    vibrate: [200, 100, 200],
-    actions: [{ action: 'view', title: '✅ Review' }]
-  },
-  leave: {
-    emoji: '📋',
-    tag: 'bm-leave',
-    requireInteraction: true,
-    vibrate: [200, 100, 200],
-    actions: [{ action: 'view', title: '📋 Review' }]
-  },
-  leave_review: {
-    emoji: '📋',
-    tag: 'bm-leave',
-    requireInteraction: false,
-    vibrate: [200, 100, 200],
-    actions: [{ action: 'view', title: '📋 View' }]
-  },
-  milestone: {
-    emoji: '🎉',
-    tag: 'bm-milestone',
-    requireInteraction: false,
-    vibrate: [200, 100, 200, 100, 200],
-    actions: [{ action: 'view', title: '🎉 Celebrate' }]
-  },
-  shortage_alert: {
-    emoji: '⚠️',
-    tag: 'bm-shortage',
-    requireInteraction: true,
-    vibrate: [400, 200, 400],
-    actions: [{ action: 'view', title: '📊 View' }]
-  },
-  shortage_warning: {
-    emoji: '⚡',
-    tag: 'bm-shortage',
-    requireInteraction: false,
-    vibrate: [200, 100, 200],
-    actions: [{ action: 'view', title: '📊 View' }]
-  },
-  daily_summary: {
-    emoji: '📊',
-    tag: 'bm-daily',
-    requireInteraction: false,
-    vibrate: [100, 50, 100],
-    actions: [{ action: 'view', title: '📊 View' }]
-  },
-  weekly_report: {
-    emoji: '📈',
-    tag: 'bm-weekly',
-    requireInteraction: false,
-    vibrate: [100, 50, 100],
-    actions: [{ action: 'view', title: '📈 View' }]
-  },
-  monthly_progress: {
-    emoji: '📊',
-    tag: 'bm-monthly',
-    requireInteraction: false,
-    vibrate: [100, 50, 100],
-    actions: [{ action: 'view', title: '📊 View' }]
-  },
-  birthday: {
-    emoji: '🎂',
-    tag: 'bm-birthday',
-    requireInteraction: false,
-    vibrate: [150, 100, 150, 100, 150],
-    actions: [{ action: 'view', title: '🎂 Open' }]
-  },
-  subject_assigned: {
-    emoji: '📚',
-    tag: 'bm-subject',
-    requireInteraction: false,
-    vibrate: [150, 100, 150],
-    actions: [{ action: 'view', title: '📚 View' }]
-  },
-  faculty_mark: {
-    emoji: '✅',
-    tag: 'bm-faculty-mark',
-    requireInteraction: false,
-    vibrate: [200, 100, 200],
-    actions: [{ action: 'view', title: '✅ View' }]
-  },
-  faculty_bulk_mark: {
-    emoji: '✅',
-    tag: 'bm-faculty-bulk',
-    requireInteraction: false,
-    vibrate: [200, 100, 200],
-    actions: [{ action: 'view', title: '✅ View' }]
-  },
-  admin_manual_mark: {
-    emoji: '✅',
-    tag: 'bm-admin-mark',
-    requireInteraction: false,
-    vibrate: [200, 100, 200],
-    actions: [{ action: 'view', title: '✅ View' }]
-  },
-  admin_bulk_mark: {
-    emoji: '✅',
-    tag: 'bm-admin-bulk',
-    requireInteraction: false,
-    vibrate: [200, 100, 200],
-    actions: [{ action: 'view', title: '✅ View' }]
-  },
-  attendance_deleted: {
-    emoji: '⚠️',
-    tag: 'bm-att-deleted',
-    requireInteraction: true,
-    vibrate: [400, 200, 400],
-    actions: [{ action: 'view', title: '⚠️ View' }]
-  },
-  attendance_updated: {
-    emoji: '⚠️',
-    tag: 'bm-att-updated',
-    requireInteraction: false,
-    vibrate: [200, 100, 200],
-    actions: [{ action: 'view', title: '📊 View' }]
-  },
-  system_alert: {
-    emoji: '🚨',
-    tag: 'bm-system',
-    requireInteraction: true,
-    vibrate: [1000, 500, 1000],
-    actions: [{ action: 'view', title: '🚨 Open' }],
-    urgent: true
-  },
-  pending_admin_reminder: {
-    emoji: '⏰',
-    tag: 'bm-pending-admin',
-    requireInteraction: false,
-    vibrate: [200, 100, 200],
-    actions: [{ action: 'view', title: '📋 Review' }]
-  },
-  request_pending_student: {
-    emoji: '📋',
-    tag: 'bm-pending-student',
-    requireInteraction: false,
-    vibrate: [100, 50, 100],
-    actions: [{ action: 'view', title: '📋 View' }]
-  },
-  location_failed: {
-    emoji: '📍',
-    tag: 'bm-location',
-    requireInteraction: true,
-    vibrate: [300, 200, 300],
-    actions: [{ action: 'view', title: '📍 Retry' }]
-  },
-  password_reset: {
-    emoji: '🔑',
-    tag: 'bm-password',
-    requireInteraction: true,
-    vibrate: [200, 100, 200],
-    actions: [{ action: 'view', title: '🔐 Login' }]
-  },
-  chat_mark: {
-    emoji: '✅',
-    tag: 'bm-chat-mark',
-    requireInteraction: false,
-    vibrate: [200, 100, 200],
-    actions: [{ action: 'view', title: '✅ View' }]
-  },
-  db_op: {
-    emoji: '✅',
-    tag: 'bm-db-op',
-    requireInteraction: false,
-    vibrate: [100, 50, 100],
-    actions: [{ action: 'view', title: '✅ View' }]
+    actions: [{ action: 'mark', title: '✅ Mark Now' }, { action: 'dismiss', title: 'Later' }]
   },
   mark: {
-    emoji: '✅',
-    tag: 'bm-mark',
-    requireInteraction: false,
+    emoji: '✅', tag: 'bm-mark', requireInteraction: false,
     vibrate: [200, 100, 200],
     actions: [{ action: 'view', title: '✅ View' }]
   },
   mark_lecture: {
-    emoji: '✅',
-    tag: 'bm-mark',
-    requireInteraction: false,
+    emoji: '✅', tag: 'bm-mark', requireInteraction: false,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '✅ View' }]
+  },
+  chat_mark: {
+    emoji: '✅', tag: 'bm-chat-mark', requireInteraction: false,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '✅ View' }]
+  },
+  admin_manual_mark: {
+    emoji: '✅', tag: 'bm-admin-mark', requireInteraction: false,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '✅ View' }]
+  },
+  admin_bulk_mark: {
+    emoji: '✅', tag: 'bm-admin-bulk', requireInteraction: false,
     vibrate: [200, 100, 200],
     actions: [{ action: 'view', title: '✅ View' }]
   },
   bulk_mark: {
-    emoji: '✅',
-    tag: 'bm-bulk',
-    requireInteraction: false,
+    emoji: '✅', tag: 'bm-bulk', requireInteraction: false,
     vibrate: [200, 100, 200],
     actions: [{ action: 'view', title: '✅ View' }]
   },
   fac_bulk: {
-    emoji: '✅',
-    tag: 'bm-fac-bulk',
-    requireInteraction: false,
+    emoji: '✅', tag: 'bm-fac-bulk', requireInteraction: false,
     vibrate: [200, 100, 200],
     actions: [{ action: 'view', title: '✅ View' }]
   },
-  download: {
-    emoji: '📥',
-    tag: 'bm-download',
-    requireInteraction: false,
+  faculty_mark: {
+    emoji: '✅', tag: 'bm-faculty-mark', requireInteraction: false,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '✅ View' }]
+  },
+  faculty_bulk_mark: {
+    emoji: '✅', tag: 'bm-faculty-bulk', requireInteraction: false,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '✅ View' }]
+  },
+  attendance_deleted: {
+    emoji: '⚠️', tag: 'bm-att-deleted', requireInteraction: true,
+    vibrate: [400, 200, 400],
+    actions: [{ action: 'view', title: '⚠️ View' }]
+  },
+  attendance_updated: {
+    emoji: '⚠️', tag: 'bm-att-updated', requireInteraction: false,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '📊 View' }]
+  },
+
+  // ── Requests ──
+  request_approved: {
+    emoji: '✅', tag: 'bm-request', requireInteraction: false,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '📋 View' }]
+  },
+  request_rejected: {
+    emoji: '❌', tag: 'bm-request', requireInteraction: false,
+    vibrate: [300, 200, 300],
+    actions: [{ action: 'view', title: '📋 View' }]
+  },
+  request_undone: {
+    emoji: '↩️', tag: 'bm-request-undo', requireInteraction: true,
+    vibrate: [200, 100, 200, 100, 200],
+    actions: [{ action: 'view', title: '📋 View' }]
+  },
+  attendance_request: {
+    emoji: '📩', tag: 'bm-att-req', requireInteraction: true,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '✅ Review' }]
+  },
+  request_pending_student: {
+    emoji: '📋', tag: 'bm-pending-student', requireInteraction: false,
     vibrate: [100, 50, 100],
-    actions: []
+    actions: [{ action: 'view', title: '📋 View' }]
+  },
+
+  // ── Passcode ──
+  passcode: {
+    emoji: '🔐', tag: 'bm-passcode', requireInteraction: true,
+    vibrate: [400, 200, 400, 200, 400],
+    actions: [{ action: 'mark', title: '✅ Mark Now' }]
+  },
+
+  // ── Notices & Announcements ──
+  notice: {
+    emoji: '📢', tag: 'bm-notice', requireInteraction: true,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '📖 Read' }]
+  },
+  faculty_announcement: {
+    emoji: '👨‍🏫', tag: 'bm-announcement', requireInteraction: false,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '📖 Read' }]
+  },
+  emergency: {
+    emoji: '🚨', tag: 'bm-emergency', requireInteraction: true,
+    vibrate: [1000, 500, 1000, 500, 1000, 500, 1000],
+    actions: [{ action: 'view', title: '🚨 Open' }],
+    urgent: true
+  },
+  system_alert: {
+    emoji: '🚨', tag: 'bm-system', requireInteraction: true,
+    vibrate: [1000, 500, 1000],
+    actions: [{ action: 'view', title: '🚨 Open' }],
+    urgent: true
+  },
+
+  // ── Holidays ──
+  holiday_added: {
+    emoji: '🎉', tag: 'bm-holiday', requireInteraction: false,
+    vibrate: [100, 50, 100],
+    actions: [{ action: 'view', title: '📅 Calendar' }]
+  },
+  holiday_cancelled: {
+    emoji: '⚠️', tag: 'bm-holiday', requireInteraction: true,
+    vibrate: [300, 200, 300],
+    actions: [{ action: 'view', title: '📅 Calendar' }]
+  },
+
+  // ── Security & Account ──
+  new_device_login: {
+    emoji: '🔐', tag: 'bm-security', requireInteraction: true,
+    vibrate: [500, 200, 500, 200, 500],
+    actions: [{ action: 'view', title: '⚠️ Check' }]
+  },
+  device_reset: {
+    emoji: '📱', tag: 'bm-device', requireInteraction: false,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '🔐 Login' }]
+  },
+  password_reset: {
+    emoji: '🔑', tag: 'bm-password', requireInteraction: true,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '🔐 Login' }]
+  },
+  account_request: {
+    emoji: '🔔', tag: 'bm-account', requireInteraction: true,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '🔍 Review' }]
+  },
+  account_approved: {
+    emoji: '✅', tag: 'bm-account', requireInteraction: false,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '🔍 View' }]
+  },
+  account_rejected: {
+    emoji: '❌', tag: 'bm-account', requireInteraction: false,
+    vibrate: [300, 200, 300],
+    actions: [{ action: 'view', title: '🔍 View' }]
+  },
+  registration: {
+    emoji: '📝', tag: 'bm-registration', requireInteraction: true,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '👤 Review' }]
+  },
+
+  // ── Notes & Documents ──
+  note_added: {
+    emoji: '📚', tag: 'bm-notes', requireInteraction: false,
+    vibrate: [150, 100, 150],
+    actions: [{ action: 'view', title: '📖 Open' }, { action: 'download', title: '📥 Download' }]
+  },
+  doc_request: {
+    emoji: '📤', tag: 'bm-doc-request', requireInteraction: true,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '📝 Review' }]
+  },
+  doc_approved: {
+    emoji: '✅', tag: 'bm-doc', requireInteraction: false,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '📚 View Notes' }]
+  },
+  doc_rejected: {
+    emoji: '❌', tag: 'bm-doc', requireInteraction: false,
+    vibrate: [300, 200, 300],
+    actions: [{ action: 'view', title: '📚 View' }]
+  },
+
+  // ── Fees ──
+  fee_added: {
+    emoji: '💰', tag: 'bm-fee', requireInteraction: true,
+    vibrate: [300, 150, 300],
+    actions: [{ action: 'view', title: '💰 Pay Now' }, { action: 'dismiss', title: 'Later' }]
+  },
+  fee_paid: {
+    emoji: '✅', tag: 'bm-fee', requireInteraction: false,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '✅ View Receipt' }]
+  },
+  fee_reminder: {
+    emoji: '💰', tag: 'bm-fee-reminder', requireInteraction: true,
+    vibrate: [400, 200, 400],
+    actions: [{ action: 'view', title: '💰 Pay Now' }, { action: 'dismiss', title: 'Later' }]
+  },
+
+  // ── Library ──
+  book_issued: {
+    emoji: '📚', tag: 'bm-library', requireInteraction: false,
+    vibrate: [150, 100, 150],
+    actions: [{ action: 'view', title: '📖 View' }]
+  },
+  library_due: {
+    emoji: '📚', tag: 'bm-library-due', requireInteraction: true,
+    vibrate: [300, 150, 300],
+    actions: [{ action: 'view', title: '📚 Return' }]
+  },
+
+  // ── Results & Exams ──
+  result_published: {
+    emoji: '📊', tag: 'bm-result', requireInteraction: false,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '📊 View Result' }]
+  },
+  new_exam: {
+    emoji: '📝', tag: 'bm-exam', requireInteraction: true,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '📅 View' }]
+  },
+  exam_reminder: {
+    emoji: '📝', tag: 'bm-exam-reminder', requireInteraction: true,
+    vibrate: [300, 200, 300, 200, 300],
+    actions: [{ action: 'view', title: '📅 View' }]
+  },
+
+  // ── Assignments ──
+  new_assignment: {
+    emoji: '📝', tag: 'bm-assignment', requireInteraction: false,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '📝 View' }]
+  },
+  assignment_deadline: {
+    emoji: '📝', tag: 'bm-assignment-due', requireInteraction: true,
+    vibrate: [300, 150, 300],
+    actions: [{ action: 'view', title: '📝 Submit' }]
+  },
+
+  // ── Leave ──
+  leave: {
+    emoji: '📋', tag: 'bm-leave', requireInteraction: true,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '📋 Review' }]
+  },
+  leave_review: {
+    emoji: '📋', tag: 'bm-leave', requireInteraction: false,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '📋 View' }]
+  },
+
+  // ── Admin ──
+  pending_admin_reminder: {
+    emoji: '⏰', tag: 'bm-pending-admin', requireInteraction: false,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '📋 Review' }]
+  },
+  subject_assigned: {
+    emoji: '📚', tag: 'bm-subject', requireInteraction: false,
+    vibrate: [150, 100, 150],
+    actions: [{ action: 'view', title: '📚 View' }]
+  },
+  db_op: {
+    emoji: '✅', tag: 'bm-db-op', requireInteraction: false,
+    vibrate: [100, 50, 100],
+    actions: [{ action: 'view', title: '✅ View' }]
+  },
+
+  // ── Gamification ──
+  achievement: {
+    emoji: '🏆', tag: 'bm-achievement', requireInteraction: false,
+    vibrate: [200, 100, 200, 100, 200],
+    actions: [{ action: 'view', title: '🏆 View' }]
+  },
+  milestone: {
+    emoji: '🎉', tag: 'bm-milestone', requireInteraction: false,
+    vibrate: [200, 100, 200, 100, 200],
+    actions: [{ action: 'view', title: '🎉 Celebrate' }]
+  },
+  streak: {
+    emoji: '🔥', tag: 'bm-streak', requireInteraction: false,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '🔥 View' }]
+  },
+
+  // ── Subscription ──
+  subscription_activated: {
+    emoji: '🎉', tag: 'bm-subscription', requireInteraction: false,
+    vibrate: [200, 100, 200, 100, 200],
+    actions: [{ action: 'view', title: '⭐ View Plan' }]
+  },
+  subscription_granted: {
+    emoji: '🎉', tag: 'bm-subscription', requireInteraction: false,
+    vibrate: [200, 100, 200, 100, 200],
+    actions: [{ action: 'view', title: '⭐ View Plan' }]
+  },
+  subscription_cancelled: {
+    emoji: '⚠️', tag: 'bm-subscription', requireInteraction: true,
+    vibrate: [300, 200, 300],
+    actions: [{ action: 'view', title: '⚠️ Check' }]
+  },
+
+  // ── Attendance Analytics ──
+  shortage_alert: {
+    emoji: '⚠️', tag: 'bm-shortage', requireInteraction: true,
+    vibrate: [400, 200, 400],
+    actions: [{ action: 'view', title: '📊 View' }]
+  },
+  shortage_warning: {
+    emoji: '⚡', tag: 'bm-shortage', requireInteraction: false,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '📊 View' }]
+  },
+  daily_summary: {
+    emoji: '📊', tag: 'bm-daily', requireInteraction: false,
+    vibrate: [100, 50, 100],
+    actions: [{ action: 'view', title: '📊 View' }]
+  },
+  weekly_report: {
+    emoji: '📈', tag: 'bm-weekly', requireInteraction: false,
+    vibrate: [100, 50, 100],
+    actions: [{ action: 'view', title: '📈 View' }]
+  },
+  monthly_progress: {
+    emoji: '📊', tag: 'bm-monthly', requireInteraction: false,
+    vibrate: [100, 50, 100],
+    actions: [{ action: 'view', title: '📊 View' }]
+  },
+
+  // ── Misc ──
+  birthday: {
+    emoji: '🎂', tag: 'bm-birthday', requireInteraction: false,
+    vibrate: [150, 100, 150, 100, 150],
+    actions: [{ action: 'view', title: '🎂 Open' }]
+  },
+  location_failed: {
+    emoji: '📍', tag: 'bm-location', requireInteraction: true,
+    vibrate: [300, 200, 300],
+    actions: [{ action: 'view', title: '📍 Retry' }]
+  },
+  class_reminder_student: {
+    emoji: '⏰', tag: 'bm-class-reminder', requireInteraction: false,
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'view', title: '📅 View' }]
+  },
+  class_reminder_faculty: {
+    emoji: '⏰', tag: 'bm-class-reminder', requireInteraction: true,
+    vibrate: [300, 200, 300],
+    actions: [{ action: 'view', title: '📅 View' }]
+  },
+  download: {
+    emoji: '📥', tag: 'bm-download', requireInteraction: false,
+    vibrate: [100, 50, 100], actions: []
   },
   fcm_foreground: {
-    emoji: '🔔',
-    tag: 'bm-foreground',
-    requireInteraction: false,
-    vibrate: [100, 50, 100],
-    actions: []
+    emoji: '🔔', tag: 'bm-foreground', requireInteraction: false,
+    vibrate: [100, 50, 100], actions: []
   },
   test: {
-    emoji: '🧪',
-    tag: 'bm-test',
-    requireInteraction: false,
-    vibrate: [200, 100, 200],
-    actions: []
+    emoji: '🧪', tag: 'bm-test', requireInteraction: false,
+    vibrate: [200, 100, 200], actions: []
   }
 };
 
@@ -494,27 +427,22 @@ const NOTIFICATION_CONFIG = {
 // ============================================================
 function getNotificationConfig(type) {
   return NOTIFICATION_CONFIG[type] || {
-    emoji: '🔔',
-    tag: 'bm-notification',
-    requireInteraction: false,
-    vibrate: [200, 100, 200],
-    actions: []
+    emoji: '🔔', tag: 'bm-notification', requireInteraction: false,
+    vibrate: [200, 100, 200], actions: []
   };
 }
 
 function buildTitle(emoji, rawTitle) {
   const t = (rawTitle || 'BM Attendance').trim();
-  // Don't double-prefix if title already has emoji
   if (/^[\u2700-\u27BF]|[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u26FF]/.test(t)) return t;
   return emoji ? `${emoji} ${t}` : t;
 }
 
-// Extract deep-link path from data type (for click handling)
+// Deep-link path from type — matches app.js tab routing
 function getNotificationTargetUrl(data) {
   const type = data?.type || '';
   const baseUrl = data?.url || data?.link || '/';
-  
-  if (data.url && data.url !== '/') return data.url; // Direct URL provided
+  if (data.url && data.url !== '/') return data.url;
 
   switch (type) {
     case 'passcode':
@@ -522,6 +450,7 @@ function getNotificationTargetUrl(data) {
     case 'attendance_marked':
     case 'mark':
     case 'mark_lecture':
+    case 'chat_mark':
       return '/?tab=mark';
     case 'note_added':
     case 'doc_approved':
@@ -569,6 +498,23 @@ function getNotificationTargetUrl(data) {
     case 'leave_review':
     case 'pending_admin_reminder':
       return '/?tab=admin';
+    case 'achievement':
+    case 'milestone':
+    case 'streak':
+      return '/?tab=achievements';
+    case 'subscription_activated':
+    case 'subscription_granted':
+    case 'subscription_cancelled':
+      return '/?tab=subscription';
+    case 'class_reminder_student':
+    case 'class_reminder_faculty':
+      return '/?tab=timetable';
+    case 'shortage_alert':
+    case 'shortage_warning':
+    case 'daily_summary':
+    case 'weekly_report':
+    case 'monthly_progress':
+      return '/?tab=mark';
     default:
       return baseUrl;
   }
@@ -576,16 +522,13 @@ function getNotificationTargetUrl(data) {
 
 // ============================================================
 //  BACKGROUND MESSAGE HANDLER
-//  Handles BOTH:
-//    - data-only messages  → we manually showNotification()
-//    - notification+data   → FCM auto-displays; we skip
 // ============================================================
 messaging.onBackgroundMessage((payload) => {
   console.log('[SW] Background message received:', payload);
 
   const data = payload.data || {};
   const rawTitle = data.title || payload.notification?.title || 'BM Attendance';
-  const rawBody  = data.body  || payload.notification?.body  || 'You have a new notification';
+  const rawBody = data.body || payload.notification?.body || 'You have a new notification';
   const type = String(data.type || 'generic');
   const cfg = getNotificationConfig(type);
 
@@ -595,12 +538,12 @@ messaging.onBackgroundMessage((payload) => {
     return;
   }
 
-  // Build options
   const options = {
     body: rawBody,
-    icon: ICON_URL, // Custom App Icon from URL
-    badge: BADGE_URL, // White SVG
+    icon: ICON_URL,
+    badge: BADGE_URL,
     image: data.image || undefined,
+    color: BRAND_COLOR,
     vibrate: cfg.vibrate || [200, 100, 200],
     requireInteraction: !!cfg.requireInteraction,
     tag: cfg.tag || (data.tag || 'bm-notification'),
@@ -617,7 +560,6 @@ messaging.onBackgroundMessage((payload) => {
     actions: (cfg.actions && cfg.actions.length > 0) ? cfg.actions : undefined
   };
 
-  // Urgent notifications → use 'high' priority tag
   if (cfg.urgent) {
     options.requireInteraction = true;
     options.silent = false;
@@ -627,7 +569,7 @@ messaging.onBackgroundMessage((payload) => {
 
   self.registration.showNotification(title, options);
 
-  // Also broadcast to any open clients so the page can show an in-app toast
+  // Broadcast to open clients for in-app toast
   try {
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
@@ -666,18 +608,19 @@ self.addEventListener('notificationclick', (event) => {
     absoluteTarget = self.location.origin + '/';
   }
 
-  // If it's a download request, prioritize opening the direct URL in a new window 
-  // to trigger Android's native "Open With" file handler.
-  const finalTarget = (action === 'download' && notifData.downloadUrl) ? notifData.downloadUrl : absoluteTarget;
+  // Download action: prefer direct download URL to trigger native Open With
+  const finalTarget = (action === 'download' && notifData.downloadUrl)
+    ? notifData.downloadUrl
+    : absoluteTarget;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Look for an existing client at same origin
+      // Look for existing client at same origin
       for (const client of clientList) {
         try {
           const clientUrl = new URL(client.url);
           if (clientUrl.origin === self.location.origin) {
-            // Send postMessage so the app can react
+            // Send postMessage so app can react without reload
             client.postMessage({
               __bmNotificationClick: true,
               data: notifData,
@@ -685,15 +628,15 @@ self.addEventListener('notificationclick', (event) => {
               type,
               targetUrl: finalTarget
             });
-            
-            // If downloading, open a new window so Android triggers "Open With"
+
+            // Download → open in new window for native file handler
             if (action === 'download') {
               if (clients.openWindow) return clients.openWindow(finalTarget);
-            } 
-            // Otherwise, focus the app and navigate to the specific tab
+            }
+            // Normal tab → focus + navigate (uses SPA-style handling)
             else if ('focus' in client) {
               return client.focus().then((focusedClient) => {
-                if (focusedClient && 'navigate' in focusedClient) {
+                if (focusedClient && 'navigate' in focusedClient && focusedClient.url !== finalTarget) {
                   return focusedClient.navigate(finalTarget);
                 }
                 return focusedClient;
@@ -704,7 +647,7 @@ self.addEventListener('notificationclick', (event) => {
         } catch (e) { /* ignore bad URL */ }
       }
 
-      // No client found → open a new window
+      // No existing client → open new window
       if (clients.openWindow) {
         return clients.openWindow(finalTarget);
       }
@@ -716,27 +659,23 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 // ============================================================
-//  NOTIFICATION CLOSE HANDLER (cleanup if needed)
+//  NOTIFICATION CLOSE HANDLER (just logging)
 // ============================================================
 self.addEventListener('notificationclose', (event) => {
   const data = event.notification?.data || {};
-  console.log('[SW] Notification closed (dismissed by user):', data.type || 'unknown');
-  // No cleanup needed — just logging for debugging
+  console.log('[SW] Notification closed by user:', data.type || 'unknown');
 });
 
 // ============================================================
-//  PUSH EVENT (raw push — for servers sending via raw Web Push)
+//  RAW PUSH FALLBACK (if server sends via raw Web Push)
 // ============================================================
 self.addEventListener('push', (event) => {
   console.log('[SW] Raw push event received');
-  // FCM SDK's onBackgroundMessage already handles most cases.
-  // This is a fallback for raw Web Push payloads.
   try {
     let payload = {};
     if (event.data) {
       try { payload = event.data.json(); } catch (e) { payload = { notification: { body: event.data.text() } }; }
     }
-    // If payload was already handled by onBackgroundMessage, skip
     if (!payload || !payload.data || payload.__bmHandled) return;
 
     const data = payload.data || {};
@@ -749,6 +688,7 @@ self.addEventListener('push', (event) => {
         body,
         icon: ICON_URL,
         badge: BADGE_URL,
+        color: BRAND_COLOR,
         vibrate: cfg.vibrate || [200, 100, 200],
         requireInteraction: !!cfg.requireInteraction,
         tag: cfg.tag || 'bm-notification',
@@ -767,7 +707,7 @@ self.addEventListener('push', (event) => {
 });
 
 // ============================================================
-//  MESSAGE HANDLER (from page or push service)
+//  MESSAGE HANDLER (from page)
 // ============================================================
 self.addEventListener('message', (event) => {
   const msg = event.data || {};
@@ -775,13 +715,13 @@ self.addEventListener('message', (event) => {
   // Skip internal FCM messages
   if (msg.__bmNotification || msg.__bmNotificationClick) return;
 
-  // Handle SKIP_WAITING from page (activate new SW immediately)
+  // Handle SKIP_WAITING (activate new SW immediately)
   if (msg.type === 'SKIP_WAITING') {
     self.skipWaiting();
     return;
   }
 
-  // Handle TEST_NOTIFICATION from page (dev/testing)
+  // Handle TEST_NOTIFICATION (dev/testing)
   if (msg.type === 'TEST_NOTIFICATION') {
     const title = msg.title || '🧪 Test Notification';
     const body = msg.body || 'This is a test notification.';
@@ -789,6 +729,7 @@ self.addEventListener('message', (event) => {
       body,
       icon: ICON_URL,
       badge: BADGE_URL,
+      color: BRAND_COLOR,
       vibrate: [200, 100, 200],
       tag: 'bm-test',
       renotify: true,
@@ -810,26 +751,25 @@ self.addEventListener('message', (event) => {
 //  INSTALL & ACTIVATE
 // ============================================================
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing v5.0...');
+  console.log('[SW] Installing v6.0...');
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activated v5.0');
+  console.log('[SW] Activated v6.0');
   event.waitUntil(
     (async () => {
       // Take control of all clients immediately
       try { await self.clients.claim(); } catch (e) {}
-      // Clean up stale notifications from older SW versions (optional)
+
+      // Clean up stale notifications from older SW versions
       try {
         const notifs = await self.registration.getNotifications();
         const now = Date.now();
         notifs.forEach((n) => {
           const receivedAt = n.data?.receivedAt || 0;
           // Close notifications older than 7 days
-          if (receivedAt && (now - receivedAt) > 7 * 24 * 60 * 60 * 1000) {
-            n.close();
-          }
+          if (receivedAt && (now - receivedAt) > 7 * 24 * 60 * 60 * 1000) n.close();
         });
       } catch (e) {}
     })()
@@ -837,25 +777,25 @@ self.addEventListener('activate', (event) => {
 });
 
 // ============================================================
-//  FETCH HANDLER (offline fallback for navigation)
-//  Lightweight — only cache navigation requests
+//  FETCH HANDLER (offline fallback for navigation only)
 // ============================================================
 self.addEventListener('fetch', (event) => {
-  // Only handle navigation requests; let everything else pass through
   if (event.request.mode !== 'navigate') return;
   event.respondWith(
     fetch(event.request).catch(() => {
       return new Response(
         `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
          <title>Offline — BM ERP</title>
-         <style>body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;
-         min-height:100vh;margin:0;background:#f1f5f9;color:#0f172a;text-align:center;padding:24px}
-         .card{background:#fff;padding:40px 28px;border-radius:20px;box-shadow:0 12px 32px rgba(15,23,42,.10);max-width:380px}
-         h1{margin:0 0 8px;color:#2563eb;font-size:22px}
-         p{color:#64748b;font-size:14px;line-height:1.6;margin:0 0 20px}
-         button{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;
-         padding:12px 24px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer}
-         button:hover{transform:translateY(-2px)}
+         <style>
+           body{font-family:system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;
+           min-height:100vh;margin:0;background:#f1f5f9;color:#0f172a;text-align:center;padding:24px}
+           .card{background:#fff;padding:40px 28px;border-radius:20px;box-shadow:0 12px 32px rgba(15,23,42,.10);max-width:380px}
+           h1{margin:0 0 8px;color:#2563eb;font-size:22px}
+           p{color:#64748b;font-size:14px;line-height:1.6;margin:0 0 20px}
+           button{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;
+           padding:12px 24px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;
+           transition:transform .15s ease}
+           button:active{transform:scale(0.96)}
          </style></head>
          <body><div class="card">
            <h1>📡 You're Offline</h1>
@@ -871,5 +811,5 @@ self.addEventListener('fetch', (event) => {
 // ============================================================
 //  LOG
 // ============================================================
-console.log('%c[SW] BM Group ERP — Service Worker v5.0 ready ✅', 'color:#10b981;font-weight:900;font-size:14px;');
-console.log('[SW] Handles: attendance, notes, docs, fees, library, exams, results, emergency alerts');
+console.log('%c[SW] BM Group ERP — Service Worker v6.0 ready ✅', 'color:#10b981;font-weight:900;font-size:14px;');
+console.log('[SW] Handles: attendance, notes, docs, fees, library, exams, results, emergency, chat, subscription, achievement, admin bulk');
