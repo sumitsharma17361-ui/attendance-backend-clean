@@ -1,18 +1,16 @@
 /* ============================================================
-   ★ SESSION & DEVICE POLICY (v5.1 Fixes)
+   ★ SESSION & DEVICE POLICY (v6.0)
    ------------------------------------------------------------
-   - JWT: expires in 7 days (backend: expiresIn '7d')
+   - JWT: 7 days expiry
    - Session validated every 60s via /api/auth/verify-session
-   - Single-device login: new login invalidates old session
+   - Single-device login
    - Device ID: persistent in localStorage, PRESERVED on logout
-     (Fix: same-device re-login no longer shows "Unauthorized")
-   - Session time remaining shown in header (real-time countdown)
+   - Session time remaining shown in header
+   - v6.0: Native Android feel, Custom dialogs, Bottom nav, PTR
    ============================================================ */
 
-/* ★ FIX: disable browser scroll restoration so refresh always starts at top */
-if ('scrollRestoration' in history) {
-  history.scrollRestoration = 'manual';
-}
+/* ★ Disable browser scroll restoration */
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 
 /* ============================================================
    GLOBAL CONFIG
@@ -25,8 +23,7 @@ const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const FULL_DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const FACULTY_NAME_MAP = {'BDA - Big Data Analytics':'Ms. Geeta','ECO - Economics for Engineers':'Ms. Sakshi Yadav','DAA - Design & Analysis of Algorithm':'Ms. Rashmi','FLA - Formal Language & Automata':'Ms. Nisha Yadav','HRM - Human Resource Mgmt':'Mr. Lokesh','CN - Computer Network':'Mr. Chhetrapal','WT - Web Technology':'Mr. Avish Yadav','Internet Lab':'Ms. Geeta','CN LAB - Computer Network Lab':'Mr. Chhetrapal','DAA LAB - Algorithm Lab':'Ms. Rashmi','WT LAB - Web Technology Lab':'Mr. Avish Yadav','PA - Predictive Analysis':'Ms. Pooja','ML - Machine Learning':'Mr. Harsh','PA LAB - Predictive Analysis Lab':'Ms. Pooja','ML LAB - Machine Learning Lab':'Mr. Harsh','BDA LAB - Big Data Analytics Lab':'Ms. Geeta'};
 const DOWNLOAD_KEYWORDS = ['pdf','download','excel','file','save','print','xlsx','txt','document','report','export','banao','bana do','chahiye','bana','generate'];
-
-const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 
 const ICONS = {
   view: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
@@ -97,6 +94,9 @@ const FACULTY_MENU_ITEMS = [
   { key: 'changepassword', label: 'Change Password', icon: '<rect width="18" height="11" x="3" y="11" rx="2"/>' }
 ];
 
+/* ============================================================
+   GLOBAL STATE
+   ============================================================ */
 let currentUser = null, globalHistory = [], globalHolidays = [], trendChart = null, isRegistering = false, currentManualBranch = 'CSE', chatGreeted = false, currentThreadId = null, selectedBulkDates = [], facSelectedBulkDates = [], pendingBulkAction = null, chatHistory = [], selectedHolidayDates = new Set(), subjectBreakdownOpen = false, pendingChatFile = null, recognition = null, openDownloadMenuId = null;
 let thinkingTimerId = null, thinkingStartTime = 0;
 let useContextMode = false, useDatabaseMode = false;
@@ -112,55 +112,114 @@ let pendingUndoApprovalId = null;
 let sessionCheckInterval = null;
 let userSubscription = { tier: 'free', expiresAt: null };
 let leaderboardCache = { attendance: null, login: null, percentage: null };
+let activeBottomNav = 'home';
 
 /* ============================================================
-   ★ CUSTOM LAYOUT FIX INJECTION
+   INJECT: Small style fixes (scroll lock, ripple prep)
    ============================================================ */
 (function injectLayoutFix() {
   if (document.getElementById('bm-custom-layout-fix')) return;
   const style = document.createElement('style');
   style.id = 'bm-custom-layout-fix';
   style.innerHTML = `
-    .welcome { display: flex !important; justify-content: space-between !important; align-items: flex-start !important; gap: 10px !important; flex-wrap: wrap !important; }
-    .welcome-left { display: flex !important; align-items: flex-start !important; gap: 12px !important; flex: 1; min-width: 0; }
-    .welcome-left > div { min-width: 0; flex: 1; }
-    .welcome-left h2 { font-size: 18px !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; margin: 0 0 4px 0 !important; }
-    .welcome .meta { display: flex !important; align-items: center !important; gap: 6px !important; font-size: 12px !important; flex-wrap: wrap !important; }
-    .welcome .row.no-flex { display: flex !important; flex-wrap: wrap !important; justify-content: flex-end !important; gap: 6px !important; max-width: 180px; }
     .collapsible-card { scroll-margin-top: 100px !important; }
     .clickable-stat { cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; }
     .clickable-stat:active { transform: scale(0.97); }
     .btn svg { width: 14px; height: 14px; margin-right: 6px; vertical-align: middle; margin-top: -2px; }
     .btn-xs svg { width: 12px; height: 12px; margin-right: 4px; }
-    .report-btn-group { display: flex; gap: 8px; }
-    .report-btn-group > * { flex: 1; }
     .modal-backdrop { align-items: center !important; padding-top: 20px !important; padding-bottom: 20px !important; }
     .safe-top-modal { padding-top: calc(60px + env(safe-area-inset-top)) !important; }
     .modal { margin: auto !important; }
     @media (max-width: 640px) {
-        .safe-top-modal { padding-top: calc(80px + env(safe-area-inset-top)) !important; }
+      .safe-top-modal { padding-top: calc(80px + env(safe-area-inset-top)) !important; }
     }
-    @media (max-width: 550px) {
-        .welcome { flex-direction: column !important; gap: 8px !important; }
-        .welcome-left { flex-direction: row !important; width: 100% !important; align-items: center !important; }
-        .welcome .row.no-flex { 
-            justify-content: flex-start !important; 
-            max-width: 100% !important; 
-            margin-top: 4px !important; 
-            padding-left: 0 !important; 
-            width: 100% !important; 
-        }
-        .welcome .meta { flex-direction: row !important; white-space: nowrap !important; font-size: 11px !important; }
-        .welcome-left h2 { font-size: 17px !important; white-space: normal !important; line-height: 1.2 !important; }
-    }
-    /* PDF Zoom Controls */
-    #pdf-zoom-controls button { user-select: none; -webkit-user-select: none; touch-action: manipulation; }
-    #pdf-zoom-controls button:active { transform: scale(0.92); }
-    /* Session expiry pill */
-    #sessionExpiry { font-size: 10.5px; font-weight: 700; padding: 2px 8px; background: var(--slate-100); border-radius: 99px; color: var(--slate-500); }
   `;
   document.head.appendChild(style);
 })();
+
+/* ============================================================
+   ★ NEW: CUSTOM DIALOG SYSTEM (replaces prompt/confirm/alert)
+   ============================================================ */
+const DIALOG_ICONS = {
+  info: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+  warning: '<svg viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  danger: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+  success: '<svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+  question: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+};
+
+function _buildDialog({ type='info', title='', message='', inputType=null, inputPlaceholder='', inputValue='', confirmText='OK', cancelText='Cancel', showCancel=false }) {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('customDialog');
+    if (!overlay) { resolve(type === 'confirm' || showCancel ? false : null); return; }
+
+    const iconMap = {
+      info: 'dialog-info', warning: 'dialog-warning', danger: 'dialog-danger',
+      success: 'dialog-success', question: 'dialog-info'
+    };
+    const iconKey = type === 'confirm' ? 'question' : (type === 'prompt' ? 'info' : type);
+    const cls = iconMap[iconKey] || 'dialog-info';
+    const iconSvg = DIALOG_ICONS[iconKey] || DIALOG_ICONS.info;
+    const btnClass = type === 'danger' ? 'btn-danger' : type === 'confirm' ? 'btn-primary' : 'btn-primary';
+
+    const inputHtml = inputType ? `<input type="${inputType}" class="dialog-input" id="cdInput" placeholder="${escapeHtml(inputPlaceholder)}" value="${escapeHtml(inputValue)}" autocomplete="off" />` : '';
+    const cancelHtml = showCancel ? `<button type="button" class="btn btn-outline ripple" id="cdCancel">${escapeHtml(cancelText)}</button>` : '';
+
+    overlay.innerHTML = `
+      <div class="dialog ${cls}" role="document">
+        <div class="dialog-icon">${iconSvg}</div>
+        ${title ? `<div class="dialog-title">${escapeHtml(title)}</div>` : ''}
+        ${message ? `<div class="dialog-message">${escapeHtml(message)}</div>` : ''}
+        ${inputHtml}
+        <div class="dialog-actions">
+          ${cancelHtml}
+          <button type="button" class="btn ${btnClass} ripple" id="cdConfirm">${escapeHtml(confirmText)}</button>
+        </div>
+      </div>
+    `;
+    overlay.classList.add('open');
+
+    const inputEl = overlay.querySelector('#cdInput');
+    const confirmBtn = overlay.querySelector('#cdConfirm');
+    const cancelBtn = overlay.querySelector('#cdCancel');
+
+    const close = (val) => {
+      overlay.classList.remove('open');
+      setTimeout(() => { overlay.innerHTML = ''; resolve(val); }, 180);
+    };
+
+    confirmBtn.addEventListener('click', () => close(inputType ? (inputEl?.value || '') : true));
+    if (cancelBtn) cancelBtn.addEventListener('click', () => close(inputType ? null : false));
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(inputType ? null : false); });
+
+    if (inputEl) {
+      setTimeout(() => { inputEl.focus(); }, 120);
+      inputEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); close(inputEl.value); }
+        if (e.key === 'Escape') { e.preventDefault(); close(null); }
+      });
+    }
+  });
+}
+
+window.customAlert = (title, message, type = 'info') => _buildDialog({ type, title, message, confirmText: 'OK' });
+window.customConfirm = (title, message, opts = {}) => _buildDialog({
+  type: opts.danger ? 'danger' : 'confirm',
+  title, message,
+  confirmText: opts.confirmText || 'Confirm',
+  cancelText: opts.cancelText || 'Cancel',
+  showCancel: true
+});
+window.customPrompt = (title, placeholder = '', opts = {}) => _buildDialog({
+  type: 'prompt', title,
+  message: opts.message || '',
+  inputType: opts.inputType || 'text',
+  inputPlaceholder: placeholder,
+  inputValue: opts.inputValue || '',
+  confirmText: opts.confirmText || 'Submit',
+  cancelText: opts.cancelText || 'Cancel',
+  showCancel: true
+});
 
 /* ============================================================
    DEVICE INFO DETECTION
@@ -182,7 +241,6 @@ function getDeviceInfo() {
   return { name: `${name} (${screenInfo})`, ua, screen: screenInfo };
 }
 
-/* ★ FIX 3: Persistent Device ID — survives logout, so same-device re-login works */
 function getOrCreateDeviceId() {
   let id = localStorage.getItem('BM_DEVICE_ID');
   if (!id) {
@@ -259,7 +317,11 @@ async function sendPushNotification(title, body, data = {}) {
   } catch(e) { console.warn('[Push] Browser notification failed:', e.message); }
 }
 
+/* ============================================================
+   HELPERS
+   ============================================================ */
 function $(id){return document.getElementById(id);}
+
 function toast(msg, type='info'){
   const el = $('toast'); if (!el) return;
   const icon = $('toastIcon');
@@ -272,6 +334,7 @@ function toast(msg, type='info'){
   clearTimeout(el._t);
   el._t = setTimeout(() => el.classList.remove('show'), 4000);
 }
+
 function showFeedback(type, title, message, opts = {}){
   const overlay = document.createElement('div');
   overlay.className = 'feedback-overlay';
@@ -294,10 +357,19 @@ function showFeedback(type, title, message, opts = {}){
   overlay.querySelector('#fbOkBtn').onclick = () => { close(); opts.onClose && opts.onClose(); };
   overlay.addEventListener('click', (e) => { if (e.target === overlay) { close(); opts.onClose && opts.onClose(); } });
 }
+
 function showDL(msg){ if ($('dlMsg')) $('dlMsg').textContent = msg; $('dlProgress')?.classList.add('show'); }
 function hideDL(){ $('dlProgress')?.classList.remove('show'); }
-function closeModal(id){ const m = $(id); if (m) m.classList.remove('open'); }
+
+function closeModal(id){
+  const m = $(id); if (!m) return;
+  m.classList.remove('open');
+  // ★ transitionend fallback (no setTimeout for UI)
+  const onEnd = () => { m.removeEventListener('transitionend', onEnd); };
+  m.addEventListener('transitionend', onEnd, { once: true });
+}
 function openModal(id){ const m = $(id); if (m) m.classList.add('open'); }
+
 function fmtDate(d){const y=d.getFullYear();const m=String(d.getMonth()+1).padStart(2,'0');const day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`;}
 function fmtDatePretty(s){if(!s)return '—';const p=s.split('T')[0].split('-');if(p.length<3)return s;return `${p[2]}/${p[1]}/${p[0]}`;}
 function sanitizeRoll(r){return r ? r.toUpperCase().replace(/[^A-Z0-9]/g,'') : '';}
@@ -308,7 +380,164 @@ function isDesktop(){ return window.innerWidth >= 641; }
 function isMedianApp(){ return typeof window.median !== 'undefined' && window.median !== null; }
 
 /* ============================================================
-   ★ FIX 1: PDF VIEWER WITH SMOOTH ZOOM (Pinch + Buttons + Double-tap)
+   ★ NEW: RIPPLE COORDINATE TRACKER
+   Captures touch/mouse position for --ripple-x/--ripple-y
+   ============================================================ */
+document.addEventListener('pointerdown', function(e) {
+  const el = e.target.closest('.ripple, .btn, .tab, .subnav-item, .menu-trigger-btn, .icon-btn, .bottom-nav-btn, .student-menu-item, .portal');
+  if (!el) return;
+  const rect = el.getBoundingClientRect();
+  el.style.setProperty('--ripple-x', (e.clientX - rect.left) + 'px');
+  el.style.setProperty('--ripple-y', (e.clientY - rect.top) + 'px');
+}, { passive: true });
+
+/* ============================================================
+   ★ NEW: BOTTOM NAVIGATION
+   ============================================================ */
+function updateBottomNavVisibility() {
+  const nav = document.getElementById('bottomNav');
+  if (!nav) return;
+  if (currentUser && currentUser.role === 'student' && !isDesktop()) {
+    nav.style.display = 'block';
+  } else {
+    nav.style.display = 'none';
+  }
+}
+
+function updateBottomNavActive(key) {
+  document.querySelectorAll('.bottom-nav-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.nav === key);
+  });
+  activeBottomNav = key;
+}
+
+function bottomNavClick(action) {
+  if (!currentUser || currentUser.role !== 'student') return;
+  updateBottomNavActive(action);
+
+  if (action === 'home') {
+    switchTab('tab-mark');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } else if (action === 'attendance') {
+    switchTab('tab-mark');
+    setTimeout(() => {
+      const el = document.getElementById('attendanceActionsCard');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 80);
+  } else if (action === 'notes') {
+    switchTab('tab-mark');
+    setTimeout(() => {
+      const notesSec = document.getElementById('sec-notes');
+      if (notesSec) {
+        notesSec.style.display = 'block';
+        const body = notesSec.querySelector('.collapsible-body');
+        if (body) body.classList.add('open');
+        loadStudentNotes();
+        notesSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 80);
+  } else if (action === 'menu') {
+    openStudentMenu();
+  }
+}
+
+/* ============================================================
+   ★ NEW: PULL-TO-REFRESH
+   ============================================================ */
+function initPullToRefresh() {
+  if (window._ptrInit) return;
+  window._ptrInit = true;
+
+  const indicator = document.getElementById('ptrIndicator');
+  const textEl = document.getElementById('ptrText');
+  if (!indicator || !textEl) return;
+
+  let startY = 0;
+  let pulling = false;
+  let scrollTopAtStart = 0;
+  const THRESHOLD = 70;
+  const MAX_PULL = 110;
+
+  const onStart = (e) => {
+    if (window.scrollY > 5) return;
+    if (document.body.classList.contains('body-locked')) return;
+    if (document.querySelector('.modal-backdrop.open')) return;
+    if (document.getElementById('chatPanel')?.classList.contains('open')) return;
+    scrollTopAtStart = window.scrollY;
+    startY = e.touches[0].clientY;
+    pulling = true;
+  };
+
+  const onMove = (e) => {
+    if (!pulling) return;
+    if (window.scrollY > 5) { pulling = false; hidePTR(); return; }
+    const dy = e.touches[0].clientY - startY;
+    if (dy <= 0) { hidePTR(); return; }
+    const pull = Math.min(dy * 0.5, MAX_PULL);
+    const progress = Math.min(pull / THRESHOLD, 1);
+    indicator.style.transform = `translate(-50%, ${-60 + pull}px)`;
+    indicator.style.opacity = String(progress);
+    if (pull >= THRESHOLD) textEl.textContent = 'Release to refresh';
+    else textEl.textContent = 'Pull to refresh';
+    if (e.cancelable && dy > 5) e.preventDefault();
+  };
+
+  const onEnd = async (e) => {
+    if (!pulling) return;
+    pulling = false;
+    const dy = (e.changedTouches[0]?.clientY || 0) - startY;
+    const pull = Math.min(dy * 0.5, MAX_PULL);
+    if (pull >= THRESHOLD) {
+      indicator.style.transform = 'translate(-50%, 0)';
+      indicator.style.opacity = '1';
+      indicator.classList.add('refreshing');
+      textEl.textContent = 'Refreshing…';
+      await doRefresh();
+      setTimeout(() => hidePTR(), 400);
+    } else {
+      hidePTR();
+    }
+  };
+
+  function hidePTR() {
+    indicator.classList.remove('refreshing');
+    indicator.style.transform = 'translate(-50%, -60px)';
+    indicator.style.opacity = '0';
+  }
+
+  document.addEventListener('touchstart', onStart, { passive: true });
+  document.addEventListener('touchmove', onMove, { passive: false });
+  document.addEventListener('touchend', onEnd, { passive: true });
+}
+
+async function doRefresh() {
+  try {
+    if (!currentUser) return;
+    if (currentUser.role === 'student') {
+      await Promise.allSettled([
+        fetchHistory(),
+        loadMyRequests(),
+        loadLivePasscodes(),
+        loadApprovedBanner(),
+        fetchUserSubscription()
+      ]);
+    } else if (currentUser.role === 'admin') {
+      await Promise.allSettled([
+        loadDashboardStats(),
+        fetchNotices()
+      ]);
+    } else if (currentUser.role === 'faculty') {
+      await Promise.allSettled([
+        fetchTeacherStudents(),
+        loadFacultyRecent()
+      ]);
+    }
+    toast('Refreshed', 'success');
+  } catch (e) { toast('Refresh failed', 'error'); }
+}
+
+/* ============================================================
+   DOWNLOAD / PDF VIEWER
    ============================================================ */
 function viewPdfBlob(blob, fileName = 'document.pdf') {
   if (!blob.type || blob.type === 'application/octet-stream') {
@@ -316,204 +545,101 @@ function viewPdfBlob(blob, fileName = 'document.pdf') {
     if (ext === 'pdf') blob = new Blob([blob], { type: 'application/pdf' });
     else if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) blob = new Blob([blob], { type: `image/${ext === 'jpg' ? 'jpeg' : ext}` });
   }
-
   const isImage = blob.type.startsWith('image/');
   const isPdf = blob.type === 'application/pdf';
-
-  if (isImage) {
-    renderImageViewer(blob, fileName);
-    return;
-  }
-  if (isPdf) {
-    renderPdfWithPdfJs(blob);
-    return;
-  }
-
+  if (isImage) { renderImageViewer(blob, fileName); return; }
+  if (isPdf) { renderPdfWithPdfJs(blob); return; }
   const url = URL.createObjectURL(blob);
   const modal = document.createElement('div');
   modal.className = 'modal-backdrop open safe-top-modal';
   modal.style.zIndex = '99999';
-  modal.innerHTML = `
-    <div class="modal wide" style="height: 85vh; display: flex; flex-direction: column; max-width: 900px; padding: 0;">
-      <div class="modal-header" style="padding: 12px 18px; border-bottom: 1px solid var(--slate-200); margin: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0;">
-        <h3 style="margin:0; font-size: 15px;">📄 Document Preview</h3>
-        <button type="button" class="modal-close" onclick="this.closest('.modal-backdrop').remove(); URL.revokeObjectURL('${url}')">✕</button>
-      </div>
-      <div style="flex: 1; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f8fafc; padding: 10px;">
-        <div style="padding: 20px; text-align: center; color: var(--slate-600);">
-          <p style="margin-bottom: 16px;">Preview is not available for this file type.</p>
-          <a href="${url}" download="${fileName}" class="btn btn-primary">Download File</a>
-        </div>
-      </div>
-    </div>
-  `;
+  modal.innerHTML = `<div class="modal wide" style="height: 85vh; display: flex; flex-direction: column; max-width: 900px; padding: 0;"><div class="modal-header"><h3>📄 Document Preview</h3><button type="button" class="modal-close ripple" onclick="this.closest('.modal-backdrop').remove(); URL.revokeObjectURL('${url}')">✕</button></div><div style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; text-align: center;"><div><p style="margin-bottom: 16px; color: var(--slate-600);">Preview not available.</p><a href="${url}" download="${fileName}" class="btn btn-primary">Download File</a></div></div></div>`;
   document.body.appendChild(modal);
 }
 
-/* ★ NEW: Image viewer with pinch-zoom + buttons (horizontal scroll fixed) */
 function renderImageViewer(blob, fileName) {
   const url = URL.createObjectURL(blob);
   const modal = document.createElement('div');
   modal.className = 'modal-backdrop open safe-top-modal';
   modal.style.zIndex = '99999';
-  modal.innerHTML = `
-    <div class="modal wide" style="height: 90vh; display: flex; flex-direction: column; max-width: 900px; padding: 0;">
-      <div class="modal-header" style="padding: 12px 18px; border-bottom: 1px solid var(--slate-200); margin: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-        <h3 style="margin:0; font-size: 15px;">🖼️ Image Preview</h3>
-        <div style="display: flex; gap: 6px; align-items: center;">
-          <div id="img-zoom-controls" style="display: flex; gap: 4px; align-items: center;">
-            <button type="button" onclick="imgZoomOut()" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--slate-200); background: #fff; cursor: pointer; font-weight: 800; font-size: 16px;">−</button>
-            <span id="img-zoom-label" style="font-size: 11px; font-weight: 700; color: var(--slate-600); min-width: 44px; text-align: center; font-variant-numeric: tabular-nums;">100%</span>
-            <button type="button" onclick="imgZoomIn()" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--slate-200); background: #fff; cursor: pointer; font-weight: 800; font-size: 16px;">+</button>
-            <button type="button" onclick="imgZoomReset()" style="padding: 0 10px; height: 32px; border-radius: 8px; border: 1px solid var(--slate-200); background: #fff; cursor: pointer; font-size: 11px; font-weight: 700;">↺ Reset</button>
-          </div>
-          <button type="button" class="modal-close" onclick="this.closest('.modal-backdrop').remove(); URL.revokeObjectURL('${url}')">✕</button>
-        </div>
-      </div>
-      <div style="flex: 1; overflow: auto; background: #525659; padding: 10px; position: relative; -webkit-overflow-scrolling: touch;" id="img-outer-wrap">
-        <div id="img-zoom-wrap" style="transform-origin: top left; transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1); display: inline-block; padding: 10px;">
-          <img src="${url}" style="max-width: 100%; height: auto; box-shadow: 0 2px 6px rgba(0,0,0,0.3);" />
-        </div>
-      </div>
-    </div>
-  `;
+  modal.innerHTML = `<div class="modal wide" style="height: 90vh; display: flex; flex-direction: column; max-width: 900px; padding: 0;"><div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;"><h3>🖼️ Image Preview</h3><div style="display:flex;gap:6px;align-items:center;"><div id="img-zoom-controls" style="display: flex; gap: 4px; align-items: center;"><button type="button" onclick="imgZoomOut()" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--surface-border);background:var(--surface-card);cursor:pointer;font-weight:800;">−</button><span id="img-zoom-label" style="font-size:11px;font-weight:700;min-width:44px;text-align:center;">100%</span><button type="button" onclick="imgZoomIn()" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--surface-border);background:var(--surface-card);cursor:pointer;font-weight:800;">+</button><button type="button" onclick="imgZoomReset()" style="padding:0 10px;height:32px;border-radius:8px;border:1px solid var(--surface-border);background:var(--surface-card);cursor:pointer;font-size:11px;font-weight:700;">↺</button></div><button type="button" class="modal-close ripple" onclick="this.closest('.modal-backdrop').remove(); URL.revokeObjectURL('${url}')">✕</button></div></div><div style="flex: 1; overflow: auto; background: #525659; padding: 10px;" id="img-outer-wrap"><div id="img-zoom-wrap" style="transform-origin: top left; transition: transform 0.18s; display: inline-block; padding: 10px;"><img src="${url}" style="max-width: 100%; height: auto; box-shadow: 0 2px 6px rgba(0,0,0,0.3);" /></div></div></div>`;
   document.body.appendChild(modal);
-
   const container = modal.querySelector('#img-zoom-wrap');
   const outerWrap = modal.querySelector('#img-outer-wrap');
   const zoomLabel = modal.querySelector('#img-zoom-label');
   let zoomLevel = 1;
   const MIN_ZOOM = 0.5, MAX_ZOOM = 4;
-
-  window.imgZoomIn = () => { zoomLevel = Math.min(MAX_ZOOM, zoomLevel + 0.25); applyImgZoom(true); };
-  window.imgZoomOut = () => { zoomLevel = Math.max(MIN_ZOOM, zoomLevel - 0.25); applyImgZoom(true); };
-  window.imgZoomReset = () => { zoomLevel = 1; applyImgZoom(true); };
-  function applyImgZoom(smooth) {
-    container.style.transition = smooth ? 'transform 0.18s cubic-bezier(0.4, 0, 0.2, 1)' : 'none';
+  window.imgZoomIn = () => { zoomLevel = Math.min(MAX_ZOOM, zoomLevel + 0.25); applyImgZoom(); };
+  window.imgZoomOut = () => { zoomLevel = Math.max(MIN_ZOOM, zoomLevel - 0.25); applyImgZoom(); };
+  window.imgZoomReset = () => { zoomLevel = 1; applyImgZoom(); };
+  function applyImgZoom() {
     container.style.transform = `scale(${zoomLevel})`;
     zoomLabel.textContent = Math.round(zoomLevel * 100) + '%';
   }
-
-  attachZoomGestures(outerWrap, container, () => zoomLevel, (z, smooth) => { zoomLevel = z; applyImgZoom(smooth); });
+  attachZoomGestures(outerWrap, container, () => zoomLevel, (z) => { zoomLevel = z; applyImgZoom(); });
 }
 
-/* ★ NEW: Shared zoom gesture handler (pinch, double-tap, ctrl+wheel) */
 function attachZoomGestures(outerWrap, container, getZoom, setZoom) {
   const MIN_ZOOM = 0.5, MAX_ZOOM = 4;
   let initialDistance = 0, initialZoom = 1, pinching = false, lastTap = 0;
-
   outerWrap.addEventListener('touchstart', (e) => {
     if (e.touches.length === 2) {
       initialDistance = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-      initialZoom = getZoom();
-      pinching = true;
+      initialZoom = getZoom(); pinching = true;
     }
     if (e.touches.length === 1) {
       const now = Date.now();
-      if (now - lastTap < 300) {
-        const z = getZoom();
-        setZoom(z > 1.1 ? 1 : 2, true);
-        lastTap = 0;
-      } else { lastTap = now; }
+      if (now - lastTap < 300) { setZoom(getZoom() > 1.1 ? 1 : 2); lastTap = 0; }
+      else { lastTap = now; }
     }
   }, { passive: true });
-
   outerWrap.addEventListener('touchmove', (e) => {
-    if (e.touches.length === 2) {
-      if (!pinching) {
-        initialDistance = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-        initialZoom = getZoom();
-        pinching = true;
-      }
-      if (initialDistance > 0) {
-        if (e.cancelable) e.preventDefault();
-        const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-        const scale = dist / initialDistance;
-        setZoom(Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, initialZoom * scale)), false);
-      }
+    if (e.touches.length === 2 && pinching && initialDistance > 0) {
+      if (e.cancelable) e.preventDefault();
+      const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      setZoom(Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, initialZoom * (dist / initialDistance))));
     }
   }, { passive: false });
-
   outerWrap.addEventListener('touchend', (e) => {
     if (e.touches.length < 2) { pinching = false; initialDistance = 0; }
   }, { passive: true });
-
-  outerWrap.addEventListener('wheel', (e) => {
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      const z = getZoom();
-      if (e.deltaY < 0) setZoom(Math.min(MAX_ZOOM, z + 0.1), true);
-      else setZoom(Math.max(MIN_ZOOM, z - 0.1), true);
-    }
-  }, { passive: false });
 }
 
-/* ★ FIX 1: PDF renderer with zoom controls (horizontal scroll fixed) */
 async function renderPdfWithPdfJs(blob) {
   const modal = document.createElement('div');
   modal.className = 'modal-backdrop open safe-top-modal';
   modal.style.zIndex = '99999';
-  modal.innerHTML = `
-    <div class="modal wide" style="height: 90vh; display: flex; flex-direction: column; max-width: 900px; padding: 0;">
-      <div class="modal-header" style="padding: 12px 18px; border-bottom: 1px solid var(--slate-200); margin: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-        <h3 style="margin:0; font-size: 15px;">📄 Document Preview</h3>
-        <div style="display: flex; gap: 6px; align-items: center;">
-          <div id="pdf-zoom-controls" style="display: none; gap: 4px; align-items: center;">
-            <button type="button" onclick="pdfZoomOut()" title="Zoom out" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--slate-200); background: #fff; cursor: pointer; font-weight: 800; font-size: 16px;">−</button>
-            <span id="pdf-zoom-label" style="font-size: 11px; font-weight: 700; color: var(--slate-600); min-width: 44px; text-align: center; font-variant-numeric: tabular-nums;">100%</span>
-            <button type="button" onclick="pdfZoomIn()" title="Zoom in" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--slate-200); background: #fff; cursor: pointer; font-weight: 800; font-size: 16px;">+</button>
-            <button type="button" onclick="pdfZoomReset()" title="Reset zoom" style="padding: 0 10px; height: 32px; border-radius: 8px; border: 1px solid var(--slate-200); background: #fff; cursor: pointer; font-size: 11px; font-weight: 700;">↺ Reset</button>
-          </div>
-          <button type="button" class="modal-close" onclick="this.closest('.modal-backdrop').remove()">✕</button>
-        </div>
-      </div>
-      <div style="flex: 1; overflow: auto; background: #525659; padding: 10px; position: relative; -webkit-overflow-scrolling: touch;" id="pdf-outer-wrap">
-        <div id="pdf-zoom-wrap" style="transform-origin: top left; transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1); display: inline-block; padding: 10px;">
-          <div class="spinner" style="border-top-color: white; margin-top: 20px;"></div>
-        </div>
-      </div>
-    </div>
-  `;
+  modal.innerHTML = `<div class="modal wide" style="height: 90vh; display: flex; flex-direction: column; max-width: 900px; padding: 0;"><div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;"><h3>📄 Document Preview</h3><div style="display:flex;gap:6px;align-items:center;"><div id="pdf-zoom-controls" style="display: none; gap: 4px; align-items: center;"><button type="button" onclick="pdfZoomOut()" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--surface-border);background:var(--surface-card);cursor:pointer;font-weight:800;">−</button><span id="pdf-zoom-label" style="font-size:11px;font-weight:700;min-width:44px;text-align:center;">100%</span><button type="button" onclick="pdfZoomIn()" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--surface-border);background:var(--surface-card);cursor:pointer;font-weight:800;">+</button><button type="button" onclick="pdfZoomReset()" style="padding:0 10px;height:32px;border-radius:8px;border:1px solid var(--surface-border);background:var(--surface-card);cursor:pointer;font-size:11px;font-weight:700;">↺</button></div><button type="button" class="modal-close ripple" onclick="this.closest('.modal-backdrop').remove()">✕</button></div></div><div style="flex: 1; overflow: auto; background: #525659; padding: 10px;" id="pdf-outer-wrap"><div id="pdf-zoom-wrap" style="transform-origin: top left; transition: transform 0.18s; display: inline-block; padding: 10px;"><div class="spinner" style="border-top-color: white; margin-top: 20px;"></div></div></div></div>`;
   document.body.appendChild(modal);
-
   const container = modal.querySelector('#pdf-zoom-wrap');
   const outerWrap = modal.querySelector('#pdf-outer-wrap');
   const controls = modal.querySelector('#pdf-zoom-controls');
   const zoomLabel = modal.querySelector('#pdf-zoom-label');
-
   let zoomLevel = 1;
   const MIN_ZOOM = 0.5, MAX_ZOOM = 4;
-
-  window.pdfZoomIn = () => { zoomLevel = Math.min(MAX_ZOOM, zoomLevel + 0.25); applyPdfZoom(true); };
-  window.pdfZoomOut = () => { zoomLevel = Math.max(MIN_ZOOM, zoomLevel - 0.25); applyPdfZoom(true); };
-  window.pdfZoomReset = () => { zoomLevel = 1; applyPdfZoom(true); };
-  function applyPdfZoom(smooth) {
-    container.style.transition = smooth ? 'transform 0.18s cubic-bezier(0.4, 0, 0.2, 1)' : 'none';
+  window.pdfZoomIn = () => { zoomLevel = Math.min(MAX_ZOOM, zoomLevel + 0.25); applyPdfZoom(); };
+  window.pdfZoomOut = () => { zoomLevel = Math.max(MIN_ZOOM, zoomLevel - 0.25); applyPdfZoom(); };
+  window.pdfZoomReset = () => { zoomLevel = 1; applyPdfZoom(); };
+  function applyPdfZoom() {
     container.style.transform = `scale(${zoomLevel})`;
     zoomLabel.textContent = Math.round(zoomLevel * 100) + '%';
   }
-
-  attachZoomGestures(outerWrap, container, () => zoomLevel, (z, smooth) => { zoomLevel = z; applyPdfZoom(smooth); });
-
+  attachZoomGestures(outerWrap, container, () => zoomLevel, (z) => { zoomLevel = z; applyPdfZoom(); });
   try {
     if (!window.pdfjsLib) {
       await new Promise((resolve, reject) => {
         const script = document.createElement('script');
         script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-        script.onload = resolve;
-        script.onerror = reject;
+        script.onload = resolve; script.onerror = reject;
         document.head.appendChild(script);
       });
       window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     }
-
     const arrayBuffer = await blob.arrayBuffer();
     const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     container.innerHTML = '';
     controls.style.display = 'flex';
-
     const dpr = window.devicePixelRatio || 1;
-
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const unscaledViewport = page.getViewport({ scale: 1 });
@@ -521,18 +647,12 @@ async function renderPdfWithPdfJs(blob) {
       const baseScale = containerWidth / unscaledViewport.width;
       const cssViewport = page.getViewport({ scale: baseScale });
       const renderViewport = page.getViewport({ scale: baseScale * dpr });
-
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d');
-      canvas.height = renderViewport.height;
-      canvas.width = renderViewport.width;
-      canvas.style.width = `${cssViewport.width}px`;
-      canvas.style.height = `${cssViewport.height}px`;
-      canvas.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-      canvas.style.background = '#fff';
-      canvas.style.display = 'block';
-      canvas.style.margin = '0 auto 10px auto';
-
+      canvas.height = renderViewport.height; canvas.width = renderViewport.width;
+      canvas.style.width = `${cssViewport.width}px`; canvas.style.height = `${cssViewport.height}px`;
+      canvas.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)'; canvas.style.background = '#fff';
+      canvas.style.display = 'block'; canvas.style.margin = '0 auto 10px auto';
       container.appendChild(canvas);
       await page.render({ canvasContext: context, viewport: renderViewport }).promise;
     }
@@ -552,14 +672,13 @@ function universalDownload(blob, filename, opts = {}){
             window.median.downloadFile({ base64: base64, filename: filename, mimeType: blob.type || 'application/octet-stream' });
             toast('Downloaded: ' + filename, 'success');
             if (opts.notify !== false) sendPushNotification('📥 Download Complete', filename, { type: 'download', filename });
-          } catch(e) { toast('Median download failed, trying fallback…', 'info'); fallbackBlobDownload(blob, filename, opts); }
+          } catch(e) { fallbackBlobDownload(blob, filename, opts); }
         };
-        reader.readAsDataURL(blob);
-        return;
-      } catch(e) { console.warn('Median download error:', e); }
+        reader.readAsDataURL(blob); return;
+      } catch(e) {}
     }
     fallbackBlobDownload(blob, filename, opts);
-  } catch(e) { console.error('universalDownload failed:', e); toast('Download failed: ' + e.message, 'error'); }
+  } catch(e) { toast('Download failed: ' + e.message, 'error'); }
 }
 function fallbackBlobDownload(blob, filename, opts = {}){
   const url = URL.createObjectURL(blob);
@@ -576,8 +695,7 @@ function ensureJsPDF(){
   return window.jspdf.jsPDF;
 }
 function generatePDFBlob(title, subtitle, metaLines, tableHeaders, tableRows, summaryLines){
-  const JsPDF = ensureJsPDF();
-  if (!JsPDF) return null;
+  const JsPDF = ensureJsPDF(); if (!JsPDF) return null;
   const doc = new JsPDF();
   doc.setFillColor(37, 99, 235); doc.rect(0, 0, 210, 24, 'F');
   doc.setTextColor(255, 255, 255); doc.setFontSize(16); doc.setFont(undefined, 'bold');
@@ -591,8 +709,7 @@ function generatePDFBlob(title, subtitle, metaLines, tableHeaders, tableRows, su
   y += 3;
   if (summaryLines && summaryLines.length) {
     doc.setTextColor(15, 23, 42); doc.setFontSize(10); doc.setFont(undefined, 'bold');
-    summaryLines.forEach(line => { doc.text(line, 14, y); y += 5; });
-    y += 3;
+    summaryLines.forEach(line => { doc.text(line, 14, y); y += 5; }); y += 3;
   }
   if (tableHeaders && tableRows) {
     doc.autoTable({ startY: y, head: [tableHeaders], body: tableRows, theme: 'grid', styles: { fontSize: 8.5, cellPadding: 3 }, headStyles: { fillColor: [219, 234, 254], textColor: [30, 64, 175], fontStyle: 'bold' }, alternateRowStyles: { fillColor: [248, 250, 252] } });
@@ -618,10 +735,7 @@ function populateStudentMenu(){
   const list = $('studentMenuList'); if (!list) return;
   list.innerHTML = STUDENT_MENU_ITEMS.map(item => {
     if (item.divider) return '<div class="student-menu-divider"></div>';
-    return `<button class="student-menu-item ${activeStudentMenuKey === item.key ? 'active' : ''}" onclick="navigateStudentMenu('${item.key}')">
-      <svg viewBox="0 0 24 24">${item.icon}</svg>
-      <span class="menu-label">${item.label}</span>
-    </button>`;
+    return `<button class="student-menu-item ${activeStudentMenuKey === item.key ? 'active' : ''}" onclick="navigateStudentMenu('${item.key}')"><svg viewBox="0 0 24 24">${item.icon}</svg><span class="menu-label">${item.label}</span></button>`;
   }).join('');
 }
 function navigateStudentMenu(key){
@@ -651,19 +765,19 @@ function navigateStudentMenu(key){
     }
     if (action === 'workingdays') { openWorkingDays(); return; }
     document.querySelectorAll('.collapsible-card').forEach(card => {
-        const body = card.querySelector('.collapsible-body');
-        const arrow = card.querySelector('.collapse-arrow');
-        if (body) { body.classList.remove('open'); }
-        if (arrow) { arrow.style.transform = 'rotate(0deg)'; }
+      const body = card.querySelector('.collapsible-body');
+      const arrow = card.querySelector('.collapse-arrow');
+      if (body) body.classList.remove('open');
+      if (arrow) arrow.style.transform = 'rotate(0deg)';
     });
     const el = document.getElementById(targetId);
     if (el) {
       if (el.style.display === 'none' && ['reports', 'portals', 'notes', 'assignments', 'exams', 'announcements'].includes(key)) el.style.display = 'block';
       if (el.classList.contains('collapsible-card')) {
-          const body = el.querySelector('.collapsible-body');
-          const arrow = el.querySelector('.collapse-arrow');
-          if (body) body.classList.add('open');
-          if (arrow) arrow.style.transform = 'rotate(180deg)';
+        const body = el.querySelector('.collapsible-body');
+        const arrow = el.querySelector('.collapse-arrow');
+        if (body) body.classList.add('open');
+        if (arrow) arrow.style.transform = 'rotate(180deg)';
       }
       const rect = el.getBoundingClientRect();
       const top = window.pageYOffset + rect.top - 120;
@@ -692,10 +806,7 @@ function populateAdminMenu(){
   const activeKey = (currentUser && currentUser.role === 'faculty') ? activeFacultyMenuKey : activeAdminMenuKey;
   list.innerHTML = items.map(item => {
     if (item.divider) return '<div class="student-menu-divider"></div>';
-    return `<button class="student-menu-item ${activeKey === item.key ? 'active' : ''}" onclick="navigateAdminMenu('${item.key}')">
-      <svg viewBox="0 0 24 24">${item.icon}</svg>
-      <span class="menu-label">${item.label}</span>
-    </button>`;
+    return `<button class="student-menu-item ${activeKey === item.key ? 'active' : ''}" onclick="navigateAdminMenu('${item.key}')"><svg viewBox="0 0 24 24">${item.icon}</svg><span class="menu-label">${item.label}</span></button>`;
   }).join('');
 }
 function navigateAdminMenu(key){
@@ -719,11 +830,7 @@ function navigateAdminMenu(key){
       }
       if (targetId) {
         const el = document.getElementById(targetId);
-        if (el) {
-            const rect = el.getBoundingClientRect();
-            const top = window.pageYOffset + rect.top - 120;
-            window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
-        }
+        if (el) { const rect = el.getBoundingClientRect(); const top = window.pageYOffset + rect.top - 120; window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' }); }
       }
       populateAdminMenu();
     }, 220);
@@ -740,6 +847,10 @@ document.addEventListener('click', function(e){
 
 function insideChatPanel(el){ const cp = document.getElementById('chatPanel'); if (!cp) return false; return cp.contains(el); }
 function insideModal(el){ return !!(el && el.closest && el.closest('.modal-backdrop.open')); }
+
+/* ============================================================
+   SWIPE GESTURE (drawer open/close)
+   ============================================================ */
 (function initSwipeGesture(){
   const SCROLL_CLASSES = ['tabs','subnav','chat-head-bottom','req-tabs','chips','table-wrap','bulk-select-list','present-list-wrap','wd-grid','row','chart-canvas-wrap'];
   function insideScrollable(el){
@@ -808,36 +919,40 @@ function insideModal(el){ return !!(el && el.closest && el.closest('.modal-backd
   }, { passive: true });
 })();
 
+/* ============================================================
+   REGISTRATION / STATUS CHECK
+   ============================================================ */
 function openRegStatusCheck(){ openModal('regStatusModal'); const r = $('regStatusRoll'); if (r) r.value = ''; const res = $('regStatusResult'); if (res) res.innerHTML = ''; }
 async function checkRegStatus(){
   const roll = sanitizeRoll($('regStatusRoll').value.trim());
   if (!roll) return toast('Enter roll no','error');
   const res = $('regStatusResult');
-  res.innerHTML = '<div class="empty" style="padding:14px 0;"><div class="spinner" style="margin:0 auto 8px;"></div>Checking…</div>';
+  res.innerHTML = '<div class="empty"><div class="spinner" style="margin:0 auto 8px;"></div>Checking…</div>';
   try {
     const r = await fetch(`${API}/api/auth/register-request/check/${roll}`);
     const d = await r.json();
     if (!r.ok) { res.innerHTML = `<div class="empty">${escapeHtml(d.error || 'Failed')}</div>`; return; }
     const reqs = d.requests || [];
-    if (!reqs.length) { res.innerHTML = '<div class="empty" style="padding:14px 0;">No registration request found.</div>'; return; }
+    if (!reqs.length) { res.innerHTML = '<div class="empty">No registration request found.</div>'; return; }
     res.innerHTML = reqs.map(x => {
-      const statusClass = x.status === 'Approved' ? 'badge-success' : x.status === 'Rejected' ? 'badge-danger' : 'badge-warning';
-      const statusEmoji = x.status === 'Approved' ? '✅' : x.status === 'Rejected' ? '❌' : '⏳';
+      const sc = x.status === 'Approved' ? 'badge-success' : x.status === 'Rejected' ? 'badge-danger' : 'badge-warning';
+      const se = x.status === 'Approved' ? '✅' : x.status === 'Rejected' ? '❌' : '⏳';
       let info = '';
-      if (x.status === 'Approved') info = '<div style="margin-top:10px;font-size:11px;color:#047857;font-weight:600;">Approved! You can sign in now.</div>';
-      else if (x.status === 'Rejected') info = `<div style="margin-top:10px;font-size:11px;color:#be123c;font-weight:600;">Rejected${x.adminNote ? ' — ' + escapeHtml(x.adminNote) : ''}.</div>`;
-      else info = '<div style="margin-top:10px;font-size:11px;color:#b45309;font-weight:600;">Waiting for admin approval.</div>';
-      return `<div style="padding:14px;border:1px solid var(--slate-200);border-radius:11px;margin-bottom:10px;background:#fff;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
-          <div style="font-weight:800;font-size:13px;">${escapeHtml(x.rollNo)} — ${escapeHtml(x.name)}</div>
-          <span class="badge ${statusClass}">${statusEmoji} ${x.status}</span>
+      if (x.status === 'Approved') info = '<div class="mt-1 text-sm" style="color:var(--emerald-700);font-weight:600;">Approved! You can sign in now.</div>';
+      else if (x.status === 'Rejected') info = `<div class="mt-1 text-sm" style="color:var(--rose-700);font-weight:600;">Rejected${x.adminNote ? ' — ' + escapeHtml(x.adminNote) : ''}.</div>`;
+      else info = '<div class="mt-1 text-sm" style="color:var(--amber-700);font-weight:600;">Waiting for admin approval.</div>';
+      return `<div class="list-item">
+        <div class="list-item-header">
+          <div class="list-item-title">${escapeHtml(x.rollNo)} — ${escapeHtml(x.name)}</div>
+          <span class="badge ${sc}">${se} ${x.status}</span>
         </div>
-        <div style="margin-top:6px;font-size:10.5px;color:var(--slate-400);">${new Date(x.createdAt).toLocaleString('en-IN')}</div>
+        <div class="list-item-meta">${new Date(x.createdAt).toLocaleString('en-IN')}</div>
         ${info}
       </div>`;
     }).join('');
   } catch(e) { res.innerHTML = '<div class="empty">Network error: ' + escapeHtml(e.message) + '</div>'; }
 }
+
 async function loadRegistrationRequests(){
   const status = $('regFilterStatus')?.value || 'Pending';
   const el = $('registrationRequestsList'); if (!el) return;
@@ -851,22 +966,27 @@ async function loadRegistrationRequests(){
     el.innerHTML = reqs.map(r => {
       const isPending = r.status === 'Pending';
       const sc = r.status === 'Approved' ? 'badge-success' : r.status === 'Rejected' ? 'badge-danger' : 'badge-warning';
-      return `<div style="padding:14px;border:1px solid var(--slate-200);border-radius:11px;margin-bottom:10px;background:#fff;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
-          <div style="min-width:0;flex:1;"><div style="font-weight:800;font-size:13px;">${escapeHtml(r.rollNo)} <span class="badge badge-neutral">${escapeHtml(r.branch || '')}</span></div><div style="font-size:11.5px;color:var(--slate-600);margin-top:3px;">${escapeHtml(r.name)}</div></div>
+      return `<div class="list-item">
+        <div class="list-item-header">
+          <div style="min-width:0;flex:1;">
+            <div class="list-item-title">${escapeHtml(r.rollNo)} <span class="badge badge-neutral">${escapeHtml(r.branch || '')}</span></div>
+            <div class="list-item-sub">${escapeHtml(r.name)}</div>
+          </div>
           <span class="badge ${sc}">${escapeHtml(r.status)}</span>
         </div>
-        <div style="margin-top:6px;font-size:10.5px;color:var(--slate-400);">${new Date(r.createdAt).toLocaleString('en-IN')}</div>
-        ${isPending ? `<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-success btn-xs" onclick="reviewRegistration('${r._id}','Approved')">${ICONS.check} Approve</button>
-          <button class="btn btn-danger btn-xs" onclick="reviewRegistration('${r._id}','Rejected')">${ICONS.cross} Reject</button>
+        <div class="list-item-meta">${new Date(r.createdAt).toLocaleString('en-IN')}</div>
+        ${isPending ? `<div class="list-item-actions">
+          <button class="btn btn-success btn-xs ripple" onclick="reviewRegistration('${r._id}','Approved')">${ICONS.check} Approve</button>
+          <button class="btn btn-danger btn-xs ripple" onclick="reviewRegistration('${r._id}','Rejected')">${ICONS.cross} Reject</button>
         </div>` : ''}
       </div>`;
     }).join('');
   } catch(e){ el.innerHTML = '<div class="empty">Network error</div>'; }
 }
+
 async function reviewRegistration(id, action){
-  const note = prompt(`Note for ${action} (optional):`) || '';
+  // ★ Uses customPrompt (replaces native prompt)
+  const note = await customPrompt(`Note for ${action} (optional):`, 'e.g. Verified', { message: `Provide an optional note for this ${action.toLowerCase()} action.` }) || '';
   try {
     const res = await fetch(`${API}/api/admin/registration-requests/review/${id}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, action, note})});
     const d = await res.json();
@@ -874,39 +994,41 @@ async function reviewRegistration(id, action){
     else showFeedback('error', 'Failed', d.error || 'Could not process');
   } catch(e){ showFeedback('error', 'Network Error', e.message); }
 }
+
 function openCheckStatus(){ openModal('checkStatusModal'); const r = $('csRoll'); if (r) r.value = ''; const res = $('csResult'); if (res) res.innerHTML = ''; }
 async function checkRequestStatus(){
   const roll = sanitizeRoll($('csRoll').value.trim());
   if (!roll) return toast('Enter roll no','error');
   const res = $('csResult');
-  res.innerHTML = '<div class="empty" style="padding:14px 0;"><div class="spinner" style="margin:0 auto 8px;"></div>Checking…</div>';
+  res.innerHTML = '<div class="empty"><div class="spinner" style="margin:0 auto 8px;"></div>Checking…</div>';
   try {
     const r = await fetch(`${API}/api/auth/account-requests/check/${roll}`);
     const d = await r.json();
     if (!r.ok) { res.innerHTML = `<div class="empty">${escapeHtml(d.error || 'Failed')}</div>`; return; }
     const reqs = d.requests || [];
-    if (!reqs.length) { res.innerHTML = '<div class="empty" style="padding:14px 0;">No requests found.</div>'; return; }
+    if (!reqs.length) { res.innerHTML = '<div class="empty">No requests found.</div>'; return; }
     res.innerHTML = reqs.map(r => {
       const type = r.type === 'forgot_password' ? '🔑 Forgot Password' : '📱 Device Reset';
-      const statusClass = r.status === 'Approved' ? 'badge-success' : r.status === 'Rejected' ? 'badge-danger' : r.status === 'Used' ? 'badge-info' : 'badge-warning';
-      const statusEmoji = r.status === 'Approved' ? '✅' : r.status === 'Rejected' ? '❌' : r.status === 'Used' ? '✨' : '⏳';
+      const sc = r.status === 'Approved' ? 'badge-success' : r.status === 'Rejected' ? 'badge-danger' : r.status === 'Used' ? 'badge-info' : 'badge-warning';
+      const se = r.status === 'Approved' ? '✅' : r.status === 'Rejected' ? '❌' : r.status === 'Used' ? '✨' : '⏳';
       let action = '';
-      if (r.status === 'Approved' && r.type === 'forgot_password') action = `<button class="btn btn-success btn-xs" style="margin-top:10px;" onclick="closeModal('checkStatusModal');openSetNewPassword();document.getElementById('snpRoll').value='${r.rollNo}';">Set New Password →</button>`;
-      else if (r.status === 'Approved' && r.type === 'device_reset') action = `<div style="margin-top:10px;font-size:11px;color:#047857;font-weight:600;">Device unlocked — try logging in from new phone.</div>`;
-      else if (r.status === 'Rejected') action = `<div style="margin-top:10px;font-size:11px;color:#be123c;font-weight:600;">Contact admin for details.</div>`;
-      else action = `<div style="margin-top:10px;font-size:11px;color:#b45309;font-weight:600;">Waiting for admin approval.</div>`;
-      return `<div style="padding:14px;border:1px solid var(--slate-200);border-radius:11px;margin-bottom:10px;background:#fff;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
-          <div style="font-weight:800;font-size:13px;">${type}</div>
-          <span class="badge ${statusClass}">${statusEmoji} ${r.status}</span>
+      if (r.status === 'Approved' && r.type === 'forgot_password') action = `<button class="btn btn-success btn-xs ripple mt-1" onclick="closeModal('checkStatusModal');openSetNewPassword();document.getElementById('snpRoll').value='${r.rollNo}';">Set New Password →</button>`;
+      else if (r.status === 'Approved' && r.type === 'device_reset') action = `<div class="mt-1 text-sm" style="color:var(--emerald-700);font-weight:600;">Device unlocked — try logging in from new phone.</div>`;
+      else if (r.status === 'Rejected') action = `<div class="mt-1 text-sm" style="color:var(--rose-700);font-weight:600;">Contact admin for details.</div>`;
+      else action = `<div class="mt-1 text-sm" style="color:var(--amber-700);font-weight:600;">Waiting for admin approval.</div>`;
+      return `<div class="list-item">
+        <div class="list-item-header">
+          <div class="list-item-title">${type}</div>
+          <span class="badge ${sc}">${se} ${r.status}</span>
         </div>
-        ${r.reason ? `<div style="margin-top:8px;font-size:11.5px;color:var(--slate-500);">Reason: ${escapeHtml(r.reason)}</div>` : ''}
-        <div style="margin-top:6px;font-size:10.5px;color:var(--slate-400);">${new Date(r.createdAt).toLocaleString('en-IN')}</div>
+        ${r.reason ? `<div class="list-item-body">Reason: ${escapeHtml(r.reason)}</div>` : ''}
+        <div class="list-item-meta">${new Date(r.createdAt).toLocaleString('en-IN')}</div>
         ${action}
       </div>`;
     }).join('');
   } catch(e) { res.innerHTML = '<div class="empty">Network error: ' + escapeHtml(e.message) + '</div>'; }
 }
+
 async function loadApprovedBanner(){
   if (!currentUser || currentUser.role !== 'student') return;
   const banner = $('approvedRequestBanner'); if (!banner) return;
@@ -924,7 +1046,7 @@ async function loadApprovedBanner(){
     if (approvedFP) {
       cls = 'forgot'; icon = '✅'; head = 'Forgot Password Approved';
       text = 'Your password reset request has been approved. Click "Set New Password" to create a new password.';
-      actions = `<button class="btn btn-success btn-sm" onclick="openSetNewPassword();document.getElementById('snpRoll').value=currentUser.rollNo;">Set New Password →</button>`;
+      actions = `<button class="btn btn-success btn-sm ripple" onclick="openSetNewPassword();document.getElementById('snpRoll').value=currentUser.rollNo;">Set New Password →</button>`;
     } else if (pending) {
       cls = 'pending'; icon = '⏳';
       const typeName = pending.type === 'forgot_password' ? 'Forgot Password' : 'Device Reset';
@@ -933,16 +1055,16 @@ async function loadApprovedBanner(){
     } else { banner.classList.remove('show'); return; }
     banner.className = `approved-banner ${cls} show`;
     banner.innerHTML = `
-      <div class="ab-head">
-        <svg viewBox="0 0 24 24">${cls === 'forgot' ? '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>' : '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'}</svg>
-        ${icon} ${head}
-      </div>
+      <div class="ab-head"><svg viewBox="0 0 24 24">${cls === 'forgot' ? '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>' : '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'}</svg>${icon} ${head}</div>
       <div class="ab-text">${text}</div>
       <div class="ab-actions">${actions}</div>
     `;
   } catch(e) { banner.classList.remove('show'); }
 }
 
+/* ============================================================
+   LIVE PASSCODE
+   ============================================================ */
 async function loadLivePasscodes(){
   try {
     const [fd, sl] = await Promise.all([
@@ -1030,7 +1152,7 @@ function handleScrollFab(){ const f = $('scrollTopFab'); if (!f) return; if (win
 window.addEventListener('scroll', handleScrollFab, { passive: true });
 
 /* ============================================================
-   SCROLL REVEAL ANIMATIONS
+   SCROLL REVEAL
    ============================================================ */
 function initScrollAnimations(){
   const targets = document.querySelectorAll('.stat, .card, .working-days-cta, .chart-wrap, .advisor, .passcode-card, .collapsible-card, .attendance-actions-card, .approved-banner, .welcome, .portal-grid .portal, .subject-summary-line');
@@ -1092,13 +1214,12 @@ async function handleAuth(){
       if (data.user.role !== selectedRole) return showFeedback('error', 'Role Mismatch', `Registered as ${data.user.role}, not ${selectedRole}.`);
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
-      localStorage.setItem('BM_LOGIN_TIME', Date.now().toString()); // ★ Track session start
+      localStorage.setItem('BM_LOGIN_TIME', Date.now().toString());
       loadDashboard();
     }
   } catch(e){ hideDL(); showFeedback('error', 'Network Error', e.message); }
 }
 
-/* ★ FIX 3: Preserve device ID + FCM settings on logout (same-device re-login works) */
 function logout(){
   const oT = localStorage.getItem('BM_ORIG_TOKEN'), oU = localStorage.getItem('BM_ORIG_USER');
   if (oT && oU) {
@@ -1106,19 +1227,13 @@ function logout(){
     localStorage.setItem('user', oU);
     localStorage.removeItem('BM_ORIG_TOKEN');
     localStorage.removeItem('BM_ORIG_USER');
-    location.reload();
-    return;
+    location.reload(); return;
   }
-  // ★ Preserve persistent keys — critical for device binding to work
   const preserveKeys = ['BM_DEVICE_ID', 'BM_FCM_ENABLED', 'BM_FCM_TOKEN'];
   const saved = {};
-  preserveKeys.forEach(k => {
-    const v = localStorage.getItem(k);
-    if (v) saved[k] = v;
-  });
+  preserveKeys.forEach(k => { const v = localStorage.getItem(k); if (v) saved[k] = v; });
   localStorage.clear();
   Object.entries(saved).forEach(([k, v]) => localStorage.setItem(k, v));
-  console.log('[Logout] Preserved:', Object.keys(saved).join(', '));
   location.reload();
 }
 function switchBack(){
@@ -1131,6 +1246,7 @@ function switchBack(){
 function openForgotPassword(){ openModal('forgotPassModal'); }
 function openSetNewPassword(){ openModal('setNewPassModal'); }
 function openDeviceReset(){ openModal('deviceResetModal'); }
+
 async function submitForgotPassword(){
   const roll = sanitizeRoll($('fpRoll').value.trim());
   const reason = $('fpReason').value.trim() || 'Forgot password';
@@ -1194,19 +1310,13 @@ function loadRazorpayScript() {
     document.body.appendChild(script);
   });
 }
-
 async function fetchUserSubscription() {
   if (!currentUser || currentUser.role !== 'student') return;
   try {
     const res = await fetch(`${API}/api/user/subscription/${currentUser.rollNo}`);
-    if (res.ok) {
-      const d = await res.json();
-      userSubscription = d;
-      updateSubscriptionBadge();
-    }
+    if (res.ok) { const d = await res.json(); userSubscription = d; updateSubscriptionBadge(); }
   } catch (e) {}
 }
-
 function updateSubscriptionBadge() {
   let badge = $('subBadge');
   if (!badge) {
@@ -1223,10 +1333,10 @@ function updateSubscriptionBadge() {
   if (!badge) return;
   badge.style.display = 'inline-flex';
   const tier = userSubscription.tier || 'free';
-  if (tier === 'silver') { badge.textContent = '🥈 Silver'; badge.style.background = '#e2e8f0'; badge.style.color = '#475569'; }
-  else if (tier === 'gold') { badge.textContent = '🥇 Gold'; badge.style.background = '#fef3c7'; badge.style.color = '#b45309'; }
-  else if (tier === 'platinum') { badge.textContent = '💎 Platinum'; badge.style.background = '#f3e8ff'; badge.style.color = '#6d28d9'; }
-  else { badge.textContent = 'Free'; badge.style.background = '#f1f5f9'; badge.style.color = '#64748b'; }
+  if (tier === 'silver') { badge.textContent = '🥈 Silver'; badge.style.background = 'var(--slate-200)'; badge.style.color = 'var(--slate-700)'; }
+  else if (tier === 'gold') { badge.textContent = '🥇 Gold'; badge.style.background = 'var(--amber-100)'; badge.style.color = 'var(--amber-700)'; }
+  else if (tier === 'platinum') { badge.textContent = '💎 Platinum'; badge.style.background = 'var(--purple-100)'; badge.style.color = 'var(--purple-700)'; }
+  else { badge.textContent = 'Free'; badge.style.background = 'var(--slate-100)'; badge.style.color = 'var(--slate-600)'; }
 }
 
 function openSubscriptionModal() {
@@ -1235,17 +1345,7 @@ function openSubscriptionModal() {
     modal = document.createElement('div');
     modal.id = 'subscriptionModal';
     modal.className = 'modal-backdrop safe-top-modal';
-    modal.innerHTML = `
-      <div class="modal wide">
-        <div class="modal-header" style="align-items: center !important; padding-bottom: 12px;">
-          <div><h3>🌟 Upgrade Premium</h3><p class="text-xs text-muted" style="margin-top:4px;">Unlock exclusive features</p></div>
-          <button type="button" class="modal-close" style="margin-top: 8px; margin-right: 4px;" onclick="event.stopPropagation(); event.preventDefault(); closeModal('subscriptionModal')">✕</button>
-        </div>
-        <div class="modal-body" id="subscriptionBody">
-          <div class="empty">Loading plans…</div>
-        </div>
-      </div>
-    `;
+    modal.innerHTML = `<div class="modal wide"><div class="modal-header"><div><h3>🌟 Upgrade Premium</h3><p class="text-xs text-muted mt-1">Unlock exclusive features</p></div><button type="button" class="modal-close ripple" onclick="event.stopPropagation();closeModal('subscriptionModal')">✕</button></div><div class="modal-body" id="subscriptionBody"><div class="empty">Loading plans…</div></div></div>`;
     document.body.appendChild(modal);
   }
   openModal('subscriptionModal');
@@ -1256,9 +1356,9 @@ function renderSubscriptionPlans() {
   const body = $('subscriptionBody');
   const currentTier = userSubscription.tier || 'free';
   const plans = [
-    { id: 'silver', name: 'Silver', icon: '🥈', price: '₹5', color: '#475569', features: ['PDF Reports (Attendance)', 'Basic Bunk Advisor'] },
-    { id: 'gold', name: 'Gold', icon: '🥇', price: '₹10', color: '#b45309', features: ['PDF Reports', 'Bunk Advisor', 'AI Chatbot Access', 'Priority Support'] },
-    { id: 'platinum', name: 'Platinum', icon: '💎', price: '₹20', color: '#6d28d9', features: ['All Gold Features', 'AI File/Image Analysis', 'Unlimited everything', 'Early Access to new features'] }
+    { id: 'silver', name: 'Silver', icon: '🥈', price: '₹5', color: 'var(--slate-700)', features: ['PDF Reports (Attendance)', 'Basic Bunk Advisor'] },
+    { id: 'gold', name: 'Gold', icon: '🥇', price: '₹10', color: 'var(--amber-700)', features: ['PDF Reports', 'Bunk Advisor', 'AI Chatbot Access', 'Priority Support'] },
+    { id: 'platinum', name: 'Platinum', icon: '💎', price: '₹20', color: 'var(--purple-700)', features: ['All Gold Features', 'AI File/Image Analysis', 'Unlimited everything', 'Early Access to new features'] }
   ];
   const tierRank = { free: 0, silver: 1, gold: 2, platinum: 3 };
   const userRank = tierRank[currentTier] || 0;
@@ -1272,19 +1372,12 @@ function renderSubscriptionPlans() {
     let disabled = '';
     if (isCurrent && !isExpired) { btnText = 'Current Plan'; btnClass = 'btn-outline'; disabled = 'disabled'; }
     else if (isLowerTier && !isExpired) { btnText = 'Included'; btnClass = 'btn-outline'; disabled = 'disabled'; }
-    html += `
-      <div style="border:2px solid ${(isCurrent || isLowerTier) && !isExpired ? p.color : 'var(--slate-200)'};border-radius:14px;padding:16px;margin-bottom:12px;position:relative;background:#fff; ${disabled ? 'opacity:0.8;' : ''}">
-        ${(isCurrent || isLowerTier) && !isExpired ? `<span style="position:absolute;top:-10px;right:16px;background:${p.color};color:#fff;font-size:10px;font-weight:800;padding:2px 10px;border-radius:20px;">ACTIVE</span>` : ''}
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-          <div style="font-size:18px;font-weight:800;color:${p.color};">${p.icon} ${p.name}</div>
-          <div style="font-size:20px;font-weight:900;color:var(--slate-900);">${p.price}<span style="font-size:12px;color:var(--slate-500);font-weight:500;">/mo</span></div>
-        </div>
-        <ul style="list-style:none;padding:0;margin:0 0 16px 0;font-size:12px;color:var(--slate-600);line-height:1.8;">
-          ${p.features.map(f => `<li>✅ ${f}</li>`).join('')}
-        </ul>
-        <button class="btn ${btnClass} btn-block" ${disabled} onclick="initiatePayment('${p.id}')">${btnText}</button>
-      </div>
-    `;
+    html += `<div class="list-item" style="border:2px solid ${(isCurrent || isLowerTier) && !isExpired ? p.color : 'var(--surface-border)'};border-radius:14px;padding:16px;position:relative;${disabled ? 'opacity:0.8;' : ''}">
+      ${(isCurrent || isLowerTier) && !isExpired ? `<span style="position:absolute;top:-10px;right:16px;background:${p.color};color:#fff;font-size:10px;font-weight:800;padding:2px 10px;border-radius:20px;">ACTIVE</span>` : ''}
+      <div class="flex-between mb-2"><div style="font-size:18px;font-weight:800;color:${p.color};">${p.icon} ${p.name}</div><div style="font-size:20px;font-weight:900;color:var(--slate-900);">${p.price}<span style="font-size:12px;color:var(--slate-500);font-weight:500;">/mo</span></div></div>
+      <ul style="list-style:none;padding:0;margin:0 0 16px 0;font-size:12px;color:var(--slate-600);line-height:1.8;">${p.features.map(f => `<li>✅ ${f}</li>`).join('')}</ul>
+      <button class="btn ${btnClass} btn-block ripple" ${disabled} onclick="initiatePayment('${p.id}')">${btnText}</button>
+    </div>`;
   });
   body.innerHTML = html;
 }
@@ -1294,59 +1387,34 @@ async function initiatePayment(tier) {
   try {
     const isLoaded = await loadRazorpayScript();
     if (!isLoaded) { hideDL(); return toast('Razorpay SDK failed to load.', 'error'); }
-    const res = await fetch(`${API}/api/payment/create-order`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rollNo: currentUser.rollNo, tier })
-    });
+    const res = await fetch(`${API}/api/payment/create-order`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: currentUser.rollNo, tier }) });
     const orderData = await res.json();
     hideDL();
     if (!res.ok) return toast(orderData.error || 'Order creation failed', 'error');
     const options = {
-      key: orderData.key_id,
-      amount: orderData.order.amount,
-      currency: "INR",
-      name: "BM Group ERP",
-      description: `${tier.toUpperCase()} Subscription - 1 Month`,
+      key: orderData.key_id, amount: orderData.order.amount, currency: "INR",
+      name: "BM Group ERP", description: `${tier.toUpperCase()} Subscription - 1 Month`,
       order_id: orderData.order.id,
       config: { display: { blocks: { upi: { name: "UPI (GPay, PhonePe, Paytm)", instruments: [{ method: "upi" }] } }, sequence: ["block.upi", "block.other"], preferences: { show_default_blocks: true } } },
       handler: async function (response) {
         showDL('Verifying payment…');
-        const verifyRes = await fetch(`${API}/api/payment/verify`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            razorpay_order_id: response.razorpay_order_id,
-            razorpay_payment_id: response.razorpay_payment_id,
-            razorpay_signature: response.razorpay_signature
-          })
-        });
+        const verifyRes = await fetch(`${API}/api/payment/verify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ razorpay_order_id: response.razorpay_order_id, razorpay_payment_id: response.razorpay_payment_id, razorpay_signature: response.razorpay_signature }) });
         const verifyData = await verifyRes.json();
         hideDL();
-        if (verifyData.success) {
-          showFeedback('success', 'Payment Successful!', `You are now a ${tier.toUpperCase()} member! Enjoy premium features.`);
-          closeModal('subscriptionModal');
-          fetchUserSubscription();
-        } else {
-          toast(verifyData.error || 'Payment verification failed', 'error');
-        }
+        if (verifyData.success) { showFeedback('success', 'Payment Successful!', `You are now a ${tier.toUpperCase()} member!`); closeModal('subscriptionModal'); fetchUserSubscription(); }
+        else toast(verifyData.error || 'Payment verification failed', 'error');
       },
       prefill: { name: currentUser.name, contact: currentUser.phone || "" },
       theme: { color: "#2563eb" }
     };
     const rzp = new Razorpay(options);
-    rzp.on('payment.failed', function (response){
-      toast('Payment Failed: ' + response.error.description, 'error');
-    });
+    rzp.on('payment.failed', function (response){ toast('Payment Failed: ' + response.error.description, 'error'); });
     rzp.open();
-  } catch (e) {
-    hideDL();
-    toast('Payment Error: ' + e.message, 'error');
-  }
+  } catch (e) { hideDL(); toast('Payment Error: ' + e.message, 'error'); }
 }
 
 /* ============================================================
-   GAMIFICATION
+   ACHIEVEMENTS
    ============================================================ */
 function openAchievementsModal() {
   let modal = $('achievementsModal');
@@ -1354,17 +1422,7 @@ function openAchievementsModal() {
     modal = document.createElement('div');
     modal.id = 'achievementsModal';
     modal.className = 'modal-backdrop safe-top-modal';
-    modal.innerHTML = `
-      <div class="modal wide">
-        <div class="modal-header" style="align-items: center !important; padding-bottom: 12px;">
-          <div><h3>🏆 Achievements</h3><p class="text-xs text-muted" style="margin-top:4px;">Your streaks & unlocked badges</p></div>
-          <button type="button" class="modal-close" style="margin-top: 8px; margin-right: 4px;" onclick="event.stopPropagation(); event.preventDefault(); closeModal('achievementsModal')">✕</button>
-        </div>
-        <div class="modal-body" id="achievementsBody">
-          <div class="empty">Loading…</div>
-        </div>
-      </div>
-    `;
+    modal.innerHTML = `<div class="modal wide"><div class="modal-header"><div><h3>🏆 Achievements</h3><p class="text-xs text-muted mt-1">Your streaks & unlocked badges</p></div><button type="button" class="modal-close ripple" onclick="event.stopPropagation();closeModal('achievementsModal')">✕</button></div><div class="modal-body" id="achievementsBody"><div class="empty">Loading…</div></div></div>`;
     document.body.appendChild(modal);
   }
   openModal('achievementsModal');
@@ -1380,38 +1438,33 @@ async function loadAchievementsData() {
     const data = await res.json();
     let html = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
-        <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:12px;padding:16px;text-align:center;border:1px solid #fcd34d;">
+        <div style="background:linear-gradient(135deg,var(--amber-100),var(--amber-200));border-radius:12px;padding:16px;text-align:center;border:1px solid var(--amber-400);">
           <div style="font-size:32px;margin-bottom:4px;">🔥</div>
-          <div style="font-size:24px;font-weight:900;color:#b45309;">${data.loginStreak || 0}</div>
-          <div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;">Day Login Streak</div>
+          <div style="font-size:24px;font-weight:900;color:var(--amber-700);">${data.loginStreak || 0}</div>
+          <div style="font-size:11px;font-weight:700;color:var(--amber-800);text-transform:uppercase;">Day Login Streak</div>
         </div>
-        <div style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);border-radius:12px;padding:16px;text-align:center;border:1px solid #6ee7b7;">
+        <div style="background:linear-gradient(135deg,var(--emerald-50),var(--emerald-100));border-radius:12px;padding:16px;text-align:center;border:1px solid var(--emerald-400);">
           <div style="font-size:32px;margin-bottom:4px;">⚡</div>
-          <div style="font-size:24px;font-weight:900;color:#047857;">${data.totalXp || 0}</div>
-          <div style="font-size:11px;font-weight:700;color:#065f46;text-transform:uppercase;">Total XP</div>
+          <div style="font-size:24px;font-weight:900;color:var(--emerald-700);">${data.totalXp || 0}</div>
+          <div style="font-size:11px;font-weight:700;color:var(--emerald-800);text-transform:uppercase;">Total XP</div>
         </div>
       </div>
       <div class="section-title">Unlocked Badges (${data.unlockedAchievements.length})</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(100px, 1fr));gap:10px;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;">
     `;
-    if (data.unlockedAchievements.length === 0) {
-      html += `<div style="grid-column:1/-1;" class="empty">No achievements yet. Keep marking attendance and logging in daily!</div>`;
-    } else {
+    if (data.unlockedAchievements.length === 0) html += `<div style="grid-column:1/-1;" class="empty">No achievements yet. Keep marking attendance and logging in daily!</div>`;
+    else {
       data.unlockedAchievements.forEach(a => {
-        html += `
-          <div style="background:#fff;border:1px solid var(--slate-200);border-radius:12px;padding:12px;text-align:center;box-shadow:var(--shadow-sm);">
-            <div style="font-size:32px;margin-bottom:6px;">${a.icon}</div>
-            <div style="font-size:12px;font-weight:800;color:var(--slate-900);line-height:1.2;margin-bottom:4px;">${escapeHtml(a.title)}</div>
-            <div style="font-size:10px;color:var(--slate-500);line-height:1.3;">${escapeHtml(a.desc)}</div>
-          </div>
-        `;
+        html += `<div class="list-item" style="text-align:center;padding:12px;">
+          <div style="font-size:32px;margin-bottom:6px;">${a.icon}</div>
+          <div style="font-size:12px;font-weight:800;color:var(--slate-900);line-height:1.2;margin-bottom:4px;">${escapeHtml(a.title)}</div>
+          <div style="font-size:10px;color:var(--slate-500);line-height:1.3;">${escapeHtml(a.desc)}</div>
+        </div>`;
       });
     }
     html += `</div>`;
     body.innerHTML = html;
-  } catch (e) {
-    body.innerHTML = `<div class="empty">Error: ${escapeHtml(e.message)}</div>`;
-  }
+  } catch (e) { body.innerHTML = `<div class="empty">Error: ${escapeHtml(e.message)}</div>`; }
 }
 
 /* ============================================================
@@ -1440,29 +1493,11 @@ function makeCollapsible(id, title, iconSvg, openByDefault = false) {
     const el = document.getElementById(id);
     if (!el || el.classList.contains('collapsible-card')) return;
     const originalDisplay = el.style.display || 'block';
-    el.querySelectorAll('.card-title, h3, h2, .section-title').forEach(node => {
-        if (!node.querySelector('button, select, input, a')) {
-            node.remove();
-        }
-    });
+    el.querySelectorAll('.card-title, h3, h2, .section-title').forEach(node => { if (!node.querySelector('button, select, input, a')) node.remove(); });
     const header = document.createElement('div');
     header.className = 'collapsible-header';
     header.onclick = function() { toggleCardBody(this); };
-    header.style.display = 'flex';
-    header.style.justifyContent = 'space-between';
-    header.style.alignItems = 'center';
-    header.style.padding = '16px 18px';
-    header.style.cursor = 'pointer';
     const headerLeft = document.createElement('h3');
-    headerLeft.style.margin = '0';
-    headerLeft.style.display = 'flex';
-    headerLeft.style.alignItems = 'center';
-    headerLeft.style.gap = '8px';
-    headerLeft.style.fontSize = '12px';
-    headerLeft.style.fontWeight = '700';
-    headerLeft.style.color = 'var(--slate-500)';
-    headerLeft.style.textTransform = 'uppercase';
-    headerLeft.style.letterSpacing = '.05em';
     headerLeft.innerHTML = `${iconSvg} ${title}`;
     const headerRight = document.createElement('div');
     headerRight.style.display = 'flex';
@@ -1510,7 +1545,7 @@ function initCollapsibleCards() {
 }
 
 /* ============================================================
-   DASHBOARD & STATS CLICKABLE LOGIC
+   DASHBOARD INIT
    ============================================================ */
 function loadDashboard(){
   const userStr = localStorage.getItem('user'); if (!userStr) return;
@@ -1533,16 +1568,13 @@ function loadDashboard(){
   if (rb) { rb.innerHTML = (roleIcons[currentUser.role] || '') + (currentUser.role === 'admin' ? 'Admin' : currentUser.role === 'faculty' ? 'Faculty' : 'Student'); rb.className = 'pill role-' + currentUser.role; }
   if ($('branchBadge')) $('branchBadge').textContent = currentUser.branch || 'CSE';
 
-  /* ★ FIX 4: Session expiry indicator appended to welcome meta */
   const meta = document.querySelector('.welcome .meta');
   if (meta && !document.getElementById('sessionExpiry')) {
-    const sep = document.createElement('span');
-    sep.textContent = '·';
+    const sep = document.createElement('span'); sep.textContent = '·';
     const expirySpan = document.createElement('span');
     expirySpan.id = 'sessionExpiry';
     expirySpan.title = 'Session valid for 7 days from login';
-    meta.appendChild(sep);
-    meta.appendChild(expirySpan);
+    meta.appendChild(sep); meta.appendChild(expirySpan);
   }
 
   fetchUserSubscription();
@@ -1571,9 +1603,7 @@ function loadDashboard(){
     if ($('menuUserName')) $('menuUserName').textContent = currentUser.name;
     if ($('menuUserRoll')) $('menuUserRoll').textContent = (currentUser.rollNo || '') + ' · ' + (currentUser.branch || 'CSE');
     populateStudentMenu();
-    [reqSec, advBox, sbCard, repSec, qpCard, aaCard, notesSec, assignSec, examsSec, annSec].forEach(el => {
-      if (el) el.style.display = (el === advBox) ? 'flex' : 'block';
-    });
+    [reqSec, advBox, sbCard, repSec, qpCard, aaCard, notesSec, assignSec, examsSec, annSec].forEach(el => { if (el) el.style.display = (el === advBox) ? 'flex' : 'block'; });
     loadLivePasscodes(); loadApprovedBanner();
     if (passcodeIntervalId) clearInterval(passcodeIntervalId);
     passcodeIntervalId = setInterval(loadLivePasscodes, 30000);
@@ -1585,17 +1615,13 @@ function loadDashboard(){
         if (dpStat) { dpStat.classList.add('clickable-stat'); dpStat.onclick = () => {
                 switchTab('tab-mark');
                 document.querySelectorAll('.collapsible-card').forEach(c => {
-                    const b = c.querySelector('.collapsible-body');
-                    const a = c.querySelector('.collapse-arrow');
-                    if(b) b.classList.remove('open');
-                    if(a) a.style.transform = 'rotate(0deg)';
+                    const b = c.querySelector('.collapsible-body'); const a = c.querySelector('.collapse-arrow');
+                    if(b) b.classList.remove('open'); if(a) a.style.transform = 'rotate(0deg)';
                 });
                 const cal = document.getElementById('sec-calendar');
                 if(cal) {
-                    const b = cal.querySelector('.collapsible-body');
-                    const a = cal.querySelector('.collapse-arrow');
-                    if(b) b.classList.add('open');
-                    if(a) a.style.transform = 'rotate(180deg)';
+                    const b = cal.querySelector('.collapsible-body'); const a = cal.querySelector('.collapse-arrow');
+                    if(b) b.classList.add('open'); if(a) a.style.transform = 'rotate(180deg)';
                     setTimeout(() => cal.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
                 }
             }; }
@@ -1606,9 +1632,7 @@ function loadDashboard(){
                 setTimeout(() => document.getElementById('subjectBreakdownCard')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
             }; }
         const wdpStat = $('statWorkingDaysPct')?.closest('.stat');
-        if (wdpStat) { wdpStat.classList.add('clickable-stat'); wdpStat.onclick = () => {
-                showFeedback('info', 'Working Days Analytics', 'Your working days percentage is ' + ($('statWorkingDaysPct')?.textContent || '0%') + '.\n\nThis means you attended college on this percentage of total working days. Keep it above 75%!');
-            }; }
+        if (wdpStat) { wdpStat.classList.add('clickable-stat'); wdpStat.onclick = () => { showFeedback('info', 'Working Days Analytics', 'Your working days percentage is ' + ($('statWorkingDaysPct')?.textContent || '0%') + '.\n\nThis means you attended college on this percentage of total working days. Keep it above 75%!'); }; }
 
         if (userSubscription.tier === 'platinum' || userSubscription.tier === 'gold') {
             let premCard = $('premiumAnalyticsCard');
@@ -1617,20 +1641,9 @@ function loadDashboard(){
                 premCard.id = 'premiumAnalyticsCard';
                 premCard.className = 'card collapsible-card';
                 premCard.style.marginTop = '16px';
-                premCard.innerHTML = `
-                    <div class="collapsible-header" onclick="toggleCardBody(this)" style="display:flex;justify-content:space-between;align-items:center;padding:16px 18px;cursor:pointer;">
-                        <h3 style="margin:0;font-size:12px;font-weight:700;color:var(--slate-500);text-transform:uppercase;letter-spacing:.05em;">💎 Premium Insights</h3>
-                        <span class="collapse-arrow" style="font-size:12px;color:var(--slate-400);transition:transform .25s;">▼</span>
-                    </div>
-                    <div class="collapsible-body" style="padding:18px;display:none;">
-                        <div style="background:linear-gradient(135deg,#f3e8ff,#e9d5ff);border-radius:12px;padding:16px;border:1px solid #d8b4fe;">
-                            <div style="font-weight:800;color:#6d28d9;font-size:14px;margin-bottom:8px;">AI Bunk Predictor</div>
-                            <div style="font-size:12px;color:#4c1d95;line-height:1.5;">You are in the safe zone! But to maintain 85%+ attendance, you should not skip more than 3 lectures next week. Keep up the good work!</div>
-                        </div>
-                    </div>
-                `;
+                premCard.innerHTML = `<div class="collapsible-header" onclick="toggleCardBody(this)"><h3>💎 Premium Insights</h3><span class="collapse-arrow">▼</span></div><div class="collapsible-body"><div class="highlight-box info" style="background:linear-gradient(135deg,var(--purple-100),var(--purple-200));border-color:var(--purple-400);color:var(--purple-800);"><div style="font-weight:800;font-size:14px;margin-bottom:8px;">AI Bunk Predictor</div><div style="font-size:12px;line-height:1.5;">You are in the safe zone! But to maintain 85%+ attendance, you should not skip more than 3 lectures next week. Keep up the good work!</div></div></div>`;
                 const advBox = $('advisorBox');
-                if (advBox && advBox.parentNode) { advBox.parentNode.insertBefore(premCard, advBox.nextSibling); }
+                if (advBox && advBox.parentNode) advBox.parentNode.insertBefore(premCard, advBox.nextSibling);
             }
         }
     }, 800);
@@ -1639,10 +1652,7 @@ function loadDashboard(){
         if (repSec) {
             const btnRow = repSec.querySelector('.row:last-child');
             if (btnRow) {
-                btnRow.innerHTML = `
-                  <button class="btn btn-outline" style="flex:1;" onclick="generateSelfPDF('view')">${ICONS.view} View</button>
-                  <button class="btn btn-primary" style="flex:1;" onclick="generateSelfPDF('download')">${ICONS.download} Download</button>
-                `;
+                btnRow.innerHTML = `<button class="btn btn-outline ripple" style="flex:1;" onclick="generateSelfPDF('view')">${ICONS.view} View</button><button class="btn btn-primary ripple" style="flex:1;" onclick="generateSelfPDF('download')">${ICONS.download} Download</button>`;
                 btnRow.classList.add('report-btn-group');
             }
         }
@@ -1664,9 +1674,7 @@ function loadDashboard(){
   }
 
   if (currentUser.role === 'admin' || currentUser.role === 'faculty') {
-    ['sec-chart','sec-timetable','sec-calendar','sec-reports','sec-notes','sec-assignments','sec-exams','sec-announcements'].forEach(id => {
-      const e = $(id); if (e) e.style.display = 'none';
-    });
+    ['sec-chart','sec-timetable','sec-calendar','sec-reports','sec-notes','sec-assignments','sec-exams','sec-announcements'].forEach(id => { const e = $(id); if (e) e.style.display = 'none'; });
   }
 
   if (mt) mt.style.display = 'flex';
@@ -1709,70 +1717,63 @@ function loadDashboard(){
   setTimeout(ensureScrollUnlocked, 500);
   setTimeout(initCollapsibleCards, 300);
   startSessionCheck();
+
+  // ★ NEW: Bottom nav + PTR init
+  updateBottomNavVisibility();
+  updateBottomNavActive('home');
+  initPullToRefresh();
 }
 
-/* ★ FIX 4: Real-time session expiry display */
 function updateClock(){
   const n = new Date();
   if ($('currentTime')) $('currentTime').textContent = n.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
   if ($('currentDate')) $('currentDate').textContent = n.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
-
   const loginTime = parseInt(localStorage.getItem('BM_LOGIN_TIME') || '0');
   const sessionEl = $('sessionExpiry');
   if (loginTime && sessionEl) {
     const remainMs = (loginTime + SESSION_DURATION_MS) - Date.now();
-    if (remainMs <= 0) {
-      sessionEl.textContent = '⏰ Expired';
-      sessionEl.style.color = 'var(--rose-600)';
-      sessionEl.style.background = 'var(--rose-50)';
-    } else {
+    if (remainMs <= 0) { sessionEl.textContent = '⏰ Expired'; sessionEl.style.color = 'var(--rose-700)'; sessionEl.style.background = 'var(--rose-50)'; }
+    else {
       const days = Math.floor(remainMs / (24*60*60*1000));
       const hours = Math.floor((remainMs % (24*60*60*1000)) / (60*60*1000));
       const mins = Math.floor((remainMs % (60*60*1000)) / 60000);
       sessionEl.textContent = `Session: ${days}d ${hours}h`;
       sessionEl.style.color = days < 1 ? 'var(--amber-700)' : 'var(--slate-500)';
       sessionEl.style.background = days < 1 ? 'var(--amber-50)' : 'var(--slate-100)';
-      sessionEl.title = `Session expires in ${days}d ${hours}h ${mins}m (7 days from login)`;
+      sessionEl.title = `Session expires in ${days}d ${hours}h ${mins}m`;
     }
   }
 }
+
 async function fetchNotices(){
   try { const res = await fetch(`${API}/api/notices`); const data = await res.json(); if (data && data.length) { if ($('noticeText')) $('noticeText').textContent = data[data.length-1].message || 'No new notices'; const nb = $('noticeBanner'); if (nb) nb.style.display = 'flex'; } } catch(e){}
 }
+
 function switchTab(id){
   document.querySelectorAll('#mainTabs .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === id));
   ['tab-mark','tab-admin','tab-faculty','tab-leave'].forEach(t => { const el = $(t); if (el) el.style.display = 'none'; });
-  const el = $(id); if (el) { el.style.display = 'block'; el.style.animation = 'tabFadeIn .4s ease'; }
+  const el = $(id); if (el) { el.style.display = 'block'; el.style.animation = 'tabEnter .4s ease'; }
   if (id === 'tab-leave') { activeStudentMenuKey = 'leave'; populateStudentMenu(); }
   else if (id === 'tab-mark' && currentUser && currentUser.role === 'student' && !['request','notes','assignments','exams','announcements','timetable','calendar','subjects','workingdays','reports','logs','portals'].includes(activeStudentMenuKey)) { activeStudentMenuKey = 'home'; populateStudentMenu(); }
   observeNewContent();
   setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 60);
 }
 
-
-// Naya function sirf dropdown ke liye (Fast)
 async function fetchStudentsForDropdown() {
   const select = $('reportStudentSelect');
   if (!select) return;
   select.innerHTML = '<option value="">Loading Students…</option>';
   try {
-    // Yeh direct API se saare users le raha hai (bina summary ke)
     const data = await fetch(`${API}/api/admin/all-users/${currentUser.rollNo}`).then(x => x.json());
     const students = data.filter(u => u.role === 'student');
-    
-    // Dropdown mein list bharna
-    select.innerHTML = '<option value="">Select Student…</option>' + 
-      students.sort((a,b) => a.rollNo.localeCompare(b.rollNo, undefined, {numeric: true}))
-      .map(s => `<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`).join('');
-      
-  } catch (e) {
-    select.innerHTML = '<option value="">Error loading</option>';
-  }
+    select.innerHTML = '<option value="">Select Student…</option>' + students.sort((a,b) => a.rollNo.localeCompare(b.rollNo, undefined, {numeric: true})).map(s => `<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`).join('');
+  } catch (e) { select.innerHTML = '<option value="">Error loading</option>'; }
 }
+
 function showAdmin(id){
   document.querySelectorAll('.subnav-item').forEach(b => b.classList.toggle('active', b.getAttribute('onclick').includes(id)));
   ['a-directory','a-attendance','a-requests','a-registrations','a-account','a-reports','a-entry','a-holiday','a-passcode','a-notes','a-fees','a-library','a-results','a-exams','a-alerts','a-tools','a-leave','a-defaulters','a-subscriptions','a-gamification'].forEach(x => { const el = $(x); if (el) el.style.display = 'none'; });
-  const el = $(id); if (el) { el.style.display = 'block'; el.style.animation = 'tabFadeIn .35s ease'; }
+  const el = $(id); if (el) { el.style.display = 'block'; el.style.animation = 'tabEnter .35s ease'; }
   if (id === 'a-directory') fetchUsers();
   if (id === 'a-attendance') loadAllAttendance();
   if (id === 'a-requests') loadAdminRequests();
@@ -1799,34 +1800,69 @@ function initAnnouncementsUI() {
     if (alertsSection && !$('clearAnnBtn')) {
         const clearBtnCard = document.createElement('div');
         clearBtnCard.className = 'card';
-        clearBtnCard.innerHTML = `
-            <div class="card-title" style="color:#be123c;">🗑️ Clear Announcements</div>
-            <p class="text-xs text-muted mb-2">Remove all announcements for all branches.</p>
-            <button class="btn btn-danger btn-block" id="clearAnnBtn" onclick="clearAllAnnouncements()">Clear All Announcements</button>
-        `;
+        clearBtnCard.innerHTML = `<div class="card-title" style="color:var(--rose-700);">🗑️ Clear Announcements</div><p class="text-xs text-muted mb-2">Remove all announcements for all branches.</p><button class="btn btn-danger btn-block ripple" id="clearAnnBtn" onclick="clearAllAnnouncements()">Clear All Announcements</button>`;
         alertsSection.appendChild(clearBtnCard);
     }
 }
 async function clearAllAnnouncements() {
-    if (!confirm('Clear all announcements?')) return;
+    // ★ Uses customConfirm
+    const ok = await customConfirm('Clear All Announcements?', 'This will remove all announcements for all branches. This cannot be undone.', { danger: true, confirmText: 'Clear' });
+    if (!ok) return;
     showDL('Clearing...');
     try {
-        const res = await fetch(`${API}/api/admin/clear-announcements`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ requesterRollNo: currentUser.rollNo, branch: 'ALL' })
-        });
+        const res = await fetch(`${API}/api/admin/clear-announcements`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, branch: 'ALL' }) });
         hideDL();
         if (res.ok) { toast('Announcements cleared', 'success'); }
         else toast('Failed to clear', 'error');
     } catch(e) { hideDL(); toast('Network error', 'error'); }
 }
 
-async function clearAllRequests(){ if (!confirm('Delete ALL attendance requests? This cannot be undone.')) return; try { const res = await fetch(`${API}/api/admin/clear-requests`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})}); const d = await res.json(); if (res.ok) { showFeedback('success','Cleared', d.message || 'All attendance requests have been deleted.'); loadAdminRequests(); } else showFeedback('error','Failed', d.error || 'Could not clear requests'); } catch(e){ showFeedback('error','Network Error', e.message); } }
-async function clearAllRegistrations(){ if (!confirm('Delete ALL registration requests? This cannot be undone.')) return; try { const res = await fetch(`${API}/api/admin/clear-registrations`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})}); const d = await res.json(); if (res.ok) { showFeedback('success','Cleared', d.message || 'All registration requests have been deleted.'); loadRegistrationRequests(); } else showFeedback('error','Failed', d.error || 'Could not clear registrations'); } catch(e){ showFeedback('error','Network Error', e.message); } }
-async function clearAllAccountRequests(){ if (!confirm('Delete ALL account requests? This cannot be undone.')) return; try { const res = await fetch(`${API}/api/admin/clear-account-requests`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})}); const d = await res.json(); if (res.ok) { showFeedback('success','Cleared', d.message || 'All account requests have been deleted.'); loadAccountRequests(); } else showFeedback('error','Failed', d.error || 'Could not clear account requests'); } catch(e){ showFeedback('error','Network Error', e.message); } }
-async function clearAllLeaves(){ if (!confirm('Delete ALL leave requests? This cannot be undone.')) return; try { const res = await fetch(`${API}/api/admin/clear-leaves`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})}); const d = await res.json(); if (res.ok) { showFeedback('success','Cleared', d.message || 'All leave requests have been deleted.'); loadLeaveRequests(); } else showFeedback('error','Failed', d.error || 'Could not clear leaves'); } catch(e){ showFeedback('error','Network Error', e.message); } }
-async function clearAllChats(){ if (!confirm('Delete ALL your chat history? This cannot be undone.')) return; try { const res = await fetch(`${API}/api/chats/clear-all`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo})}); const d = await res.json(); if (res.ok) { showFeedback('success','Chats Cleared', d.message || 'All chat history has been deleted.'); chatHistory = []; currentThreadId = null; renderChatHistory(); newChat(); } else showFeedback('error','Failed', d.error || 'Could not clear chats'); } catch(e){ showFeedback('error','Network Error', e.message); } }
+async function clearAllRequests(){
+  // ★ Custom confirm
+  if (!await customConfirm('Delete ALL attendance requests?', 'This action cannot be undone. All pending, approved and rejected requests will be deleted.', { danger: true, confirmText: 'Delete All' })) return;
+  try {
+    const res = await fetch(`${API}/api/admin/clear-requests`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})});
+    const d = await res.json();
+    if (res.ok) { showFeedback('success','Cleared', d.message || 'All attendance requests have been deleted.'); loadAdminRequests(); }
+    else showFeedback('error','Failed', d.error || 'Could not clear requests');
+  } catch(e){ showFeedback('error','Network Error', e.message); }
+}
+async function clearAllRegistrations(){
+  if (!await customConfirm('Delete ALL registration requests?', 'This action cannot be undone.', { danger: true, confirmText: 'Delete All' })) return;
+  try {
+    const res = await fetch(`${API}/api/admin/clear-registrations`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})});
+    const d = await res.json();
+    if (res.ok) { showFeedback('success','Cleared', d.message || 'All registration requests have been deleted.'); loadRegistrationRequests(); }
+    else showFeedback('error','Failed', d.error || 'Could not clear registrations');
+  } catch(e){ showFeedback('error','Network Error', e.message); }
+}
+async function clearAllAccountRequests(){
+  if (!await customConfirm('Delete ALL account requests?', 'This action cannot be undone.', { danger: true, confirmText: 'Delete All' })) return;
+  try {
+    const res = await fetch(`${API}/api/admin/clear-account-requests`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})});
+    const d = await res.json();
+    if (res.ok) { showFeedback('success','Cleared', d.message || 'All account requests have been deleted.'); loadAccountRequests(); }
+    else showFeedback('error','Failed', d.error || 'Could not clear account requests');
+  } catch(e){ showFeedback('error','Network Error', e.message); }
+}
+async function clearAllLeaves(){
+  if (!await customConfirm('Delete ALL leave requests?', 'This action cannot be undone.', { danger: true, confirmText: 'Delete All' })) return;
+  try {
+    const res = await fetch(`${API}/api/admin/clear-leaves`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})});
+    const d = await res.json();
+    if (res.ok) { showFeedback('success','Cleared', d.message || 'All leave requests have been deleted.'); loadLeaveRequests(); }
+    else showFeedback('error','Failed', d.error || 'Could not clear leaves');
+  } catch(e){ showFeedback('error','Network Error', e.message); }
+}
+async function clearAllChats(){
+  if (!await customConfirm('Delete ALL your chat history?', 'This action cannot be undone.', { danger: true, confirmText: 'Clear Chats' })) return;
+  try {
+    const res = await fetch(`${API}/api/chats/clear-all`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo})});
+    const d = await res.json();
+    if (res.ok) { showFeedback('success','Chats Cleared', d.message || 'All chat history has been deleted.'); chatHistory = []; currentThreadId = null; renderChatHistory(); newChat(); }
+    else showFeedback('error','Failed', d.error || 'Could not clear chats');
+  } catch(e){ showFeedback('error','Network Error', e.message); }
+}
 
 async function loadAccountRequests(){
   const el = $('accountRequestsList'); if (!el) return;
@@ -1840,26 +1876,35 @@ async function loadAccountRequests(){
     el.innerHTML = reqs.map(r => {
       const isPending = r.status === 'Pending';
       const type = r.type === 'forgot_password' ? '🔑 Forgot Password' : '📱 Device Reset';
-      return `<div style="padding:14px;border:1px solid var(--slate-200);border-radius:11px;margin-bottom:10px;background:#fff;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
-          <div style="min-width:0;flex:1;"><div style="font-weight:800;font-size:13px;">${escapeHtml(r.rollNo)}</div><div style="font-size:11px;color:var(--slate-500);margin-top:3px;">${type}</div></div>
-          <span class="badge ${r.status==='Approved'?'badge-success':r.status==='Rejected'?'badge-danger':r.status==='Used'?'badge-info':'badge-warning'}">${r.status}</span>
+      const sc = r.status === 'Approved' ? 'badge-success' : r.status === 'Rejected' ? 'badge-danger' : r.status === 'Used' ? 'badge-info' : 'badge-warning';
+      return `<div class="list-item">
+        <div class="list-item-header">
+          <div style="min-width:0;flex:1;">
+            <div class="list-item-title">${escapeHtml(r.rollNo)}</div>
+            <div class="list-item-sub">${type}</div>
+          </div>
+          <span class="badge ${sc}">${r.status}</span>
         </div>
-        <div style="margin-top:8px;font-size:11.5px;color:var(--slate-600);">Reason: ${escapeHtml(r.reason || '—')}</div>
-        <div style="margin-top:6px;font-size:10.5px;color:var(--slate-400);">${new Date(r.createdAt).toLocaleString('en-IN')}</div>
-        ${isPending ? `<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-success btn-xs" onclick="reviewAccountRequest('${r._id}','Approved')">${ICONS.check} Approve</button>
-          <button class="btn btn-danger btn-xs" onclick="reviewAccountRequest('${r._id}','Rejected')">${ICONS.cross} Reject</button>
-        </div>` : ''}
+        <div class="list-item-body">Reason: ${escapeHtml(r.reason || '—')}</div>
+        <div class="list-item-meta">${new Date(r.createdAt).toLocaleString('en-IN')}</div>
+        ${isPending ? `<div class="list-item-actions"><button class="btn btn-success btn-xs ripple" onclick="reviewAccountRequest('${r._id}','Approved')">${ICONS.check} Approve</button><button class="btn btn-danger btn-xs ripple" onclick="reviewAccountRequest('${r._id}','Rejected')">${ICONS.cross} Reject</button></div>` : ''}
       </div>`;
     }).join('');
   } catch(e){ el.innerHTML = '<div class="empty">Network error</div>'; }
   observeNewContent();
 }
-async function reviewAccountRequest(id, action){ const note = prompt(`Note for ${action} (optional):`) || ''; try { const res = await fetch(`${API}/api/admin/account-requests/review/${id}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, action, note})}); const d = await res.json(); if (res.ok) { toast(d.message || 'Done','success'); loadAccountRequests(); } else toast(d.error || 'Failed','error'); } catch(e){ toast('Network error','error'); } }
+async function reviewAccountRequest(id, action){
+  const note = await customPrompt(`Note for ${action} (optional):`, 'e.g. Verified via phone') || '';
+  try {
+    const res = await fetch(`${API}/api/admin/account-requests/review/${id}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, action, note})});
+    const d = await res.json();
+    if (res.ok) { toast(d.message || 'Done','success'); loadAccountRequests(); } else toast(d.error || 'Failed','error');
+  } catch(e){ toast('Network error','error'); }
+}
+
 function switchReqTab(tab){ document.querySelectorAll('.req-tab').forEach(t => t.classList.toggle('active', t.dataset.reqtab === tab)); const sp = $('reqSinglePane'); if (sp) sp.style.display = tab === 'single' ? 'block' : 'none'; const bp = $('reqBulkPane'); if (bp) bp.style.display = tab === 'bulk' ? 'block' : 'none'; }
 function addReqBulkDate(){ const d = $('reqBulkDate').value; if (!d) return toast('Select date','error'); const t = fmtDate(new Date()); if (d > t) return toast('Future date not allowed','error'); if (reqBulkDates.includes(d)) return toast('Already added','error'); reqBulkDates.push(d); renderReqBulkDates(); $('reqBulkDate').value = ''; }
-function renderReqBulkDates(){ if ($('reqBulkDates')) $('reqBulkDates').innerHTML = reqBulkDates.map(d => `<span class="chip">${fmtDatePretty(d)} <span onclick="removeReqBulkDate('${d}')" style="cursor:pointer;color:var(--rose-600);font-weight:800;">×</span></span>`).join(''); }
+function renderReqBulkDates(){ if ($('reqBulkDates')) $('reqBulkDates').innerHTML = reqBulkDates.map(d => `<span class="chip">${fmtDatePretty(d)} <span onclick="removeReqBulkDate('${d}')" style="cursor:pointer;color:var(--rose-700);font-weight:800;">×</span></span>`).join(''); }
 function removeReqBulkDate(d){ reqBulkDates = reqBulkDates.filter(x=>x!==d); renderReqBulkDates(); }
 function getBrowserLocation(){ return new Promise((resolve, reject) => { if (!navigator.geolocation) return reject(new Error('Geolocation not supported.')); navigator.geolocation.getCurrentPosition(pos => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }), err => reject(new Error(err.code === 1 ? 'Location permission denied.' : 'Failed to get location.')), { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }); }); }
 async function submitAttendanceRequest(){
@@ -1894,19 +1939,19 @@ async function loadMyRequests(){
   try {
     const res = await fetch(`${API}/api/requests/my/${currentUser.rollNo}`);
     const data = await res.json();
-    if (!Array.isArray(data) || data.length === 0) return el.innerHTML = '<div class="empty" style="padding:14px 0;">No requests yet</div>';
+    if (!Array.isArray(data) || data.length === 0) return el.innerHTML = '<div class="empty-state" style="padding:14px 0;">No requests yet</div>';
     el.innerHTML = data.slice(0, 10).map(r => {
       const c = r.status === 'Approved' ? 'badge-success' : r.status === 'Rejected' ? 'badge-danger' : r.status === 'Partially Approved' ? 'badge-info' : 'badge-warning';
       const tl = r.lectureType === 'full_day' ? 'Full Day' : 'Single Lecture';
-      return `<div style="padding:10px 0;border-bottom:1px solid var(--slate-100);font-size:12px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-          <div style="min-width:0;"><div style="font-weight:700;">${fmtDatePretty(r.date)} · ${tl}</div>${r.subject ? `<div style="font-size:10.5px;color:var(--slate-500);margin-top:2px;">${escapeHtml(r.subject)}</div>` : ''}</div>
+      return `<div style="padding:10px 0;border-bottom:1px solid var(--surface-border);font-size:12px;">
+        <div class="flex-between">
+          <div style="min-width:0;"><div style="font-weight:700;">${fmtDatePretty(r.date)} · ${tl}</div>${r.subject ? `<div class="text-xs text-muted mt-1">${escapeHtml(r.subject)}</div>` : ''}</div>
           <span class="badge ${c}">${r.status}</span>
         </div>
-        ${r.reason ? `<div style="font-size:10.5px;color:var(--slate-500);margin-top:4px;">${escapeHtml(r.reason)}</div>` : ''}
+        ${r.reason ? `<div class="text-xs text-muted mt-1">${escapeHtml(r.reason)}</div>` : ''}
       </div>`;
     }).join('');
-  } catch(e) { el.innerHTML = '<div class="empty" style="padding:14px 0;">Failed to load</div>'; }
+  } catch(e) { el.innerHTML = '<div class="empty-state" style="padding:14px 0;">Failed to load</div>'; }
   observeNewContent();
 }
 
@@ -1932,24 +1977,42 @@ async function loadAdminRequests(){
       const ll = r.lectureType === 'full_day' ? '📅 Full Day' : '📖 Single Lecture';
       const canUndo = (r.status === 'Approved' || r.status === 'Partially Approved') && r.updatedAt && (now - new Date(r.updatedAt).getTime()) < UNDO_WINDOW_MS;
       const remainMin = canUndo ? Math.ceil((UNDO_WINDOW_MS - (now - new Date(r.updatedAt).getTime())) / 60000) : 0;
-      return `<div style="padding:14px;border:1px solid var(--slate-200);border-radius:11px;margin-bottom:10px;background:#fff;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
-          <div style="min-width:0;flex:1;"><div style="font-weight:800;font-size:13px;">${escapeHtml(r.studentName || r.name || '')} <span class="badge badge-neutral">${escapeHtml(r.rollNo || '')}</span></div><div style="font-size:11px;color:var(--slate-500);margin-top:3px;">${escapeHtml(r.branch || '')} · ${fmtDatePretty(r.date)}</div></div>
+      return `<div class="list-item">
+        <div class="list-item-header">
+          <div style="min-width:0;flex:1;">
+            <div class="list-item-title">${escapeHtml(r.studentName || r.name || '')} <span class="badge badge-neutral">${escapeHtml(r.rollNo || '')}</span></div>
+            <div class="list-item-sub">${escapeHtml(r.branch || '')} · ${fmtDatePretty(r.date)}</div>
+          </div>
           <span class="badge ${sc}">${escapeHtml(r.status || '')}</span>
         </div>
-        <div style="margin-top:10px;font-size:12px;">${ll}${r.subject ? ' · ' + escapeHtml(r.subject) : ''}</div>
-        <div style="margin-top:5px;font-size:11.5px;color:var(--slate-600);">Reason: ${escapeHtml(r.reason || '—')}</div>
-        ${r.status === 'Pending' ? `<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-success btn-xs" onclick="approveRequest('${r._id}')">${ICONS.check} Approve</button><button class="btn btn-danger btn-xs" onclick="rejectRequest('${r._id}')">${ICONS.cross} Reject</button></div>` : `<div style="margin-top:10px;font-size:10.5px;color:var(--slate-500);">Reviewed by ${escapeHtml(r.reviewedBy || '—')}</div>`}
-        ${canUndo ? `<div style="margin-top:10px;"><button class="btn btn-warning btn-xs" onclick="openUndoApproval('${r._id}', '${escapeHtml(r.rollNo)}', '${r.date}', ${remainMin})">↩️ Undo Approval (${remainMin}m left)</button></div>` : ''}
+        <div class="list-item-body">${ll}${r.subject ? ' · ' + escapeHtml(r.subject) : ''}</div>
+        <div class="list-item-body">Reason: ${escapeHtml(r.reason || '—')}</div>
+        ${r.status === 'Pending' ? `<div class="list-item-actions"><button class="btn btn-success btn-xs ripple" onclick="approveRequest('${r._id}')">${ICONS.check} Approve</button><button class="btn btn-danger btn-xs ripple" onclick="rejectRequest('${r._id}')">${ICONS.cross} Reject</button></div>` : `<div class="list-item-meta">Reviewed by ${escapeHtml(r.reviewedBy || '—')}</div>`}
+        ${canUndo ? `<div class="mt-1"><button class="btn btn-warning btn-xs ripple" onclick="openUndoApproval('${r._id}', '${escapeHtml(r.rollNo)}', '${r.date}', ${remainMin})">↩️ Undo Approval (${remainMin}m left)</button></div>` : ''}
       </div>`;
     }).join('');
   } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
   observeNewContent();
 }
-async function approveRequest(id){ const note = prompt('Approval note (optional):') || ''; try { const res = await fetch(`${API}/api/requests/review/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, action: 'Approved', note }) }); const d = await res.json(); if (res.ok) { toast(d.message || 'Approved','success'); loadAdminRequests(); loadDashboardStats(); } else toast(d.error,'error'); } catch(e){ toast('Network error','error'); } }
-async function rejectRequest(id){ const note = prompt('Rejection reason (optional):') || ''; try { const res = await fetch(`${API}/api/requests/review/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, action: 'Rejected', note }) }); const d = await res.json(); if (res.ok) { toast('Rejected','success'); loadAdminRequests(); } else toast(d.error,'error'); } catch(e){ toast('Network error','error'); } }
+
+async function approveRequest(id){
+  const note = await customPrompt('Approval note (optional):', 'e.g. Verified') || '';
+  try {
+    const res = await fetch(`${API}/api/requests/review/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, action: 'Approved', note }) });
+    const d = await res.json();
+    if (res.ok) { toast(d.message || 'Approved','success'); loadAdminRequests(); loadDashboardStats(); } else toast(d.error,'error');
+  } catch(e){ toast('Network error','error'); }
+}
+async function rejectRequest(id){
+  const note = await customPrompt('Rejection reason (optional):', 'e.g. Insufficient evidence') || '';
+  try {
+    const res = await fetch(`${API}/api/requests/review/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, action: 'Rejected', note }) });
+    const d = await res.json();
+    if (res.ok) { toast('Rejected','success'); loadAdminRequests(); } else toast(d.error,'error');
+  } catch(e){ toast('Network error','error'); }
+}
 async function bulkApproveAllRequests(){
-  if (!confirm('Approve ALL pending?')) return;
+  if (!await customConfirm('Approve ALL pending requests?', 'All currently pending attendance requests will be approved and attendance records created.', { confirmText: 'Approve All' })) return;
   try {
     const res = await fetch(`${API}/api/requests/all/${currentUser.rollNo}?status=Pending`);
     const data = await res.json();
@@ -1966,12 +2029,7 @@ async function bulkApproveAllRequests(){
 
 function openUndoApproval(requestId, rollNo, date, remainMin) {
   pendingUndoApprovalId = requestId;
-  $('undoApprovalInfo').innerHTML = `
-    <div style="font-weight:700;color:var(--slate-900);margin-bottom:8px;">Request to revert:</div>
-    <div>🎓 <b>${escapeHtml(rollNo)}</b></div>
-    <div>📅 Date: <b>${fmtDatePretty(date)}</b></div>
-    <div style="margin-top:8px;color:var(--amber-700);font-weight:600;">⏱ ${remainMin} min left in undo window</div>
-  `;
+  $('undoApprovalInfo').innerHTML = `<div style="font-weight:700;color:var(--slate-900);margin-bottom:8px;">Request to revert:</div><div>🎓 <b>${escapeHtml(rollNo)}</b></div><div>📅 Date: <b>${fmtDatePretty(date)}</b></div><div style="margin-top:8px;color:var(--amber-700);font-weight:600;">⏱ ${remainMin} min left in undo window</div>`;
   openModal('undoApprovalModal');
 }
 async function confirmUndoApproval() {
@@ -1979,23 +2037,12 @@ async function confirmUndoApproval() {
   closeModal('undoApprovalModal');
   showDL('Reverting approval…');
   try {
-    const res = await fetch(`${API}/api/requests/undo/${pendingUndoApprovalId}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requesterRollNo: currentUser.rollNo })
-    });
+    const res = await fetch(`${API}/api/requests/undo/${pendingUndoApprovalId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo }) });
     const d = await res.json();
     hideDL();
-    if (res.ok) {
-      showFeedback('success', 'Approval Reverted', d.message || 'Approval undone and attendance records removed.');
-      loadAdminRequests();
-    } else {
-      showFeedback('error', 'Undo Failed', d.error || 'Could not undo approval.');
-    }
-  } catch (e) {
-    hideDL();
-    showFeedback('error', 'Network Error', e.message);
-  }
+    if (res.ok) { showFeedback('success', 'Approval Reverted', d.message || 'Approval undone and attendance records removed.'); loadAdminRequests(); }
+    else showFeedback('error', 'Undo Failed', d.error || 'Could not undo approval.');
+  } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
   pendingUndoApprovalId = null;
 }
 
@@ -2095,36 +2142,26 @@ async function showDayInfo(dateStr, mode){
     else stateLabel = `<span class="badge badge-info">📘 Working Day</span>`;
     s.innerHTML = stateLabel;
     let html = '';
-    if (d.isHoliday) html += `<div style="padding:14px;background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:11px;margin-bottom:12px;border:1px solid #fcd34d;"><div style="font-size:12px;color:#78350f;font-weight:600;">🎉 Reason</div><div style="font-size:15px;font-weight:800;color:#78350f;margin-top:4px;">${escapeHtml(d.holidayReason || 'Holiday')}</div></div>`;
-    else if (d.isWeekend) html += `<div style="padding:14px;background:#e2e8f0;border-radius:11px;margin-bottom:12px;border:1px solid #cbd5e1;"><div style="font-size:12px;color:#334155;font-weight:600;">🌴 Weekend</div><div style="font-size:13.5px;color:#334155;margin-top:4px;">${escapeHtml(d.dayName)} — College closed. No classes today.</div></div>`;
-    else if (d.isFuture) html += `<div style="padding:14px;background:#dbeafe;border-radius:11px;margin-bottom:12px;border:1px solid #93c5fd;"><div style="font-size:12.5px;color:#1e40af;font-weight:600;">🔮 Future date — details will appear soon.</div></div>`;
-    else if (d.isBeforeSemester) html += `<div style="padding:14px;background:#f1f5f9;border-radius:11px;margin-bottom:12px;border:1px solid #cbd5e1;"><div style="font-size:12.5px;color:#64748b;font-weight:600;">⏪ Semester started on 15 Jul 2026.</div></div>`;
+    if (d.isHoliday) html += `<div class="highlight-box holiday"><div class="text-sm" style="font-weight:600;">🎉 Reason</div><div style="font-size:15px;font-weight:800;margin-top:4px;">${escapeHtml(d.holidayReason || 'Holiday')}</div></div>`;
+    else if (d.isWeekend) html += `<div class="highlight-box weekend"><div class="text-sm" style="font-weight:600;">🌴 Weekend</div><div style="font-size:13.5px;margin-top:4px;">${escapeHtml(d.dayName)} — College closed. No classes today.</div></div>`;
+    else if (d.isFuture) html += `<div class="highlight-box future"><div style="font-size:12.5px;font-weight:600;">🔮 Future date — details will appear soon.</div></div>`;
+    else if (d.isBeforeSemester) html += `<div class="highlight-box info"><div style="font-size:12.5px;font-weight:600;">⏪ Semester started on 15 Jul 2026.</div></div>`;
     if (!d.isWeekend && !d.isHoliday && !d.isFuture && !d.isBeforeSemester) {
       html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-        <div style="padding:14px;background:#fff;border-radius:11px;border:1px solid var(--slate-200);text-align:center;">
-          <div style="font-size:24px;font-weight:800;color:var(--brand-700);">${d.attended}</div>
-          <div style="font-size:10px;color:var(--slate-500);text-transform:uppercase;font-weight:700;margin-top:2px;">Attended</div>
-        </div>
-        <div style="padding:14px;background:#fff;border-radius:11px;border:1px solid var(--slate-200);text-align:center;">
-          <div style="font-size:24px;font-weight:800;color:var(--slate-700);">${d.conducted}</div>
-          <div style="font-size:10px;color:var(--slate-500);text-transform:uppercase;font-weight:700;margin-top:2px;">Conducted</div>
-        </div>
+        <div class="stat-mini"><div class="stat-mini-value">${d.attended}</div><div class="stat-mini-label">Attended</div></div>
+        <div class="stat-mini"><div class="stat-mini-value" style="color:var(--slate-700);">${d.conducted}</div><div class="stat-mini-label">Conducted</div></div>
       </div>`;
       if (mode === 'full') {
         if (d.scheduledLectures && d.scheduledLectures.length) {
           html += '<div class="section-title" style="margin-top:8px;">📚 Scheduled Lectures</div>';
           html += d.scheduledLectures.map(sl => {
             const rec = (d.records || []).find(r => r.subject === sl.subject);
-            const statusBadge = rec
-              ? (rec.status === 'Present' || rec.status === 'Duty Leave'
-                  ? '<span class="badge badge-success">✅ Present</span>'
-                  : `<span class="badge badge-danger">${rec.status}</span>`)
-              : '<span class="badge badge-neutral">— Not Marked</span>';
-            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#fff;border-radius:9px;margin-bottom:6px;border:1px solid var(--slate-200);gap:10px;">
+            const statusBadge = rec ? (rec.status === 'Present' || rec.status === 'Duty Leave' ? '<span class="badge badge-success">✅ Present</span>' : `<span class="badge badge-danger">${rec.status}</span>`) : '<span class="badge badge-neutral">— Not Marked</span>';
+            return `<div class="nested-row">
               <div style="min-width:0;flex:1;">
-                <div style="font-size:11px;color:var(--slate-500);font-weight:700;">${sl.period} · ${sl.start}–${sl.end}</div>
+                <div class="text-xs text-muted" style="font-weight:700;">${sl.period} · ${sl.start}–${sl.end}</div>
                 <div style="font-size:12.5px;font-weight:700;color:var(--slate-900);margin-top:2px;">${escapeHtml(sl.subject)}</div>
-                <div style="font-size:10.5px;color:var(--slate-500);margin-top:1px;">👨‍🏫 ${escapeHtml(sl.faculty || '—')}</div>
+                <div class="text-xs text-muted" style="margin-top:1px;">👨‍🏫 ${escapeHtml(sl.faculty || '—')}</div>
               </div>
               <div style="flex-shrink:0;">${statusBadge}</div>
             </div>`;
@@ -2177,6 +2214,7 @@ async function loadRequestSubjects(){
     try { const subs = await fetch(`${API}/api/timetable/subjects`).then(r => r.json()); s.innerHTML = '<option value="">Select subject…</option>' + (subs || []).map(x => `<option value="${x}">${x}</option>`).join(''); } catch(e){}
   }
 }
+
 async function fetchHistory(){
   try { await ensureHolidays();
     const res = await fetch(`${API}/api/attendance/history/${currentUser.rollNo}`);
@@ -2186,6 +2224,7 @@ async function fetchHistory(){
   } catch(e){ }
   observeNewContent();
 }
+
 async function loadStats(){
   try {
     const res = await fetch(`${API}/api/student/summary/${currentUser.rollNo}`);
@@ -2207,6 +2246,7 @@ async function loadStats(){
   } catch(e){}
   observeNewContent();
 }
+
 async function loadSubjectBreakdown(){
   if (!currentUser || currentUser.role !== 'student') return;
   const f = $('subjectMonthFilter').value;
@@ -2225,6 +2265,7 @@ async function loadSubjectBreakdown(){
   } catch(e) { l.innerHTML = '<span class="text-xs text-muted">Failed</span>'; }
   observeNewContent();
 }
+
 function onCalendarModeChange(){ const m = $('calendarViewMode').value; if ($('calendarSelectedMonthWrap')) $('calendarSelectedMonthWrap').style.display = m === 'SELECTED_MONTH' ? 'block' : 'none'; renderAttendanceCalendar(); }
 function renderAttendanceCalendar(){
   const w = $('calendarDisplay'); if (!w) return;
@@ -2259,6 +2300,7 @@ function renderAttendanceCalendar(){
   w.innerHTML = html || '<div class="empty">No data</div>';
   observeNewContent();
 }
+
 let trendView = 'monthly';
 function setTrendView(v){ trendView = v; $('btnMonthly')?.classList.toggle('active', v === 'monthly'); $('btnDaily')?.classList.toggle('active', v === 'daily'); if ($('trendMonth')) $('trendMonth').style.display = v === 'daily' ? 'inline-block' : 'none'; updateTrend(); }
 async function updateTrend(){
@@ -2292,6 +2334,7 @@ async function updateTrend(){
     trendChart = new Chart(c, { type: 'line', data: { labels, datasets: [{ label: 'Attendance %', data: pctData, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.08)', borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#2563eb', pointBorderColor: '#fff', pointBorderWidth: 2, tension: 0.25, fill: true, spanGaps: false }] }, options: { responsive: true, maintainAspectRatio: false, animation: { duration: 800, easing: 'easeOutQuart' }, plugins: { legend: { display: false } }, scales: { y: { min:0, max:100, grid:{color:'#f1f5f9'}, ticks:{font:{size:10},color:'#94a3b8',callback:v=>v+'%'} }, x: { grid:{display:false}, ticks:{font:{size:9},color:'#94a3b8'} } } } });
   } catch(e){}
 }
+
 async function updatePeriod(){
   try {
     const today = fmtDate(new Date());
@@ -2322,14 +2365,15 @@ async function updatePeriod(){
     else if (active && active.period === 'LUNCH') { if ($('periodLabel')) $('periodLabel').textContent = 'LUNCH BREAK'; if ($('periodName')) $('periodName').textContent = 'No active lecture'; if ($('markPeriodBtn')) $('markPeriodBtn').disabled = true; window._activeSubject = null; }
     else { if ($('periodLabel')) $('periodLabel').textContent = 'OFF HOURS'; if ($('periodName')) $('periodName').textContent = 'No active lecture'; if ($('markPeriodBtn')) $('markPeriodBtn').disabled = true; window._activeSubject = null; }
     const todaySubs = getTimetableForBranch(branch, today)[FULL_DAY_NAMES[dow]] || [];
-    if ($('todayTimetable')) $('todayTimetable').innerHTML = todaySubs.length ? todaySubs.map((s,i) => `<div style="padding:7px 0;border-bottom:1px solid var(--slate-100);display:flex;justify-content:space-between;"><span class="text-xs font-bold text-muted">P${i+1}</span><span style="font-weight:600;">${s}</span></div>`).join('') : 'No classes today';
+    if ($('todayTimetable')) $('todayTimetable').innerHTML = todaySubs.length ? todaySubs.map((s,i) => `<div style="padding:7px 0;border-bottom:1px solid var(--surface-border);display:flex;justify-content:space-between;"><span class="text-xs font-bold text-muted">P${i+1}</span><span style="font-weight:600;">${s}</span></div>`).join('') : 'No classes today';
   } catch(e){}
 }
+
 async function markFullDay(){
   const today = fmtDate(new Date());
   const st = await checkDateStatus(today);
   if (st.isBlocked) { if (st.type === 'WEEKEND') return showFeedback('warning', 'College Closed', `${st.dayName} — college is closed today.`); return showFeedback('warning', 'Holiday', `${st.holiday || 'College closed'} — today is a holiday.`); }
-  const pc = prompt('Enter Full Day Passcode (5-digit):');
+  const pc = await customPrompt('Enter Full Day Passcode (5-digit):', '5-digit passcode', { message: 'Ask your teacher or check the passcode card.', inputType: 'tel' });
   if (!pc) return; if (pc.length !== 5) return showFeedback('error', 'Invalid Passcode', 'Passcode must be 5 digits.');
   showDL('Verifying passcode…');
   try {
@@ -2349,9 +2393,10 @@ async function markFullDay(){
     }, (err) => { hideDL(); showFeedback('error', 'Location Error', err.code === 1 ? 'Location permission denied. Please allow GPS.' : 'Location not available. Please try again.'); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   } catch(e){ hideDL(); showFeedback('error', 'Network Error', e.message); }
 }
+
 async function markActivePeriod(){
   if (!window._activeSubject) return showFeedback('warning', 'No Active Lecture', 'There is no active lecture right now.');
-  const pc = prompt(`Enter 4-digit passcode for ${window._activeSubject}:`);
+  const pc = await customPrompt(`Enter 4-digit passcode for ${window._activeSubject}:`, '4-digit passcode', { message: 'Get it from your teacher.', inputType: 'tel' });
   if (!pc) return; if (pc.length !== 4) return showFeedback('error', 'Invalid Passcode', 'Single lecture passcode is 4 digits.');
   showDL('Verifying…');
   try {
@@ -2377,55 +2422,27 @@ async function generateIndividualPDF(studentRoll, studentName, branch, range, mo
     let records = [];
     if (isSelf) records = (globalHistory || []).slice();
     else { const attRes = await fetch(`${API}/api/attendance/student/${studentRoll}/${currentUser.rollNo}`); if (attRes.ok) records = await attRes.json(); else { const err = await attRes.json().catch(()=>({})); hideDL(); return toast(err.error || 'Failed', 'error'); } }
-    
     const rng = getRangeForSelection(range, month);
     records = records.filter(r => r.date >= rng.start && r.date <= rng.end);
     if (!records.length) { hideDL(); return toast('No records for range','error'); }
 
-    // ✅ NAYA FIX: Backend se sahi conducted lectures fetch karo
-    let totalAttended = 0;
-    let totalConducted = 0;
-    let pct = 0;
-
+    let totalAttended = 0, totalConducted = 0, pct = 0;
     if (range === 'SELECTED_MONTH' || range === 'CURRENT_MONTH') {
         const m = range === 'CURRENT_MONTH' ? new Date().getMonth() : parseInt(month);
         const res = await fetch(`${API}/api/student/monthly-summary/${studentRoll}?month=${m}`);
-        if (res.ok) {
-            const backendData = await res.json();
-            totalAttended = backendData.totalAttended || 0;
-            totalConducted = backendData.totalConducted || 0;
-            pct = backendData.attendancePercentage || 0;
-        }
+        if (res.ok) { const backendData = await res.json(); totalAttended = backendData.totalAttended || 0; totalConducted = backendData.totalConducted || 0; pct = backendData.attendancePercentage || 0; }
     } else {
         const res = await fetch(`${API}/api/student/summary/${studentRoll}`);
-        if (res.ok) {
-            const backendData = await res.json();
-            totalAttended = backendData.totalAcademicLectures || 0;
-            totalConducted = backendData.totalConductedLectures || 0;
-            pct = backendData.attendancePercentage || 0;
-        }
+        if (res.ok) { const backendData = await res.json(); totalAttended = backendData.totalAcademicLectures || 0; totalConducted = backendData.totalConductedLectures || 0; pct = backendData.attendancePercentage || 0; }
     }
-
-    // Fallback agar backend fail ho jaye
     if (totalConducted === 0) {
         totalAttended = records.filter(r => r.status === 'Present' || r.status === 'Duty Leave').length;
         const holidaySet = new Set((globalHolidays || []).map(h => (h.date||'').split('T')[0]));
         let cur = new Date(rng.start + 'T00:00:00');
         const endD = new Date(rng.end + 'T23:59:59');
-        while (cur <= endD) { 
-            const ds = fmtDate(cur); 
-            const dow = cur.getDay(); 
-            if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) { 
-                const scheduleObj = getScheduleForBranch(branch); 
-                const daySchedule = scheduleObj[dow] || [];
-                const validLectures = daySchedule.filter(s => s.period !== 'LUNCH' && !s.subject.includes('Sports') && !s.subject.includes('LIB'));
-                totalConducted += validLectures.length; 
-            } 
-            cur.setDate(cur.getDate()+1); 
-        }
+        while (cur <= endD) { const ds = fmtDate(cur); const dow = cur.getDay(); if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) { const scheduleObj = getScheduleForBranch(branch); const daySchedule = scheduleObj[dow] || []; const validLectures = daySchedule.filter(s => s.period !== 'LUNCH' && !s.subject.includes('Sports') && !s.subject.includes('LIB')); totalConducted += validLectures.length; } cur.setDate(cur.getDate()+1); }
         pct = totalConducted > 0 ? Math.min(100, Math.round((totalAttended/totalConducted)*100)) : 0;
     }
-
     const blob = generatePDFBlob('Student Attendance Report', `${studentName} (${studentRoll})`, [`Branch: ${branch} · 5th Semester`, `Range: ${fmtDatePretty(rng.start)} → ${fmtDatePretty(rng.end)}`], ['Date', 'Subject', 'Status'], records.sort((a,b) => b.date.localeCompare(a.date)).map(r => [fmtDatePretty(r.date), r.subject, r.status]), [`Attended: ${totalAttended}    |    Conducted: ${totalConducted}    |    Percentage: ${pct}%`]);
     hideDL();
     if (!blob) return toast('PDF library failed to load','error');
@@ -2444,17 +2461,14 @@ async function generateSelfPDF(action = 'download'){
 }
 
 /* ============================================================
-   TIMETABLE — DATE-AWARE (Oct 28, 2026 switch)
+   TIMETABLE
    ============================================================ */
 function getTimetableForBranch(b, dateStr = null) {
   const isOld = dateStr && dateStr < TIMETABLE_CHANGE_DATE;
-
   const OLD_CSE = { Monday: ['BDA - Big Data Analytics','ECO - Economics for Engineers','DAA - Design & Analysis of Algorithm','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','CN - Computer Network','Sports'], Tuesday: ['WT - Web Technology','ECO - Economics for Engineers','Internet Lab','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','BDA - Big Data Analytics','Sports'], Wednesday: ['BDA - Big Data Analytics','ECO - Economics for Engineers','FLA - Formal Language & Automata','Sports / Activity','WT - Web Technology','CN LAB - Computer Network Lab'], Thursday: ['BDA - Big Data Analytics','WT - Web Technology','CN - Computer Network','DAA - Design & Analysis of Algorithm','DAA LAB - Algorithm Lab','HRM - Human Resource Mgmt'], Friday: ['DAA - Design & Analysis of Algorithm','CN - Computer Network','FLA - Formal Language & Automata','BDA - Big Data Analytics','WT LAB - Web Technology Lab','Sports'] };
   const NEW_CSE = { Monday: ['FLA - Formal Language & Automata','ECO - Economics for Engineers','DAA - Design & Analysis of Algorithm','LIB - Library','HRM - Human Resource Mgmt','CN - Computer Network','Sports'], Tuesday: ['WT - Web Technology','ECO - Economics for Engineers','Internet Lab','LIB - Library','HRM - Human Resource Mgmt','FLA - Formal Language & Automata','Sports'], Wednesday: ['FLA - Formal Language & Automata','ECO - Economics for Engineers','BDA - Big Data Analytics','LIB - Library','WT - Web Technology','CN LAB - Computer Network Lab'], Thursday: ['BDA - Big Data Analytics','WT - Web Technology','CN - Computer Network','DAA - Design & Analysis of Algorithm','DAA LAB - Algorithm Lab','HRM - Human Resource Mgmt'], Friday: ['FLA - Formal Language & Automata','CN - Computer Network','LIB - Library','DAA - Design & Analysis of Algorithm','WT LAB - Web Technology Lab','BDA - Big Data Analytics'] };
-  
   const OLD_AIDS = { Monday: ['BDA - Big Data Analytics','ECO - Economics for Engineers','LIB - Library','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','PA - Predictive Analysis','Sports'], Tuesday: ['WT - Web Technology','ECO - Economics for Engineers','PA - Predictive Analysis','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','BDA - Big Data Analytics','ML - Machine Learning'], Wednesday: ['BDA - Big Data Analytics','ECO - Economics for Engineers','FLA - Formal Language & Automata','Sports / Project','WT - Web Technology','PA LAB - Predictive Analysis Lab'], Thursday: ['BDA - Big Data Analytics','WT - Web Technology','ML - Machine Learning','PA - Predictive Analysis','ML LAB - Machine Learning Lab','HRM - Human Resource Mgmt'], Friday: ['ML - Machine Learning','LIB - Library','FLA - Formal Language & Automata','BDA - Big Data Analytics','BDA LAB - Big Data Analytics Lab','Sports'] };
   const NEW_AIDS = { Monday: ['FLA - Formal Language & Automata','ECO - Economics for Engineers','ML - Machine Learning','LIB - Library','HRM - Human Resource Mgmt','PA - Predictive Analysis','Sports'], Tuesday: ['WT - Web Technology','ECO - Economics for Engineers','PA - Predictive Analysis','LIB - Library','HRM - Human Resource Mgmt','FLA - Formal Language & Automata','ML - Machine Learning'], Wednesday: ['FLA - Formal Language & Automata','ECO - Economics for Engineers','BDA - Big Data Analytics','LIB - Library','WT - Web Technology','PA LAB - Predictive Analysis Lab'], Thursday: ['BDA - Big Data Analytics','WT - Web Technology','LIB - Library','PA - Predictive Analysis','ML LAB - Machine Learning Lab','HRM - Human Resource Mgmt'], Friday: ['FLA - Formal Language & Automata','BDA LAB - Big Data Analytics Lab','ML - Machine Learning','Internet Lab','BDA - Big Data Analytics'] };
-
   if (b && b.toUpperCase() === 'AIDS') return isOld ? OLD_AIDS : NEW_AIDS;
   return isOld ? OLD_CSE : NEW_CSE;
 }
@@ -2465,6 +2479,9 @@ function getScheduleForBranch(b){
   return (b && b.toUpperCase() === 'AIDS') ? AIDS : CSE;
 }
 
+/* ============================================================
+   ADMIN INIT
+   ============================================================ */
 function initAdmin(){ const t = fmtDate(new Date()); if ($('manualDate')) $('manualDate').value = t; if ($('holidayDate')) $('holidayDate').value = t; if ($('classStart')) $('classStart').value = '2026-07-15'; if ($('classEnd')) $('classEnd').value = t; const ssm = $('singleStudentMonth'); if (ssm && !ssm.innerHTML.trim()) ssm.innerHTML = [6,7,8,9,10,11].map(m=>`<option value="${m}">${MONTH_NAMES[m]} 2026</option>`).join(''); setBranch('CSE'); loadHolidays(); }
 
 async function fetchUsers(){
@@ -2480,19 +2497,61 @@ async function fetchUsers(){
       const rb = u.role === 'admin' ? '<span class="badge badge-warning">Admin</span>' : u.role === 'faculty' ? '<span class="badge badge-info">Faculty</span>' : '<span class="badge badge-neutral">Student</span>';
       const dev = u.boundDeviceName || (u.boundDeviceId ? '<span class="badge badge-success">Bound</span>' : '<span class="badge badge-neutral">—</span>');
       let att = '—'; if (u.role === 'student' && sumMap[u.rollNo]) { const s = sumMap[u.rollNo]; att = `${s.totalAcademicLectures||0}/${s.totalConductedLectures||0} (${s.attendancePercentage||0}%)`; }
-      return `<tr><td><b>${u.rollNo}</b></td><td>${u.name}</td><td>${rb}</td><td>${dev}</td><td>${att}</td><td>${u.role === 'student' ? `<button class="btn btn-outline btn-xs" onclick="viewStudentRecords('${u.rollNo}')">${ICONS.view} View</button>` : ''}</td></tr>`;
+      return `<tr><td><b>${u.rollNo}</b></td><td>${u.name}</td><td>${rb}</td><td>${dev}</td><td>${att}</td><td>${u.role === 'student' ? `<button class="btn btn-outline btn-xs ripple" onclick="viewStudentRecords('${u.rollNo}')">${ICONS.view} View</button>` : ''}</td></tr>`;
     }).join('');
     const s2 = data.filter(u => u.role === 'student');
     ['singleStudentSelect','reportStudentSelect'].forEach(id => { const el = $(id); if (el) el.innerHTML = '<option value="">Select Student…</option>' + s2.map(s => `<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`).join(''); });
     const teachers = data.filter(u => u.role === 'faculty'); const ts = $('assignTeacher'); if (ts) ts.innerHTML = '<option value="">Select Teacher…</option>' + teachers.map(t => `<option value="${t.rollNo}">${t.rollNo} - ${t.name}</option>`).join('');
   } catch(e){ if ($('directoryBody')) $('directoryBody').innerHTML = '<tr><td colspan="6" class="empty">Network error</td></tr>'; }
 }
-async function viewStudentRecords(r){ try { const res = await fetch(`${API}/api/attendance/student/${r}/${currentUser.rollNo}`); const data = await res.json(); if (!res.ok) return toast(data.error || 'Failed','error'); const g = {}; data.forEach(x => { if (!g[x.date]) g[x.date] = []; g[x.date].push(x); }); const dates = Object.keys(g).sort((a,b)=>b.localeCompare(a)); let html = `<div class="modal-backdrop open safe-top-modal" id="viewRecordsModal"><div class="modal wide"><div class="modal-header"><div><h3>Attendance – ${r}</h3><p class="text-xs text-muted" style="margin-top:4px;">${data.length} records</p></div><button type="button" class="modal-close" onclick="document.getElementById('viewRecordsModal').remove()">✕</button></div><div class="modal-body">`; dates.forEach(d => { html += `<div style="margin-bottom:16px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><b>${fmtDatePretty(d)}</b><button class="btn btn-danger btn-xs" onclick="deleteAllDate('${r}','${d}')">${ICONS.trash} Delete All</button></div>`; g[d].forEach(x => { html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--slate-50);border-radius:8px;margin:4px 0;font-size:12px;"><div>${x.subject} <span class="badge badge-success">${x.status}</span></div><button class="btn btn-danger btn-xs" onclick="deleteRecord('${x._id}')">${ICONS.trash} Del</button></div>`; }); html += `</div>`; }); html += `</div></div></div>`; const div = document.createElement('div'); div.innerHTML = html; document.body.appendChild(div.firstElementChild); } catch(e){ toast('Failed','error'); } }
-async function deleteRecord(id){ if (!confirm('Delete?')) return; try { const res = await fetch(`${API}/api/attendance/delete/${id}/${currentUser.rollNo}`, {method:'DELETE'}); if (res.ok) { toast('Deleted','success'); const m = $('viewRecordsModal'); if (m) m.remove(); loadAllAttendance(); } } catch(e){} }
-async function deleteAllDate(r, d){ if (!confirm('Delete all records for this date?')) return; try { const res = await fetch(`${API}/api/attendance/delete-day/${r}/${d}/${currentUser.rollNo}`, {method:'DELETE'}); if (res.ok) { toast('Deleted','success'); const m = $('viewRecordsModal'); if (m) m.remove(); loadAllAttendance(); } } catch(e){} }
-async function loadAllAttendance(){ try { const res = await fetch(`${API}/api/attendance/all/${currentUser.rollNo}`); const data = await res.json(); const fr = ($('filterRoll').value||'').toUpperCase(); const fd = $('filterDate').value; let filtered = data; if (fr) filtered = filtered.filter(r => r.rollNo.includes(fr)); if (fd) filtered = filtered.filter(r => r.date === fd); const tb = $('allAttendanceBody'); if (!tb) return; if (filtered.length === 0) return tb.innerHTML = '<tr><td colspan="7" class="empty">No records</td></tr>'; window._allRecords = filtered; tb.innerHTML = filtered.slice(0,200).map(r => `<tr><td><input type="checkbox" class="rec-cb" data-id="${r._id}"></td><td>${fmtDatePretty(r.date)}</td><td><b>${r.rollNo}</b></td><td>${r.studentName||''}</td><td>${r.subject}</td><td><span class="badge ${r.status==='Present'?'badge-success':r.status==='Duty Leave'?'badge-warning':'badge-danger'}">${r.status}</span></td><td><button class="btn btn-danger btn-xs" onclick="deleteRecord('${r._id}')">${ICONS.trash} Del</button></td></tr>`).join(''); } catch(e){ if ($('allAttendanceBody')) $('allAttendanceBody').innerHTML = '<tr><td colspan="7" class="empty">Network error</td></tr>'; } observeNewContent(); }
+
+async function viewStudentRecords(r){
+  try {
+    const res = await fetch(`${API}/api/attendance/student/${r}/${currentUser.rollNo}`);
+    const data = await res.json();
+    if (!res.ok) return toast(data.error || 'Failed','error');
+    const g = {}; data.forEach(x => { if (!g[x.date]) g[x.date] = []; g[x.date].push(x); });
+    const dates = Object.keys(g).sort((a,b)=>b.localeCompare(a));
+    let html = `<div class="modal-backdrop open safe-top-modal" id="viewRecordsModal"><div class="modal wide"><div class="modal-header"><div><h3>Attendance – ${r}</h3><p class="text-xs text-muted mt-1">${data.length} records</p></div><button type="button" class="modal-close ripple" onclick="document.getElementById('viewRecordsModal').remove()">✕</button></div><div class="modal-body">`;
+    dates.forEach(d => {
+      html += `<div style="margin-bottom:16px;"><div class="flex-between" style="margin-bottom:6px;"><b>${fmtDatePretty(d)}</b><button class="btn btn-danger btn-xs ripple" onclick="deleteAllDate('${r}','${d}')">${ICONS.trash} Delete All</button></div>`;
+      g[d].forEach(x => { html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--slate-50);border-radius:8px;margin:4px 0;font-size:12px;"><div>${x.subject} <span class="badge badge-success">${x.status}</span></div><button class="btn btn-danger btn-xs ripple" onclick="deleteRecord('${x._id}')">${ICONS.trash} Del</button></div>`; });
+      html += `</div>`;
+    });
+    html += `</div></div></div>`;
+    const div = document.createElement('div'); div.innerHTML = html; document.body.appendChild(div.firstElementChild);
+  } catch(e){ toast('Failed','error'); }
+}
+async function deleteRecord(id){
+  if (!await customConfirm('Delete this record?', 'This attendance record will be permanently deleted.', { danger: true, confirmText: 'Delete' })) return;
+  try { const res = await fetch(`${API}/api/attendance/delete/${id}/${currentUser.rollNo}`, {method:'DELETE'}); if (res.ok) { toast('Deleted','success'); const m = $('viewRecordsModal'); if (m) m.remove(); loadAllAttendance(); } } catch(e){}
+}
+async function deleteAllDate(r, d){
+  if (!await customConfirm('Delete all records for this date?', `All records for ${r} on ${fmtDatePretty(d)} will be permanently deleted.`, { danger: true, confirmText: 'Delete All' })) return;
+  try { const res = await fetch(`${API}/api/attendance/delete-day/${r}/${d}/${currentUser.rollNo}`, {method:'DELETE'}); if (res.ok) { toast('Deleted','success'); const m = $('viewRecordsModal'); if (m) m.remove(); loadAllAttendance(); } } catch(e){}
+}
+async function loadAllAttendance(){
+  try {
+    const res = await fetch(`${API}/api/attendance/all/${currentUser.rollNo}`);
+    const data = await res.json();
+    const fr = ($('filterRoll').value||'').toUpperCase(); const fd = $('filterDate').value;
+    let filtered = data; if (fr) filtered = filtered.filter(r => r.rollNo.includes(fr)); if (fd) filtered = filtered.filter(r => r.date === fd);
+    const tb = $('allAttendanceBody'); if (!tb) return;
+    if (filtered.length === 0) return tb.innerHTML = '<tr><td colspan="7" class="empty">No records</td></tr>';
+    window._allRecords = filtered;
+    tb.innerHTML = filtered.slice(0,200).map(r => `<tr><td><input type="checkbox" class="rec-cb" data-id="${r._id}"></td><td>${fmtDatePretty(r.date)}</td><td><b>${r.rollNo}</b></td><td>${r.studentName||''}</td><td>${r.subject}</td><td><span class="badge ${r.status==='Present'?'badge-success':r.status==='Duty Leave'?'badge-warning':'badge-danger'}">${r.status}</span></td><td><button class="btn btn-danger btn-xs ripple" onclick="deleteRecord('${r._id}')">${ICONS.trash} Del</button></td></tr>`).join('');
+  } catch(e){ if ($('allAttendanceBody')) $('allAttendanceBody').innerHTML = '<tr><td colspan="7" class="empty">Network error</td></tr>'; }
+  observeNewContent();
+}
 function toggleAll(){ document.querySelectorAll('.rec-cb').forEach(cb => cb.checked = $('selectAll').checked); }
-async function deleteSelected(){ const ids = Array.from(document.querySelectorAll('.rec-cb:checked')).map(cb => cb.dataset.id); if (!ids.length) return toast('Select records','error'); if (!confirm(`Delete ${ids.length}?`)) return; let ok = 0; for (const id of ids) { try { const r = await fetch(`${API}/api/attendance/delete/${id}/${currentUser.rollNo}`, {method:'DELETE'}); if (r.ok) ok++; } catch(e){} } toast(`Deleted ${ok}`,'success'); loadAllAttendance(); }
+async function deleteSelected(){
+  const ids = Array.from(document.querySelectorAll('.rec-cb:checked')).map(cb => cb.dataset.id);
+  if (!ids.length) return toast('Select records','error');
+  if (!await customConfirm(`Delete ${ids.length} record(s)?`, 'This action cannot be undone.', { danger: true, confirmText: `Delete ${ids.length}` })) return;
+  let ok = 0;
+  for (const id of ids) { try { const r = await fetch(`${API}/api/attendance/delete/${id}/${currentUser.rollNo}`, {method:'DELETE'}); if (r.ok) ok++; } catch(e){} }
+  toast(`Deleted ${ok}`,'success'); loadAllAttendance();
+}
 function initReports(){ const s = $('singleStudentMonth'); if (s && !s.innerHTML.trim()) s.innerHTML = [6,7,8,9,10,11].map(m=>`<option value="${m}">${MONTH_NAMES[m]} 2026</option>`).join(''); }
 function toggleSingleMonth(){ const el = $('singleStudentMonth'); if (el) el.style.display = $('singleStudentRange').value === 'SELECTED_MONTH' ? 'block' : 'none'; }
 function downloadSingle(){ const roll = $('singleStudentSelect').value; if (!roll) return toast('Select student','error'); const range = $('singleStudentRange').value; const month = $('singleStudentMonth').value; toast('Downloading CSV…','info'); window.location.href = `${API}/api/export/student-attendance/${currentUser.rollNo}?studentRollNo=${roll}&range=${range}&month=${month}`; }
@@ -2515,7 +2574,32 @@ async function generateClassReport(action = 'download'){
 }
 
 function toggleAdminReportRange(){ const e = $('adminReportMonth'); if (e) e.style.display = $('adminReportRange').value === 'SELECTED_MONTH' ? 'block' : 'none'; }
-async function exportGrid(){ const r = window._allRecords || await fetch(`${API}/api/attendance/all/${currentUser.rollNo}`).then(x=>x.json()); const sel = $('exportRange').value; const hol = await fetch(`${API}/api/holidays`).then(x=>x.json()); const hS = new Set(hol.map(h => (h.date||'').split('T')[0])); const start = sel === 'ALL_SEMESTER' ? new Date(2026,6,15) : new Date(2026, parseInt(sel), 1); let end = sel === 'ALL_SEMESTER' ? new Date(2026,11,31) : new Date(2026, parseInt(sel)+1, 0); const today = new Date(); if (end > today) end = today; const days = []; let cur = new Date(start); while (cur <= end) { days.push(fmtDate(cur)); cur.setDate(cur.getDate()+1); } const bs = {}; r.forEach(x => { if (!bs[x.rollNo]) bs[x.rollNo] = { name: x.studentName||'', dates: {} }; if (!bs[x.rollNo].dates[x.date]) bs[x.rollNo].dates[x.date] = []; bs[x.rollNo].dates[x.date].push(x.status); }); let csv = 'Roll,Name,' + days.map(d => `${d}`).join(',') + ',Total\n'; Object.keys(bs).sort().forEach(roll => { const s = bs[roll]; let total = 0, row = `"${roll}","${s.name}"`; days.forEach(d => { const dow = new Date(d).getDay(); if (dow === 0 || dow === 6) { row += ',OFF'; return; } if (hS.has(d)) { row += ',H'; return; } const st = s.dates[d] || []; if (st.some(x => x === 'Present' || x === 'Duty Leave')) { row += ',P'; total++; } else row += ',A'; }); row += `,${total}`; csv += row + '\n'; }); download(csv, `attendance_grid.csv`); }
+
+async function exportGrid(){
+  const r = window._allRecords || await fetch(`${API}/api/attendance/all/${currentUser.rollNo}`).then(x=>x.json());
+  const sel = $('exportRange').value;
+  const hol = await fetch(`${API}/api/holidays`).then(x=>x.json());
+  const hS = new Set(hol.map(h => (h.date||'').split('T')[0]));
+  const start = sel === 'ALL_SEMESTER' ? new Date(2026,6,15) : new Date(2026, parseInt(sel), 1);
+  let end = sel === 'ALL_SEMESTER' ? new Date(2026,11,31) : new Date(2026, parseInt(sel)+1, 0);
+  const today = new Date(); if (end > today) end = today;
+  const days = []; let cur = new Date(start); while (cur <= end) { days.push(fmtDate(cur)); cur.setDate(cur.getDate()+1); }
+  const bs = {}; r.forEach(x => { if (!bs[x.rollNo]) bs[x.rollNo] = { name: x.studentName||'', dates: {} }; if (!bs[x.rollNo].dates[x.date]) bs[x.rollNo].dates[x.date] = []; bs[x.rollNo].dates[x.date].push(x.status); });
+  let csv = 'Roll,Name,' + days.map(d => `${d}`).join(',') + ',Total\n';
+  Object.keys(bs).sort().forEach(roll => {
+    const s = bs[roll]; let total = 0, row = `"${roll}","${s.name}"`;
+    days.forEach(d => {
+      const dow = new Date(d).getDay();
+      if (dow === 0 || dow === 6) { row += ',OFF'; return; }
+      if (hS.has(d)) { row += ',H'; return; }
+      const st = s.dates[d] || [];
+      if (st.some(x => x === 'Present' || x === 'Duty Leave')) { row += ',P'; total++; }
+      else row += ',A';
+    });
+    row += `,${total}`; csv += row + '\n';
+  });
+  download(csv, `attendance_grid.csv`);
+}
 
 async function generateStudentReport(f, action = 'download'){
   const r = $('reportStudentSelect').value;
@@ -2538,7 +2622,7 @@ async function generateStudentReport(f, action = 'download'){
 }
 
 function initEntry(){ setBranch(currentManualBranch); if ($('manualDate')) $('manualDate').value = fmtDate(new Date()); loadBulkStudents(); }
-function setBranch(b){ currentManualBranch = b; if ($('branchCSE')) $('branchCSE').className = 'btn ' + (b === 'CSE' ? 'btn-primary' : 'btn-outline') + ' btn-sm'; if ($('branchAIDS')) $('branchAIDS').className = 'btn ' + (b === 'AIDS' ? 'btn-primary' : 'btn-outline') + ' btn-sm'; loadSubjects(); }
+function setBranch(b){ currentManualBranch = b; if ($('branchCSE')) $('branchCSE').className = 'btn ' + (b === 'CSE' ? 'btn-primary' : 'btn-outline') + ' btn-sm ripple'; if ($('branchAIDS')) $('branchAIDS').className = 'btn ' + (b === 'AIDS' ? 'btn-primary' : 'btn-outline') + ' btn-sm ripple'; loadSubjects(); }
 function loadSubjects(){ const date = $('manualDate').value; if (!date) return; const d = new Date(date); const dayName = FULL_DAY_NAMES[d.getDay()]; const subs = (getTimetableForBranch(currentManualBranch, date)[dayName] || []).filter(s => !s.includes('Sports') && !s.includes('LIB') && !s.includes('Library')); if ($('subjectCheckboxes')) $('subjectCheckboxes').innerHTML = `<label style="grid-column:span 2;display:flex;align-items:center;gap:8px;padding:9px;background:var(--slate-100);border-radius:9px;font-size:11.5px;font-weight:700;cursor:pointer;"><input type="checkbox" onchange="selectAllSubjects(this.checked)"> Select All (${subs.length})</label>` + subs.map(s => `<label style="display:flex;align-items:center;gap:8px;padding:7px 11px;background:var(--slate-50);border-radius:7px;font-size:11.5px;cursor:pointer;"><input type="checkbox" class="sub-cb" value="${s}"> ${s}</label>`).join(''); validateBranch(); }
 function selectAllSubjects(v){ document.querySelectorAll('.sub-cb').forEach(cb => cb.checked = v); }
 async function validateBranch(){ const r = ($('manualRoll').value||'').toUpperCase(); if (!r) return; try { const p = await fetch(`${API}/api/student/profile/${r}`).then(x=>x.json()); if (p.branch && p.branch !== currentManualBranch) toast(`Warning: Student is in ${p.branch}`,'error'); } catch(e){} }
@@ -2552,22 +2636,19 @@ async function loadBulkStudents(){
     const students = data.filter(u => u.role === 'student' && (u.branch === b || u.rollNo.startsWith(b === 'CSE' ? '24CSE' : '24AIDS')));
     if ($('bulkStudents')) {
       const sorted = students.sort((a,b) => a.rollNo.localeCompare(b.rollNo, undefined, {numeric: true}));
-      $('bulkStudents').innerHTML = `<label class="bulk-select-item" style="font-weight:700;border-bottom:1px solid var(--slate-200);margin-bottom:6px;padding-bottom:8px;"><input type="checkbox" onchange="document.querySelectorAll('.bulk-stu').forEach(c=>c.checked=this.checked)"><span class="bulk-name" style="font-weight:700;color:var(--slate-900);">Select All (${sorted.length})</span></label>` + sorted.map(s => `<label class="bulk-select-item"><input type="checkbox" class="bulk-stu" value="${escapeHtml(s.rollNo)}" data-name="${escapeHtml(s.name)}"><span class="bulk-roll">${escapeHtml(s.rollNo)}</span><span class="bulk-name">${escapeHtml(s.name)}</span></label>`).join('');
+      $('bulkStudents').innerHTML = `<label class="bulk-select-item" style="font-weight:700;border-bottom:1px solid var(--surface-border);margin-bottom:6px;padding-bottom:8px;"><input type="checkbox" onchange="document.querySelectorAll('.bulk-stu').forEach(c=>c.checked=this.checked)"><span class="bulk-name" style="font-weight:700;color:var(--slate-900);">Select All (${sorted.length})</span></label>` + sorted.map(s => `<label class="bulk-select-item"><input type="checkbox" class="bulk-stu" value="${escapeHtml(s.rollNo)}" data-name="${escapeHtml(s.name)}"><span class="bulk-roll">${escapeHtml(s.rollNo)}</span><span class="bulk-name">${escapeHtml(s.name)}</span></label>`).join('');
     }
   } catch(e){ console.error('loadBulkStudents error:', e); }
 }
 function addBulkDate(){ const d = $('bulkDate').value; if (!d) return toast('Select date','error'); if (selectedBulkDates.includes(d)) return toast('Already added','error'); selectedBulkDates.push(d); renderBulkDates(); }
-function renderBulkDates(){ if ($('bulkDates')) $('bulkDates').innerHTML = selectedBulkDates.map(d => `<span class="chip">${fmtDatePretty(d)} <span onclick="removeBulkDate('${d}')" style="cursor:pointer;color:var(--rose-600);font-weight:800;">×</span></span>`).join(''); }
+function renderBulkDates(){ if ($('bulkDates')) $('bulkDates').innerHTML = selectedBulkDates.map(d => `<span class="chip">${fmtDatePretty(d)} <span onclick="removeBulkDate('${d}')" style="cursor:pointer;color:var(--rose-700);font-weight:800;">×</span></span>`).join(''); }
 function removeBulkDate(d){ selectedBulkDates = selectedBulkDates.filter(x=>x!==d); renderBulkDates(); }
 
-/* ★ FIX 2: Bulk mark preview shows per-student lecture counts */
 async function bulkMarkPreview(){
   const students = Array.from(document.querySelectorAll('.bulk-stu:checked')).map(cb => ({roll: cb.value, name: cb.dataset.name || ''}));
   if (!students.length) return toast('Select students','error');
   if (!selectedBulkDates.length) return toast('Add dates','error');
-
-  const preview = [];
-  let grandTotal = 0;
+  const preview = []; let grandTotal = 0;
   for (const st of students) {
     const branch = st.roll.startsWith('24AIDS') ? 'AIDS' : 'CSE';
     let totalLectures = 0;
@@ -2581,23 +2662,9 @@ async function bulkMarkPreview(){
     preview.push({ ...st, branch, totalLectures });
     grandTotal += totalLectures;
   }
-
-  let s = `<div style="margin-bottom:14px;padding:14px;background:var(--brand-50);border:1px solid var(--brand-200);border-radius:10px;">
-    <div style="font-size:14px;font-weight:800;color:var(--brand-900);">📋 Bulk Marking Summary</div>
-    <div style="font-size:12.5px;color:var(--brand-700);margin-top:6px;"><b>${students.length}</b> student(s) × <b>${selectedBulkDates.length}</b> date(s)</div>
-    <div style="font-size:12.5px;color:var(--brand-700);margin-top:4px;">🎯 Total lectures to mark: <b>${grandTotal}</b></div>
-    <div style="font-size:11px;color:var(--brand-600);margin-top:6px;font-style:italic;">Review the list below, then confirm to proceed.</div>
-  </div>`;
-  s += `<div style="max-height:280px;overflow-y:auto;border:1px solid var(--slate-200);border-radius:10px;padding:8px;background:#fff;">`;
-  preview.forEach(p => {
-    s += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--slate-100);gap:8px;">
-      <div style="min-width:0;flex:1;">
-        <div style="font-weight:700;font-size:12px;">${escapeHtml(p.roll)} — ${escapeHtml(p.name)}</div>
-        <div style="font-size:10.5px;color:var(--slate-500);">${p.branch}</div>
-      </div>
-      <div style="font-weight:800;color:var(--brand-600);font-size:14px;font-variant-numeric:tabular-nums;">${p.totalLectures}</div>
-    </div>`;
-  });
+  let s = `<div class="highlight-box info" style="background:linear-gradient(135deg,var(--brand-50),var(--brand-100));border-color:var(--brand-300);color:var(--brand-800);"><div style="font-size:14px;font-weight:800;">📋 Bulk Marking Summary</div><div style="font-size:12.5px;margin-top:6px;"><b>${students.length}</b> student(s) × <b>${selectedBulkDates.length}</b> date(s)</div><div style="font-size:12.5px;margin-top:4px;">🎯 Total lectures to mark: <b>${grandTotal}</b></div><div class="text-sm" style="margin-top:6px;font-style:italic;">Review the list below, then confirm to proceed.</div></div>`;
+  s += `<div style="max-height:280px;overflow-y:auto;border:1px solid var(--surface-border);border-radius:10px;padding:8px;background:var(--surface-card);">`;
+  preview.forEach(p => { s += `<div class="nested-row"><div style="min-width:0;flex:1;"><div style="font-weight:700;font-size:12px;">${escapeHtml(p.roll)} — ${escapeHtml(p.name)}</div><div class="text-xs text-muted">${p.branch}</div></div><div style="font-weight:800;color:var(--brand-600);font-size:14px;font-variant-numeric:tabular-nums;">${p.totalLectures}</div></div>`; });
   s += `</div>`;
   $('bulkMarkSummary').innerHTML = s;
   pendingBulkAction = { type: 'mark', students: students.map(x=>x.roll) };
@@ -2607,59 +2674,26 @@ async function bulkMarkPreview(){
 async function confirmBulkMark() {
   if (!pendingBulkAction) return;
   closeModal('bulkMarkModal');
-
-  /* ★ FIX 2: Faculty bulk mark (uses teacher endpoint) */
   if (pendingBulkAction.type === 'fac-mark') {
     showDL('Marking…');
     try {
-      const res = await fetch(`${API}/api/teacher/bulk-mark-attendance`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          requesterRollNo: currentUser.rollNo,
-          studentRollNos: pendingBulkAction.students,
-          dates: facSelectedBulkDates,
-          status: pendingBulkAction.status
-        })
-      });
-      const d = await res.json();
-      hideDL();
-      if (res.ok) {
-        showFeedback('success','Bulk Marked', d.message || 'Attendance marked.');
-        sendPushNotification('✅ Bulk Marked', `${pendingBulkAction.students.length} students × ${facSelectedBulkDates.length} dates`, { type: 'fac_bulk' });
-        facSelectedBulkDates = []; renderFacBulkDates();
-        fetchTeacherStudents(); loadFacultyRecent();
-      } else showFeedback('error','Failed', d.error || 'Could not mark');
+      const res = await fetch(`${API}/api/teacher/bulk-mark-attendance`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, studentRollNos: pendingBulkAction.students, dates: facSelectedBulkDates, status: pendingBulkAction.status }) });
+      const d = await res.json(); hideDL();
+      if (res.ok) { showFeedback('success','Bulk Marked', d.message || 'Attendance marked.'); sendPushNotification('✅ Bulk Marked', `${pendingBulkAction.students.length} students × ${facSelectedBulkDates.length} dates`, { type: 'fac_bulk' }); facSelectedBulkDates = []; renderFacBulkDates(); fetchTeacherStudents(); loadFacultyRecent(); }
+      else showFeedback('error','Failed', d.error || 'Could not mark');
     } catch(e) { hideDL(); showFeedback('error','Network Error', e.message); }
-    pendingBulkAction = null;
-    return;
+    pendingBulkAction = null; return;
   }
-
-  /* ★ FIX 2: Admin bulk mark */
   if (pendingBulkAction.type === 'mark') {
     showDL('Marking…');
     try {
-      const res = await fetch(`${API}/api/admin/bulk-mark-attendance`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          requesterRollNo: currentUser.rollNo,
-          studentRollNos: pendingBulkAction.students,
-          dates: selectedBulkDates,
-          subjects: []
-        })
-      });
-      const d = await res.json();
-      hideDL();
-      if (res.ok) {
-        showFeedback('success','Bulk Marked', d.message || 'Attendance marked.');
-        sendPushNotification('✅ Bulk Marked', `${pendingBulkAction.students.length} students × ${selectedBulkDates.length} dates`, { type: 'bulk_mark' });
-      } else showFeedback('error','Failed', d.error || 'Could not mark');
+      const res = await fetch(`${API}/api/admin/bulk-mark-attendance`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, studentRollNos: pendingBulkAction.students, dates: selectedBulkDates, subjects: [] }) });
+      const d = await res.json(); hideDL();
+      if (res.ok) { showFeedback('success','Bulk Marked', d.message || 'Attendance marked.'); sendPushNotification('✅ Bulk Marked', `${pendingBulkAction.students.length} students × ${selectedBulkDates.length} dates`, { type: 'bulk_mark' }); }
+      else showFeedback('error','Failed', d.error || 'Could not mark');
     } catch(e) { hideDL(); showFeedback('error','Network Error', e.message); }
-    pendingBulkAction = null;
-    return;
+    pendingBulkAction = null; return;
   }
-
   pendingBulkAction = null;
 }
 
@@ -2667,7 +2701,6 @@ async function bulkDeletePreview(){
   const students = Array.from(document.querySelectorAll('.bulk-stu:checked')).map(cb => ({roll: cb.value, name: cb.dataset.name}));
   if (!students.length) return toast('Select students','error');
   if (!selectedBulkDates.length) return toast('Add dates','error');
-
   let grandTotal = 0;
   const preview = students.map(st => {
     const branch = st.roll.startsWith('24AIDS') ? 'AIDS' : 'CSE';
@@ -2682,22 +2715,10 @@ async function bulkDeletePreview(){
     grandTotal += count;
     return { ...st, branch, count };
   });
-
-  let s = `<div style="margin-bottom:14px;padding:14px;background:var(--rose-50);border:1px solid #fecdd3;border-radius:10px;">
-    <div style="font-size:14px;font-weight:800;color:var(--rose-700);">⚠️ Confirm Bulk Delete</div>
-    <div style="font-size:12.5px;color:var(--rose-700);margin-top:6px;"><b>${students.length}</b> student(s) × <b>${selectedBulkDates.length}</b> date(s)</div>
-    <div style="font-size:12.5px;color:var(--rose-700);margin-top:4px;">🎯 Total records to delete: <b>~${grandTotal}</b></div>
-    <div style="font-size:11px;color:#9f1239;margin-top:6px;font-weight:600;">⚠️ This action cannot be undone!</div>
-  </div>`;
-  s += `<div style="max-height:200px;overflow-y:auto;border:1px solid var(--slate-200);border-radius:10px;padding:8px;background:#fff;">`;
-  preview.forEach(p => {
-    s += `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-bottom:1px solid var(--slate-100);gap:8px;">
-      <div style="font-weight:700;font-size:12px;">${escapeHtml(p.roll)} — ${escapeHtml(p.name)}</div>
-      <div style="font-weight:800;color:var(--rose-600);font-size:12px;font-variant-numeric:tabular-nums;">${p.count}</div>
-    </div>`;
-  });
+  let s = `<div class="highlight-box" style="background:linear-gradient(135deg,var(--rose-50),var(--rose-100));border-color:var(--rose-300);color:var(--rose-800);"><div style="font-size:14px;font-weight:800;">⚠️ Confirm Bulk Delete</div><div style="font-size:12.5px;margin-top:6px;"><b>${students.length}</b> student(s) × <b>${selectedBulkDates.length}</b> date(s)</div><div style="font-size:12.5px;margin-top:4px;">🎯 Total records to delete: <b>~${grandTotal}</b></div><div class="text-sm" style="margin-top:6px;font-weight:600;">⚠️ This action cannot be undone!</div></div>`;
+  s += `<div style="max-height:200px;overflow-y:auto;border:1px solid var(--surface-border);border-radius:10px;padding:8px;background:var(--surface-card);">`;
+  preview.forEach(p => { s += `<div class="nested-row"><div style="font-weight:700;font-size:12px;min-width:0;flex:1;">${escapeHtml(p.roll)} — ${escapeHtml(p.name)}</div><div style="font-weight:800;color:var(--rose-600);font-size:12px;font-variant-numeric:tabular-nums;">${p.count}</div></div>`; });
   s += `</div>`;
-
   $('bulkDeleteSummary').innerHTML = s;
   pendingBulkAction = { type: 'delete', students: students.map(x=>x.roll) };
   openModal('bulkDeleteModal');
@@ -2708,33 +2729,74 @@ async function confirmBulkDelete() {
   closeModal('bulkDeleteModal');
   showDL('Deleting…');
   try {
-    const res = await fetch(`${API}/api/admin/bulk-delete-attendance`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requesterRollNo: currentUser.rollNo, studentRollNos: pendingBulkAction.students, dates: selectedBulkDates })
-    });
-    const d = await res.json();
-    hideDL();
+    const res = await fetch(`${API}/api/admin/bulk-delete-attendance`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, studentRollNos: pendingBulkAction.students, dates: selectedBulkDates }) });
+    const d = await res.json(); hideDL();
     if (res.ok) showFeedback('success','Deleted', d.message || 'Records deleted.');
     else showFeedback('error','Failed', d.error || 'Could not delete');
   } catch(e) { hideDL(); showFeedback('error','Network Error', e.message); }
   pendingBulkAction = null;
 }
 
-async function loadHolidays(){ try { const data = await ensureHolidays(); selectedHolidayDates.clear(); if ($('holidayList')) $('holidayList').innerHTML = data.length ? data.map(h => { const d = (h.date||'').split('T')[0]; return `<div class="holiday-row"><label style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;min-width:0;"><input type="checkbox" class="holiday-cb" value="${d}" onchange="toggleHolidaySelect('${d}', this.checked)"> <b>${fmtDatePretty(d)}</b> · ${h.reason}</label><button class="btn btn-danger btn-xs" onclick="deleteHoliday('${d}')">${ICONS.trash} Delete</button></div>`; }).join('') : '<div class="empty">No holidays</div>'; } catch(e){} observeNewContent(); }
+async function loadHolidays(){
+  try {
+    const data = await ensureHolidays();
+    selectedHolidayDates.clear();
+    if ($('holidayList')) $('holidayList').innerHTML = data.length ? data.map(h => { const d = (h.date||'').split('T')[0]; return `<div class="holiday-row"><label style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;min-width:0;"><input type="checkbox" class="holiday-cb" value="${d}" onchange="toggleHolidaySelect('${d}', this.checked)"> <b>${fmtDatePretty(d)}</b> · ${h.reason}</label><button class="btn btn-danger btn-xs ripple" onclick="deleteHoliday('${d}')">${ICONS.trash} Delete</button></div>`; }).join('') : '<div class="empty">No holidays</div>';
+  } catch(e){}
+  observeNewContent();
+}
 function toggleHolidaySelect(d, c){ if (c) selectedHolidayDates.add(d); else selectedHolidayDates.delete(d); }
-async function deleteSelectedHolidays(){ if (selectedHolidayDates.size === 0) return toast('Select holidays','error'); if (!confirm(`Delete ${selectedHolidayDates.size}?`)) return; showDL('Deleting…'); let ok = 0; for (const d of selectedHolidayDates) { try { const res = await fetch(`${API}/api/admin/holiday/${d}`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})}); if (res.ok) ok++; } catch(e){} } hideDL(); toast(`Deleted ${ok}`,'success'); globalHolidays = []; await ensureHolidays(); loadHolidays(); }
+async function deleteSelectedHolidays(){
+  if (selectedHolidayDates.size === 0) return toast('Select holidays','error');
+  if (!await customConfirm(`Delete ${selectedHolidayDates.size} holiday(s)?`, 'This cannot be undone.', { danger: true, confirmText: 'Delete' })) return;
+  showDL('Deleting…'); let ok = 0;
+  for (const d of selectedHolidayDates) { try { const res = await fetch(`${API}/api/admin/holiday/${d}`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})}); if (res.ok) ok++; } catch(e){} }
+  hideDL(); toast(`Deleted ${ok}`,'success'); globalHolidays = []; await ensureHolidays(); loadHolidays();
+}
 async function declareHoliday(){ const d = $('holidayDate').value, r = $('holidayReason').value.trim(); if (!d || !r) return toast('Enter date and reason','error'); try { const res = await fetch(`${API}/api/admin/holiday`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, date: d, reason: r})}); const x = await res.json(); if (res.ok) { showFeedback('success','Holiday Declared',`${fmtDatePretty(d)} — ${r}`); $('holidayReason').value = ''; globalHolidays = []; await ensureHolidays(); loadHolidays(); } else showFeedback('error','Failed',x.error||'Could not declare'); } catch(e){ showFeedback('error','Network Error',e.message); } }
-async function deleteHoliday(d){ if (!confirm('Delete?')) return; try { await fetch(`${API}/api/admin/holiday/${d}`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})}); toast('Deleted','success'); globalHolidays = []; await ensureHolidays(); loadHolidays(); } catch(e){} }
+async function deleteHoliday(d){
+  if (!await customConfirm('Delete holiday?', `${fmtDatePretty(d)} will no longer be marked as a holiday.`, { danger: true, confirmText: 'Delete' })) return;
+  try { await fetch(`${API}/api/admin/holiday/${d}`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})}); toast('Deleted','success'); globalHolidays = []; await ensureHolidays(); loadHolidays(); } catch(e){}
+}
 function addBulkHolidayRange(){ const f = $('bulkHolidayFrom').value, t = $('bulkHolidayTo').value; if (!f || !t) return toast('Select both dates','error'); if (f > t) return toast('Start must be before end','error'); const dates = []; let cur = new Date(f + 'T00:00:00'); const end = new Date(t + 'T00:00:00'); while (cur <= end) { dates.push(fmtDate(cur)); cur.setDate(cur.getDate()+1); } const ta = $('bulkHolidayText'); const ex = ta.value.split('\n').map(s=>s.trim()).filter(Boolean); const merged = [...new Set([...ex, ...dates])]; ta.value = merged.join('\n'); toast(`Added ${dates.length} dates`,'success'); }
-async function submitBulkHolidays(){ const text = $('bulkHolidayText').value; const dates = text.split('\n').map(s=>s.trim()).filter(s => /^\d{4}-\d{2}-\d{2}$/.test(s)); if (!dates.length) return toast('No valid dates','error'); if (!confirm(`Add ${dates.length} holidays?`)) return; showDL('Adding…'); let ok = 0, fail = 0; for (const d of dates) { try { const res = await fetch(`${API}/api/admin/holiday`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, date: d, reason: 'Bulk Holiday'})}); if (res.ok) ok++; else fail++; } catch(e){ fail++; } } hideDL(); showFeedback(ok?'success':'error','Bulk Holidays',`${ok} added${fail ? ', ' + fail + ' skipped' : ''}.`); $('bulkHolidayText').value = ''; globalHolidays = []; await ensureHolidays(); loadHolidays(); }
+async function submitBulkHolidays(){ const text = $('bulkHolidayText').value; const dates = text.split('\n').map(s=>s.trim()).filter(s => /^\d{4}-\d{2}-\d{2}$/.test(s)); if (!dates.length) return toast('No valid dates','error'); if (!await customConfirm(`Add ${dates.length} holidays?`, 'All dates will be marked as holidays.', { confirmText: 'Add All' })) return; showDL('Adding…'); let ok = 0, fail = 0; for (const d of dates) { try { const res = await fetch(`${API}/api/admin/holiday`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, date: d, reason: 'Bulk Holiday'})}); if (res.ok) ok++; else fail++; } catch(e){ fail++; } } hideDL(); showFeedback(ok?'success':'error','Bulk Holidays',`${ok} added${fail ? ', ' + fail + ' skipped' : ''}.`); $('bulkHolidayText').value = ''; globalHolidays = []; await ensureHolidays(); loadHolidays(); }
+
 const PASSCODE_CACHE_KEY = 'BM_PASSCODE_CACHE';
 function getPasscodeCache() { try { return JSON.parse(localStorage.getItem(PASSCODE_CACHE_KEY) || '{}'); } catch(e) { return {}; } }
 function setPasscodeCache(type, p, e) { const c = getPasscodeCache(); c[type] = { passcode: p, expiresAt: e }; localStorage.setItem(PASSCODE_CACHE_KEY, JSON.stringify(c)); }
-async function loadPasscodes() { const today = fmtDate(new Date()); const st = await checkDateStatus(today); const cb = $('passcodeClosedBanner'), ct = $('passcodeClosedText'), fdC = $('fullDayPasscodeCard'), slC = $('singlePasscodeCard'); if (st.isBlocked) { if (cb) cb.style.display = 'flex'; if (ct) { if (st.type === 'WEEKEND') ct.textContent = `${st.dayName} — College Closed.`; else ct.textContent = `Holiday — ${st.holiday || 'Closed'}.`; } if (fdC) fdC.style.display = 'none'; if (slC) slC.style.display = 'none'; return; } if (cb) cb.style.display = 'none'; if (fdC) fdC.style.display = 'block'; if (slC) slC.style.display = 'block'; const cache = getPasscodeCache(); const now = Date.now(); const fd = cache['full_day'], sl = cache['single_lecture']; if (fd && new Date(fd.expiresAt).getTime() > now) { $('fdPasscode').textContent = fd.passcode; $('fdPasscode').classList.remove('empty'); $('fdPasscodeDisplay').classList.add('valid'); } else { $('fdPasscode').textContent = '— — — — —'; $('fdPasscode').classList.add('empty'); $('fdPasscodeDisplay').classList.remove('valid'); } if (sl && new Date(sl.expiresAt).getTime() > now) { $('slPasscode').textContent = sl.passcode; $('slPasscode').classList.remove('empty'); $('slPasscodeDisplay').classList.add('valid'); } else { $('slPasscode').textContent = '— — — —'; $('slPasscode').classList.add('empty'); $('slPasscodeDisplay').classList.remove('valid'); } }
-async function genPass(type, force){ const today = fmtDate(new Date()); const st = await checkDateStatus(today); if (st.isBlocked) return toast(st.type === 'WEEKEND' ? `${st.dayName} — closed.` : `Holiday — closed.`, 'error'); const label = type === 'full_day' ? 'Full Day' : 'Lecture'; if (force && !confirm(`Change ${label} Passcode?`)) return; try { const res = await fetch(`${API}/api/admin/generate-passcode`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, type, force: !!force }) }); const d = await res.json(); if (!res.ok) return toast(d.error || 'Failed', 'error'); setPasscodeCache(type, d.passcode, d.expiresAt); if (type === 'full_day') { $('fdPasscode').textContent = d.passcode; $('fdPasscode').classList.remove('empty'); $('fdPasscodeDisplay').classList.add('valid'); } else { $('slPasscode').textContent = d.passcode; $('slPasscode').classList.remove('empty'); $('slPasscodeDisplay').classList.add('valid'); } toast(force ? `${label} changed!` : `${label} generated!`, 'success'); } catch(e) { toast('Network error', 'error'); } }
-async function publishPasscode(){ const type = $('pubPassType').value; const dm = parseInt($('pubPassDuration').value) || 30; if (!confirm(`Publish ${type.replace('_',' ')} for ${dm} min?`)) return; try { const res = await fetch(`${API}/api/admin/generate-passcode`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, type, publish: true, durationMinutes: dm }) }); const d = await res.json(); if (!res.ok) return toast(d.error || 'Failed', 'error'); setPasscodeCache(type, d.passcode, d.expiresAt); showFeedback('success','Passcode Published',`Students can now see this passcode.\n\nPasscode: ${d.passcode}\nValid for ${dm} minutes.`); if (type === 'full_day') { $('fdPasscode').textContent = d.passcode; $('fdPasscode').classList.remove('empty'); $('fdPasscodeDisplay').classList.add('valid'); $('fdPasscodeMeta').textContent = `Published · expires ${new Date(d.expiresAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`; } else { $('slPasscode').textContent = d.passcode; $('slPasscode').classList.remove('empty'); $('slPasscodeDisplay').classList.add('valid'); $('slPasscodeMeta').textContent = `Published · expires ${new Date(d.expiresAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`; } } catch(e) { toast('Network error', 'error'); } }
-async function fixAllAttendanceSubjects(isTest){ const tr = isTest ? ($('fixAllTestRoll').value || '').trim().toUpperCase() : ''; if (isTest && !tr) return toast('Test roll required','error'); if (!confirm(isTest ? `Test on ${tr}?` : 'DESTRUCTIVE! Continue?')) return; const se = $('fixAllStatus'), re = $('fixAllReport'); se.textContent = isTest ? `Testing ${tr}…` : 'Scanning…'; re.innerHTML = ''; showDL(isTest ? `Testing ${tr}…` : 'Fixing…'); try { const body = { requesterRollNo: currentUser.rollNo }; if (isTest) body.testRollNo = tr; const res = await fetch(`${API}/api/admin/fix-all-attendance-subjects`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); const d = await res.json(); hideDL(); if (!res.ok) { se.textContent = '❌ ' + (d.error || 'Failed'); return toast(d.error || 'Failed', 'error'); } se.textContent = d.message || 'Done'; let html = `<div style="background:#fff;border:1px solid var(--slate-200);border-radius:10px;padding:14px;font-size:12px;"><div style="font-weight:800;margin-bottom:10px;">${isTest ? 'Test: ' + tr : 'Summary'}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px;background:var(--slate-50);border-radius:8px;"><div>${d.totalStudents || 0} scanned</div><div>${d.removed || 0} removed</div><div>${d.added || 0} added</div><div>${d.renamed || 0} renamed</div><div>${d.deduplicated || 0} deduped</div></div></div>`; re.innerHTML = html; toast(isTest ? `Test done` : `Fix done`, 'success'); if (!isTest) { globalHolidays = []; await ensureHolidays(); if (typeof fetchUsers === 'function') fetchUsers(); } } catch(e) { hideDL(); se.textContent = '❌ ' + e.message; toast('Error: ' + e.message, 'error'); } }
+async function loadPasscodes() {
+  const today = fmtDate(new Date()); const st = await checkDateStatus(today);
+  const cb = $('passcodeClosedBanner'), ct = $('passcodeClosedText'), fdC = $('fullDayPasscodeCard'), slC = $('singlePasscodeCard');
+  if (st.isBlocked) { if (cb) cb.style.display = 'flex'; if (ct) { if (st.type === 'WEEKEND') ct.textContent = `${st.dayName} — College Closed.`; else ct.textContent = `Holiday — ${st.holiday || 'Closed'}.`; } if (fdC) fdC.style.display = 'none'; if (slC) slC.style.display = 'none'; return; }
+  if (cb) cb.style.display = 'none'; if (fdC) fdC.style.display = 'block'; if (slC) slC.style.display = 'block';
+  const cache = getPasscodeCache(); const now = Date.now();
+  const fd = cache['full_day'], sl = cache['single_lecture'];
+  if (fd && new Date(fd.expiresAt).getTime() > now) { $('fdPasscode').textContent = fd.passcode; $('fdPasscode').classList.remove('empty'); $('fdPasscodeDisplay').classList.add('valid'); } else { $('fdPasscode').textContent = '— — — — —'; $('fdPasscode').classList.add('empty'); $('fdPasscodeDisplay').classList.remove('valid'); }
+  if (sl && new Date(sl.expiresAt).getTime() > now) { $('slPasscode').textContent = sl.passcode; $('slPasscode').classList.remove('empty'); $('slPasscodeDisplay').classList.add('valid'); } else { $('slPasscode').textContent = '— — — —'; $('slPasscode').classList.add('empty'); $('slPasscodeDisplay').classList.remove('valid'); }
+}
+async function genPass(type, force){ const today = fmtDate(new Date()); const st = await checkDateStatus(today); if (st.isBlocked) return toast(st.type === 'WEEKEND' ? `${st.dayName} — closed.` : `Holiday — closed.`, 'error'); const label = type === 'full_day' ? 'Full Day' : 'Lecture'; if (force && !await customConfirm(`Change ${label} Passcode?`, 'The old passcode will be invalidated immediately.', { confirmText: 'Change' })) return; try { const res = await fetch(`${API}/api/admin/generate-passcode`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, type, force: !!force }) }); const d = await res.json(); if (!res.ok) return toast(d.error || 'Failed', 'error'); setPasscodeCache(type, d.passcode, d.expiresAt); if (type === 'full_day') { $('fdPasscode').textContent = d.passcode; $('fdPasscode').classList.remove('empty'); $('fdPasscodeDisplay').classList.add('valid'); } else { $('slPasscode').textContent = d.passcode; $('slPasscode').classList.remove('empty'); $('slPasscodeDisplay').classList.add('valid'); } toast(force ? `${label} changed!` : `${label} generated!`, 'success'); } catch(e) { toast('Network error', 'error'); } }
+async function publishPasscode(){ const type = $('pubPassType').value; const dm = parseInt($('pubPassDuration').value) || 30; if (!await customConfirm(`Publish ${type.replace('_',' ')} for ${dm} min?`, 'Students will be notified immediately.', { confirmText: 'Publish' })) return; try { const res = await fetch(`${API}/api/admin/generate-passcode`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, type, publish: true, durationMinutes: dm }) }); const d = await res.json(); if (!res.ok) return toast(d.error || 'Failed', 'error'); setPasscodeCache(type, d.passcode, d.expiresAt); showFeedback('success','Passcode Published',`Students can now see this passcode.\n\nPasscode: ${d.passcode}\nValid for ${dm} minutes.`); if (type === 'full_day') { $('fdPasscode').textContent = d.passcode; $('fdPasscode').classList.remove('empty'); $('fdPasscodeDisplay').classList.add('valid'); $('fdPasscodeMeta').textContent = `Published · expires ${new Date(d.expiresAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`; } else { $('slPasscode').textContent = d.passcode; $('slPasscode').classList.remove('empty'); $('slPasscodeDisplay').classList.add('valid'); $('slPasscodeMeta').textContent = `Published · expires ${new Date(d.expiresAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`; } } catch(e) { toast('Network error', 'error'); } }
+
+async function fixAllAttendanceSubjects(isTest){
+  const tr = isTest ? ($('fixAllTestRoll').value || '').trim().toUpperCase() : '';
+  if (isTest && !tr) return toast('Test roll required','error');
+  if (!await customConfirm(isTest ? `Test on ${tr}?` : 'DESTRUCTIVE — run fix on ALL students?', isTest ? 'Test will not modify existing records.' : 'This will rename subjects and remove duplicates across all students. Continue?', { danger: !isTest, confirmText: isTest ? 'Test' : 'Run Fix' })) return;
+  const se = $('fixAllStatus'), re = $('fixAllReport');
+  se.textContent = isTest ? `Testing ${tr}…` : 'Scanning…'; re.innerHTML = '';
+  showDL(isTest ? `Testing ${tr}…` : 'Fixing…');
+  try {
+    const body = { requesterRollNo: currentUser.rollNo }; if (isTest) body.testRollNo = tr;
+    const res = await fetch(`${API}/api/admin/fix-all-attendance-subjects`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const d = await res.json(); hideDL();
+    if (!res.ok) { se.textContent = '❌ ' + (d.error || 'Failed'); return toast(d.error || 'Failed', 'error'); }
+    se.textContent = d.message || 'Done';
+    let html = `<div class="highlight-box info"><div style="font-weight:800;margin-bottom:10px;">${isTest ? 'Test: ' + tr : 'Summary'}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px;background:var(--slate-50);border-radius:8px;"><div>${d.totalStudents || 0} scanned</div><div>${d.removed || 0} removed</div><div>${d.added || 0} added</div><div>${d.renamed || 0} renamed</div><div>${d.deduplicated || 0} deduped</div></div></div>`;
+    re.innerHTML = html;
+    toast(isTest ? `Test done` : `Fix done`, 'success');
+    if (!isTest) { globalHolidays = []; await ensureHolidays(); if (typeof fetchUsers === 'function') fetchUsers(); }
+  } catch(e) { hideDL(); se.textContent = '❌ ' + e.message; toast('Error: ' + e.message, 'error'); }
+}
+
 function initTools(){ toggleFacultyFields(); populateFacultySubjects(); populateAssignSubjects(); loadTeachersForAssign(); loadBulkResetStudents(); }
 function toggleFacultyFields(){ const r = $('toolRole').value; $('facultyFields').style.display = r === 'faculty' ? 'block' : 'none'; if (r === 'faculty') { $('toolRoll').disabled = true; $('toolRoll').value = 'AUTO'; } else { $('toolRoll').disabled = false; $('toolRoll').value = ''; } }
 async function populateFacultySubjects(){ try { const data = await fetch(`${API}/api/timetable/subjects`).then(x=>x.json()); const allowed = ['BDA - Big Data Analytics','ECO - Economics for Engineers','DAA - Design & Analysis of Algorithm','FLA - Formal Language & Automata','HRM - Human Resource Mgmt','CN - Computer Network','WT - Web Technology','Internet Lab','CN LAB - Computer Network Lab','DAA LAB - Algorithm Lab','WT LAB - Web Technology Lab','PA - Predictive Analysis','ML - Machine Learning','PA LAB - Predictive Analysis Lab','ML LAB - Machine Learning Lab','BDA LAB - Big Data Analytics Lab']; $('facultySubject').innerHTML = '<option value="">Select Subject…</option>' + data.filter(s=>allowed.includes(s)).map(s => `<option value="${s}">${s}</option>`).join(''); $('facultySubject').onchange = function(){ const n = FACULTY_NAME_MAP[this.value]; if (n) $('toolName').value = n; }; } catch(e){} }
@@ -2749,10 +2811,7 @@ async function loadBulkResetStudents() {
     if (el) el.innerHTML = students.map(s => `<label class="bulk-select-item"><input type="checkbox" class="bulk-reset-stu" value="${escapeHtml(s.rollNo)}"><span class="bulk-roll">${escapeHtml(s.rollNo)}</span><span class="bulk-name">${escapeHtml(s.name)}</span></label>`).join('');
   } catch(e){}
 }
-function onBulkResetScopeChange() {
-  const v = $('bulkResetScope').value;
-  $('bulkResetSelectedWrap').style.display = v === 'SELECTED' ? 'block' : 'none';
-}
+function onBulkResetScopeChange() { const v = $('bulkResetScope').value; $('bulkResetSelectedWrap').style.display = v === 'SELECTED' ? 'block' : 'none'; }
 async function executeBulkDeviceReset() {
   const scope = $('bulkResetScope').value;
   let rolls = [];
@@ -2761,21 +2820,13 @@ async function executeBulkDeviceReset() {
     if (!rolls.length) return toast('Select at least 1 student', 'error');
   }
   const scopeLabel = scope === 'ALL' ? 'ALL students' : scope === 'SELECTED' ? `${rolls.length} selected students` : `all ${scope} students`;
-  if (!confirm(`Reset device for ${scopeLabel}?\n\nAll selected students will need to login fresh from any device.`)) return;
+  if (!await customConfirm(`Reset device for ${scopeLabel}?`, 'All selected students will need to login fresh from any device.', { danger: true, confirmText: 'Reset Devices' })) return;
   showDL('Resetting devices…');
   try {
-    const res = await fetch(`${API}/api/admin/bulk-reset-device`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requesterRollNo: currentUser.rollNo, scope, rollNos: rolls })
-    });
-    const d = await res.json();
-    hideDL();
-    if (res.ok) {
-      showFeedback('success', 'Devices Reset', d.message || `Reset complete. ${d.resetCount || 0} student(s) unlocked.`);
-      loadBulkResetStudents();
-      if (typeof fetchUsers === 'function') fetchUsers();
-    } else showFeedback('error', 'Failed', d.error || 'Bulk reset failed');
+    const res = await fetch(`${API}/api/admin/bulk-reset-device`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, scope, rollNos: rolls }) });
+    const d = await res.json(); hideDL();
+    if (res.ok) { showFeedback('success', 'Devices Reset', d.message || `Reset complete. ${d.resetCount || 0} student(s) unlocked.`); loadBulkResetStudents(); if (typeof fetchUsers === 'function') fetchUsers(); }
+    else showFeedback('error', 'Failed', d.error || 'Bulk reset failed');
   } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
 }
 
@@ -2790,30 +2841,21 @@ async function adminLookupStudent(){
     if (!res.ok) { out.innerHTML = `<div class="empty">${escapeHtml(d.error || 'Student not found')}</div>`; return; }
     const subjRows = Object.entries(d.subjectStats || {}).map(([s, st]) => {
       const cls = st.percentage >= 75 ? 'good' : 'bad';
-      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--slate-50);border-radius:8px;margin-bottom:4px;font-size:12px;gap:8px;">
-        <span style="font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.substring(0, 24))}</span>
-        <span class="chip ${cls}" style="padding:2px 8px;font-size:10px;flex-shrink:0;">${st.percentage}% (${st.present}/${st.total})</span>
-      </div>`;
+      return `<div class="nested-row"><span style="font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;">${escapeHtml(s.substring(0, 24))}</span><span class="chip ${cls}" style="padding:2px 8px;font-size:10px;flex-shrink:0;">${st.percentage}% (${st.present}/${st.total})</span></div>`;
     }).join('');
     const pctCls = d.attendancePercentage >= 75 ? 'good' : 'bad';
-    out.innerHTML = `
-      <div style="padding:14px;border:1px solid var(--slate-200);border-radius:12px;background:#fff;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;">
-          <div style="font-weight:800;font-size:14px;">${escapeHtml(roll)}</div>
-          <div class="stat-value ${pctCls}" style="font-size:22px;">${d.attendancePercentage}%</div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;font-size:11.5px;color:var(--slate-600);">
-          <div>Attended: <b style="color:var(--slate-900);">${d.totalAcademicLectures || 0}</b></div>
-          <div>Conducted: <b style="color:var(--slate-900);">${d.totalConductedLectures || 0}</b></div>
-          <div>Days Present: <b style="color:var(--slate-900);">${d.daysPresent || 0}</b></div>
-          <div>Working Days: <b style="color:var(--slate-900);">${d.workingDaysSoFar || 0}</b></div>
-        </div>
-        <div class="section-title" style="font-size:10px;margin-top:10px;">📚 Subject-wise</div>
-        ${subjRows || '<div class="text-xs text-muted">No subject data</div>'}
-      </div>`;
-  } catch(e) {
-    out.innerHTML = `<div class="empty">Network error: ${escapeHtml(e.message)}</div>`;
-  }
+    out.innerHTML = `<div class="list-item">
+      <div class="flex-between mb-2"><div style="font-weight:800;font-size:14px;">${escapeHtml(roll)}</div><div class="stat-value ${pctCls}" style="font-size:22px;">${d.attendancePercentage}%</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;font-size:11.5px;color:var(--slate-600);">
+        <div>Attended: <b style="color:var(--slate-900);">${d.totalAcademicLectures || 0}</b></div>
+        <div>Conducted: <b style="color:var(--slate-900);">${d.totalConductedLectures || 0}</b></div>
+        <div>Days Present: <b style="color:var(--slate-900);">${d.daysPresent || 0}</b></div>
+        <div>Working Days: <b style="color:var(--slate-900);">${d.workingDaysSoFar || 0}</b></div>
+      </div>
+      <div class="section-title">📚 Subject-wise</div>
+      ${subjRows || '<div class="text-xs text-muted">No subject data</div>'}
+    </div>`;
+  } catch(e) { out.innerHTML = `<div class="empty">Network error: ${escapeHtml(e.message)}</div>`; }
   observeNewContent();
 }
 
@@ -2825,33 +2867,72 @@ async function postNotice(){ const m = $('noticeMsg').value.trim(); if (!m) retu
 async function clearNotice(){ try { await fetch(`${API}/api/admin/notice`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, title:'Announcement', message:''})}); $('noticeBanner').style.display = 'none'; toast('Cleared','success'); } catch(e){} }
 async function updateRoll(){ const o = $('oldRoll').value.trim().toUpperCase(), n = $('newRoll').value.trim().toUpperCase(); if (!o || !n) return toast('Enter old & new ID','error'); try { const res = await fetch(`${API}/api/admin/update-rollno`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, oldRoll: o, newRoll: n})}); const d = await res.json(); if (res.ok) { showFeedback('success','Roll Updated',`${o} → ${n}`); $('oldRoll').value=''; $('newRoll').value=''; fetchUsers(); } else showFeedback('error','Failed',d.error||'Could not update'); } catch(e){ showFeedback('error','Network Error',e.message); } }
 async function resetPassword(){ const r = $('pwResetRoll').value.trim().toUpperCase(), p = $('pwResetPass').value.trim(); if (!r) return toast('Enter ID','error'); try { const res = await fetch(`${API}/api/admin/reset-password`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, targetRollNo: r, newPassword: p})}); const d = await res.json(); if (res.ok) { showFeedback('success','Password Reset',`${r} password reset.`); $('pwResetRoll').value=''; $('pwResetPass').value=''; } else showFeedback('error','Failed',d.error||'Could not reset'); } catch(e){ showFeedback('error','Network Error',e.message); } }
-async function deleteUser(){ const r = $('deleteRoll').value.trim().toUpperCase(); if (!r) return toast('Enter ID','error'); if (!confirm('Permanently delete this account?')) return; try { const res = await fetch(`${API}/api/admin/delete-user`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, targetRollNo: r})}); const d = await res.json(); if (res.ok) { showFeedback('success','Deleted',`${r} has been deleted.`); $('deleteRoll').value = ''; fetchUsers(); } else showFeedback('error','Failed',d.error||'Could not delete'); } catch(e){ showFeedback('error','Network Error',e.message); } }
+async function deleteUser(){
+  const r = $('deleteRoll').value.trim().toUpperCase();
+  if (!r) return toast('Enter ID','error');
+  if (!await customConfirm(`Permanently delete ${r}?`, 'This will remove the user and ALL their attendance records. This cannot be undone.', { danger: true, confirmText: 'Delete Permanently' })) return;
+  try { const res = await fetch(`${API}/api/admin/delete-user`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, targetRollNo: r})}); const d = await res.json(); if (res.ok) { showFeedback('success','Deleted',`${r} has been deleted.`); $('deleteRoll').value = ''; fetchUsers(); } else showFeedback('error','Failed',d.error||'Could not delete'); } catch(e){ showFeedback('error','Network Error',e.message); }
+}
 async function impersonate(){ const r = $('impRollInput').value.trim().toUpperCase(); if (!r) return toast('Enter roll','error'); try { const res = await fetch(`${API}/api/admin/login-as-student`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, targetRollNo: r})}); const d = await res.json(); if (res.ok) { localStorage.setItem('BM_ORIG_TOKEN', localStorage.getItem('token')); localStorage.setItem('BM_ORIG_USER', localStorage.getItem('user')); localStorage.setItem('token', d.token); localStorage.setItem('user', JSON.stringify(d.user)); location.reload(); } else toast(d.error,'error'); } catch(e){} }
-async function loadLeaveRequests(){ try { const data = await fetch(`${API}/api/leave/requests/${currentUser.rollNo}`).then(x=>x.json()); const el = $('leaveRequestsList'); if (!data || !data.length) return el.innerHTML = '<div class="empty">No requests</div>'; el.innerHTML = data.map(l => `<div style="padding:12px 0;border-bottom:1px solid var(--slate-100);"><div style="display:flex;justify-content:space-between;align-items:center;"><b>${l.studentName}</b> <span class="badge ${l.status==='Approved'?'badge-success':l.status==='Rejected'?'badge-danger':'badge-warning'}">${l.status}</span></div><div class="text-xs text-muted" style="margin-top:4px;">${l.rollNo} · ${fmtDatePretty(l.fromDate)} → ${fmtDatePretty(l.toDate)}</div><div class="text-xs mt-1">${l.reason}</div>${l.status === 'Pending' ? `<div class="row mt-1"><button class="btn btn-success btn-xs" onclick="reviewLeave('${l._id}','Approved')">${ICONS.check} Approve</button><button class="btn btn-danger btn-xs" onclick="reviewLeave('${l._id}','Rejected')">${ICONS.cross} Reject</button></div>` : ''}</div>`).join(''); } catch(e){} observeNewContent(); }
-async function reviewLeave(id, action){ const n = prompt(`Note for ${action}:`) || ''; try { const res = await fetch(`${API}/api/leave/action/${id}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, action, adminNote: n})}); if (res.ok) { toast('Done','success'); loadLeaveRequests(); } } catch(e){} }
-async function loadDefaulters(){ const t = $('defThreshold').value || 75; try { const data = await fetch(`${API}/api/admin/defaulters/${currentUser.rollNo}?threshold=${t}`).then(x=>x.json()); const el = $('defaulterList'); if (!data.defaulters || !data.defaulters.length) return el.innerHTML = '<div class="empty">None below threshold</div>'; el.innerHTML = data.defaulters.map(s => `<div style="padding:10px 0;border-bottom:1px solid var(--slate-100);"><b>${s.rollNo}</b> · ${s.name} · ${s.branch} · <span class="badge badge-danger">${s.pct}%</span></div>`).join(''); } catch(e){} observeNewContent(); }
 
-/* ============================================================
+async function loadLeaveRequests(){
+  try {
+    const data = await fetch(`${API}/api/leave/requests/${currentUser.rollNo}`).then(x=>x.json());
+    const el = $('leaveRequestsList');
+    if (!data || !data.length) return el.innerHTML = '<div class="empty">No requests</div>';
+    el.innerHTML = data.map(l => {
+      const sc = l.status === 'Approved' ? 'badge-success' : l.status === 'Rejected' ? 'badge-danger' : 'badge-warning';
+      return `<div class="list-item">
+        <div class="list-item-header"><b>${l.studentName}</b> <span class="badge ${sc}">${l.status}</span></div>
+        <div class="list-item-sub">${l.rollNo} · ${fmtDatePretty(l.fromDate)} → ${fmtDatePretty(l.toDate)}</div>
+        <div class="list-item-body">${l.reason}</div>
+        ${l.status === 'Pending' ? `<div class="list-item-actions"><button class="btn btn-success btn-xs ripple" onclick="reviewLeave('${l._id}','Approved')">${ICONS.check} Approve</button><button class="btn btn-danger btn-xs ripple" onclick="reviewLeave('${l._id}','Rejected')">${ICONS.cross} Reject</button></div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e){}
+  observeNewContent();
+}
+async function reviewLeave(id, action){
+  const n = await customPrompt(`Note for ${action}:`, 'e.g. Approved by HOD') || '';
+  try { const res = await fetch(`${API}/api/leave/action/${id}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, action, adminNote: n})}); if (res.ok) { toast('Done','success'); loadLeaveRequests(); } } catch(e){}
+}
+async function loadDefaulters(){ const t = $('defThreshold').value || 75; try { const data = await fetch(`${API}/api/admin/defaulters/${currentUser.rollNo}?threshold=${t}`).then(x=>x.json()); const el = $('defaulterList'); if (!data.defaulters || !data.defaulters.length) return el.innerHTML = '<div class="empty">None below threshold</div>'; el.innerHTML = data.defaulters.map(s => `<div style="padding:10px 0;border-bottom:1px solid var(--surface-border);"><b>${s.rollNo}</b> · ${s.name} · ${s.branch} · <span class="badge badge-danger">${s.pct}%</span></div>`).join(''); } catch(e){} observeNewContent(); }
+
+/* ═══════════════════════════════════════════════════════════
+   ★ PART 1 ENDS HERE
+   ═══════════════════════════════════════════════════════════
+   PART 2 START karega yaha se (next message):
+   - Notes & Documents (loadStudentNotes, openDocumentPreview, etc.)
+   - Assignments, Exams, Announcements
+   - Faculty module (initFaculty, facMark, facBulkMark, etc.)
+   - Chat / AI (toggleChat, sendChat, renderMarkdown, etc.)
+   - FCM (initFirebase, enableNotifications, autoInitFCM)
+   - Premium init (initScrollProgress, initSpotlight, etc.)
+   - CRON-adjacent helpers (ensureHolidays, checkDateStatus, etc.)
+   - final boot (DOMContentLoaded, deep link, service worker)
+   ═══════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════
    NOTES & DOCUMENTS
-   ============================================================ */
+   ═══════════════════════════════════════════════════════════ */
 async function loadStudentNotes() {
   const el = $('studentNotesList'); if (!el) return;
-  el.innerHTML = '<div class="empty" style="padding:14px 0;"><div class="spinner" style="margin:0 auto 8px;"></div>Loading…</div>';
+  el.innerHTML = '<div class="skeleton-card" style="border:1px solid var(--surface-border);border-radius:10px;margin-bottom:8px;"><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-text" style="width:50%;"></div></div><div class="skeleton-card" style="border:1px solid var(--surface-border);border-radius:10px;"><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-text" style="width:50%;"></div></div>';
   try {
     const res = await fetch(`${API}/api/notes/${currentUser.branch || 'CSE'}`);
     const data = await res.json();
     if (!res.ok) return el.innerHTML = `<div class="empty">${escapeHtml(data.error || 'Failed')}</div>`;
     const notes = Array.isArray(data) ? data : (data.notes || []);
-    if (!notes.length) return el.innerHTML = '<div class="empty" style="padding:14px 0;">No notes uploaded yet.</div>';
+    if (!notes.length) return el.innerHTML = '<div class="empty-state">No notes uploaded yet.</div>';
     el.innerHTML = notes.map(n => `
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 14px; border:1px solid var(--slate-200); border-radius:10px; margin-bottom:8px; background:#fff; flex-wrap:wrap;">
-        <div style="min-width:0; flex:1;">
-          <div style="font-weight:800; font-size:13px; color:var(--slate-900); margin-bottom:2px;">${escapeHtml(n.title || 'Untitled')}</div>
-          <div style="font-size:11px; color:var(--slate-500);">${escapeHtml(n.subject || '—')} · ${escapeHtml(n.branch || 'ALL')} · ${new Date(n.createdAt).toLocaleDateString('en-IN')}</div>
+      <div class="list-item" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div style="min-width:0;flex:1;">
+          <div class="list-item-title">${escapeHtml(n.title || 'Untitled')}</div>
+          <div class="list-item-sub">${escapeHtml(n.subject || '—')} · ${escapeHtml(n.branch || 'ALL')} · ${new Date(n.createdAt).toLocaleDateString('en-IN')}</div>
         </div>
-        <div style="display:flex; gap:6px; flex-shrink:0;">
-          <button onclick="openDocumentPreview('${n._id}')" class="btn btn-outline btn-xs" style="padding:5px 10px;">${ICONS.view} View</button>
-          <a href="${API}${n.downloadUrl}" class="btn btn-success btn-xs" style="padding:5px 10px;">${ICONS.download} Download</a>
+        <div class="list-item-actions" style="margin-top:0;flex-shrink:0;">
+          <button onclick="openDocumentPreview('${n._id}')" class="btn btn-outline btn-xs ripple" style="padding:5px 10px;">${ICONS.view} View</button>
+          <a href="${API}${n.downloadUrl}" class="btn btn-success btn-xs ripple" style="padding:5px 10px;">${ICONS.download} Download</a>
         </div>
       </div>
     `).join('');
@@ -2911,15 +2992,15 @@ async function loadAdminNotes() {
     const notes = Array.isArray(data) ? data : (data.notes || []);
     if (!notes.length) return el.innerHTML = '<div class="empty">No notes uploaded yet</div>';
     el.innerHTML = notes.map(n => `
-      <div style="padding:10px;border:1px solid var(--slate-200);border-radius:9px;margin-bottom:8px;background:#fff;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+      <div class="list-item" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
         <div style="min-width:0;flex:1;">
-          <div style="font-weight:700;font-size:12.5px;">${escapeHtml(n.title)}</div>
-          <div style="font-size:11px;color:var(--slate-500);">${escapeHtml(n.subject)} · ${escapeHtml(n.branch)} · ${new Date(n.createdAt).toLocaleDateString('en-IN')}</div>
+          <div class="list-item-title" style="font-size:12.5px;">${escapeHtml(n.title)}</div>
+          <div class="list-item-sub">${escapeHtml(n.subject)} · ${escapeHtml(n.branch)} · ${new Date(n.createdAt).toLocaleDateString('en-IN')}</div>
         </div>
-        <div style="display:flex; gap:6px;">
-          <button onclick="openDocumentPreview('${n._id}')" class="btn btn-outline btn-xs">${ICONS.view} View</button>
-          <a href="${API}${n.downloadUrl}" class="btn btn-success btn-xs">${ICONS.download} Download</a>
-          <button class="btn btn-danger btn-xs" onclick="deleteNote('${n._id}')">${ICONS.trash} Delete</button>
+        <div class="list-item-actions" style="margin-top:0;flex-shrink:0;">
+          <button onclick="openDocumentPreview('${n._id}')" class="btn btn-outline btn-xs ripple">${ICONS.view} View</button>
+          <a href="${API}${n.downloadUrl}" class="btn btn-success btn-xs ripple">${ICONS.download} Download</a>
+          <button class="btn btn-danger btn-xs ripple" onclick="deleteNote('${n._id}')">${ICONS.trash} Delete</button>
         </div>
       </div>
     `).join('');
@@ -2927,7 +3008,7 @@ async function loadAdminNotes() {
 }
 
 async function deleteNote(id) {
-  if (!confirm('Delete this note?')) return;
+  if (!await customConfirm('Delete this note?', 'The file will be permanently deleted.', { danger: true, confirmText: 'Delete' })) return;
   try {
     const res = await fetch(`${API}/api/admin/notes/${id}`, {
       method: 'DELETE',
@@ -2949,17 +3030,17 @@ async function loadDocRequests() {
     if (!reqs.length) return el.innerHTML = '<div class="empty">No pending requests</div>';
     el.innerHTML = reqs.map(r => {
       const fileHtml = r.fileName
-        ? `<div style="margin-top:6px;"><button class="btn btn-outline btn-xs" onclick="openDocReqPreview('${r._id}')">${ICONS.view} View File</button> <button class="btn btn-success btn-xs" onclick="downloadDocReqFile('${r._id}', 'download')">${ICONS.download} Download</button> <span style="font-size:10px;color:var(--slate-500);margin-left:4px;">${escapeHtml(r.fileName)}</span></div>`
+        ? `<div style="margin-top:6px;"><button class="btn btn-outline btn-xs ripple" onclick="openDocReqPreview('${r._id}')">${ICONS.view} View File</button> <button class="btn btn-success btn-xs ripple" onclick="downloadDocReqFile('${r._id}', 'download')">${ICONS.download} Download</button> <span style="font-size:10px;color:var(--slate-500);margin-left:4px;">${escapeHtml(r.fileName)}</span></div>`
         : '';
       return `
-      <div style="padding:12px;border:1px solid var(--slate-200);border-radius:10px;margin-bottom:8px;background:#fff;">
-        <div style="font-weight:800;font-size:12.5px;">${escapeHtml(r.title)}</div>
-        <div style="font-size:11px;color:var(--slate-500);margin-top:3px;">${escapeHtml(r.rollNo)} · ${escapeHtml(r.subject)}</div>
-        ${r.reason ? `<div style="font-size:11px;color:var(--slate-600);margin-top:5px;">Reason: ${escapeHtml(r.reason)}</div>` : ''}
+      <div class="list-item">
+        <div class="list-item-title" style="font-size:12.5px;">${escapeHtml(r.title)}</div>
+        <div class="list-item-sub">${escapeHtml(r.rollNo)} · ${escapeHtml(r.subject)}</div>
+        ${r.reason ? `<div class="list-item-body">Reason: ${escapeHtml(r.reason)}</div>` : ''}
         ${fileHtml}
-        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
-          <button class="btn btn-success btn-xs" onclick="approveDocRequest('${r._id}')">${ICONS.check} Fulfil</button>
-          <button class="btn btn-danger btn-xs" onclick="rejectDocRequest('${r._id}')">${ICONS.cross} Reject</button>
+        <div class="list-item-actions">
+          <button class="btn btn-success btn-xs ripple" onclick="approveDocRequest('${r._id}')">${ICONS.check} Fulfil</button>
+          <button class="btn btn-danger btn-xs ripple" onclick="rejectDocRequest('${r._id}')">${ICONS.cross} Reject</button>
         </div>
       </div>
     `;
@@ -2981,10 +3062,7 @@ async function downloadDocReqFile(reqId, action = 'download') {
     const blob = new Blob([byteArray], {type: data.mimeType || 'application/octet-stream'});
     if (action === 'view') viewPdfBlob(blob, data.fileName || 'document.pdf');
     else universalDownload(blob, data.fileName || 'document.pdf');
-  } catch (e) {
-    hideDL();
-    toast('Failed: ' + e.message, 'error');
-  }
+  } catch (e) { hideDL(); toast('Failed: ' + e.message, 'error'); }
 }
 
 async function openDocumentPreview(noteId) {
@@ -2995,10 +3073,7 @@ async function openDocumentPreview(noteId) {
     const blob = await res.blob();
     hideDL();
     viewPdfBlob(blob, `document_${noteId}.pdf`);
-  } catch (e) {
-    hideDL();
-    toast('Failed: ' + e.message, 'error');
-  }
+  } catch (e) { hideDL(); toast('Failed: ' + e.message, 'error'); }
 }
 
 async function openDocReqPreview(reqId) {
@@ -3009,10 +3084,7 @@ async function openDocReqPreview(reqId) {
     const blob = await res.blob();
     hideDL();
     viewPdfBlob(blob, `document_${reqId}.pdf`);
-  } catch (e) {
-    hideDL();
-    toast('Failed: ' + e.message, 'error');
-  }
+  } catch (e) { hideDL(); toast('Failed: ' + e.message, 'error'); }
 }
 
 async function approveDocRequest(id) {
@@ -3030,7 +3102,7 @@ async function approveDocRequest(id) {
   } catch(e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
 }
 async function rejectDocRequest(id) {
-  const note = prompt('Rejection note (optional):') || '';
+  const note = await customPrompt('Rejection note (optional):', 'e.g. Not relevant') || '';
   try {
     const res = await fetch(`${API}/api/admin/notes/requests/reject/${id}`, {
       method: 'POST',
@@ -3080,12 +3152,12 @@ async function uploadNote() {
   } catch (e) { hideDL(); showFeedback('error', 'File Error', e.message); }
 }
 
-/* ============================================================
+/* ═══════════════════════════════════════════════════════════
    ASSIGNMENTS
-   ============================================================ */
+   ═══════════════════════════════════════════════════════════ */
 async function loadStudentAssignments() {
   const el = $('studentAssignmentsList'); if (!el) return;
-  el.innerHTML = '<div class="empty">Loading…</div>';
+  el.innerHTML = '<div class="skeleton-card" style="border:1px solid var(--surface-border);border-radius:10px;"><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-text" style="width:70%;"></div></div>';
   try {
     const res = await fetch(`${API}/api/assignments/${currentUser.branch || 'CSE'}`);
     const data = await res.json();
@@ -3094,52 +3166,42 @@ async function loadStudentAssignments() {
     if (!assignments.length) return el.innerHTML = '<div class="empty">No assignments</div>';
     el.innerHTML = assignments.map(a => {
       const isOverdue = a.dueDate < fmtDate(new Date());
-      return `
-        <div style="padding:12px;border:1px solid var(--slate-200);border-radius:10px;margin-bottom:8px;background:#fff;">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
-            <div style="min-width:0;flex:1;">
-              <div style="font-weight:800;font-size:13px;">${escapeHtml(a.title)}</div>
-              <div style="font-size:11px;color:var(--slate-500);margin-top:3px;">${escapeHtml(a.subject)} · ${escapeHtml(a.facultyName || '')}</div>
-              ${a.description ? `<div style="font-size:11.5px;color:var(--slate-600);margin-top:5px;">${escapeHtml(a.description)}</div>` : ''}
-              <div style="font-size:11px;color:${isOverdue ? 'var(--rose-600)' : 'var(--slate-600)'};margin-top:5px;font-weight:600;">Due: ${fmtDatePretty(a.dueDate)}${isOverdue ? ' (Overdue)' : ''}</div>
-            </div>
-          </div>
-        </div>
-      `;
+      return `<div class="list-item">
+        <div class="list-item-title">${escapeHtml(a.title)}</div>
+        <div class="list-item-sub">${escapeHtml(a.subject)} · ${escapeHtml(a.facultyName || '')}</div>
+        ${a.description ? `<div class="list-item-body">${escapeHtml(a.description)}</div>` : ''}
+        <div class="list-item-body" style="color:${isOverdue ? 'var(--rose-600)' : 'var(--slate-600)'};font-weight:600;">Due: ${fmtDatePretty(a.dueDate)}${isOverdue ? ' (Overdue)' : ''}</div>
+      </div>`;
     }).join('');
   } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
 }
 
-/* ============================================================
+/* ═══════════════════════════════════════════════════════════
    EXAMS
-   ============================================================ */
+   ═══════════════════════════════════════════════════════════ */
 async function loadStudentExams() {
   const el = $('studentExamsList'); if (!el) return;
-  el.innerHTML = '<div class="empty">Loading…</div>';
+  el.innerHTML = '<div class="skeleton-card" style="border:1px solid var(--surface-border);border-radius:10px;"><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-text" style="width:70%;"></div></div>';
   try {
     const res = await fetch(`${API}/api/exams/${currentUser.branch || 'CSE'}`);
     const data = await res.json();
     if (!res.ok) return el.innerHTML = `<div class="empty">${escapeHtml(data.error || 'Failed')}</div>`;
     const exams = Array.isArray(data) ? data : [];
     if (!exams.length) return el.innerHTML = '<div class="empty">No exams scheduled</div>';
-    el.innerHTML = exams.map(e => `
-      <div style="padding:12px;border:1px solid var(--slate-200);border-radius:10px;margin-bottom:8px;background:#fff;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
-          <div style="min-width:0;flex:1;">
-            <div style="font-weight:800;font-size:13px;">${escapeHtml(e.subject)}</div>
-            <div style="font-size:11px;color:var(--slate-500);margin-top:3px;">${escapeHtml(e.examType)}</div>
-            <div style="font-size:11.5px;color:var(--slate-700);margin-top:5px;font-weight:600;">📅 ${fmtDatePretty(e.examDate)} · ${escapeHtml(e.startTime)}–${escapeHtml(e.endTime)}</div>
-            <div style="font-size:11px;color:var(--slate-500);margin-top:2px;">📍 ${escapeHtml(e.venue)}</div>
-          </div>
-        </div>
-      </div>
-    `).join('');
+    el.innerHTML = exams.map(e => `<div class="list-item">
+      <div class="list-item-title">${escapeHtml(e.subject)}</div>
+      <div class="list-item-sub">${escapeHtml(e.examType)}</div>
+      <div class="list-item-body" style="font-weight:600;">📅 ${fmtDatePretty(e.examDate)} · ${escapeHtml(e.startTime)}–${escapeHtml(e.endTime)}</div>
+      <div class="list-item-body" style="color:var(--slate-500);">📍 ${escapeHtml(e.venue)}</div>
+    </div>`).join('');
   } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
 }
+
 async function loadAdminExams() {
   const el = $('adminExamsList'); if (!el) return;
   el.innerHTML = '<div class="empty">Refresh to see exams</div>';
 }
+
 async function createExam() {
   const subject = $('examSubject').value.trim();
   const branch = $('examBranch').value;
@@ -3166,37 +3228,35 @@ async function createExam() {
   } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
 }
 
-/* ============================================================
+/* ═══════════════════════════════════════════════════════════
    ANNOUNCEMENTS
-   ============================================================ */
+   ═══════════════════════════════════════════════════════════ */
 async function loadStudentAnnouncements() {
   const el = $('studentAnnouncementsList'); if (!el) return;
-  el.innerHTML = '<div class="empty">Loading…</div>';
+  el.innerHTML = '<div class="skeleton-card" style="border:1px solid var(--surface-border);border-radius:10px;"><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-text" style="width:70%;"></div></div>';
   try {
     const res = await fetch(`${API}/api/announcements/${currentUser.branch || 'CSE'}`);
     if (!res.ok) return el.innerHTML = '<div class="empty">No announcements</div>';
     const data = await res.json();
     const list = Array.isArray(data) ? data : [];
     if (!list.length) return el.innerHTML = '<div class="empty">No announcements</div>';
-    el.innerHTML = list.map(a => `
-      <div style="padding:12px;border:1px solid var(--slate-200);border-radius:10px;margin-bottom:8px;background:#fff;">
-        <div style="font-weight:800;font-size:12.5px;">${escapeHtml(a.subject)}</div>
-        <div style="font-size:11px;color:var(--slate-500);margin-top:3px;">From: ${escapeHtml(a.facultyName || 'Faculty')}</div>
-        <div style="font-size:12.5px;color:var(--slate-700);margin-top:6px;line-height:1.5;">${escapeHtml(a.message)}</div>
-        <div style="font-size:10.5px;color:var(--slate-400);margin-top:5px;">${new Date(a.createdAt).toLocaleString('en-IN')}</div>
-      </div>
-    `).join('');
+    el.innerHTML = list.map(a => `<div class="list-item">
+      <div class="list-item-title" style="font-size:12.5px;">${escapeHtml(a.subject)}</div>
+      <div class="list-item-sub">From: ${escapeHtml(a.facultyName || 'Faculty')}</div>
+      <div class="list-item-body" style="font-size:12.5px;color:var(--slate-700);">${escapeHtml(a.message)}</div>
+      <div class="list-item-meta">${new Date(a.createdAt).toLocaleString('en-IN')}</div>
+    </div>`).join('');
   } catch(e) { el.innerHTML = '<div class="empty">Network error</div>'; }
 }
 
-/* ============================================================
+/* ═══════════════════════════════════════════════════════════
    EMERGENCY ALERT
-   ============================================================ */
+   ═══════════════════════════════════════════════════════════ */
 async function sendEmergencyAlert() {
   const title = $('alertTitle').value.trim();
   const message = $('alertMessage').value.trim();
   if (!title || !message) return toast('Fill title and message', 'error');
-  if (!confirm(`Send EMERGENCY alert to ALL users?\n\nTitle: ${title}\nMessage: ${message}`)) return;
+  if (!await customConfirm(`Send EMERGENCY alert to ALL users?`, `Title: ${title}\nMessage: ${message}`, { danger: true, confirmText: 'Send Alert' })) return;
   showDL('Sending alert…');
   try {
     const res = await fetch(`${API}/api/admin/emergency-alert`, {
@@ -3212,6 +3272,7 @@ async function sendEmergencyAlert() {
     } else showFeedback('error', 'Failed', d.error || 'Could not send alert');
   } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
 }
+
 async function postFacultyAnnouncement() {
   const subject = $('annSubject').value.trim();
   const branch = $('annBranch').value;
@@ -3233,29 +3294,67 @@ async function postFacultyAnnouncement() {
   } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
 }
 
-/* ============================================================
+/* ═══════════════════════════════════════════════════════════
    FACULTY MODULE
-   ============================================================ */
+   ═══════════════════════════════════════════════════════════ */
 async function initFaculty(){ await loadFacultySubjects(); await fetchTeacherStudents(); await loadFacultyRecent(); await loadFacultyPasscode(); setInterval(fetchTeacherStudents, 60000); }
-async function loadFacultySubjects(){ try { const subs = await fetch(`${API}/api/teacher/subjects/${currentUser.rollNo}`).then(x=>x.json()); window._facSubs = subs || []; $('facMarkSubject').innerHTML = '<option value="">Select Subject…</option>' + (subs||[]).map(s=>`<option value="${s}">${s}</option>`).join(''); } catch(e){} }
-async function loadFacultyRecent(){ try { const data = await fetch(`${API}/api/attendance/all/${currentUser.rollNo}`).then(x=>x.json()); const tb = $('facRecentBody'); if (!data || !data.length) return tb.innerHTML = '<tr><td colspan="3" class="empty">No records</td></tr>'; tb.innerHTML = data.slice(0,15).map(r => `<tr><td>${fmtDatePretty(r.date)}</td><td>${r.studentName}</td><td>${r.subject}</td></tr>`).join(''); } catch(e){} observeNewContent(); }
-async function loadFacultyPasscode(){ const cache = getPasscodeCache(); const c = cache['single_lecture']; if (c && new Date(c.expiresAt).getTime() > Date.now()) { const p = $('facPasscode'); const d = $('facPasscodeDisplay'); if (p) { p.textContent = c.passcode; p.classList.remove('empty'); } if (d) d.classList.add('valid'); } }
+
+async function loadFacultySubjects(){
+  try {
+    const subs = await fetch(`${API}/api/teacher/subjects/${currentUser.rollNo}`).then(x=>x.json());
+    window._facSubs = subs || [];
+    $('facMarkSubject').innerHTML = '<option value="">Select Subject…</option>' + (subs||[]).map(s=>`<option value="${s}">${s}</option>`).join('');
+  } catch(e){}
+}
+
+async function loadFacultyRecent(){
+  try {
+    const data = await fetch(`${API}/api/attendance/all/${currentUser.rollNo}`).then(x=>x.json());
+    const tb = $('facRecentBody');
+    if (!data || !data.length) return tb.innerHTML = '<tr><td colspan="3" class="empty">No records</td></tr>';
+    tb.innerHTML = data.slice(0,15).map(r => `<tr><td>${fmtDatePretty(r.date)}</td><td>${r.studentName}</td><td>${r.subject}</td></tr>`).join('');
+  } catch(e){}
+  observeNewContent();
+}
+
+async function loadFacultyPasscode(){
+  const cache = getPasscodeCache();
+  const c = cache['single_lecture'];
+  if (c && new Date(c.expiresAt).getTime() > Date.now()) {
+    const p = $('facPasscode'); const d = $('facPasscodeDisplay');
+    if (p) { p.textContent = c.passcode; p.classList.remove('empty'); }
+    if (d) d.classList.add('valid');
+  }
+}
+
 async function fetchTeacherStudents(){
   try {
     const data = await fetch(`${API}/api/teacher/students/${currentUser.rollNo}`).then(x=>x.json());
     const tb = $('facStudentsBody');
-    if (!data || !data.length) { tb.innerHTML = '<tr><td colspan="3" class="empty">No students</td></tr>'; $('facTotalStudents').textContent = '0'; $('facBulkStudents').innerHTML = '<div class="empty">No students</div>'; return; }
+    if (!data || !data.length) {
+      tb.innerHTML = '<tr><td colspan="3" class="empty">No students</td></tr>';
+      $('facTotalStudents').textContent = '0';
+      $('facBulkStudents').innerHTML = '<div class="empty">No students</div>';
+      return;
+    }
     window._facStudents = data;
     $('facMarkStudent').innerHTML = '<option value="">Select Student…</option>' + data.map(s=>`<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`).join('');
     const fr = $('facReportStudent');
     if (fr) fr.innerHTML = '<option value="">Select Student…</option>' + data.map(s=>`<option value="${s.rollNo}">${s.rollNo} - ${s.name}</option>`).join('');
     $('facTotalStudents').textContent = data.length;
-    tb.innerHTML = data.map(s => `<tr><td><b>${s.rollNo}</b></td><td>${s.name}</td><td><button class="btn btn-outline btn-xs" onclick="viewStudentRecords('${s.rollNo}')">${ICONS.view} View</button></td></tr>`).join('');
+    tb.innerHTML = data.map(s => `<tr><td><b>${s.rollNo}</b></td><td>${s.name}</td><td><button class="btn btn-outline btn-xs ripple" onclick="viewStudentRecords('${s.rollNo}')">${ICONS.view} View</button></td></tr>`).join('');
     const sorted = data.sort((a,b) => a.rollNo.localeCompare(b.rollNo, undefined, {numeric: true}));
-    $('facBulkStudents').innerHTML = `<label class="bulk-select-item" style="font-weight:700;border-bottom:1px solid var(--slate-200);margin-bottom:6px;padding-bottom:8px;"><input type="checkbox" onchange="document.querySelectorAll('.fac-bulk-stu').forEach(c=>c.checked=this.checked)"><span class="bulk-name" style="font-weight:700;color:var(--slate-900);">Select All (${sorted.length})</span></label>` + sorted.map(s => `<label class="bulk-select-item"><input type="checkbox" class="fac-bulk-stu" value="${escapeHtml(s.rollNo)}" data-name="${escapeHtml(s.name)}"><span class="bulk-roll">${escapeHtml(s.rollNo)}</span><span class="bulk-name">${escapeHtml(s.name)}</span></label>`).join('');
+    $('facBulkStudents').innerHTML = `<label class="bulk-select-item" style="font-weight:700;border-bottom:1px solid var(--surface-border);margin-bottom:6px;padding-bottom:8px;"><input type="checkbox" onchange="document.querySelectorAll('.fac-bulk-stu').forEach(c=>c.checked=this.checked)"><span class="bulk-name" style="font-weight:700;color:var(--slate-900);">Select All (${sorted.length})</span></label>` + sorted.map(s => `<label class="bulk-select-item"><input type="checkbox" class="fac-bulk-stu" value="${escapeHtml(s.rollNo)}" data-name="${escapeHtml(s.name)}"><span class="bulk-roll">${escapeHtml(s.rollNo)}</span><span class="bulk-name">${escapeHtml(s.name)}</span></label>`).join('');
     const today = fmtDate(new Date());
     let present = 0, absent = 0, presentNames = [];
-    for (const s of data) { try { const recs = await fetch(`${API}/api/attendance/student/${s.rollNo}/${currentUser.rollNo}`).then(x=>x.json()); const todayRecs = recs.filter(r => r.date === today && (window._facSubs||[]).includes(r.subject)); if (todayRecs.some(r => r.status === 'Present' || r.status === 'Duty Leave')) { present++; presentNames.push(s); } else absent++; } catch(e){} }
+    for (const s of data) {
+      try {
+        const recs = await fetch(`${API}/api/attendance/student/${s.rollNo}/${currentUser.rollNo}`).then(x=>x.json());
+        const todayRecs = recs.filter(r => r.date === today && (window._facSubs||[]).includes(r.subject));
+        if (todayRecs.some(r => r.status === 'Present' || r.status === 'Duty Leave')) { present++; presentNames.push(s); }
+        else absent++;
+      } catch(e){}
+    }
     $('facTodayPresent').textContent = present;
     $('facTodayAbsent').textContent = absent;
     try { const avg = await fetch(`${API}/api/teacher/class-average/${currentUser.rollNo}`).then(x=>x.json()); $('facClassAvg').textContent = (avg.average||0) + '%'; } catch(e){}
@@ -3263,6 +3362,7 @@ async function fetchTeacherStudents(){
   } catch(e){}
   observeNewContent();
 }
+
 async function facLookupStudent(){
   const roll = ($('facLookupRoll').value || '').trim().toUpperCase();
   const out = $('facLookupResult');
@@ -3274,43 +3374,65 @@ async function facLookupStudent(){
     if (!res.ok) { out.innerHTML = `<div class="empty">${escapeHtml(d.error || 'Student not found')}</div>`; return; }
     const subjRows = Object.entries(d.subjectStats || {}).map(([s, st]) => {
       const cls = st.percentage >= 75 ? 'good' : 'bad';
-      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--slate-50);border-radius:8px;margin-bottom:4px;font-size:12px;gap:8px;">
-        <span style="font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.substring(0, 24))}</span>
-        <span class="chip ${cls}" style="padding:2px 8px;font-size:10px;flex-shrink:0;">${st.percentage}% (${st.present}/${st.total})</span>
-      </div>`;
+      return `<div class="nested-row"><span style="font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;">${escapeHtml(s.substring(0, 24))}</span><span class="chip ${cls}" style="padding:2px 8px;font-size:10px;flex-shrink:0;">${st.percentage}% (${st.present}/${st.total})</span></div>`;
     }).join('');
     const pctCls = d.attendancePercentage >= 75 ? 'good' : 'bad';
-    out.innerHTML = `
-      <div style="padding:14px;border:1px solid var(--slate-200);border-radius:12px;background:#fff;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;">
-          <div style="font-weight:800;font-size:14px;">${escapeHtml(roll)}</div>
-          <div class="stat-value ${pctCls}" style="font-size:22px;">${d.attendancePercentage}%</div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;font-size:11.5px;color:var(--slate-600);">
-          <div>Attended: <b style="color:var(--slate-900);">${d.totalAcademicLectures || 0}</b></div>
-          <div>Conducted: <b style="color:var(--slate-900);">${d.totalConductedLectures || 0}</b></div>
-          <div>Days Present: <b style="color:var(--slate-900);">${d.daysPresent || 0}</b></div>
-          <div>Working Days: <b style="color:var(--slate-900);">${d.workingDaysSoFar || 0}</b></div>
-        </div>
-        <div class="section-title" style="font-size:10px;margin-top:10px;">📚 Subject-wise</div>
-        ${subjRows || '<div class="text-xs text-muted">No subject data</div>'}
-      </div>`;
+    out.innerHTML = `<div class="list-item">
+      <div class="flex-between mb-2"><div style="font-weight:800;font-size:14px;">${escapeHtml(roll)}</div><div class="stat-value ${pctCls}" style="font-size:22px;">${d.attendancePercentage}%</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;font-size:11.5px;color:var(--slate-600);">
+        <div>Attended: <b style="color:var(--slate-900);">${d.totalAcademicLectures || 0}</b></div>
+        <div>Conducted: <b style="color:var(--slate-900);">${d.totalConductedLectures || 0}</b></div>
+        <div>Days Present: <b style="color:var(--slate-900);">${d.daysPresent || 0}</b></div>
+        <div>Working Days: <b style="color:var(--slate-900);">${d.workingDaysSoFar || 0}</b></div>
+      </div>
+      <div class="section-title">📚 Subject-wise</div>
+      ${subjRows || '<div class="text-xs text-muted">No subject data</div>'}
+    </div>`;
   } catch(e) { out.innerHTML = `<div class="empty">Network error: ${escapeHtml(e.message)}</div>`; }
   observeNewContent();
 }
-async function genTeacherPass(force){ const today = fmtDate(new Date()); const st = await checkDateStatus(today); if (st.isBlocked) return toast('College closed','error'); if (force && !confirm('Change Lecture Passcode?')) return; try { const res = await fetch(`${API}/api/admin/generate-passcode`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, type:'single_lecture', force: !!force})}); const d = await res.json(); if (res.ok) { setPasscodeCache('single_lecture', d.passcode, d.expiresAt); $('facPasscode').textContent = d.passcode; $('facPasscode').classList.remove('empty'); $('facPasscodeDisplay').classList.add('valid'); toast(force ? 'Changed!' : 'Generated!', 'success'); } else toast(d.error,'error'); } catch(e){} }
-async function facMark(){ const s = $('facMarkStudent').value, sub = $('facMarkSubject').value; if (!s || !sub) return toast('Select student & subject','error'); showDL('Getting location…'); navigator.geolocation.getCurrentPosition(async (pos) => { showDL('Marking…'); const res = await fetch(`${API}/api/teacher/mark-attendance`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo, name: currentUser.name, subject: sub, latitude: pos.coords.latitude, longitude: pos.coords.longitude, studentRollNo: s})}); const d = await res.json(); hideDL(); if (res.ok) { showFeedback('success','Marked',d.message || 'Attendance marked.'); sendPushNotification('✅ Marked', `${s} — ${sub}`, { type: 'faculty_mark' }); fetchTeacherStudents(); loadFacultyRecent(); } else showFeedback('error','Failed',d.error||'Could not mark'); }, () => { hideDL(); showFeedback('error','Location Error','Location permission is required.'); }, { enableHighAccuracy: true, timeout: 15000 }); }
+
+async function genTeacherPass(force){
+  const today = fmtDate(new Date());
+  const st = await checkDateStatus(today);
+  if (st.isBlocked) return toast('College closed','error');
+  if (force && !await customConfirm('Change Lecture Passcode?', 'The old passcode will be invalidated.', { confirmText: 'Change' })) return;
+  try {
+    const res = await fetch(`${API}/api/admin/generate-passcode`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, type:'single_lecture', force: !!force})});
+    const d = await res.json();
+    if (res.ok) {
+      setPasscodeCache('single_lecture', d.passcode, d.expiresAt);
+      $('facPasscode').textContent = d.passcode;
+      $('facPasscode').classList.remove('empty');
+      $('facPasscodeDisplay').classList.add('valid');
+      toast(force ? 'Changed!' : 'Generated!', 'success');
+    } else toast(d.error,'error');
+  } catch(e){}
+}
+
+async function facMark(){
+  const s = $('facMarkStudent').value, sub = $('facMarkSubject').value;
+  if (!s || !sub) return toast('Select student & subject','error');
+  showDL('Getting location…');
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    showDL('Marking…');
+    const res = await fetch(`${API}/api/teacher/mark-attendance`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo, name: currentUser.name, subject: sub, latitude: pos.coords.latitude, longitude: pos.coords.longitude, studentRollNo: s})});
+    const d = await res.json();
+    hideDL();
+    if (res.ok) { showFeedback('success','Marked',d.message || 'Attendance marked.'); sendPushNotification('✅ Marked', `${s} — ${sub}`, { type: 'faculty_mark' }); fetchTeacherStudents(); loadFacultyRecent(); }
+    else showFeedback('error','Failed',d.error||'Could not mark');
+  }, () => { hideDL(); showFeedback('error','Location Error','Location permission is required.'); }, { enableHighAccuracy: true, timeout: 15000 });
+}
+
 function facAddBulkDate(){ const d = $('facBulkDate').value; if (!d) return toast('Select date','error'); if (facSelectedBulkDates.includes(d)) return toast('Already added','error'); facSelectedBulkDates.push(d); renderFacBulkDates(); }
-function renderFacBulkDates(){ if ($('facBulkDates')) $('facBulkDates').innerHTML = facSelectedBulkDates.map(d => `<span class="chip">${fmtDatePretty(d)} <span onclick="removeFacBulkDate('${d}')" style="cursor:pointer;color:var(--rose-600);font-weight:800;">×</span></span>`).join(''); }
+function renderFacBulkDates(){ if ($('facBulkDates')) $('facBulkDates').innerHTML = facSelectedBulkDates.map(d => `<span class="chip">${fmtDatePretty(d)} <span onclick="removeFacBulkDate('${d}')" style="cursor:pointer;color:var(--rose-700);font-weight:800;">×</span></span>`).join(''); }
 function removeFacBulkDate(d){ facSelectedBulkDates = facSelectedBulkDates.filter(x=>x!==d); renderFacBulkDates(); }
 
-/* ★ FIX 2: Faculty bulk mark with proper modal + lecture count */
 async function facBulkMark(){
   const students = Array.from(document.querySelectorAll('.fac-bulk-stu:checked')).map(cb => ({roll: cb.value, name: cb.dataset.name || ''}));
   if (!students.length) return toast('Select students','error');
   if (!facSelectedBulkDates.length) return toast('Add dates','error');
   const status = $('facBulkStatus').value;
-
   const subjects = window._facSubs || [];
   const preview = [];
   let grandTotal = 0;
@@ -3327,32 +3449,35 @@ async function facBulkMark(){
     preview.push({ ...st, branch, totalLectures });
     grandTotal += totalLectures;
   }
-
-  let html = `<div style="margin-bottom:14px;padding:14px;background:var(--brand-50);border:1px solid var(--brand-200);border-radius:10px;">
-    <div style="font-size:14px;font-weight:800;color:var(--brand-900);">📋 Faculty Bulk Marking</div>
-    <div style="font-size:12.5px;color:var(--brand-700);margin-top:6px;">Status: <b>${status}</b> · <b>${students.length}</b> student(s) × <b>${facSelectedBulkDates.length}</b> date(s)</div>
-    <div style="font-size:12.5px;color:var(--brand-700);margin-top:4px;">🎯 Total lectures (your subjects): <b>${grandTotal}</b></div>
-    <div style="font-size:11px;color:var(--brand-600);margin-top:6px;font-style:italic;">Only your assigned subjects will be marked.</div>
-  </div>`;
-  html += `<div style="max-height:280px;overflow-y:auto;border:1px solid var(--slate-200);border-radius:10px;padding:8px;background:#fff;">`;
-  preview.forEach(p => {
-    html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--slate-100);gap:8px;">
-      <div style="min-width:0;flex:1;">
-        <div style="font-weight:700;font-size:12px;">${escapeHtml(p.roll)} — ${escapeHtml(p.name)}</div>
-        <div style="font-size:10.5px;color:var(--slate-500);">${p.branch}</div>
-      </div>
-      <div style="font-weight:800;color:var(--brand-600);font-size:14px;font-variant-numeric:tabular-nums;">${p.totalLectures}</div>
-    </div>`;
-  });
+  let html = `<div class="highlight-box info" style="background:linear-gradient(135deg,var(--brand-50),var(--brand-100));border-color:var(--brand-300);color:var(--brand-800);"><div style="font-size:14px;font-weight:800;">📋 Faculty Bulk Marking</div><div style="font-size:12.5px;margin-top:6px;">Status: <b>${status}</b> · <b>${students.length}</b> student(s) × <b>${facSelectedBulkDates.length}</b> date(s)</div><div style="font-size:12.5px;margin-top:4px;">🎯 Total lectures (your subjects): <b>${grandTotal}</b></div><div class="text-sm" style="margin-top:6px;font-style:italic;">Only your assigned subjects will be marked.</div></div>`;
+  html += `<div style="max-height:280px;overflow-y:auto;border:1px solid var(--surface-border);border-radius:10px;padding:8px;background:var(--surface-card);">`;
+  preview.forEach(p => { html += `<div class="nested-row"><div style="min-width:0;flex:1;"><div style="font-weight:700;font-size:12px;">${escapeHtml(p.roll)} — ${escapeHtml(p.name)}</div><div class="text-xs text-muted">${p.branch}</div></div><div style="font-weight:800;color:var(--brand-600);font-size:14px;font-variant-numeric:tabular-nums;">${p.totalLectures}</div></div>`; });
   html += `</div>`;
-
   $('bulkMarkSummary').innerHTML = html;
   pendingBulkAction = { type: 'fac-mark', students: students.map(x=>x.roll), status };
   openModal('bulkMarkModal');
 }
 
-async function facBulkDelete(){ const students = Array.from(document.querySelectorAll('.fac-bulk-stu:checked')).map(cb => cb.value); if (!students.length) return toast('Select students','error'); if (!facSelectedBulkDates.length) return toast('Add dates','error'); if (!confirm(`Delete ${students.length} students × ${facSelectedBulkDates.length} dates?`)) return; showDL('Deleting…'); try { const res = await fetch(`${API}/api/teacher/bulk-delete-attendance`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, studentRollNos: students, dates: facSelectedBulkDates }) }); const d = await res.json(); hideDL(); if (res.ok) { showFeedback('success','Deleted',d.message || 'Records deleted.'); facSelectedBulkDates = []; renderFacBulkDates(); fetchTeacherStudents(); loadFacultyRecent(); } else showFeedback('error','Failed',d.error || 'Could not delete'); } catch(e){ hideDL(); showFeedback('error','Network Error',e.message); } }
-function toggleFacMonth(){ const v = $('facReportRange').value; $('facReportMonth').style.display = v === 'SELECTED_MONTH' ? 'block' : 'none'; $('facCustomRangeRow').style.display = v === 'CUSTOM' ? 'flex' : 'none'; }
+async function facBulkDelete(){
+  const students = Array.from(document.querySelectorAll('.fac-bulk-stu:checked')).map(cb => cb.value);
+  if (!students.length) return toast('Select students','error');
+  if (!facSelectedBulkDates.length) return toast('Add dates','error');
+  if (!await customConfirm(`Delete ${students.length} students × ${facSelectedBulkDates.length} dates?`, 'This action cannot be undone.', { danger: true, confirmText: 'Delete' })) return;
+  showDL('Deleting…');
+  try {
+    const res = await fetch(`${API}/api/teacher/bulk-delete-attendance`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, studentRollNos: students, dates: facSelectedBulkDates }) });
+    const d = await res.json();
+    hideDL();
+    if (res.ok) { showFeedback('success','Deleted',d.message || 'Records deleted.'); facSelectedBulkDates = []; renderFacBulkDates(); fetchTeacherStudents(); loadFacultyRecent(); }
+    else showFeedback('error','Failed',d.error || 'Could not delete');
+  } catch(e){ hideDL(); showFeedback('error','Network Error',e.message); }
+}
+
+function toggleFacMonth(){
+  const v = $('facReportRange').value;
+  $('facReportMonth').style.display = v === 'SELECTED_MONTH' ? 'block' : 'none';
+  $('facCustomRangeRow').style.display = v === 'CUSTOM' ? 'flex' : 'none';
+}
 
 async function facReport(fmt, action = 'download'){
   const roll = $('facReportStudent').value;
@@ -3387,22 +3512,61 @@ async function facReport(fmt, action = 'download'){
   } catch(e){ hideDL(); toast('Failed: ' + e.message,'error'); }
 }
 
-async function applyLeave(){ const f = $('leaveFrom').value, t = $('leaveTo').value, r = $('leaveReason').value.trim(); if (!f || !t || !r) return showFeedback('warning','Missing Fields','Dates and reason are required.'); try { const res = await fetch(`${API}/api/leave/apply`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo, fromDate:f, toDate:t, reason:r, leaveType:$('leaveType').value})}); const d = await res.json(); if (res.ok) { $('leaveReason').value = ''; loadMyLeaves(); showFeedback('success','Leave Applied',`${fmtDatePretty(f)} → ${fmtDatePretty(t)}\n\nDuty leave will be marked after admin approval.`); } else showFeedback('error','Failed',d.error||'Could not apply'); } catch(e){ showFeedback('error','Network Error',e.message); } }
-async function loadMyLeaves(){ try { const data = await fetch(`${API}/api/leave/my/${currentUser.rollNo}`).then(x=>x.json()); const el = $('myLeaveList'); el.innerHTML = data.length ? data.map(l => `<div style="padding:10px 0;border-bottom:1px solid var(--slate-100);"><div style="display:flex;justify-content:space-between;"><b>${fmtDatePretty(l.fromDate)} → ${fmtDatePretty(l.toDate)}</b> <span class="badge ${l.status==='Approved'?'badge-success':l.status==='Rejected'?'badge-danger':'badge-warning'}">${l.status}</span></div><div class="text-xs text-muted mt-1">${l.leaveType}: ${l.reason}</div></div>`).join('') : '<div class="empty">No applications</div>'; } catch(e){} observeNewContent(); }
+/* ═══════════════════════════════════════════════════════════
+   LEAVE (student side)
+   ═══════════════════════════════════════════════════════════ */
+async function applyLeave(){
+  const f = $('leaveFrom').value, t = $('leaveTo').value, r = $('leaveReason').value.trim();
+  if (!f || !t || !r) return showFeedback('warning','Missing Fields','Dates and reason are required.');
+  try {
+    const res = await fetch(`${API}/api/leave/apply`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo, fromDate:f, toDate:t, reason:r, leaveType:$('leaveType').value})});
+    const d = await res.json();
+    if (res.ok) { $('leaveReason').value = ''; loadMyLeaves(); showFeedback('success','Leave Applied',`${fmtDatePretty(f)} → ${fmtDatePretty(t)}\n\nDuty leave will be marked after admin approval.`); }
+    else showFeedback('error','Failed',d.error||'Could not apply');
+  } catch(e){ showFeedback('error','Network Error',e.message); }
+}
+async function loadMyLeaves(){
+  try {
+    const data = await fetch(`${API}/api/leave/my/${currentUser.rollNo}`).then(x=>x.json());
+    const el = $('myLeaveList');
+    el.innerHTML = data.length ? data.map(l => {
+      const sc = l.status === 'Approved' ? 'badge-success' : l.status === 'Rejected' ? 'badge-danger' : 'badge-warning';
+      return `<div style="padding:10px 0;border-bottom:1px solid var(--surface-border);"><div class="flex-between"><b>${fmtDatePretty(l.fromDate)} → ${fmtDatePretty(l.toDate)}</b> <span class="badge ${sc}">${l.status}</span></div><div class="text-xs text-muted mt-1">${l.leaveType}: ${l.reason}</div></div>`;
+    }).join('') : '<div class="empty">No applications</div>';
+  } catch(e){}
+  observeNewContent();
+}
 
-/* ============================================================
-   CHAT
-   ============================================================ */
-function toggleContext(){ useContextMode = !useContextMode; const b = $('ctxToggle'); if (b) { b.classList.toggle('active', useContextMode); const l = b.querySelector('.ctx-label'); if (l) l.textContent = useContextMode ? 'Context On' : 'Context'; } toast(useContextMode ? 'Context ON' : 'Context OFF', useContextMode ? 'success' : 'info'); if ($('chatPanel').classList.contains('open')) { const m = $('chatMsgs'); if (!m.querySelector('.msg')) renderChatWelcome(); } }
-function toggleDatabase(){ useDatabaseMode = !useDatabaseMode; const b = $('dbToggle'); if (b) { b.classList.toggle('active', useDatabaseMode); const l = b.querySelector('.db-label'); if (l) l.textContent = useDatabaseMode ? 'Database On' : 'Database'; } toast(useDatabaseMode ? 'Database ON' : 'Database OFF', useDatabaseMode ? 'success' : 'info'); if ($('chatPanel').classList.contains('open')) { const m = $('chatMsgs'); if (!m.querySelector('.msg')) renderChatWelcome(); } }
+/* ═══════════════════════════════════════════════════════════
+   CHAT / AI
+   ═══════════════════════════════════════════════════════════ */
+function toggleContext(){
+  useContextMode = !useContextMode;
+  const b = $('ctxToggle');
+  if (b) { b.classList.toggle('active', useContextMode); const l = b.querySelector('.ctx-label'); if (l) l.textContent = useContextMode ? 'Context On' : 'Context'; }
+  toast(useContextMode ? 'Context ON' : 'Context OFF', useContextMode ? 'success' : 'info');
+  if ($('chatPanel').classList.contains('open')) { const m = $('chatMsgs'); if (!m.querySelector('.msg')) renderChatWelcome(); }
+}
+function toggleDatabase(){
+  useDatabaseMode = !useDatabaseMode;
+  const b = $('dbToggle');
+  if (b) { b.classList.toggle('active', useDatabaseMode); const l = b.querySelector('.db-label'); if (l) l.textContent = useDatabaseMode ? 'Database On' : 'Database'; }
+  toast(useDatabaseMode ? 'Database ON' : 'Database OFF', useDatabaseMode ? 'success' : 'info');
+  if ($('chatPanel').classList.contains('open')) { const m = $('chatMsgs'); if (!m.querySelector('.msg')) renderChatWelcome(); }
+}
 function toggleChat(){
   const p = $('chatPanel');
   if (!p) return;
   p.classList.toggle('open');
   if (p.classList.contains('open')) { lockBodyScroll(true); chatGreeted = false; fetchChatHistory(); renderChatWelcome(); }
-  else { lockBodyScroll(false); if (openDownloadMenuId) { const m = document.getElementById(openDownloadMenuId); if (m) m.classList.remove('open'); openDownloadMenuId = null; } const sb = $('chatSidebar'); if (sb) sb.classList.remove('open'); }
+  else {
+    lockBodyScroll(false);
+    if (openDownloadMenuId) { const m = document.getElementById(openDownloadMenuId); if (m) m.classList.remove('open'); openDownloadMenuId = null; }
+    const sb = $('chatSidebar'); if (sb) sb.classList.remove('open');
+  }
 }
 function toggleChatSidebar(){ const s = $('chatSidebar'); if (s) s.classList.toggle('open'); }
+
 document.addEventListener('click', (e) => {
   const sidebar = $('chatSidebar'); const panel = $('chatPanel');
   if (!sidebar || !panel) return;
@@ -3412,29 +3576,93 @@ document.addEventListener('click', (e) => {
   if (toggleBtn && toggleBtn.contains(e.target)) return;
   sidebar.classList.remove('open');
 }, true);
+
 function renderChatWelcome(){
   const el = $('chatMsgs'); if (!el) return;
   const now = new Date(); const hour = now.getHours();
   let greeting = 'Hello'; if (hour < 12) greeting = 'Good morning'; else if (hour < 17) greeting = 'Good afternoon'; else greeting = 'Good evening';
   const name = currentUser ? currentUser.name : 'there';
-  if (!useContextMode && !useDatabaseMode) { el.innerHTML = `<div class="chat-welcome"><div class="greeting-emoji"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg></div><div><strong>${greeting}, ${name}!</strong> I'm <strong>BM Bot</strong>.</div><div style="margin-top:8px;">Turn on <b>Context</b> for personal data or <b>Database</b> for commands.</div><div style="font-size:11.5px;margin-top:10px;color:var(--slate-400);">Ask me anything — notes, coding, general help.</div></div>`; return; }
+  if (!useContextMode && !useDatabaseMode) {
+    el.innerHTML = `<div class="chat-welcome"><div class="greeting-emoji"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg></div><div><strong>${greeting}, ${name}!</strong> I'm <strong>BM Bot</strong>.</div><div style="margin-top:8px;">Turn on <b>Context</b> for personal data or <b>Database</b> for commands.</div><div style="font-size:11.5px;margin-top:10px;color:var(--slate-400);">Ask me anything — notes, coding, general help.</div></div>`;
+    return;
+  }
   const role = currentUser ? currentUser.role : 'student';
   let extra = '';
-  if (useContextMode && !useDatabaseMode) extra = `<div style="margin-top:12px;font-size:12px;text-align:left;background:#ecfdf5;padding:12px 14px;border-radius:10px;color:#065f46;border:1px solid #a7f3d0;"><b>✅ Context ON</b> — Ask about attendance, timetable, holidays.</div>`;
-  else if (useDatabaseMode && !useContextMode) { const roleCmds = role === 'admin' ? 'Try: "Show pending requests", "Add holiday 25 Oct"' : role === 'faculty' ? 'Try: "Mark 24CSE48 present for BDA"' : 'Try: "Mark today\'s attendance", "Show my requests"'; extra = `<div style="margin-top:12px;font-size:12px;text-align:left;background:#f3e8ff;padding:12px 14px;border-radius:10px;color:#5b21b6;border:1px solid #d8b4fe;"><b>🗄️ Database ON</b><br>${roleCmds}</div>`; }
-  else extra = `<div style="margin-top:12px;font-size:12px;text-align:left;background:linear-gradient(135deg,#ecfdf5,#f3e8ff);padding:12px 14px;border-radius:10px;color:#1e293b;border:1px solid #a7f3d0;"><b>✅ Context + Database ON</b></div>`;
+  if (useContextMode && !useDatabaseMode) extra = `<div style="margin-top:12px;font-size:12px;text-align:left;background:var(--emerald-50);padding:12px 14px;border-radius:10px;color:var(--emerald-800);border:1px solid var(--emerald-400);"><b>✅ Context ON</b> — Ask about attendance, timetable, holidays.</div>`;
+  else if (useDatabaseMode && !useContextMode) {
+    const roleCmds = role === 'admin' ? 'Try: "Show pending requests", "Add holiday 25 Oct"' : role === 'faculty' ? 'Try: "Mark 24CSE48 present for BDA"' : 'Try: "Mark today\'s attendance", "Show my requests"';
+    extra = `<div style="margin-top:12px;font-size:12px;text-align:left;background:var(--purple-50);padding:12px 14px;border-radius:10px;color:var(--purple-800);border:1px solid var(--purple-400);"><b>🗄️ Database ON</b><br>${roleCmds}</div>`;
+  }
+  else extra = `<div style="margin-top:12px;font-size:12px;text-align:left;background:linear-gradient(135deg,var(--emerald-50),var(--purple-50));padding:12px 14px;border-radius:10px;color:var(--slate-800);border:1px solid var(--emerald-400);"><b>✅ Context + Database ON</b></div>`;
   el.innerHTML = `<div class="chat-welcome"><div class="greeting-emoji"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg></div><div><strong>${greeting}, ${name}!</strong> I'm <strong>BM Bot</strong>.</div>${extra}<div style="font-size:11.5px;margin-top:10px;color:var(--slate-400);">Upload PDF, TXT, images anytime.</div></div>`;
 }
-async function fetchChatHistory(){ if (!currentUser) return; try { const res = await fetch(`${API}/api/chats/${currentUser.rollNo}`); if (!res.ok) return; chatHistory = await res.json(); renderChatHistory(); } catch(e){} }
-function renderChatHistory(){ const l = $('chatHistoryList'); if (!l) return; if (!chatHistory || !chatHistory.length) { l.innerHTML = '<div class="empty" style="padding:16px 0;font-size:10px;">No chats yet</div>'; return; } l.innerHTML = chatHistory.map(c => `<div class="chat-sidebar-item ${c.threadId === currentThreadId ? 'active' : ''}" onclick="event.stopPropagation(); loadChatThread('${c.threadId}')"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${c.title || 'New Chat'}</span><span class="del-chat" onclick="event.stopPropagation(); deleteChatThread('${c.threadId}')">✕</span></div>`).join(''); }
-async function loadChatThread(t){ currentThreadId = t; const c = chatHistory.find(x => x.threadId === t); if (!c) return; const m = $('chatMsgs'); if (!m) return; m.innerHTML = ''; let lu = ''; for (const x of c.messages) { if (x.role === 'user') { lu = x.content; appendChat('user', x.content); } else { const wd = DOWNLOAD_KEYWORDS.some(k => (lu||'').toLowerCase().includes(k)); appendChat('bot', x.content, true, wd, 0, lu); } } m.scrollTop = m.scrollHeight; renderChatHistory(); if (window.innerWidth < 640) toggleChatSidebar(); }
-async function deleteChatThread(t){ if (!confirm('Delete this chat?')) return; try { const res = await fetch(`${API}/api/chats/${t}`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo})}); if (res.ok) { if (currentThreadId === t) newChat(); fetchChatHistory(); toast('Chat deleted','success'); } } catch(e){} }
+
+async function fetchChatHistory(){
+  if (!currentUser) return;
+  try { const res = await fetch(`${API}/api/chats/${currentUser.rollNo}`); if (!res.ok) return; chatHistory = await res.json(); renderChatHistory(); } catch(e){}
+}
+function renderChatHistory(){
+  const l = $('chatHistoryList'); if (!l) return;
+  if (!chatHistory || !chatHistory.length) { l.innerHTML = '<div class="empty" style="padding:16px 0;font-size:10px;">No chats yet</div>'; return; }
+  l.innerHTML = chatHistory.map(c => `<div class="chat-sidebar-item ${c.threadId === currentThreadId ? 'active' : ''}" onclick="event.stopPropagation(); loadChatThread('${c.threadId}')"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${c.title || 'New Chat'}</span><span class="del-chat" onclick="event.stopPropagation(); deleteChatThread('${c.threadId}')">✕</span></div>`).join('');
+}
+async function loadChatThread(t){
+  currentThreadId = t;
+  const c = chatHistory.find(x => x.threadId === t); if (!c) return;
+  const m = $('chatMsgs'); if (!m) return;
+  m.innerHTML = ''; let lu = '';
+  for (const x of c.messages) {
+    if (x.role === 'user') { lu = x.content; appendChat('user', x.content); }
+    else { const wd = DOWNLOAD_KEYWORDS.some(k => (lu||'').toLowerCase().includes(k)); appendChat('bot', x.content, true, wd, 0, lu); }
+  }
+  m.scrollTop = m.scrollHeight; renderChatHistory();
+  if (window.innerWidth < 640) toggleChatSidebar();
+}
+async function deleteChatThread(t){
+  if (!await customConfirm('Delete this chat?', 'The conversation will be permanently deleted.', { danger: true, confirmText: 'Delete' })) return;
+  try { const res = await fetch(`${API}/api/chats/${t}`, {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: currentUser.rollNo})}); if (res.ok) { if (currentThreadId === t) newChat(); fetchChatHistory(); toast('Chat deleted','success'); } } catch(e){}
+}
 function newChat(){ currentThreadId = null; chatGreeted = false; renderChatWelcome(); renderChatHistory(); }
-function onChatFileSelected(ev){ const f = ev.target.files[0]; if (!f) return; if (f.size > 10 * 1024 * 1024) { toast('File too large (10MB)','error'); ev.target.value=''; return; } const r = new FileReader(); r.onload = () => { const b64 = r.result.split(',')[1]; let mt = f.type || 'text/plain'; if (['js','py','java','c','cpp','ts','jsx','tsx','log','yml','yaml','sql','sh','md'].includes(f.name.split('.').pop().toLowerCase())) mt = 'text/plain'; pendingChatFile = { base64: b64, mimeType: mt, name: f.name }; $('chatFileName').textContent = f.name; $('chatFilePreview').classList.add('show'); }; r.readAsDataURL(f); }
+
+function onChatFileSelected(ev){
+  const f = ev.target.files[0]; if (!f) return;
+  if (f.size > 10 * 1024 * 1024) { toast('File too large (10MB)','error'); ev.target.value=''; return; }
+  const r = new FileReader();
+  r.onload = () => {
+    const b64 = r.result.split(',')[1];
+    let mt = f.type || 'text/plain';
+    if (['js','py','java','c','cpp','ts','jsx','tsx','log','yml','yaml','sql','sh','md'].includes(f.name.split('.').pop().toLowerCase())) mt = 'text/plain';
+    pendingChatFile = { base64: b64, mimeType: mt, name: f.name };
+    $('chatFileName').textContent = f.name;
+    $('chatFilePreview').classList.add('show');
+  };
+  r.readAsDataURL(f);
+}
 function clearChatFile(){ pendingChatFile = null; $('chatFileInput').value = ''; $('chatFilePreview').classList.remove('show'); }
-function toggleVoiceInput(){ const btn = $('chatVoiceBtn'); const indicator = $('voiceIndicator'); const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SR) { toast('Voice not supported','error'); return; } if (recognition) { try { recognition.stop(); } catch(e){} recognition = null; btn.classList.remove('recording'); indicator.classList.remove('show'); return; } recognition = new SR(); recognition.lang = 'en-IN'; recognition.continuous = false; recognition.interimResults = false; recognition.onstart = () => { btn.classList.add('recording'); indicator.classList.add('show'); }; recognition.onend = () => { btn.classList.remove('recording'); indicator.classList.remove('show'); recognition = null; }; recognition.onerror = () => { btn.classList.remove('recording'); indicator.classList.remove('show'); recognition = null; }; recognition.onresult = (e) => { $('chatInput').value = e.results[0][0].transcript; }; recognition.start(); }
-function handleChatKey(e){ if (e.key !== 'Enter') return; const isM = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (('ontouchstart' in window) && window.innerWidth <= 768); if (isM) { setTimeout(() => autoResizeTextarea(e.target), 0); return; } if (e.shiftKey) return; e.preventDefault(); sendChat(); }
+
+function toggleVoiceInput(){
+  const btn = $('chatVoiceBtn'); const indicator = $('voiceIndicator');
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { toast('Voice not supported','error'); return; }
+  if (recognition) { try { recognition.stop(); } catch(e){} recognition = null; btn.classList.remove('recording'); indicator.classList.remove('show'); return; }
+  recognition = new SR();
+  recognition.lang = 'en-IN'; recognition.continuous = false; recognition.interimResults = false;
+  recognition.onstart = () => { btn.classList.add('recording'); indicator.classList.add('show'); };
+  recognition.onend = () => { btn.classList.remove('recording'); indicator.classList.remove('show'); recognition = null; };
+  recognition.onerror = () => { btn.classList.remove('recording'); indicator.classList.remove('show'); recognition = null; };
+  recognition.onresult = (e) => { $('chatInput').value = e.results[0][0].transcript; };
+  recognition.start();
+}
+
+function handleChatKey(e){
+  if (e.key !== 'Enter') return;
+  const isM = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (('ontouchstart' in window) && window.innerWidth <= 768);
+  if (isM) { setTimeout(() => autoResizeTextarea(e.target), 0); return; }
+  if (e.shiftKey) return;
+  e.preventDefault(); sendChat();
+}
 function autoResizeTextarea(el){ el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
+
 function createAIThinkingIndicator(l){
   const d = document.createElement('div');
   d.className = 'msg bot';
@@ -3443,6 +3671,7 @@ function createAIThinkingIndicator(l){
 }
 function startThinkingTimer(el){ thinkingStartTime = Date.now(); if (thinkingTimerId) clearInterval(thinkingTimerId); const t = el.querySelector('.ai-timer'); thinkingTimerId = setInterval(() => { if (!t) return; const s = (Date.now() - thinkingStartTime) / 1000; t.textContent = s.toFixed(1) + 's'; }, 100); }
 function stopThinkingTimer(){ if (thinkingTimerId) clearInterval(thinkingTimerId); return Math.max(1, Math.round((Date.now() - thinkingStartTime) / 1000)); }
+
 function generateThinkingSummary(userMessage){
   const msg = (userMessage || '').toLowerCase().trim();
   const steps = [];
@@ -3454,6 +3683,7 @@ function generateThinkingSummary(userMessage){
   else { steps.push('Understanding question.'); steps.push('Preparing response.'); }
   return steps;
 }
+
 async function sendChat(){
   if (currentUser.role === 'student' && (userSubscription.tier === 'free' || userSubscription.tier === 'silver' || userSubscription.isExpired)) {
     return showFeedback('warning', 'Premium Required', 'AI Chatbot is a Gold+ feature. Please upgrade your plan to access it.', { buttonText: 'View Plans', onClose: openSubscriptionModal });
@@ -3464,11 +3694,16 @@ async function sendChat(){
   inp.value = ''; inp.style.height = 'auto';
   const w = $('chatMsgs').querySelector('.chat-welcome'); if (w) w.remove();
   const userWantsDL = DOWNLOAD_KEYWORDS.some(k => msg.toLowerCase().includes(k));
+
   if (pendingChatFile) {
-    const fd = pendingChatFile; const isImage = fd.mimeType.startsWith('image/'); const fileLabel = isImage ? 'image' : (fd.mimeType === 'application/pdf' ? 'PDF' : 'file');
-    appendChat('user', `[${fd.name}]${msg ? ' — ' + msg : ''}`); clearChatFile();
+    const fd = pendingChatFile;
+    const isImage = fd.mimeType.startsWith('image/');
+    const fileLabel = isImage ? 'image' : (fd.mimeType === 'application/pdf' ? 'PDF' : 'file');
+    appendChat('user', `[${fd.name}]${msg ? ' — ' + msg : ''}`);
+    clearChatFile();
     const typing = createAIThinkingIndicator(isImage ? 'Analyzing image' : `Reading ${fileLabel}`);
-    $('chatMsgs').appendChild(typing); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight; startThinkingTimer(typing);
+    $('chatMsgs').appendChild(typing); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
+    startThinkingTimer(typing);
     try {
       const res = await fetch(`${API}/api/ai/chat-with-file`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: msg || (isImage ? 'Explain this image.' : `Analyze this file.`), fileBase64: fd.base64, mimeType: fd.mimeType, rollNo: currentUser.rollNo, role: currentUser.role, name: currentUser.name, branch: currentUser.branch, threadId: currentThreadId }) });
       let d; try { d = await res.json(); } catch(_) { d = {}; }
@@ -3480,19 +3715,18 @@ async function sendChat(){
     finally { btn.disabled = false; $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight; }
     return;
   }
+
   appendChat('user', msg);
   const typing = createAIThinkingIndicator(useDatabaseMode ? 'Checking database…' : 'Thinking');
-  $('chatMsgs').appendChild(typing); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight; startThinkingTimer(typing);
+  $('chatMsgs').appendChild(typing); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
+  startThinkingTimer(typing);
   try {
     const res = await fetch(`${API}/api/ai/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg, rollNo: currentUser.rollNo, role: currentUser.role, name: currentUser.name, branch: currentUser.branch, threadId: currentThreadId, skipGreeting: chatGreeted, useContext: useContextMode, useDatabase: useDatabaseMode }) });
     let d; try { d = await res.json(); } catch(_) { d = {}; }
     const tSec = stopThinkingTimer(); typing.remove();
     if (d.threadId) { currentThreadId = d.threadId; fetchChatHistory(); }
     chatGreeted = true;
-    if (res.status === 403 && d.requiresSubscription) {
-      typing.remove();
-      return showFeedback('warning', 'Premium Required', d.error || 'This feature requires a premium plan.', { buttonText: 'View Plans', onClose: openSubscriptionModal });
-    }
+    if (res.status === 403 && d.requiresSubscription) { typing.remove(); return showFeedback('warning', 'Premium Required', d.error || 'This feature requires a premium plan.', { buttonText: 'View Plans', onClose: openSubscriptionModal }); }
     if (d.needsLocation) { pendingLocationRequest = { requestData: d.requestData || {}, explanation: d.explanation, originalMessage: msg }; renderLocationRequest(d.explanation || 'Location required.'); return; }
     if (d.needsLiveMarking) { pendingLocationRequest = { lectureType: d.lectureType || 'full_day', isLive: true, originalMessage: msg }; renderLocationRequest('Live attendance marking — share location.'); return; }
     if (d.requiresConfirmation && d.dbOp) { renderDbConfirmation(d.dbOp, d.reply || d.dbOp.explanation); return; }
@@ -3505,12 +3739,14 @@ async function sendChat(){
   } catch(e) { stopThinkingTimer(); typing.remove(); appendChat('bot', 'Network error. Please try again.'); }
   finally { btn.disabled = false; $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight; }
 }
+
 function renderLocationRequest(explanation){
   const div = document.createElement('div'); div.className = 'msg bot';
   const opId = 'locreq_' + Date.now(); div.id = opId;
-  div.innerHTML = `<div class="bubble" style="border-left:4px solid #6d28d9;background:linear-gradient(135deg,#fff,#f3e8ff);max-width:95%;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span style="background:#6d28d9;color:#fff;padding:4px 11px;border-radius:7px;font-size:10.5px;font-weight:800;">📍 LOCATION REQUIRED</span></div><div style="font-size:13px;color:#0f172a;font-weight:600;margin-bottom:12px;">${escapeHtml(explanation)}</div><div style="font-size:11.5px;color:#6d28d9;background:#f3e8ff;padding:10px 12px;border-radius:8px;margin-bottom:12px;line-height:1.6;">📌 Within 100m of BM Group campus.</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-purple btn-sm" onclick="shareLocationForRequest('${opId}')">📍 Share Location</button><button class="btn btn-outline btn-sm" onclick="document.getElementById('${opId}').remove(); pendingLocationRequest = null;">❌ Cancel</button></div></div>`;
+  div.innerHTML = `<div class="bubble" style="border-left:4px solid var(--purple-700);background:linear-gradient(135deg,var(--surface-card),var(--purple-50));max-width:95%;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span style="background:var(--purple-700);color:#fff;padding:4px 11px;border-radius:7px;font-size:10.5px;font-weight:800;">📍 LOCATION REQUIRED</span></div><div style="font-size:13px;color:var(--slate-900);font-weight:600;margin-bottom:12px;">${escapeHtml(explanation)}</div><div style="font-size:11.5px;color:var(--purple-700);background:var(--purple-50);padding:10px 12px;border-radius:8px;margin-bottom:12px;line-height:1.6;">📌 Within 100m of BM Group campus.</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-purple btn-sm ripple" onclick="shareLocationForRequest('${opId}')">📍 Share Location</button><button class="btn btn-outline btn-sm ripple" onclick="document.getElementById('${opId}').remove(); pendingLocationRequest = null;">❌ Cancel</button></div></div>`;
   $('chatMsgs').appendChild(div); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
 }
+
 async function shareLocationForRequest(opId){
   const reqDiv = document.getElementById(opId); if (!reqDiv) return;
   const btn = reqDiv.querySelector('button');
@@ -3520,7 +3756,8 @@ async function shareLocationForRequest(opId){
     const loc = await getBrowserLocation();
     reqDiv.remove();
     const typing = createAIThinkingIndicator('Verifying…');
-    $('chatMsgs').appendChild(typing); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight; startThinkingTimer(typing);
+    $('chatMsgs').appendChild(typing); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
+    startThinkingTimer(typing);
     const res = await fetch(`${API}/api/ai/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: pendingLocationRequest?.originalMessage || 'mark today\'s attendance', rollNo: currentUser.rollNo, role: currentUser.role, name: currentUser.name, branch: currentUser.branch, threadId: currentThreadId, skipGreeting: true, useContext: useContextMode, useDatabase: true, location: { latitude: loc.latitude, longitude: loc.longitude } }) });
     let d; try { d = await res.json(); } catch(_) { d = {}; }
     const tSec = stopThinkingTimer(); typing.remove();
@@ -3531,13 +3768,15 @@ async function shareLocationForRequest(opId){
     if (currentUser.role === 'student') fetchHistory();
   } catch(e) { if (btn) { btn.disabled = false; btn.textContent = '📍 Share Location'; } toast('Location error: ' + e.message, 'error'); }
 }
+
 function renderDbConfirmation(op, explanation) {
   const div = document.createElement('div'); div.className = 'msg bot';
   const opType = (op.action || 'db_op').toString().toUpperCase().replace('DB_', '');
   const opId = 'dbconfirm_' + Date.now(); div.id = opId;
-  div.innerHTML = `<div class="bubble" style="border-left:4px solid #1e40af;background:#fff;max-width:95%;"><div style="margin-bottom:10px;"><span style="background:#1e40af;color:#fff;padding:4px 11px;border-radius:7px;font-size:10.5px;font-weight:800;">⚠️ ${escapeHtml(opType)}</span></div><div style="font-size:13px;font-weight:600;margin-bottom:12px;">${escapeHtml(explanation || 'Confirm?')}</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-danger btn-sm" onclick='confirmDbOp(${JSON.stringify(op).replace(/'/g, "&apos;")}, this)'>✅ Confirm</button><button class="btn btn-outline btn-sm" onclick="document.getElementById('${opId}').remove()">❌ Cancel</button></div></div>`;
+  div.innerHTML = `<div class="bubble" style="border-left:4px solid var(--brand-800);background:var(--surface-card);max-width:95%;"><div style="margin-bottom:10px;"><span style="background:var(--brand-800);color:#fff;padding:4px 11px;border-radius:7px;font-size:10.5px;font-weight:800;">⚠️ ${escapeHtml(opType)}</span></div><div style="font-size:13px;font-weight:600;margin-bottom:12px;">${escapeHtml(explanation || 'Confirm?')}</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-danger btn-sm ripple" onclick='confirmDbOp(${JSON.stringify(op).replace(/'/g, "&apos;")}, this)'>✅ Confirm</button><button class="btn btn-outline btn-sm ripple" onclick="document.getElementById('${opId}').remove()">❌ Cancel</button></div></div>`;
   $('chatMsgs').appendChild(div); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
 }
+
 async function confirmDbOp(op, btnEl) {
   if (btnEl) { btnEl.disabled = true; btnEl.textContent = '⏳'; }
   try {
@@ -3548,6 +3787,7 @@ async function confirmDbOp(op, btnEl) {
     else appendChat('bot', '❌ ' + (d.error || 'Failed'));
   } catch(e) { if (btnEl) { btnEl.disabled = false; btnEl.textContent = '✅ Confirm'; } toast('Failed: ' + e.message, 'error'); }
 }
+
 function appendChat(role, text, renderMD, showDL2, tSec, umsg){
   const time = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
   const div = document.createElement('div'); div.className = 'msg ' + role;
@@ -3559,13 +3799,38 @@ function appendChat(role, text, renderMD, showDL2, tSec, umsg){
     const stepsHtml = steps.map(s => `<span class="tb-step">${escapeHtml(s)}</span>`).join('');
     thoughtHtml = `<div class="thought-badge" onclick="this.classList.toggle('expanded')"><div class="tb-head"><svg class="tb-icon" viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-6.88 17.24c.42.38.68.93.68 1.5V22h12.4v-1.26c0-.57.26-1.12.68-1.5A10 10 0 0 0 12 2z"/></svg><span class="tb-text">Thought for <b>${tSec}</b>s</span><svg class="tb-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div><div class="tb-body">${stepsHtml}</div></div>`;
   }
-  if (role === 'bot') { actions = `<div class="msg-actions"><button class="msg-action-btn" onclick="copyMessageText(this, '${id}')"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy</button>`; if (showDL2) actions += `<button class="msg-action-btn download-btn" onclick="toggleDownloadMenu(event, '${id}')"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download</button><div class="dl-menu" id="dlmenu_${id}"><div class="dl-menu-title">Download as</div><button onclick="downloadMessagePDF('${id}', 'view')">${ICONS.view} View</button><button onclick="downloadMessagePDF('${id}', 'download')">${ICONS.download} PDF</button><button onclick="downloadMessageTXT('${id}')">📄 Text File</button><button onclick="downloadMessageExcel('${id}')">📊 Excel</button></div>`; actions += `</div>`; }
-  else if (role === 'user') actions = `<div class="msg-actions"><button class="msg-action-btn" onclick="copyMessageText(this, '${id}')"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy</button></div>`;
+  if (role === 'bot') {
+    actions = `<div class="msg-actions"><button class="msg-action-btn ripple" onclick="copyMessageText(this, '${id}')"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy</button>`;
+    if (showDL2) actions += `<button class="msg-action-btn download-btn ripple" onclick="toggleDownloadMenu(event, '${id}')"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download</button><div class="dl-menu" id="dlmenu_${id}"><div class="dl-menu-title">Download as</div><button onclick="downloadMessagePDF('${id}', 'view')">${ICONS.view} View</button><button onclick="downloadMessagePDF('${id}', 'download')">${ICONS.download} PDF</button><button onclick="downloadMessageTXT('${id}')">📄 Text File</button><button onclick="downloadMessageExcel('${id}')">📊 Excel</button></div>`;
+    actions += `</div>`;
+  } else if (role === 'user') actions = `<div class="msg-actions"><button class="msg-action-btn ripple" onclick="copyMessageText(this, '${id}')"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy</button></div>`;
   div.innerHTML = `${thoughtHtml}<div class="bubble" id="${id}" data-raw="${encodeURIComponent(text)}">${content}<span class="time">${time}</span></div>${actions}`;
   $('chatMsgs').appendChild(div); $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
 }
-function copyMessageText(btn, id){ const el = document.getElementById(id); if (!el) return; const raw = decodeURIComponent(el.dataset.raw || el.innerText); const t = raw.replace(/<span class="time">.*<\/span>$/, '').trim(); if (navigator.clipboard) navigator.clipboard.writeText(t).then(() => { const o = btn.innerHTML; btn.classList.add('copied'); btn.innerHTML = '✓ Copied'; setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = o; }, 1800); }); }
-function toggleDownloadMenu(e, msgId){ if (e && e.stopPropagation) e.stopPropagation(); const menuId = 'dlmenu_' + msgId; const menu = document.getElementById(menuId); if (!menu) return; if (openDownloadMenuId && openDownloadMenuId !== menuId) { const old = document.getElementById(openDownloadMenuId); if (old) old.classList.remove('open'); } if (menu.classList.contains('open')) { menu.classList.remove('open'); openDownloadMenuId = null; return; } const btn = e.currentTarget || e.target; const r = btn.getBoundingClientRect(); menu.style.visibility = 'hidden'; menu.classList.add('open'); const mr = menu.getBoundingClientRect(); let top = r.bottom + 6, left = r.left; if (top + mr.height > window.innerHeight - 12) top = r.top - mr.height - 6; if (left + mr.width > window.innerWidth - 12) left = window.innerWidth - mr.width - 12; if (left < 12) left = 12; if (top < 12) top = 12; menu.style.position = 'fixed'; menu.style.top = top + 'px'; menu.style.left = left + 'px'; menu.style.bottom = 'auto'; menu.style.right = 'auto'; menu.style.visibility = ''; openDownloadMenuId = menuId; }
+
+function copyMessageText(btn, id){
+  const el = document.getElementById(id); if (!el) return;
+  const raw = decodeURIComponent(el.dataset.raw || el.innerText);
+  const t = raw.replace(/<span class="time">.*<\/span>$/, '').trim();
+  if (navigator.clipboard) navigator.clipboard.writeText(t).then(() => { const o = btn.innerHTML; btn.classList.add('copied'); btn.innerHTML = '✓ Copied'; setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = o; }, 1800); });
+}
+function toggleDownloadMenu(e, msgId){
+  if (e && e.stopPropagation) e.stopPropagation();
+  const menuId = 'dlmenu_' + msgId;
+  const menu = document.getElementById(menuId); if (!menu) return;
+  if (openDownloadMenuId && openDownloadMenuId !== menuId) { const old = document.getElementById(openDownloadMenuId); if (old) old.classList.remove('open'); }
+  if (menu.classList.contains('open')) { menu.classList.remove('open'); openDownloadMenuId = null; return; }
+  const btn = e.currentTarget || e.target;
+  const r = btn.getBoundingClientRect();
+  menu.style.visibility = 'hidden'; menu.classList.add('open');
+  const mr = menu.getBoundingClientRect();
+  let top = r.bottom + 6, left = r.left;
+  if (top + mr.height > window.innerHeight - 12) top = r.top - mr.height - 6;
+  if (left + mr.width > window.innerWidth - 12) left = window.innerWidth - mr.width - 12;
+  if (left < 12) left = 12; if (top < 12) top = 12;
+  menu.style.position = 'fixed'; menu.style.top = top + 'px'; menu.style.left = left + 'px'; menu.style.bottom = 'auto'; menu.style.right = 'auto'; menu.style.visibility = '';
+  openDownloadMenuId = menuId;
+}
 function getMessageText(msgId){ const el = document.getElementById(msgId); if (!el) return ''; return decodeURIComponent(el.dataset.raw || ''); }
 
 function downloadMessagePDF(msgId, action = 'download'){
@@ -3577,8 +3842,8 @@ function downloadMessagePDF(msgId, action = 'download'){
     doc.setTextColor(255, 255, 255); doc.setFontSize(15); doc.setFont(undefined, 'bold');
     doc.text('BM Group · BM Bot', 105, 14, { align: 'center' });
     doc.setTextColor(15, 23, 42); doc.setFontSize(10); doc.setFont(undefined, 'normal');
-    const lines = doc.splitTextToSize(text, 182); let y = 32;
-    const pageH = doc.internal.pageSize.height;
+    const lines = doc.splitTextToSize(text, 182);
+    let y = 32; const pageH = doc.internal.pageSize.height;
     lines.forEach(line => { if (y > pageH - 15) { doc.addPage(); y = 20; } doc.text(line, 14, y); y += 5.5; });
     const blob = doc.output('blob');
     if (action === 'view') viewPdfBlob(blob, `bm-bot-${Date.now()}.pdf`);
@@ -3587,279 +3852,123 @@ function downloadMessagePDF(msgId, action = 'download'){
   } catch(e) { toast('Failed: ' + e.message, 'error'); }
 }
 
-function downloadMessageTXT(msgId){ try { const text = getMessageText(msgId); if (!text) return toast('Nothing','error'); const blob = new Blob([text], { type: 'text/plain;charset=utf-8' }); universalDownload(blob, `bm-bot-${Date.now()}.txt`); const m = document.getElementById('dlmenu_' + msgId); if (m) m.classList.remove('open'); openDownloadMenuId = null; } catch(e){ toast('Failed','error'); } }
-function downloadMessageExcel(msgId){ try { const text = getMessageText(msgId); if (!text) return toast('Nothing','error'); const XLSX = window.XLSX; if (!XLSX) return toast('Excel library not loaded','error'); const wb = XLSX.utils.book_new(); const rows = text.split('\n').map(l => [l]); const ws = XLSX.utils.aoa_to_sheet(rows); XLSX.utils.book_append_sheet(wb, ws, 'BM Bot'); const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }); const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); universalDownload(blob, `bm-bot-${Date.now()}.xlsx`); const m = document.getElementById('dlmenu_' + msgId); if (m) m.classList.remove('open'); openDownloadMenuId = null; } catch(e){ toast('Failed','error'); } }
-function renderMarkdown(text){ if (!text) return ''; let html = escapeHtml(text); html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>'); html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>'); html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>'); html = html.replace(/\*\*([^*]+?)\*\*/g, '<strong>$1</strong>'); html = html.replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, '$1<em>$2</em>'); html = html.replace(/`([^`]+)`/g, '<code>$1</code>'); html = html.replace(/\n{2,}/g, '<br><br>'); html = html.replace(/\n/g, '<br>'); return html; }
-function download(content, filename){ const b = new Blob(['\uFEFF' + content], {type: 'text/csv;charset=utf-8;'}); universalDownload(b, filename); }
-async function ensureHolidays(){ try { const res = await fetch(`${API}/api/holidays`); if (res.ok) { globalHolidays = await res.json(); return globalHolidays; } } catch(e){} return globalHolidays || []; }
-async function checkDateStatus(dateStr){ try { const res = await fetch(`${API}/api/date-status/${dateStr}`); if (res.ok) return await res.json(); } catch(e){} const d = new Date(dateStr + 'T00:00:00'); const dow = d.getDay(); if (dow === 0 || dow === 6) return { isBlocked: true, type: 'WEEKEND', message: `${FULL_DAY_NAMES[dow]}: Closed`, dayName: FULL_DAY_NAMES[dow] }; const h = (globalHolidays || []).find(x => (x.date||'').split('T')[0] === dateStr); if (h) return { isBlocked: true, type: 'HOLIDAY', message: `${h.reason}`, dayName: FULL_DAY_NAMES[dow] }; return { isBlocked: false, dayName: FULL_DAY_NAMES[dow] }; }
-function getMonthRangeStrings(m){ const mm = String(m+1).padStart(2,'0'); const last = new Date(2026, m+1, 0).getDate(); const start = m === 6 ? 15 : 1; return { start: `2026-${mm}-${String(start).padStart(2,'0')}`, end: `2026-${mm}-${String(last).padStart(2,'0')}` }; }
-function getCurrentMonthRangeStrings(){ const n = new Date(); const mm = String(n.getMonth()+1).padStart(2,'0'); const last = new Date(n.getFullYear(), n.getMonth()+1, 0).getDate(); const start = (n.getFullYear() === 2026 && n.getMonth() === 6) ? 15 : 1; return { start: `${n.getFullYear()}-${mm}-${String(start).padStart(2,'0')}`, end: `${n.getFullYear()}-${mm}-${String(last).padStart(2,'0')}` }; }
-function getRangeForSelection(range, month){ let s, e; if (range === 'FULL_SEMESTER') { s = '2026-07-15'; e = '2026-12-31'; } else if (range === 'CURRENT_MONTH') { const r = getCurrentMonthRangeStrings(); s = r.start; e = r.end; } else { const r = getMonthRangeStrings(parseInt(month)); s = r.start; e = r.end; } const today = fmtDate(new Date()); if (e > today) e = today; return { start: s, end: e }; }
-
-/* ============================================================
-   FCM PUSH NOTIFICATIONS
-   ============================================================ */
-const FIREBASE_CONFIG = { apiKey: "AIzaSyBBD3V20eKCo8S9Smi6LY--klDj-pBVXYQ", authDomain: "bm-attedance.firebaseapp.com", projectId: "bm-attedance", storageBucket: "bm-attedance.firebasestorage.app", messagingSenderId: "760728083416", appId: "1:760728083416:web:0ff3d79ac1b5d89ab5f0ad" };
-const VAPID_PUBLIC_KEY = "BPgV9AtuPSDUJWdIb-nu-MvD38XngpQXVj7cyrhZGGHxaL6upFPfxth6l_e1gYXOwL9bU1pnmxPYj0AzYX1jYlM";
-let firebaseApp = null, firebaseMessaging = null;
-
-async function initFirebase(){ if (firebaseApp) return firebaseApp; try { if (isMedianApp()) { console.log('[FCM] In Median app — skipping web Firebase init'); return null; } if (!window.firebase || !firebase.messaging) { console.warn('[FCM] Firebase SDK not loaded'); return null; } if (!firebase.apps || !firebase.apps.length) firebaseApp = firebase.initializeApp(FIREBASE_CONFIG); else firebaseApp = firebase.app(); try { firebaseMessaging = firebase.messaging(); } catch(e) { console.warn('[FCM] messaging init failed:', e.message); return null; } return firebaseApp; } catch(e) { console.warn('[FCM] init error:', e.message); return null; } }
-async function registerServiceWorker(){ if (!('serviceWorker' in navigator)) return null; try { const basePath = window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, ''); const swPath = `${basePath}/firebase-messaging-sw.js`; const reg = await navigator.serviceWorker.register(swPath, { scope: `${basePath}/` }); console.log('[FCM] SW registered at:', reg.scope); return reg; } catch(e) { console.warn('[FCM] SW registration failed:', e.message); return null; } }
-async function enableNotifications(){ const btn = $('notifBtn'); if (btn) { btn.disabled = true; } try { toast('Setting up notifications…', 'info'); if (isMedianApp() && window.median.firebaseMessaging) { console.log('[FCM] Median app mode'); await enableMedianNotifications(); if (btn) btn.disabled = false; return; } console.log('[FCM] Browser Web Push mode'); await enableBrowserNotifications(); } catch(e) { console.error('[FCM] Enable error:', e); showFeedback('error', 'Setup Failed', e.message || 'Could not enable notifications.'); } finally { if (btn) btn.disabled = false; } }
-async function enableMedianNotifications(){
-  const fcm = window.median.firebaseMessaging;
-  const permResult = await new Promise((resolve) => { try { fcm.requestPermission({ callback: function(result) { console.log('[FCM] Permission result:', result); resolve(result || { granted: false }); } }); setTimeout(() => resolve({ granted: false, timeout: true }), 15000); } catch(e) { console.warn('[FCM] requestPermission error:', e); resolve({ granted: false, error: e.message }); } });
-  if (!permResult || !permResult.granted) { showFeedback('warning', 'Permission Denied', 'Please allow notifications in your phone settings to receive attendance alerts.'); return; }
-  await new Promise((resolve) => { try { fcm.register({ callback: function(result) { console.log('[FCM] Register result:', result); resolve(result); } }); setTimeout(() => resolve(null), 10000); } catch(e) { console.warn('[FCM] register error:', e); resolve(null); } });
-  const tokenResult = await new Promise((resolve) => { try { fcm.getToken({ callback: function(result) { console.log('[FCM] Token result:', result); resolve(result); } }); setTimeout(() => resolve(null), 10000); } catch(e) { console.warn('[FCM] getToken error:', e); resolve(null); } });
-  const token = tokenResult?.token;
-  if (!token || token.length < 20) { showFeedback('error', 'Token Error', 'FCM token could not be generated. Please try again or restart the app.'); return; }
-  await saveFCMTokenToBackend(token);
-  localStorage.setItem('BM_FCM_ENABLED', '1'); updateNotifBtn(true);
-  try { if (typeof fcm.enableForegroundBanners === 'function') fcm.enableForegroundBanners(); } catch(e) { console.warn('[FCM] enableForegroundBanners:', e); }
-  try { if (typeof fcm.createChannel === 'function') { fcm.createChannel({ channelId: 'attendance_alerts', channelName: 'Attendance Alerts', importance: 'high', callback: function(r) { console.log('[FCM] Channel created:', r); } }); } } catch(e) { console.warn('[FCM] createChannel:', e); }
-  setupMedianFCMListeners(fcm);
-  showFeedback('success', 'Notifications Enabled', 'You will now receive:\n\n• Passcode publish alerts\n• Notice broadcasts\n• Request updates\n• Daily attendance reminders');
-}
-async function enableBrowserNotifications(){
-  const app = await initFirebase(); if (!app || !firebaseMessaging) { toast('Notifications not supported on this browser', 'error'); return; }
-  if (typeof Notification === 'undefined') { toast('Notifications not supported here', 'error'); return; }
-  const perm = await Notification.requestPermission(); if (perm !== 'granted') { showFeedback('warning', 'Permission Denied', 'Please allow notifications in your browser settings.'); return; }
-  const reg = await registerServiceWorker(); if (!reg) { toast('Service worker registration failed', 'error'); return; }
-  const token = await firebaseMessaging.getToken({ vapidKey: VAPID_PUBLIC_KEY, serviceWorkerRegistration: reg });
-  if (!token) { toast('Could not get FCM token', 'error'); return; }
-  await saveFCMTokenToBackend(token);
-  localStorage.setItem('BM_FCM_ENABLED', '1'); updateNotifBtn(true);
-  showFeedback('success', 'Notifications Enabled', 'You will now receive attendance reminders and alerts.');
-}
-function setupMedianFCMListeners(fcm) { try { if (window._medianFCMListenersSet) return; window._medianFCMListenersSet = true; if (fcm.notificationReceived && fcm.notificationReceived.addListener) { fcm.notificationReceived.addListener((data) => { console.log('[FCM] Foreground notification:', data); const title = data?.notification?.title || data?.title || 'BM Attendance'; const body = data?.notification?.body || data?.body || ''; toast(`${title}${body ? ': ' + body : ''}`, 'info'); }); } if (fcm.notificationClicked && fcm.notificationClicked.addListener) { fcm.notificationClicked.addListener((data) => { console.log('[FCM] Notification clicked:', data); if (typeof fetchHistory === 'function' && currentUser?.role === 'student') { fetchHistory().catch(() => {}); } }); } } catch(e) { console.warn('[FCM] Listener setup error:', e.message); } }
-async function saveFCMTokenToBackend(token) { try { const res = await fetch(`${API}/api/user/save-fcm-token`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: currentUser.rollNo, fcmToken: token }) }); const d = await res.json().catch(() => ({})); if (!res.ok) { console.warn('[FCM] Backend save failed:', d.error || res.status); localStorage.setItem('BM_FCM_TOKEN', token); return false; } console.log('[FCM] Token saved to backend'); localStorage.setItem('BM_FCM_TOKEN', token); return true; } catch(e) { console.warn('[FCM] saveFCMTokenToBackend error:', e.message); localStorage.setItem('BM_FCM_TOKEN', token); return false; } }
-function updateNotifBtn(enabled){ const btn = $('notifBtn'); if (!btn) return; if (enabled) { btn.classList.add('notif-on'); btn.setAttribute('title', 'Notifications enabled'); btn.setAttribute('data-tip', 'Notifications ON'); } else { btn.classList.remove('notif-on'); btn.setAttribute('title', 'Enable Notifications'); btn.setAttribute('data-tip', 'Notifications'); } }
-async function autoInitFCM(){
-  if (!currentUser || !currentUser.rollNo) return;
-  if (localStorage.getItem('BM_FCM_ENABLED') !== '1') return;
+function downloadMessageTXT(msgId){
   try {
-    if (isMedianApp() && window.median.firebaseMessaging) { const fcm = window.median.firebaseMessaging; setupMedianFCMListeners(fcm); const tokenResult = await new Promise((resolve) => { try { fcm.getToken({ callback: (result) => resolve(result) }); setTimeout(() => resolve(null), 8000); } catch(e) { resolve(null); } }); const token = tokenResult?.token; if (token && token.length > 20) { const saved = localStorage.getItem('BM_FCM_TOKEN'); if (saved !== token) await saveFCMTokenToBackend(token); updateNotifBtn(true); } return; }
-    const app = await initFirebase(); if (!app || !firebaseMessaging) return;
-    const reg = await registerServiceWorker(); if (!reg) return;
-    const token = await firebaseMessaging.getToken({ vapidKey: VAPID_PUBLIC_KEY, serviceWorkerRegistration: reg });
-    if (!token) return;
-    const saved = localStorage.getItem('BM_FCM_TOKEN');
-    if (saved && saved === token) { updateNotifBtn(true); return; }
-    await saveFCMTokenToBackend(token);
-    updateNotifBtn(true);
-  } catch(e) { console.warn('[FCM] autoInit:', e.message); }
+    const text = getMessageText(msgId); if (!text) return toast('Nothing','error');
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    universalDownload(blob, `bm-bot-${Date.now()}.txt`);
+    const m = document.getElementById('dlmenu_' + msgId); if (m) m.classList.remove('open'); openDownloadMenuId = null;
+  } catch(e){ toast('Failed','error'); }
 }
-try { if (window.firebase && firebase.messaging && !isMedianApp()) { setTimeout(() => { try { const m = firebase.messaging(); m.onMessage((payload) => { console.log('[FCM] Foreground:', payload); const t = payload.notification?.title || 'BM Attendance'; const b = payload.notification?.body || ''; sendPushNotification(t, b, { type: 'fcm_foreground' }); }); } catch(e){} }, 1500); } } catch(e){}
-
-/* ============================================================
-   PREMIUM INIT
-   ============================================================ */
-function initScrollProgress(){ if (!isDesktop()) return; const bar = document.getElementById('scrollProgress'); if (!bar) return; const update = () => { const h = document.documentElement; const total = h.scrollHeight - h.clientHeight; bar.style.width = total > 0 ? (h.scrollTop / total) * 100 + '%' : '0%'; }; if (bar._bound) return; bar._bound = true; window.addEventListener('scroll', update, { passive: true }); window.addEventListener('resize', update); update(); }
-function initSpotlight(){ if (!isDesktop()) return; const targets = document.querySelectorAll('.card, .stat, .chart-wrap, .portal, .passcode-card, .collapsible-card, .advisor, .attendance-actions-card, .working-days-cta, .approved-banner'); targets.forEach(el => { if (el.dataset.spotlight === '1') return; el.dataset.spotlight = '1'; el.classList.add('spotlight-enabled'); el.addEventListener('mousemove', (e) => { const r = el.getBoundingClientRect(); el.style.setProperty('--mx', (e.clientX - r.left) + 'px'); el.style.setProperty('--my', (e.clientY - r.top) + 'px'); }); }); }
-function initMagneticButtons(){ if (!isDesktop()) return; document.querySelectorAll('.menu-trigger-btn').forEach(btn => { if (btn.dataset.magInit === '1') return; btn.dataset.magInit = '1'; btn.classList.add('magnetic'); btn.addEventListener('mousemove', (e) => { const r = btn.getBoundingClientRect(); const x = (e.clientX - r.left - r.width / 2) * 0.22; const y = (e.clientY - r.top - r.height / 2) * 0.22; btn.style.transform = `translate(${x}px, ${y}px)`; }); btn.addEventListener('mouseleave', () => { btn.style.transform = ''; }); }); }
-function initIconAnimations(){ if (!isDesktop()) return; document.querySelectorAll('.icon-btn').forEach(b => { if (b.dataset.iconAnim === '1') return; b.dataset.iconAnim = '1'; b.classList.add('icon-bounce'); }); const chatBtn = document.getElementById('chatBtn'); if (chatBtn && chatBtn.dataset.iconPulse !== '1') { chatBtn.dataset.iconPulse = '1'; chatBtn.classList.add('icon-pulse'); } const notice = document.getElementById('noticeBanner'); if (notice && notice.dataset.bellRing !== '1') { notice.dataset.bellRing = '1'; notice.classList.add('bell-ring'); } }
-function initTooltips(){ if (!isDesktop()) return; document.querySelectorAll('[title]').forEach(el => { const t = el.getAttribute('title'); if (!t || el.hasAttribute('data-tip')) return; el.setAttribute('data-tip', t); el.removeAttribute('title'); }); }
-function initStaggeredLists(){ if (!isDesktop()) return; document.querySelectorAll('.table-wrap tbody, #adminPresentList, #myRequestsList, #adminRequestsList, #accountRequestsList, #studentMenuList, #adminMenuList, .chips').forEach(el => { if (!el.classList.contains('stagger-list')) el.classList.add('stagger-list'); }); }
-function initStatLift(){ if (!isDesktop()) return; document.querySelectorAll('.stat').forEach(s => { if (s.dataset.tilt === '1') return; s.dataset.tilt = '1'; s.addEventListener('mousemove', (e) => { const r = s.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width - 0.5; const y = (e.clientY - r.top) / r.height - 0.5; s.style.transform = `translateY(-4px) rotateX(${-y * 4}deg) rotateY(${x * 4}deg)`; }); s.addEventListener('mouseleave', () => { s.style.transform = ''; }); }); }
-function runPremiumInit(){ if (!isDesktop()) return; initScrollProgress(); initSpotlight(); initMagneticButtons(); initIconAnimations(); initTooltips(); initStaggeredLists(); initStatLift(); }
-let _premiumResizeDebounce = null;
-window.addEventListener('resize', () => { if (_premiumResizeDebounce) clearTimeout(_premiumResizeDebounce); _premiumResizeDebounce = setTimeout(() => { try { runPremiumInit(); } catch(e){} }, 200); }, { passive: true });
-
-document.addEventListener('click', (e) => { if (e.target && e.target.classList && e.target.classList.contains('modal-backdrop') && e.target.classList.contains('open')) { e.target.classList.remove('open'); } if (openDownloadMenuId && !e.target.closest('.dl-menu') && !e.target.closest('.download-btn')) { const menu = document.getElementById(openDownloadMenuId); if (menu) menu.classList.remove('open'); openDownloadMenuId = null; } }, true);
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { document.querySelectorAll('.modal-backdrop.open').forEach(m => m.classList.remove('open')); closeStudentMenu(); closeAdminMenu(); if (openDownloadMenuId) { const m = document.getElementById(openDownloadMenuId); if (m) m.classList.remove('open'); openDownloadMenuId = null; } } });
-
-document.addEventListener('DOMContentLoaded', () => {
-  handleScrollFab();
-  const pdfRange = $('pdfRangeSelect'); if (pdfRange) pdfRange.onchange = function(){ $('pdfMonthSelect').style.display = this.value === 'SELECTED_MONTH' ? 'block' : 'none'; };
-  const adminRepRange = $('adminReportRange'); if (adminRepRange) adminRepRange.onchange = toggleAdminReportRange;
-  const lt = $('reqLectureType'); if (lt) lt.onchange = function(){ $('reqSubjectGroup').style.display = (this.value === 'single_lecture') ? 'block' : 'none'; loadRequestSubjects(); };
-  setTimeout(runPremiumInit, 120);
-  if (localStorage.getItem('token')) loadDashboard();
-  if (isMedianApp()) { console.log('[FCM] Median app detected — bridge ready'); if (typeof window.median_library_ready === 'function') { window.median_library_ready(); } }
-  setTimeout(handleDeepLink, 1500);
-});
-if (document.readyState !== 'loading') { setTimeout(() => handleScrollFab(), 50); setTimeout(runPremiumInit, 200); }
-
-window.median_library_ready = function() { console.log('[FCM] Median JS Bridge ready'); if (isMedianApp() && currentUser && localStorage.getItem('BM_FCM_ENABLED') === '1') { autoInitFCM().catch(() => {}); } };
-
-window.addEventListener('pageshow', () => {
-  window.scrollTo(0, 0);
-  document.documentElement.scrollTop = 0;
-  document.body.scrollTop = 0;
-});
-window.addEventListener('load', () => {
-  window.scrollTo(0, 0);
-  document.documentElement.scrollTop = 0;
-  document.body.scrollTop = 0;
-});
-
-/* ============================================================
-   DEEP LINKING & FILE "OPEN WITH" HANDLER
-   ============================================================ */
-function handleDeepLink() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const tabParam = urlParams.get('tab');
-  if (tabParam && currentUser) {
-    window.history.replaceState({}, document.title, window.location.pathname);
-    setTimeout(() => {
-      if (tabParam === 'admin') { switchTab('tab-admin'); showAdmin('a-account'); }
-      else if (tabParam === 'mark') { switchTab('tab-mark'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
-      else if (tabParam === 'notes') {
-        switchTab('tab-mark');
-        const notesSec = $('sec-notes');
-        if(notesSec) {
-            notesSec.style.display = 'block';
-            const body = notesSec.querySelector('.collapsible-body');
-            if(body) body.classList.add('open');
-            notesSec.scrollIntoView({ behavior: 'smooth' });
-        }
-      }
-    }, 1000);
-  }
-}
-
-async function downloadAndOpenFile(fileUrl, fileName) {
+function downloadMessageExcel(msgId){
   try {
-    showDL("Loading file...");
-    const response = await fetch(fileUrl);
-    const blob = await response.blob();
-    if (isMedianApp() && window.median && window.median.shareFile) {
-       const reader = new FileReader();
-       reader.onload = function() {
-           const base64 = reader.result.split(',')[1];
-           window.median.shareFile({ base64: base64, filename: fileName, mimeType: blob.type });
-           hideDL();
-       };
-       reader.readAsDataURL(blob);
-       return;
-    }
-    hideDL();
-    viewPdfBlob(blob, fileName);
-  } catch (e) {
-    hideDL();
-    toast("Failed: " + e.message, "error");
-  }
+    const text = getMessageText(msgId); if (!text) return toast('Nothing','error');
+    const XLSX = window.XLSX; if (!XLSX) return toast('Excel library not loaded','error');
+    const wb = XLSX.utils.book_new();
+    const rows = text.split('\n').map(l => [l]);
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, 'BM Bot');
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    universalDownload(blob, `bm-bot-${Date.now()}.xlsx`);
+    const m = document.getElementById('dlmenu_' + msgId); if (m) m.classList.remove('open'); openDownloadMenuId = null;
+  } catch(e){ toast('Failed','error'); }
 }
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.addEventListener('message', (event) => {
-    const msg = event.data;
-    if (msg && msg.__bmNotificationClick) {
-      if (msg.action === 'download' && msg.downloadUrl) {
-         downloadAndOpenFile(msg.downloadUrl, msg.fileName || 'document.pdf');
-         return;
-      }
-      if (msg.targetUrl) {
-        try {
-          const urlObj = new URL(msg.targetUrl);
-          const tabParam = urlObj.searchParams.get('tab');
-          if (tabParam) {
-            setTimeout(() => {
-              if (tabParam === 'admin') { switchTab('tab-admin'); showAdmin('a-account'); }
-              else if (tabParam === 'notes') {
-                switchTab('tab-mark');
-                const notesSec = $('sec-notes');
-                if(notesSec) {
-                    notesSec.style.display = 'block';
-                    const body = notesSec.querySelector('.collapsible-body');
-                    if(body) body.classList.add('open');
-                    notesSec.scrollIntoView({ behavior: 'smooth' });
-                }
-              } else if (tabParam === 'mark') {
-                switchTab('tab-mark');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }
-            }, 500);
-          }
-        } catch (e) {
-          console.log("Deep link parse error", e);
-        }
-      }
-    }
-  });
+function renderMarkdown(text){
+  if (!text) return '';
+  let html = escapeHtml(text);
+  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+  html = html.replace(/\*\*([^*]+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, '$1<em>$2</em>');
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  html = html.replace(/\n{2,}/g, '<br><br>');
+  html = html.replace(/\n/g, '<br>');
+  return html;
 }
 
+function download(content, filename){
+  const b = new Blob(['\uFEFF' + content], {type: 'text/csv;charset=utf-8;'});
+  universalDownload(b, filename);
+}
 
+/* ═══════════════════════════════════════════════════════════
+   HELPERS
+   ═══════════════════════════════════════════════════════════ */
+async function ensureHolidays(){
+  try { const res = await fetch(`${API}/api/holidays`); if (res.ok) { globalHolidays = await res.json(); return globalHolidays; } } catch(e){}
+  return globalHolidays || [];
+}
 
-/* ============================================================
-   LEADERBOARD & GAMIFICATION
-   ============================================================ */
+async function checkDateStatus(dateStr){
+  try { const res = await fetch(`${API}/api/date-status/${dateStr}`); if (res.ok) return await res.json(); } catch(e){}
+  const d = new Date(dateStr + 'T00:00:00');
+  const dow = d.getDay();
+  if (dow === 0 || dow === 6) return { isBlocked: true, type: 'WEEKEND', message: `${FULL_DAY_NAMES[dow]}: Closed`, dayName: FULL_DAY_NAMES[dow] };
+  const h = (globalHolidays || []).find(x => (x.date||'').split('T')[0] === dateStr);
+  if (h) return { isBlocked: true, type: 'HOLIDAY', message: `${h.reason}`, dayName: FULL_DAY_NAMES[dow] };
+  return { isBlocked: false, dayName: FULL_DAY_NAMES[dow] };
+}
+
+function getMonthRangeStrings(m){
+  const mm = String(m+1).padStart(2,'0');
+  const last = new Date(2026, m+1, 0).getDate();
+  const start = m === 6 ? 15 : 1;
+  return { start: `2026-${mm}-${String(start).padStart(2,'0')}`, end: `2026-${mm}-${String(last).padStart(2,'0')}` };
+}
+function getCurrentMonthRangeStrings(){
+  const n = new Date();
+  const mm = String(n.getMonth()+1).padStart(2,'0');
+  const last = new Date(n.getFullYear(), n.getMonth()+1, 0).getDate();
+  const start = (n.getFullYear() === 2026 && n.getMonth() === 6) ? 15 : 1;
+  return { start: `${n.getFullYear()}-${mm}-${String(start).padStart(2,'0')}`, end: `${n.getFullYear()}-${mm}-${String(last).padStart(2,'0')}` };
+}
+function getRangeForSelection(range, month){
+  let s, e;
+  if (range === 'FULL_SEMESTER') { s = '2026-07-15'; e = '2026-12-31'; }
+  else if (range === 'CURRENT_MONTH') { const r = getCurrentMonthRangeStrings(); s = r.start; e = r.end; }
+  else { const r = getMonthRangeStrings(parseInt(month)); s = r.start; e = r.end; }
+  const today = fmtDate(new Date());
+  if (e > today) e = today;
+  return { start: s, end: e };
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LEADERBOARD & GAMIFICATION (admin)
+   ═══════════════════════════════════════════════════════════ */
 function openLeaderboardModal() {
   let modal = $('leaderboardModal');
-  if (modal) {
-      const h3 = modal.querySelector('h3');
-      if (h3) h3.innerHTML = '🏆 College Leaderboards';
-  }
+  if (modal) { const h3 = modal.querySelector('h3'); if (h3) h3.innerHTML = '🏆 College Leaderboards'; }
   openModal('leaderboardModal');
   loadLeaderboard('attendance');
 }
 
 async function loadLeaderboard(type, forceRefresh = false) {
-  const el = $('leaderboardList');
-  if (!el) return;
+  const el = $('leaderboardList'); if (!el) return;
   const btns = document.querySelectorAll('#leaderboardModal .btn');
-  btns.forEach(b => {
-    if (b.getAttribute('onclick') && b.getAttribute('onclick').includes(type)) {
-      b.classList.remove('btn-outline');
-      b.classList.add('btn-primary');
-    } else {
-      b.classList.remove('btn-primary');
-      b.classList.add('btn-outline');
-    }
-  });
-  if (leaderboardCache[type] && !forceRefresh) {
-     renderLeaderboardData(leaderboardCache[type], type, el);
-     return;
-  }
+  btns.forEach(b => { if (b.getAttribute('onclick') && b.getAttribute('onclick').includes(type)) { b.classList.remove('btn-outline'); b.classList.add('btn-primary'); } else { b.classList.remove('btn-primary'); b.classList.add('btn-outline'); } });
+  if (leaderboardCache[type] && !forceRefresh) { renderLeaderboardData(leaderboardCache[type], type, el); return; }
   el.innerHTML = '<div class="empty"><div class="spinner" style="margin:0 auto 8px;"></div>Fetching rankings...</div>';
   try {
     const res = await fetch(`${API}/api/leaderboard/${type}`);
     const data = await res.json();
-    if (!res.ok || !data.length) {
-      el.innerHTML = '<div class="empty">No data available yet.</div>';
-      return;
-    }
+    if (!res.ok || !data.length) { el.innerHTML = '<div class="empty">No data available yet.</div>'; return; }
     leaderboardCache[type] = data;
     renderLeaderboardData(data, type, el);
-  } catch (e) {
-    el.innerHTML = '<div class="empty">Network error</div>';
-  }
+  } catch (e) { el.innerHTML = '<div class="empty">Network error</div>'; }
 }
 
 function renderLeaderboardData(data, type, el) {
   el.innerHTML = data.map((s, i) => {
     const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
     const isMe = currentUser && currentUser.rollNo === s.rollNo;
-    const bg = isMe ? 'background:var(--brand-50); border-color:var(--brand-300);' : 'background:#fff; border-color:var(--slate-200);';
-    let rightValue = '';
-    let rightLabel = '';
-    let color = '';
-    if (type === 'percentage') {
-        rightValue = `${s.percentage}%`;
-        rightLabel = `${s.present}/${s.total}`;
-        color = '#2563eb';
-    } else {
-        rightValue = `${s.streak} 🔥`;
-        rightLabel = 'DAYS';
-        color = '#047857';
-    }
-    return `
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-radius:12px; border:1px solid; ${bg}">
-        <div style="display:flex; align-items:center; gap:12px;">
-          <div style="font-size:18px; font-weight:900; width:24px; text-align:center;">${medal}</div>
-          <div>
-            <div style="font-weight:800; font-size:13px; color:var(--slate-900);">${escapeHtml(s.name)} ${isMe ? '(You)' : ''}</div>
-            <div style="font-size:11px; color:var(--slate-500);">${s.rollNo} • ${s.branch}</div>
-          </div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-size:18px; font-weight:900; color:${color};">${rightValue}</div>
-          <div style="font-size:10px; color:var(--slate-400); font-weight:700;">${rightLabel}</div>
-        </div>
-      </div>
-    `;
+    const bg = isMe ? 'background:var(--brand-50);border-color:var(--brand-300);' : 'background:var(--surface-card);border-color:var(--surface-border);';
+    let rightValue = '', rightLabel = '', color = '';
+    if (type === 'percentage') { rightValue = `${s.percentage}%`; rightLabel = `${s.present}/${s.total}`; color = 'var(--brand-600)'; }
+    else { rightValue = `${s.streak} 🔥`; rightLabel = 'DAYS'; color = 'var(--emerald-700)'; }
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:12px;border:1px solid;${bg}"><div style="display:flex;align-items:center;gap:12px;"><div style="font-size:18px;font-weight:900;width:24px;text-align:center;">${medal}</div><div><div style="font-weight:800;font-size:13px;color:var(--slate-900);">${escapeHtml(s.name)} ${isMe ? '(You)' : ''}</div><div class="text-sm" style="color:var(--slate-500);">${s.rollNo} • ${s.branch}</div></div></div><div style="text-align:right;"><div style="font-size:18px;font-weight:900;color:${color};">${rightValue}</div><div class="text-xs" style="color:var(--slate-400);font-weight:700;">${rightLabel}</div></div></div>`;
   }).join('');
 }
 
@@ -3877,9 +3986,7 @@ async function adminSearchGamification() {
     $('gmAttendanceStreak').value = data.gamification.attendanceStreak || 0;
     $('gmExcluded').checked = data.gamification.excludedFromLeaderboard || false;
     resEl.style.display = 'block';
-  } catch (e) {
-    toast('Network error', 'error');
-  }
+  } catch (e) { toast('Network error', 'error'); }
 }
 
 async function adminSaveGamification() {
@@ -3889,21 +3996,11 @@ async function adminSaveGamification() {
   const excluded = $('gmExcluded').checked;
   showDL('Saving...');
   try {
-    const res = await fetch(`${API}/api/admin/gamification/update`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requesterRollNo: currentUser.rollNo, targetRollNo: roll, loginStreak, attendanceStreak, excluded })
-    });
+    const res = await fetch(`${API}/api/admin/gamification/update`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, targetRollNo: roll, loginStreak, attendanceStreak, excluded }) });
     hideDL();
-    if (res.ok) {
-      showFeedback('success', 'Updated', 'Streaks and leaderboard status updated successfully.');
-    } else {
-      const d = await res.json();
-      showFeedback('error', 'Failed', d.error || 'Could not update');
-    }
-  } catch (e) {
-    hideDL(); showFeedback('error', 'Network Error', e.message);
-  }
+    if (res.ok) showFeedback('success', 'Updated', 'Streaks and leaderboard status updated successfully.');
+    else { const d = await res.json(); showFeedback('error', 'Failed', d.error || 'Could not update'); }
+  } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
 }
 
 async function lookupSubStudent() {
@@ -3927,55 +4024,348 @@ async function lookupSubStudent() {
     else if (tier === 'silver' && !isExpired) cEl.className = 'badge badge-info';
     else cEl.className = 'badge badge-neutral';
     resEl.style.display = 'block';
-  } catch (e) {
-    toast('Network error', 'error');
-  }
+  } catch (e) { toast('Network error', 'error'); }
 }
 
 async function grantSubscription() {
   const roll = $('subMgmtRollNo').value.trim().toUpperCase();
   const tier = $('subMgmtNewTier').value;
   if (!roll) return toast('Search a student first', 'error');
-  if (!confirm(`Grant ${tier.toUpperCase()} plan to ${roll} for 30 days?`)) return;
+  if (!await customConfirm(`Grant ${tier.toUpperCase()} plan to ${roll}?`, '30 days of premium access will be activated.', { confirmText: 'Grant' })) return;
   showDL('Granting access…');
   try {
-    const res = await fetch(`${API}/api/admin/subscription/grant`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requesterRollNo: currentUser.rollNo, targetRollNo: roll, tier })
-    });
+    const res = await fetch(`${API}/api/admin/subscription/grant`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, targetRollNo: roll, tier }) });
     const d = await res.json();
     hideDL();
-    if (res.ok) {
-      showFeedback('success', 'Plan Granted', `${roll} is now a ${tier.toUpperCase()} member.`);
-      lookupSubStudent();
-    } else showFeedback('error', 'Failed', d.error || 'Could not grant');
+    if (res.ok) { showFeedback('success', 'Plan Granted', `${roll} is now a ${tier.toUpperCase()} member.`); lookupSubStudent(); }
+    else showFeedback('error', 'Failed', d.error || 'Could not grant');
   } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
 }
 
 async function cancelSubscription() {
   const roll = $('subMgmtRollNo').value.trim().toUpperCase();
   if (!roll) return toast('Search a student first', 'error');
-  if (!confirm(`Are you sure you want to CANCEL the subscription for ${roll}?`)) return;
+  if (!await customConfirm(`Cancel subscription for ${roll}?`, 'Student will be downgraded to Free plan immediately.', { danger: true, confirmText: 'Cancel Plan' })) return;
   showDL('Cancelling…');
   try {
-    const res = await fetch(`${API}/api/admin/subscription/cancel`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requesterRollNo: currentUser.rollNo, targetRollNo: roll })
-    });
+    const res = await fetch(`${API}/api/admin/subscription/cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requesterRollNo: currentUser.rollNo, targetRollNo: roll }) });
     const d = await res.json();
     hideDL();
-    if (res.ok) {
-      showFeedback('success', 'Cancelled', `Subscription for ${roll} downgraded to Free.`);
-      lookupSubStudent();
-    } else showFeedback('error', 'Failed', d.error || 'Could not cancel');
+    if (res.ok) { showFeedback('success', 'Cancelled', `Subscription for ${roll} downgraded to Free.`); lookupSubStudent(); }
+    else showFeedback('error', 'Failed', d.error || 'Could not cancel');
   } catch (e) { hideDL(); showFeedback('error', 'Network Error', e.message); }
 }
 
-/* ============================================================
-   ★ SCROLL-LOCK SAFETY NET
-   ============================================================ */
+/* ═══════════════════════════════════════════════════════════
+   FCM PUSH NOTIFICATIONS
+   ═══════════════════════════════════════════════════════════ */
+const FIREBASE_CONFIG = { apiKey: "AIzaSyBBD3V20eKCo8S9Smi6LY--klDj-pBVXYQ", authDomain: "bm-attedance.firebaseapp.com", projectId: "bm-attedance", storageBucket: "bm-attedance.firebasestorage.app", messagingSenderId: "760728083416", appId: "1:760728083416:web:0ff3d79ac1b5d89ab5f0ad" };
+const VAPID_PUBLIC_KEY = "BPgV9AtuPSDUJWdIb-nu-MvD38XngpQXVj7cyrhZGGHxaL6upFPfxth6l_e1gYXOwL9bU1pnmxPYj0AzYX1jYlM";
+let firebaseApp = null, firebaseMessaging = null;
+
+async function initFirebase(){
+  if (firebaseApp) return firebaseApp;
+  try {
+    if (isMedianApp()) return null;
+    if (!window.firebase || !firebase.messaging) return null;
+    if (!firebase.apps || !firebase.apps.length) firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
+    else firebaseApp = firebase.app();
+    try { firebaseMessaging = firebase.messaging(); } catch(e) { return null; }
+    return firebaseApp;
+  } catch(e) { return null; }
+}
+async function registerServiceWorker(){
+  if (!('serviceWorker' in navigator)) return null;
+  try {
+    const basePath = window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '');
+    const swPath = `${basePath}/firebase-messaging-sw.js`;
+    const reg = await navigator.serviceWorker.register(swPath, { scope: `${basePath}/` });
+    return reg;
+  } catch(e) { return null; }
+}
+async function enableNotifications(){
+  const btn = $('notifBtn'); if (btn) btn.disabled = true;
+  try {
+    toast('Setting up notifications…', 'info');
+    if (isMedianApp() && window.median.firebaseMessaging) { await enableMedianNotifications(); if (btn) btn.disabled = false; return; }
+    await enableBrowserNotifications();
+  } catch(e) { showFeedback('error', 'Setup Failed', e.message || 'Could not enable notifications.'); }
+  finally { if (btn) btn.disabled = false; }
+}
+async function enableMedianNotifications(){
+  const fcm = window.median.firebaseMessaging;
+  const permResult = await new Promise((resolve) => { try { fcm.requestPermission({ callback: function(result) { resolve(result || { granted: false }); } }); setTimeout(() => resolve({ granted: false, timeout: true }), 15000); } catch(e) { resolve({ granted: false }); } });
+  if (!permResult || !permResult.granted) { showFeedback('warning', 'Permission Denied', 'Please allow notifications in your phone settings.'); return; }
+  await new Promise((resolve) => { try { fcm.register({ callback: function(result) { resolve(result); } }); setTimeout(() => resolve(null), 10000); } catch(e) { resolve(null); } });
+  const tokenResult = await new Promise((resolve) => { try { fcm.getToken({ callback: function(result) { resolve(result); } }); setTimeout(() => resolve(null), 10000); } catch(e) { resolve(null); } });
+  const token = tokenResult?.token;
+  if (!token || token.length < 20) { showFeedback('error', 'Token Error', 'FCM token could not be generated.'); return; }
+  await saveFCMTokenToBackend(token);
+  localStorage.setItem('BM_FCM_ENABLED', '1');
+  updateNotifBtn(true);
+  try { if (typeof fcm.enableForegroundBanners === 'function') fcm.enableForegroundBanners(); } catch(e){}
+  try { if (typeof fcm.createChannel === 'function') fcm.createChannel({ channelId: 'attendance_alerts', channelName: 'Attendance Alerts', importance: 'high', callback: function(r) {} }); } catch(e){}
+  setupMedianFCMListeners(fcm);
+  showFeedback('success', 'Notifications Enabled', 'You will now receive:\n\n• Passcode publish alerts\n• Notice broadcasts\n• Request updates\n• Daily attendance reminders');
+}
+async function enableBrowserNotifications(){
+  const app = await initFirebase();
+  if (!app || !firebaseMessaging) { toast('Notifications not supported on this browser', 'error'); return; }
+  if (typeof Notification === 'undefined') { toast('Notifications not supported here', 'error'); return; }
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') { showFeedback('warning', 'Permission Denied', 'Please allow notifications in your browser settings.'); return; }
+  const reg = await registerServiceWorker();
+  if (!reg) { toast('Service worker registration failed', 'error'); return; }
+  const token = await firebaseMessaging.getToken({ vapidKey: VAPID_PUBLIC_KEY, serviceWorkerRegistration: reg });
+  if (!token) { toast('Could not get FCM token', 'error'); return; }
+  await saveFCMTokenToBackend(token);
+  localStorage.setItem('BM_FCM_ENABLED', '1');
+  updateNotifBtn(true);
+  showFeedback('success', 'Notifications Enabled', 'You will now receive attendance reminders and alerts.');
+}
+function setupMedianFCMListeners(fcm){
+  try {
+    if (window._medianFCMListenersSet) return;
+    window._medianFCMListenersSet = true;
+    if (fcm.notificationReceived && fcm.notificationReceived.addListener) {
+      fcm.notificationReceived.addListener((data) => {
+        const title = data?.notification?.title || data?.title || 'BM Attendance';
+        const body = data?.notification?.body || data?.body || '';
+        toast(`${title}${body ? ': ' + body : ''}`, 'info');
+      });
+    }
+    if (fcm.notificationClicked && fcm.notificationClicked.addListener) {
+      fcm.notificationClicked.addListener((data) => {
+        if (typeof fetchHistory === 'function' && currentUser?.role === 'student') fetchHistory().catch(() => {});
+      });
+    }
+  } catch(e){}
+}
+async function saveFCMTokenToBackend(token){
+  try {
+    const res = await fetch(`${API}/api/user/save-fcm-token`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rollNo: currentUser.rollNo, fcmToken: token }) });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) { localStorage.setItem('BM_FCM_TOKEN', token); return false; }
+    localStorage.setItem('BM_FCM_TOKEN', token);
+    return true;
+  } catch(e) { localStorage.setItem('BM_FCM_TOKEN', token); return false; }
+}
+function updateNotifBtn(enabled){
+  const btn = $('notifBtn'); if (!btn) return;
+  if (enabled) { btn.classList.add('notif-on'); btn.setAttribute('title', 'Notifications enabled'); btn.setAttribute('data-tip', 'Notifications ON'); }
+  else { btn.classList.remove('notif-on'); btn.setAttribute('title', 'Enable Notifications'); btn.setAttribute('data-tip', 'Notifications'); }
+}
+async function autoInitFCM(){
+  if (!currentUser || !currentUser.rollNo) return;
+  if (localStorage.getItem('BM_FCM_ENABLED') !== '1') return;
+  try {
+    if (isMedianApp() && window.median.firebaseMessaging) {
+      const fcm = window.median.firebaseMessaging;
+      setupMedianFCMListeners(fcm);
+      const tokenResult = await new Promise((resolve) => { try { fcm.getToken({ callback: (result) => resolve(result) }); setTimeout(() => resolve(null), 8000); } catch(e) { resolve(null); } });
+      const token = tokenResult?.token;
+      if (token && token.length > 20) {
+        const saved = localStorage.getItem('BM_FCM_TOKEN');
+        if (saved !== token) await saveFCMTokenToBackend(token);
+        updateNotifBtn(true);
+      }
+      return;
+    }
+    const app = await initFirebase();
+    if (!app || !firebaseMessaging) return;
+    const reg = await registerServiceWorker();
+    if (!reg) return;
+    const token = await firebaseMessaging.getToken({ vapidKey: VAPID_PUBLIC_KEY, serviceWorkerRegistration: reg });
+    if (!token) return;
+    const saved = localStorage.getItem('BM_FCM_TOKEN');
+    if (saved && saved === token) { updateNotifBtn(true); return; }
+    await saveFCMTokenToBackend(token);
+    updateNotifBtn(true);
+  } catch(e){}
+}
+
+try {
+  if (window.firebase && firebase.messaging && !isMedianApp()) {
+    setTimeout(() => {
+      try {
+        const m = firebase.messaging();
+        m.onMessage((payload) => {
+          const t = payload.notification?.title || 'BM Attendance';
+          const b = payload.notification?.body || '';
+          sendPushNotification(t, b, { type: 'fcm_foreground' });
+        });
+      } catch(e){}
+    }, 1500);
+  }
+} catch(e){}
+
+/* ═══════════════════════════════════════════════════════════
+   PREMIUM INIT (scroll progress, spotlight, etc — desktop only)
+   ═══════════════════════════════════════════════════════════ */
+function initScrollProgress(){
+  if (!isDesktop()) return;
+  const bar = document.getElementById('scrollProgress'); if (!bar) return;
+  const update = () => { const h = document.documentElement; const total = h.scrollHeight - h.clientHeight; bar.style.width = total > 0 ? (h.scrollTop / total) * 100 + '%' : '0%'; };
+  if (bar._bound) return;
+  bar._bound = true;
+  window.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('resize', update);
+  update();
+}
+function initSpotlight(){
+  if (!isDesktop()) return;
+  const targets = document.querySelectorAll('.card, .stat, .chart-wrap, .portal, .passcode-card, .collapsible-card, .advisor, .attendance-actions-card, .working-days-cta, .approved-banner');
+  targets.forEach(el => {
+    if (el.dataset.spotlight === '1') return;
+    el.dataset.spotlight = '1';
+    el.classList.add('spotlight-enabled');
+    el.addEventListener('mousemove', (e) => { const r = el.getBoundingClientRect(); el.style.setProperty('--mx', (e.clientX - r.left) + 'px'); el.style.setProperty('--my', (e.clientY - r.top) + 'px'); });
+  });
+}
+function initMagneticButtons(){
+  if (!isDesktop()) return;
+  document.querySelectorAll('.menu-trigger-btn').forEach(btn => {
+    if (btn.dataset.magInit === '1') return;
+    btn.dataset.magInit = '1';
+    btn.classList.add('magnetic');
+    btn.addEventListener('mousemove', (e) => { const r = btn.getBoundingClientRect(); const x = (e.clientX - r.left - r.width / 2) * 0.22; const y = (e.clientY - r.top - r.height / 2) * 0.22; btn.style.transform = `translate(${x}px, ${y}px)`; });
+    btn.addEventListener('mouseleave', () => { btn.style.transform = ''; });
+  });
+}
+function initIconAnimations(){
+  if (!isDesktop()) return;
+  document.querySelectorAll('.icon-btn').forEach(b => { if (b.dataset.iconAnim === '1') return; b.dataset.iconAnim = '1'; b.classList.add('icon-bounce'); });
+  const chatBtn = document.getElementById('chatBtn');
+  if (chatBtn && chatBtn.dataset.iconPulse !== '1') { chatBtn.dataset.iconPulse = '1'; chatBtn.classList.add('icon-pulse'); }
+  const notice = document.getElementById('noticeBanner');
+  if (notice && notice.dataset.bellRing !== '1') { notice.dataset.bellRing = '1'; notice.classList.add('bell-ring'); }
+}
+function initTooltips(){
+  if (!isDesktop()) return;
+  document.querySelectorAll('[title]').forEach(el => { const t = el.getAttribute('title'); if (!t || el.hasAttribute('data-tip')) return; el.setAttribute('data-tip', t); el.removeAttribute('title'); });
+}
+function initStaggeredLists(){
+  if (!isDesktop()) return;
+  document.querySelectorAll('.table-wrap tbody, #adminPresentList, #myRequestsList, #adminRequestsList, #accountRequestsList, #studentMenuList, #adminMenuList, .chips').forEach(el => { if (!el.classList.contains('stagger-list')) el.classList.add('stagger-list'); });
+}
+function initStatLift(){
+  if (!isDesktop()) return;
+  document.querySelectorAll('.stat').forEach(s => {
+    if (s.dataset.tilt === '1') return;
+    s.dataset.tilt = '1';
+    s.addEventListener('mousemove', (e) => { const r = s.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width - 0.5; const y = (e.clientY - r.top) / r.height - 0.5; s.style.transform = `translateY(-4px) rotateX(${-y * 4}deg) rotateY(${x * 4}deg)`; });
+    s.addEventListener('mouseleave', () => { s.style.transform = ''; });
+  });
+}
+function runPremiumInit(){
+  if (!isDesktop()) return;
+  initScrollProgress(); initSpotlight(); initMagneticButtons(); initIconAnimations(); initTooltips(); initStaggeredLists(); initStatLift();
+}
+let _premiumResizeDebounce = null;
+window.addEventListener('resize', () => {
+  if (_premiumResizeDebounce) clearTimeout(_premiumResizeDebounce);
+  _premiumResizeDebounce = setTimeout(() => { try { runPremiumInit(); updateBottomNavVisibility(); } catch(e){} }, 200);
+}, { passive: true });
+
+/* ═══════════════════════════════════════════════════════════
+   GLOBAL CLICK / KEY HANDLERS
+   ═══════════════════════════════════════════════════════════ */
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.classList && e.target.classList.contains('modal-backdrop') && e.target.classList.contains('open')) { e.target.classList.remove('open'); }
+  if (openDownloadMenuId && !e.target.closest('.dl-menu') && !e.target.closest('.download-btn')) { const menu = document.getElementById(openDownloadMenuId); if (menu) menu.classList.remove('open'); openDownloadMenuId = null; }
+}, true);
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-backdrop.open').forEach(m => m.classList.remove('open'));
+    const cd = document.getElementById('customDialog'); if (cd && cd.classList.contains('open')) { cd.classList.remove('open'); cd.innerHTML = ''; }
+    closeStudentMenu();
+    closeAdminMenu();
+    if (openDownloadMenuId) { const m = document.getElementById(openDownloadMenuId); if (m) m.classList.remove('open'); openDownloadMenuId = null; }
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════
+   DEEP LINKING & FILE "OPEN WITH" HANDLER
+   ═══════════════════════════════════════════════════════════ */
+function handleDeepLink() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const tabParam = urlParams.get('tab');
+  if (tabParam && currentUser) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+    setTimeout(() => {
+      if (tabParam === 'admin') { switchTab('tab-admin'); showAdmin('a-account'); }
+      else if (tabParam === 'mark') { switchTab('tab-mark'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+      else if (tabParam === 'notes') {
+        switchTab('tab-mark');
+        const notesSec = $('sec-notes');
+        if(notesSec) {
+          notesSec.style.display = 'block';
+          const body = notesSec.querySelector('.collapsible-body');
+          if(body) body.classList.add('open');
+          notesSec.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+    }, 1000);
+  }
+}
+
+async function downloadAndOpenFile(fileUrl, fileName) {
+  try {
+    showDL("Loading file...");
+    const response = await fetch(fileUrl);
+    const blob = await response.blob();
+    if (isMedianApp() && window.median && window.median.shareFile) {
+      const reader = new FileReader();
+      reader.onload = function() {
+        const base64 = reader.result.split(',')[1];
+        window.median.shareFile({ base64: base64, filename: fileName, mimeType: blob.type });
+        hideDL();
+      };
+      reader.readAsDataURL(blob);
+      return;
+    }
+    hideDL();
+    viewPdfBlob(blob, fileName);
+  } catch (e) { hideDL(); toast("Failed: " + e.message, "error"); }
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    const msg = event.data;
+    if (msg && msg.__bmNotificationClick) {
+      if (msg.action === 'download' && msg.downloadUrl) { downloadAndOpenFile(msg.downloadUrl, msg.fileName || 'document.pdf'); return; }
+      if (msg.targetUrl) {
+        try {
+          const urlObj = new URL(msg.targetUrl);
+          const tabParam = urlObj.searchParams.get('tab');
+          if (tabParam) {
+            setTimeout(() => {
+              if (tabParam === 'admin') { switchTab('tab-admin'); showAdmin('a-account'); }
+              else if (tabParam === 'notes') {
+                switchTab('tab-mark');
+                const notesSec = $('sec-notes');
+                if(notesSec) {
+                  notesSec.style.display = 'block';
+                  const body = notesSec.querySelector('.collapsible-body');
+                  if(body) body.classList.add('open');
+                  notesSec.scrollIntoView({ behavior: 'smooth' });
+                }
+              } else if (tabParam === 'mark') {
+                switchTab('tab-mark');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            }, 500);
+          }
+        } catch (e) { console.log("Deep link parse error", e); }
+      }
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SCROLL-LOCK SAFETY NET
+   ═══════════════════════════════════════════════════════════ */
 (function scrollLockGuard() {
   function hardUnlock() {
     document.body.classList.remove('body-locked');
@@ -3986,11 +4376,55 @@ async function cancelSubscription() {
   window.addEventListener('load', hardUnlock);
   setInterval(() => {
     const chatOpen = document.getElementById('chatPanel')?.classList.contains('open');
-    const modalOpen = document.querySelector('.modal-backdrop.open, .feedback-overlay');
+    const modalOpen = document.querySelector('.modal-backdrop.open, .feedback-overlay, .dialog-overlay.open');
     const anyDrawerOpen = document.getElementById('studentMenuDrawer')?.classList.contains('open')
                        || document.getElementById('adminMenuDrawer')?.classList.contains('open');
-    if (!chatOpen && !modalOpen && !anyDrawerOpen && document.body.classList.contains('body-locked')) {
-      hardUnlock();
-    }
+    if (!chatOpen && !modalOpen && !anyDrawerOpen && document.body.classList.contains('body-locked')) hardUnlock();
   }, 1500);
 })();
+
+/* ═══════════════════════════════════════════════════════════
+   BOOT
+   ═══════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  handleScrollFab();
+
+  const pdfRange = $('pdfRangeSelect');
+  if (pdfRange) pdfRange.onchange = function(){ $('pdfMonthSelect').style.display = this.value === 'SELECTED_MONTH' ? 'block' : 'none'; };
+  const adminRepRange = $('adminReportRange');
+  if (adminRepRange) adminRepRange.onchange = toggleAdminReportRange;
+  const lt = $('reqLectureType');
+  if (lt) lt.onchange = function(){ $('reqSubjectGroup').style.display = (this.value === 'single_lecture') ? 'block' : 'none'; loadRequestSubjects(); };
+
+  setTimeout(runPremiumInit, 120);
+  if (localStorage.getItem('token')) loadDashboard();
+
+  if (isMedianApp()) {
+    if (typeof window.median_library_ready === 'function') { window.median_library_ready(); }
+  }
+  setTimeout(handleDeepLink, 1500);
+});
+
+if (document.readyState !== 'loading') {
+  setTimeout(() => handleScrollFab(), 50);
+  setTimeout(runPremiumInit, 200);
+}
+
+window.median_library_ready = function() {
+  if (isMedianApp() && currentUser && localStorage.getItem('BM_FCM_ENABLED') === '1') autoInitFCM().catch(() => {});
+};
+
+window.addEventListener('pageshow', () => {
+  window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+});
+window.addEventListener('load', () => {
+  window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+});
+
+/* ============================================================
+   END OF FILE — app.js v6.0
+   ============================================================ */
