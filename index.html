@@ -7,12 +7,12 @@
 
 <!-- ★ THEME COLOR (Light + Dark) — colors the Android status bar -->
 <meta name="theme-color" content="#2563eb" media="(prefers-color-scheme: light)" />
-<meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
+<meta name="theme-color" content="#0b1120" media="(prefers-color-scheme: dark)" />
 
-<!-- ★ AUTO DARK MODE FOR FORM CONTROLS (inputs, selects, date pickers) -->
+<!-- ★ AUTO DARK MODE FOR FORM CONTROLS -->
 <meta name="color-scheme" content="light dark" />
 
-<!-- ★ PREVENT ROLL NUMBERS / PHONE / EMAIL / ADDRESS AUTO-LINKING (Android WebView) -->
+<!-- ★ PREVENT AUTO-LINKING (Android WebView) -->
 <meta name="format-detection" content="telephone=no,email=no,address=no" />
 
 <!-- ★ PWA / ANDROID / iOS APP META -->
@@ -32,18 +32,53 @@
 <link rel="stylesheet" href="style.css">
 
 <style>
-  html { overflow-y: auto !important; overflow-x: hidden !important; height: auto !important; }
-  body { overflow-y: auto !important; overflow-x: hidden !important; height: auto !important; }
+  /* ═══════════════════════════════════════════════════════════
+     INLINE CRITICAL FIXES — overrides + mobile-specific rules
+     ═══════════════════════════════════════════════════════════ */
+  html {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    height: auto !important;
+    overscroll-behavior-y: none;
+  }
+  body {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    height: auto !important;
+  }
 
+  /* Refresh spinner animation */
   @keyframes spinRefresh { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   .icon-btn.refreshing svg { animation: spinRefresh 0.8s linear infinite; }
   .icon-btn.refreshing { pointer-events: none; opacity: 0.7; }
 
+  /* ★ MOBILE: Sticky header + blue top bar */
   @media (max-width: 640px) {
     html { scroll-padding-top: calc(52px + env(safe-area-inset-top, 0px)); }
-    body::before { z-index: 0 !important; }
-    .app { position: relative; z-index: 1; }
-    .app-header { position: sticky; top: 0; z-index: 5; background: #fff; }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: calc(52px + env(safe-area-inset-top, 0px));
+      background: linear-gradient(180deg, #1e3a8a 0%, #2563eb 100%);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+    }
+
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: var(--surface-card);
+    }
   }
 
   /* ★ MEDIAN WEBVIEW: File input — visible, clickable, opens native picker */
@@ -54,7 +89,6 @@
     z-index: auto !important;
     cursor: pointer;
   }
-  /* Hidden file input used by chat (opens via JS) — works in modern WebView */
   #chatFileInput {
     display: none !important;
   }
@@ -72,17 +106,7 @@
     .student-menu-drawer { height: 100dvh; }
   }
 
-  /* Menu items slightly bigger (user preference — kept from previous) */
-  .student-menu-list {
-    padding-top: 16px !important;
-  }
-  .student-menu-item {
-    padding: 14px 16px !important;
-    font-size: 14px !important;
-    border-radius: 12px !important;
-  }
-
-  /* ★ Session expiry pill (injected by app.js in .welcome .meta) */
+  /* ★ Session expiry pill — injected by app.js, styled here */
   #sessionExpiry {
     font-size: 10.5px;
     font-weight: 700;
@@ -91,6 +115,13 @@
     border-radius: 99px;
     color: var(--slate-500);
     transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* ★ Prevent bottom-nav from overlapping key FABs on mobile */
+  @media (max-width: 640px) {
+    .chat-fab { bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important; }
+    .scroll-top-fab { bottom: calc(150px + env(safe-area-inset-bottom, 0px)) !important; }
+    .chat-panel { bottom: calc(88px + env(safe-area-inset-bottom, 0px)) !important; }
   }
 </style>
 
@@ -101,15 +132,20 @@
 <!-- jsPDF for PDF generation -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-<!-- Firebase SDK (Web Push fallback — Median app uses native FCM) -->
+<!-- Firebase SDK (Web Push) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <!-- Razorpay checkout -->
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-<!-- Lenis smooth scroll -->
-<script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1.0.19/bundled/lenis.min.js"></script>
+<!-- ★ Lenis REMOVED — native scroll-behavior: smooth handles it -->
 </head>
 <body>
+
+<!-- ★ PULL-TO-REFRESH INDICATOR -->
+<div class="ptr-indicator" id="ptrIndicator">
+  <div class="ptr-spinner"></div>
+  <span class="ptr-text" id="ptrText">Pull to refresh</span>
+</div>
 
 <div class="scroll-progress" id="scrollProgress"></div>
 <div class="bg-blobs" aria-hidden="true"><div class="bg-blob"></div><div class="bg-blob"></div><div class="bg-blob"></div></div>
@@ -125,7 +161,7 @@
   <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
 </button>
 
-<!-- ===================== STUDENT MENU ===================== -->
+<!-- ===================== STUDENT MENU DRAWER ===================== -->
 <div class="student-menu-backdrop" id="studentMenuBackdrop"></div>
 <div class="student-menu-drawer" id="studentMenuDrawer">
   <div class="student-menu-header safe-top">
@@ -138,10 +174,10 @@
     </div>
   </div>
   <div class="student-menu-list" id="studentMenuList"></div>
-  <div class="student-menu-footer">BM ERP · v5.0</div>
+  <div class="student-menu-footer">BM ERP · v12.0</div>
 </div>
 
-<!-- ===================== ADMIN / FACULTY MENU ===================== -->
+<!-- ===================== ADMIN / FACULTY MENU DRAWER ===================== -->
 <div class="student-menu-backdrop" id="adminMenuBackdrop"></div>
 <div class="student-menu-drawer" id="adminMenuDrawer">
   <div class="student-menu-header safe-top">
@@ -154,7 +190,7 @@
     </div>
   </div>
   <div class="student-menu-list" id="adminMenuList"></div>
-  <div class="student-menu-footer">BM ERP · v5.0</div>
+  <div class="student-menu-footer">BM ERP · v12.0</div>
 </div>
 
 <!-- ===================== APP ===================== -->
@@ -165,19 +201,19 @@
       <div class="brand-text"><h1>BM Group of Institutions</h1><p>B.Tech CSE / AIDS · 5th Semester</p></div>
     </div>
     <div class="header-right">
-      <button class="icon-btn" id="refreshBtn" onclick="refreshPage()" title="Refresh" data-tip="Refresh" aria-label="Refresh" style="display:none;">
+      <button class="icon-btn ripple" id="refreshBtn" onclick="refreshPage()" title="Refresh" data-tip="Refresh" aria-label="Refresh" style="display:none;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
           <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
         </svg>
       </button>
-      <button class="icon-btn" id="chatBtn" onclick="toggleChat()" title="AI Assistant" data-tip="AI Assistant" aria-label="Open AI assistant" style="display:none;">
+      <button class="icon-btn ripple" id="chatBtn" onclick="toggleChat()" title="AI Assistant" data-tip="AI Assistant" aria-label="Open AI assistant" style="display:none;">
         <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       </button>
-      <button class="icon-btn" id="notifBtn" onclick="enableNotifications()" title="Enable Notifications" data-tip="Notifications" aria-label="Enable notifications" style="display:none;">
+      <button class="icon-btn ripple" id="notifBtn" onclick="enableNotifications()" title="Enable Notifications" data-tip="Notifications" aria-label="Enable notifications" style="display:none;">
         <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       </button>
-      <button class="icon-btn" id="logoutBtn" onclick="logout()" title="Logout" data-tip="Logout" aria-label="Logout" style="display:none;">
+      <button class="icon-btn ripple" id="logoutBtn" onclick="logout()" title="Logout" data-tip="Logout" aria-label="Logout" style="display:none;">
         <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
       </button>
       <div class="user-avatar" id="userAvatar" style="display:none;">SS</div>
@@ -208,14 +244,14 @@
         <input type="password" id="password" placeholder="Enter password" />
         <span class="eye-icon" onclick="togglePassword()" aria-label="Toggle password visibility"><svg viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span>
       </div></div>
-    <button class="btn btn-primary btn-block" id="authBtn" onclick="handleAuth()">Sign In</button>
+    <button class="btn btn-primary btn-block ripple" id="authBtn" onclick="handleAuth()">Sign In</button>
     <div class="auth-links-grid">
-      <span class="auth-link" id="toggleLink" onclick="toggleAuthMode()">New Student? Register</span>
-      <span class="auth-link" onclick="openForgotPassword()">Forgot Password?</span>
-      <span class="auth-link" onclick="openSetNewPassword()">Set New Password</span>
-      <span class="auth-link" onclick="openDeviceReset()">Reset Device</span>
-      <span class="auth-link" onclick="openRegStatusCheck()">📝 Registration Status</span>
-      <span class="auth-link" onclick="openCheckStatus()">🔍 Request Status</span>
+      <span class="auth-link ripple" id="toggleLink" onclick="toggleAuthMode()">New Student? Register</span>
+      <span class="auth-link ripple" onclick="openForgotPassword()">Forgot Password?</span>
+      <span class="auth-link ripple" onclick="openSetNewPassword()">Set New Password</span>
+      <span class="auth-link ripple" onclick="openDeviceReset()">Reset Device</span>
+      <span class="auth-link ripple" onclick="openRegStatusCheck()">📝 Registration Status</span>
+      <span class="auth-link ripple" onclick="openCheckStatus()">🔍 Request Status</span>
     </div>
   </div>
 
@@ -223,10 +259,10 @@
   <div id="dash-box" style="display:none;">
     <div class="app-body">
       <div class="tabs" id="mainTabs" style="display:none;">
-        <div class="tab active" data-tab="tab-mark" onclick="switchTab('tab-mark')">Attendance</div>
-        <div class="tab" data-tab="tab-admin" onclick="switchTab('tab-admin')" id="tabBtnAdmin" style="display:none;">Admin</div>
-        <div class="tab" data-tab="tab-faculty" onclick="switchTab('tab-faculty')" id="tabBtnFaculty" style="display:none;">Faculty</div>
-        <div class="tab" data-tab="tab-leave" onclick="switchTab('tab-leave')" id="tabBtnLeave" style="display:none;">Leave</div>
+        <div class="tab active ripple" data-tab="tab-mark" onclick="switchTab('tab-mark')">Attendance</div>
+        <div class="tab ripple" data-tab="tab-admin" onclick="switchTab('tab-admin')" id="tabBtnAdmin" style="display:none;">Admin</div>
+        <div class="tab ripple" data-tab="tab-faculty" onclick="switchTab('tab-faculty')" id="tabBtnFaculty" style="display:none;">Faculty</div>
+        <div class="tab ripple" data-tab="tab-leave" onclick="switchTab('tab-leave')" id="tabBtnLeave" style="display:none;">Leave</div>
       </div>
 
       <!-- ===================== STUDENT TAB ===================== -->
@@ -235,10 +271,10 @@
 
         <div class="welcome" id="sec-home">
           <div class="welcome-left">
-            <button type="button" class="menu-trigger-btn" id="studentMenuBtn" onclick="openStudentMenu()" style="display:none;" aria-label="Open menu">
+            <button type="button" class="menu-trigger-btn ripple" id="studentMenuBtn" onclick="openStudentMenu()" style="display:none;" aria-label="Open menu">
               <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
             </button>
-            <button type="button" class="menu-trigger-btn" id="adminMenuBtn" onclick="openAdminMenu()" style="display:none;" aria-label="Open menu">
+            <button type="button" class="menu-trigger-btn ripple" id="adminMenuBtn" onclick="openAdminMenu()" style="display:none;" aria-label="Open menu">
               <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
             </button>
             <div style="min-width:0;">
@@ -266,8 +302,10 @@
             <div class="stat"><div class="stat-value" id="adminTotalWorkingDays">0</div><div class="stat-label">Total Working Days</div></div>
           </div>
           <div class="card" style="margin-bottom:0;">
-            <div class="card-title"><span>Today's Present Students</span><button class="btn btn-outline btn-xs" onclick="loadDashboardStats()">Refresh</button></div>
-            <div id="adminPresentList" class="present-list-wrap"><div class="text-muted text-xs">Loading…</div></div>
+            <div class="card-title"><span>Today's Present Students</span><button class="btn btn-outline btn-xs ripple" onclick="loadDashboardStats()">Refresh</button></div>
+            <div id="adminPresentList" class="present-list-wrap">
+              <div class="skeleton-card"><div class="skeleton skeleton-row"><div class="skeleton skeleton-avatar"></div><div class="skeleton-info"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text" style="width:60%;"></div></div></div></div>
+            </div>
           </div>
         </div>
 
@@ -285,13 +323,13 @@
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <span id="closedBannerText">College Closed</span>
           </div>
-          <button class="btn btn-primary btn-block mb-2" id="markFullDayBtn" onclick="markFullDay()" style="padding:16px;font-size:13.5px;">
+          <button class="btn btn-primary btn-block mb-2 ripple" id="markFullDayBtn" onclick="markFullDay()" style="padding:16px;font-size:13.5px;">
             <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Mark Full Day Attendance
           </button>
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;background:#fff;border:1px solid var(--slate-200);border-radius:14px;" id="periodRow">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;background:var(--surface-card);border:1px solid var(--surface-border);border-radius:14px;" id="periodRow">
             <div style="min-width:0;"><div class="text-xs text-muted font-bold" id="periodLabel">CHECKING…</div>
               <div class="font-bold" id="periodName" style="font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</div></div>
-            <button class="btn btn-success btn-sm" id="markPeriodBtn" onclick="markActivePeriod()" style="flex-shrink:0;">Mark</button>
+            <button class="btn btn-success btn-sm ripple" id="markPeriodBtn" onclick="markActivePeriod()" style="flex-shrink:0;">Mark</button>
           </div>
           <div class="passcode-live-box inactive" id="mainPasscodeBox">
             <div class="plb-head">
@@ -303,7 +341,7 @@
             <div class="plb-row">
               <div class="plb-value" id="mainPasscodeValue" style="display:none;">— — — —</div>
               <div class="plb-empty-msg" id="mainPasscodeEmpty">No passcode has been published by admin yet. Please wait.</div>
-              <button class="plb-copy" id="mainPasscodeCopy" onclick="copyPasscode()" style="display:none;">
+              <button class="plb-copy ripple" id="mainPasscodeCopy" onclick="copyPasscode()" style="display:none;">
                 <svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
                 Copy
               </button>
@@ -317,8 +355,8 @@
           <div class="card-title"><span>📩 Request Attendance</span></div>
           <p class="text-xs text-muted mb-2" style="line-height:1.65;">Send a request for past dates or today's attendance after 3 PM. Admin will approve and mark it.</p>
           <div class="req-tabs">
-            <button class="req-tab active" data-reqtab="single" onclick="switchReqTab('single')">Single Date</button>
-            <button class="req-tab" data-reqtab="bulk" onclick="switchReqTab('bulk')">Bulk (Multiple Dates)</button>
+            <button class="req-tab active ripple" data-reqtab="single" onclick="switchReqTab('single')">Single Date</button>
+            <button class="req-tab ripple" data-reqtab="bulk" onclick="switchReqTab('bulk')">Bulk (Multiple Dates)</button>
           </div>
           <div id="reqSinglePane">
             <div class="form-group"><label class="form-label">Date</label><input type="date" id="reqDate" /></div>
@@ -332,7 +370,7 @@
             <div class="form-group"><label class="form-label">Reason</label>
               <input type="text" id="reqReason" placeholder="e.g. Sick, Sports event, etc." />
             </div>
-            <button class="btn btn-primary btn-block" onclick="submitAttendanceRequest()">
+            <button class="btn btn-primary btn-block ripple" onclick="submitAttendanceRequest()">
               <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
               Submit Request
             </button>
@@ -342,19 +380,24 @@
               <select id="reqBulkLectureType"><option value="full_day">Full Day</option><option value="single_lecture">Single Lecture</option></select>
             </div>
             <div class="form-group"><label class="form-label">Add Date</label>
-              <div class="row"><input type="date" id="reqBulkDate" /><button class="btn btn-primary btn-sm" onclick="addReqBulkDate()" style="flex:0 0 auto;">+ Add</button></div>
+              <div class="row"><input type="date" id="reqBulkDate" /><button class="btn btn-primary btn-sm ripple" onclick="addReqBulkDate()" style="flex:0 0 auto;">+ Add</button></div>
             </div>
             <div id="reqBulkDates" class="chips mb-2"></div>
             <div class="form-group"><label class="form-label">Reason</label>
               <input type="text" id="reqBulkReason" placeholder="e.g. Sick leave for 3 days" />
             </div>
-            <button class="btn btn-primary btn-block" onclick="submitBulkAttendanceRequests()">
+            <button class="btn btn-primary btn-block ripple" onclick="submitBulkAttendanceRequests()">
               <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
               Submit All Requests
             </button>
           </div>
           <div class="card-title mt-3" style="font-size:11px;">My Recent Requests</div>
-          <div id="myRequestsList"><div class="empty" style="padding:14px 0;">Loading…</div></div>
+          <div id="myRequestsList">
+            <div class="skeleton-card" style="border:none;padding:8px 0;">
+              <div class="skeleton skeleton-text" style="width:80%;"></div>
+              <div class="skeleton skeleton-text" style="width:50%;"></div>
+            </div>
+          </div>
         </div>
 
         <!-- Subject-wise Attendance -->
@@ -383,7 +426,7 @@
         </div>
 
         <!-- Working days CTA -->
-        <button class="working-days-cta" onclick="openWorkingDays()" id="sec-workingdays">
+        <button class="working-days-cta ripple" onclick="openWorkingDays()" id="sec-workingdays">
           <div class="cta-left"><div class="cta-icon">
             <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="m9 16 2 2 4-4"/></svg>
           </div><div><div class="cta-title">College Working Days</div><div class="cta-sub">View calendar since 15 July 2026 with holidays</div></div></div>
@@ -392,38 +435,62 @@
 
         <!-- Notes & Documents -->
         <div class="card" id="sec-notes" style="display:none;">
-          <div class="card-title"><span>📚 Notes & Documents</span><button class="btn btn-primary btn-xs" onclick="openDocRequestModal()">📤 Upload Document</button></div>
+          <div class="card-title"><span>📚 Notes & Documents</span><button class="btn btn-primary btn-xs ripple" onclick="openDocRequestModal()">📤 Upload Document</button></div>
           <p class="text-xs text-muted mb-2" style="line-height:1.65;">Files shared by admin or approved students are visible here. You can upload any document for approval.</p>
-          <div id="studentNotesList"><div class="empty" style="padding:14px 0;">Loading…</div></div>
+          <div id="studentNotesList">
+            <div class="skeleton-card" style="border:1px solid var(--surface-border);border-radius:10px;margin-bottom:8px;">
+              <div class="skeleton skeleton-title"></div>
+              <div class="skeleton skeleton-text" style="width:50%;"></div>
+            </div>
+            <div class="skeleton-card" style="border:1px solid var(--surface-border);border-radius:10px;">
+              <div class="skeleton skeleton-title"></div>
+              <div class="skeleton skeleton-text" style="width:50%;"></div>
+            </div>
+          </div>
         </div>
 
         <!-- Assignments -->
         <div class="card" id="sec-assignments" style="display:none;">
-          <div class="card-title"><span>📝 Assignments</span><button class="btn btn-outline btn-xs" onclick="loadStudentAssignments()">Refresh</button></div>
-          <div id="studentAssignmentsList"><div class="empty" style="padding:14px 0;">Loading…</div></div>
+          <div class="card-title"><span>📝 Assignments</span><button class="btn btn-outline btn-xs ripple" onclick="loadStudentAssignments()">Refresh</button></div>
+          <div id="studentAssignmentsList">
+            <div class="skeleton-card" style="border:1px solid var(--surface-border);border-radius:10px;">
+              <div class="skeleton skeleton-title"></div>
+              <div class="skeleton skeleton-text" style="width:70%;"></div>
+            </div>
+          </div>
         </div>
 
         <!-- Exams -->
         <div class="card" id="sec-exams" style="display:none;">
-          <div class="card-title"><span>📅 Upcoming Exams</span><button class="btn btn-outline btn-xs" onclick="loadStudentExams()">Refresh</button></div>
-          <div id="studentExamsList"><div class="empty" style="padding:14px 0;">Loading…</div></div>
+          <div class="card-title"><span>📅 Upcoming Exams</span><button class="btn btn-outline btn-xs ripple" onclick="loadStudentExams()">Refresh</button></div>
+          <div id="studentExamsList">
+            <div class="skeleton-card" style="border:1px solid var(--surface-border);border-radius:10px;">
+              <div class="skeleton skeleton-title"></div>
+              <div class="skeleton skeleton-text" style="width:70%;"></div>
+            </div>
+          </div>
         </div>
 
         <!-- Announcements -->
         <div class="card" id="sec-announcements" style="display:none;">
-          <div class="card-title"><span>📢 Announcements</span><button class="btn btn-outline btn-xs" onclick="loadStudentAnnouncements()">Refresh</button></div>
-          <div id="studentAnnouncementsList"><div class="empty" style="padding:14px 0;">Loading…</div></div>
+          <div class="card-title"><span>📢 Announcements</span><button class="btn btn-outline btn-xs ripple" onclick="loadStudentAnnouncements()">Refresh</button></div>
+          <div id="studentAnnouncementsList">
+            <div class="skeleton-card" style="border:1px solid var(--surface-border);border-radius:10px;">
+              <div class="skeleton skeleton-title"></div>
+              <div class="skeleton skeleton-text" style="width:70%;"></div>
+            </div>
+          </div>
         </div>
 
         <!-- Quick Portals -->
         <div class="card" id="quickPortalsCard" style="display:none;">
           <div class="card-title">Quick Portals</div>
           <div class="portal-grid">
-            <button class="portal" onclick="window.open('https://erp.bmctm.com/fees','_blank')">
+            <button class="portal ripple" onclick="window.open('https://erp.bmctm.com/fees','_blank')">
               <svg viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg><span>Pay Fees</span></button>
-            <button class="portal" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login','_blank')">
+            <button class="portal ripple" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login','_blank')">
               <svg viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg><span>Admit Card</span></button>
-            <button class="portal" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login','_blank')">
+            <button class="portal ripple" onclick="window.open('https://gurugramuniversity.samarth.edu.in/index.php/site/login','_blank')">
               <svg viewBox="0 0 24 24"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg><span>Results</span></button>
           </div>
         </div>
@@ -438,8 +505,8 @@
         <div class="chart-wrap" id="sec-chart">
           <div class="chart-head"><h4>Attendance Trend</h4>
             <div class="chart-controls">
-              <button class="active" id="btnMonthly" onclick="setTrendView('monthly')">Monthly</button>
-              <button id="btnDaily" onclick="setTrendView('daily')">Daily</button>
+              <button class="active ripple" id="btnMonthly" onclick="setTrendView('monthly')">Monthly</button>
+              <button class="ripple" id="btnDaily" onclick="setTrendView('daily')">Daily</button>
               <select id="trendMonth" onchange="updateTrend()" style="display:none;"></select>
             </div></div>
           <div class="chart-canvas-wrap"><canvas id="trendChart"></canvas></div>
@@ -487,7 +554,7 @@
             </select>
           </div>
           <div class="row">
-            <button class="btn btn-primary btn-block" onclick="generateSelfPDF()">Download PDF</button>
+            <button class="btn btn-primary btn-block ripple" onclick="generateSelfPDF()">Download PDF</button>
           </div>
         </div>
       </div>
@@ -495,32 +562,32 @@
       <!-- ===================== ADMIN TAB ===================== -->
       <div id="tab-admin" style="display:none;">
         <div class="subnav">
-          <button class="subnav-item active" onclick="showAdmin('a-directory')">Directory</button>
-          <button class="subnav-item" onclick="showAdmin('a-attendance')">All Attendance</button>
-          <button class="subnav-item" onclick="showAdmin('a-requests')">Requests</button>
-          <button class="subnav-item" onclick="showAdmin('a-registrations')">Registrations</button>
-          <button class="subnav-item" onclick="showAdmin('a-account')">Account Req.</button>
-          <button class="subnav-item" onclick="showAdmin('a-reports')">Reports</button>
-          <button class="subnav-item" onclick="showAdmin('a-entry')">Entry</button>
-          <button class="subnav-item" onclick="showAdmin('a-holiday')">Holidays</button>
-          <button class="subnav-item" onclick="showAdmin('a-passcode')">Passcode</button>
-          <button class="subnav-item" onclick="showAdmin('a-notes')">Notes</button>
-          <button class="subnav-item" onclick="showAdmin('a-fees')">Fees</button>
-          <button class="subnav-item" onclick="showAdmin('a-library')">Library</button>
-          <button class="subnav-item" onclick="showAdmin('a-results')">Results</button>
-          <button class="subnav-item" onclick="showAdmin('a-exams')">Exams</button>
-          <button class="subnav-item" onclick="showAdmin('a-alerts')">Alerts</button>
-          <button class="subnav-item" onclick="showAdmin('a-tools')">Tools</button>
-          <button class="subnav-item" onclick="showAdmin('a-leave')">Leave</button>
-          <button class="subnav-item" onclick="showAdmin('a-defaulters')">Defaulters</button>
-          <button class="subnav-item" onclick="showAdmin('a-subscriptions')">Subscriptions</button>
-          <button class="subnav-item" onclick="showAdmin('a-gamification')">Streaks</button>
+          <button class="subnav-item active ripple" onclick="showAdmin('a-directory')">Directory</button>
+          <button class="subnav-item ripple" onclick="showAdmin('a-attendance')">All Attendance</button>
+          <button class="subnav-item ripple" onclick="showAdmin('a-requests')">Requests</button>
+          <button class="subnav-item ripple" onclick="showAdmin('a-registrations')">Registrations</button>
+          <button class="subnav-item ripple" onclick="showAdmin('a-account')">Account Req.</button>
+          <button class="subnav-item ripple" onclick="showAdmin('a-reports')">Reports</button>
+          <button class="subnav-item ripple" onclick="showAdmin('a-entry')">Entry</button>
+          <button class="subnav-item ripple" onclick="showAdmin('a-holiday')">Holidays</button>
+          <button class="subnav-item ripple" onclick="showAdmin('a-passcode')">Passcode</button>
+          <button class="subnav-item ripple" onclick="showAdmin('a-notes')">Notes</button>
+          <button class="subnav-item ripple" onclick="showAdmin('a-fees')">Fees</button>
+          <button class="subnav-item ripple" onclick="showAdmin('a-library')">Library</button>
+          <button class="subnav-item ripple" onclick="showAdmin('a-results')">Results</button>
+          <button class="subnav-item ripple" onclick="showAdmin('a-exams')">Exams</button>
+          <button class="subnav-item ripple" onclick="showAdmin('a-alerts')">Alerts</button>
+          <button class="subnav-item ripple" onclick="showAdmin('a-tools')">Tools</button>
+          <button class="subnav-item ripple" onclick="showAdmin('a-leave')">Leave</button>
+          <button class="subnav-item ripple" onclick="showAdmin('a-defaulters')">Defaulters</button>
+          <button class="subnav-item ripple" onclick="showAdmin('a-subscriptions')">Subscriptions</button>
+          <button class="subnav-item ripple" onclick="showAdmin('a-gamification')">Streaks</button>
         </div>
 
         <!-- Directory -->
         <div id="a-directory">
           <div class="card">
-            <div class="card-title"><span>All Users</span><button class="btn btn-outline btn-xs" onclick="fetchUsers()">Refresh</button></div>
+            <div class="card-title"><span>All Users</span><button class="btn btn-outline btn-xs ripple" onclick="fetchUsers()">Refresh</button></div>
             <div class="table-wrap" style="max-height:400px;">
               <table><thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Device</th><th>Attendance</th><th></th></tr></thead>
                 <tbody id="directoryBody"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody></table>
@@ -535,10 +602,10 @@
             <div class="row mb-1">
               <input type="text" id="filterRoll" placeholder="Filter by Roll No" oninput="loadAllAttendance()" />
               <input type="date" id="filterDate" onchange="loadAllAttendance()" />
-              <button class="btn btn-outline btn-sm" onclick="loadAllAttendance()">Filter</button>
+              <button class="btn btn-outline btn-sm ripple" onclick="loadAllAttendance()">Filter</button>
             </div>
             <div class="row mb-2">
-              <button class="btn btn-danger btn-sm" onclick="deleteSelected()">Delete Selected</button>
+              <button class="btn btn-danger btn-sm ripple" onclick="deleteSelected()">Delete Selected</button>
             </div>
             <div class="table-wrap">
               <table><thead><tr><th style="width:30px;"><input type="checkbox" id="selectAll" onchange="toggleAll()"></th><th>Date</th><th>Roll</th><th>Name</th><th>Subject</th><th>Status</th><th></th></tr></thead>
@@ -556,12 +623,17 @@
                 <select id="reqFilterStatus" onchange="loadAdminRequests()" style="width:auto;padding:7px 12px;font-size:11.5px;">
                   <option value="">All</option><option value="Pending">Pending</option><option value="Approved">Approved</option><option value="Rejected">Rejected</option>
                 </select>
-                <button class="btn btn-outline btn-xs" onclick="loadAdminRequests()">Refresh</button>
-                <button class="btn btn-success btn-xs" onclick="bulkApproveAllRequests()">Approve All Pending</button>
-                <button class="btn btn-danger btn-xs" onclick="clearAllRequests()">Clear All</button>
+                <button class="btn btn-outline btn-xs ripple" onclick="loadAdminRequests()">Refresh</button>
+                <button class="btn btn-success btn-xs ripple" onclick="bulkApproveAllRequests()">Approve All Pending</button>
+                <button class="btn btn-danger btn-xs ripple" onclick="clearAllRequests()">Clear All</button>
               </div>
             </div>
-            <div id="adminRequestsList"><div class="empty">Loading…</div></div>
+            <div id="adminRequestsList">
+              <div class="skeleton-card" style="border:1px solid var(--surface-border);border-radius:11px;margin-bottom:10px;">
+                <div class="skeleton skeleton-title"></div>
+                <div class="skeleton skeleton-text" style="width:60%;"></div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -574,8 +646,8 @@
                 <select id="regFilterStatus" onchange="loadRegistrationRequests()" style="width:auto;padding:7px 12px;font-size:11.5px;">
                   <option value="Pending">Pending</option><option value="Approved">Approved</option><option value="Rejected">Rejected</option><option value="ALL">All</option>
                 </select>
-                <button class="btn btn-outline btn-xs" onclick="loadRegistrationRequests()">Refresh</button>
-                <button class="btn btn-danger btn-xs" onclick="clearAllRegistrations()">Clear All</button>
+                <button class="btn btn-outline btn-xs ripple" onclick="loadRegistrationRequests()">Refresh</button>
+                <button class="btn btn-danger btn-xs ripple" onclick="clearAllRegistrations()">Clear All</button>
               </div>
             </div>
             <p class="text-xs text-muted mb-2">New student registration requests. Approving creates the account.</p>
@@ -589,8 +661,8 @@
             <div class="card-title">
               <span>Password / Device Requests</span>
               <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                <button class="btn btn-outline btn-xs" onclick="loadAccountRequests()">Refresh</button>
-                <button class="btn btn-danger btn-xs" onclick="clearAllAccountRequests()">Clear All</button>
+                <button class="btn btn-outline btn-xs ripple" onclick="loadAccountRequests()">Refresh</button>
+                <button class="btn btn-danger btn-xs ripple" onclick="clearAllAccountRequests()">Clear All</button>
               </div>
             </div>
             <div id="accountRequestsList"><div class="empty">Loading…</div></div>
@@ -606,7 +678,7 @@
               <option value="6">July 2026</option><option value="7">August 2026</option><option value="8">September 2026</option>
               <option value="9">October 2026</option><option value="10">November 2026</option><option value="11">December 2026</option>
             </select>
-            <button class="btn btn-success btn-block" onclick="exportGrid()">Download Grid CSV</button>
+            <button class="btn btn-success btn-block ripple" onclick="exportGrid()">Download Grid CSV</button>
           </div>
           <div class="card">
             <div class="card-title">Individual Report (PDF)</div>
@@ -619,15 +691,15 @@
               <option value="9">October 2026</option><option value="10">November 2026</option><option value="11">December 2026</option>
             </select>
             <div class="report-btn-group" style="display:flex; gap:8px;">
-  <button class="btn btn-outline" style="flex:1;" onclick="generateStudentReport('pdf', 'view')">
-    <svg viewBox="0 0 24 24" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;margin-top:-2px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-    View
-  </button>
-  <button class="btn btn-primary" style="flex:1;" onclick="generateStudentReport('pdf', 'download')">
-    <svg viewBox="0 0 24 24" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;margin-top:-2px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-    Download
-  </button>
-</div>
+              <button class="btn btn-outline ripple" style="flex:1;" onclick="generateStudentReport('pdf', 'view')">
+                <svg viewBox="0 0 24 24" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;margin-top:-2px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                View
+              </button>
+              <button class="btn btn-primary ripple" style="flex:1;" onclick="generateStudentReport('pdf', 'download')">
+                <svg viewBox="0 0 24 24" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;margin-top:-2px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Download
+              </button>
+            </div>
           </div>
           <div class="card">
             <div class="card-title">Class Attendance Report</div>
@@ -639,15 +711,15 @@
               <option value="ALL">All Branches</option><option value="CSE">CSE</option><option value="AIDS">AIDS</option>
             </select>
             <div class="report-btn-group" style="display:flex; gap:8px;">
-  <button class="btn btn-outline" style="flex:1;" onclick="generateClassReport('view')">
-    <svg viewBox="0 0 24 24" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;margin-top:-2px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-    View
-  </button>
-  <button class="btn btn-primary" style="flex:1;" onclick="generateClassReport('download')">
-    <svg viewBox="0 0 24 24" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;margin-top:-2px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-    Download
-  </button>
-</div>
+              <button class="btn btn-outline ripple" style="flex:1;" onclick="generateClassReport('view')">
+                <svg viewBox="0 0 24 24" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;margin-top:-2px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                View
+              </button>
+              <button class="btn btn-primary ripple" style="flex:1;" onclick="generateClassReport('download')">
+                <svg viewBox="0 0 24 24" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;margin-top:-2px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Download
+              </button>
+            </div>
           </div>
         </div>
 
@@ -656,8 +728,8 @@
           <div class="card">
             <div class="card-title">Manual Backdate Attendance</div>
             <div class="row mb-1">
-              <button class="btn btn-primary btn-sm" id="branchCSE" onclick="setBranch('CSE')">CSE</button>
-              <button class="btn btn-outline btn-sm" id="branchAIDS" onclick="setBranch('AIDS')">AIDS</button>
+              <button class="btn btn-primary btn-sm ripple" id="branchCSE" onclick="setBranch('CSE')">CSE</button>
+              <button class="btn btn-outline btn-sm ripple" id="branchAIDS" onclick="setBranch('AIDS')">AIDS</button>
             </div>
             <input type="text" id="manualRoll" placeholder="Student Roll No" class="mb-1" onchange="validateBranch()" />
             <input type="date" id="manualDate" class="mb-1" onchange="loadSubjects()" />
@@ -665,22 +737,22 @@
             <div class="section-title">Select Subjects</div>
             <div id="subjectCheckboxes" class="mb-2" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:200px;overflow-y:auto;"></div>
             <div class="row">
-              <button class="btn btn-primary btn-sm" onclick="markManual()">Mark Selected</button>
-              <button class="btn btn-outline btn-sm" onclick="selectAllSubjects(true)">All</button>
-              <button class="btn btn-outline btn-sm" onclick="selectAllSubjects(false)">Clear</button>
+              <button class="btn btn-primary btn-sm ripple" onclick="markManual()">Mark Selected</button>
+              <button class="btn btn-outline btn-sm ripple" onclick="selectAllSubjects(true)">All</button>
+              <button class="btn btn-outline btn-sm ripple" onclick="selectAllSubjects(false)">Clear</button>
             </div>
-            <button class="btn btn-success btn-block mt-2" onclick="markAllForDay()">Mark All Subjects for this Day</button>
+            <button class="btn btn-success btn-block mt-2 ripple" onclick="markAllForDay()">Mark All Subjects for this Day</button>
           </div>
           <div class="card">
             <div class="card-title">Bulk Actions</div>
             <select id="bulkBranch" class="mb-1" onchange="loadBulkStudents()"><option value="CSE">CSE</option><option value="AIDS">AIDS</option></select>
             <div class="section-title">Select Students</div>
             <div id="bulkStudents" class="bulk-select-list mb-2"></div>
-            <div class="row mb-1"><input type="date" id="bulkDate" /><button class="btn btn-primary btn-sm" onclick="addBulkDate()">Add Date</button></div>
+            <div class="row mb-1"><input type="date" id="bulkDate" /><button class="btn btn-primary btn-sm ripple" onclick="addBulkDate()">Add Date</button></div>
             <div id="bulkDates" class="chips mb-2"></div>
             <div class="row">
-              <button class="btn btn-success btn-sm" onclick="bulkMarkPreview()">Mark Bulk</button>
-              <button class="btn btn-danger btn-sm" onclick="bulkDeletePreview()">Delete Bulk</button>
+              <button class="btn btn-success btn-sm ripple" onclick="bulkMarkPreview()">Mark Bulk</button>
+              <button class="btn btn-danger btn-sm ripple" onclick="bulkDeletePreview()">Delete Bulk</button>
             </div>
           </div>
         </div>
@@ -690,17 +762,17 @@
           <div class="card">
             <div class="card-title">Declare Holiday</div>
             <input type="date" id="holidayDate" class="mb-1" /><input type="text" id="holidayReason" placeholder="Reason" class="mb-1" />
-            <button class="btn btn-warning btn-block" onclick="declareHoliday()">Mark Holiday</button>
+            <button class="btn btn-warning btn-block ripple" onclick="declareHoliday()">Mark Holiday</button>
           </div>
           <div class="card">
             <div class="card-title">Bulk Add Holidays</div>
             <div class="row mb-1"><input type="date" id="bulkHolidayFrom" /><span style="flex:0 0 auto;font-size:11px;align-self:center;">to</span><input type="date" id="bulkHolidayTo" /></div>
-            <button class="btn btn-primary btn-sm mb-2" onclick="addBulkHolidayRange()">+ Add Range</button>
+            <button class="btn btn-primary btn-sm mb-2 ripple" onclick="addBulkHolidayRange()">+ Add Range</button>
             <textarea class="bulk-holiday-textarea" id="bulkHolidayText" placeholder="2026-09-01&#10;2026-09-02"></textarea>
-            <button class="btn btn-success btn-block mt-2" onclick="submitBulkHolidays()">Add All Holidays</button>
+            <button class="btn btn-success btn-block mt-2 ripple" onclick="submitBulkHolidays()">Add All Holidays</button>
           </div>
           <div class="card">
-            <div class="card-title"><span>Existing Holidays</span><button class="btn btn-danger btn-xs" onclick="deleteSelectedHolidays()">Delete Selected</button></div>
+            <div class="card-title"><span>Existing Holidays</span><button class="btn btn-danger btn-xs ripple" onclick="deleteSelectedHolidays()">Delete Selected</button></div>
             <div id="holidayList"></div>
           </div>
         </div>
@@ -718,8 +790,8 @@
               <div class="passcode-meta" id="fdPasscodeMeta">Tap Generate to create</div>
             </div>
             <div class="passcode-actions">
-              <button class="btn btn-primary btn-sm" onclick="genPass('full_day', false)">Generate</button>
-              <button class="btn btn-warning btn-sm" onclick="genPass('full_day', true)">Change</button>
+              <button class="btn btn-primary btn-sm ripple" onclick="genPass('full_day', false)">Generate</button>
+              <button class="btn btn-warning btn-sm ripple" onclick="genPass('full_day', true)">Change</button>
             </div>
           </div>
           <div class="passcode-card" id="singlePasscodeCard">
@@ -729,16 +801,16 @@
               <div class="passcode-meta" id="slPasscodeMeta">Valid for current lecture (5 min)</div>
             </div>
             <div class="passcode-actions">
-              <button class="btn btn-success btn-sm" onclick="genPass('single_lecture', false)">Generate</button>
-              <button class="btn btn-warning btn-sm" onclick="genPass('single_lecture', true)">Change</button>
+              <button class="btn btn-success btn-sm ripple" onclick="genPass('single_lecture', false)">Generate</button>
+              <button class="btn btn-warning btn-sm ripple" onclick="genPass('single_lecture', true)">Change</button>
             </div>
           </div>
-          <div class="passcode-card" style="border-color:var(--brand-300);background:linear-gradient(135deg,#fff,var(--brand-50));">
+          <div class="passcode-card" style="border-color:var(--brand-300);background:linear-gradient(135deg,var(--surface-card),var(--brand-50));">
             <div class="card-title" style="margin-bottom:12px;color:var(--brand-700);">📢 Publish Passcode to Students</div>
             <p class="text-xs text-muted" style="margin-bottom:12px;line-height:1.6;">Students will see this passcode on their home page and in the menu.</p>
             <select id="pubPassType" class="mb-1"><option value="single_lecture">Single Lecture (current period)</option><option value="full_day">Full Day</option></select>
             <input type="number" id="pubPassDuration" placeholder="Duration in minutes" value="30" class="mb-1" />
-            <button class="btn btn-primary btn-block" onclick="publishPasscode()">📢 Publish Passcode</button>
+            <button class="btn btn-primary btn-block ripple" onclick="publishPasscode()">📢 Publish Passcode</button>
           </div>
         </div>
 
@@ -755,15 +827,15 @@
             <div class="form-group"><label class="form-label">File</label>
               <input type="file" id="noteFile" accept="*/*" />
             </div>
-            <button class="btn btn-primary btn-block" onclick="uploadNote()">📤 Upload</button>
+            <button class="btn btn-primary btn-block ripple" onclick="uploadNote()">📤 Upload</button>
           </div>
           <div class="card">
-            <div class="card-title"><span>📄 Student Upload Requests</span><button class="btn btn-outline btn-xs" onclick="loadDocRequests()">Refresh</button></div>
+            <div class="card-title"><span>📄 Student Upload Requests</span><button class="btn btn-outline btn-xs ripple" onclick="loadDocRequests()">Refresh</button></div>
             <p class="text-xs text-muted mb-2">Approve student-uploaded documents to make them visible to all roles.</p>
             <div id="docRequestsList"><div class="empty">Loading…</div></div>
           </div>
           <div class="card">
-            <div class="card-title"><span>📂 All Uploaded Notes</span><button class="btn btn-outline btn-xs" onclick="loadAdminNotes()">Refresh</button></div>
+            <div class="card-title"><span>📂 All Uploaded Notes</span><button class="btn btn-outline btn-xs ripple" onclick="loadAdminNotes()">Refresh</button></div>
             <div id="adminNotesList"><div class="empty">Loading…</div></div>
           </div>
         </div>
@@ -775,9 +847,9 @@
             <p class="text-xs text-muted mb-2">Manually grant or cancel premium plans for students.</p>
             <div class="row mb-2">
               <input type="text" id="subMgmtRollNo" placeholder="Student Roll No (e.g. 24CSE01)" style="text-transform:uppercase;" />
-              <button class="btn btn-outline btn-sm" onclick="lookupSubStudent()" style="flex:0 0 auto;">Search</button>
+              <button class="btn btn-outline btn-sm ripple" onclick="lookupSubStudent()" style="flex:0 0 auto;">Search</button>
             </div>
-            <div id="subMgmtResult" style="display:none; padding:16px; background:var(--slate-50); border-radius:12px; border:1px solid var(--slate-200);">
+            <div id="subMgmtResult" style="display:none; padding:16px; background:var(--slate-50); border-radius:12px; border:1px solid var(--surface-border);">
               <div style="font-weight:800; font-size:14px; margin-bottom:8px;" id="subMgmtName">Student Name</div>
               <div style="font-size:12px; margin-bottom:12px;">Current Plan: <span id="subMgmtCurrent" class="badge badge-neutral">Free</span></div>
               <div class="section-title">Grant New Plan (30 Days)</div>
@@ -787,10 +859,10 @@
                   <option value="gold">🥇 Gold</option>
                   <option value="platinum">💎 Platinum</option>
                 </select>
-                <button class="btn btn-success btn-sm" onclick="grantSubscription()" style="flex:0 0 auto;">Grant Plan</button>
+                <button class="btn btn-success btn-sm ripple" onclick="grantSubscription()" style="flex:0 0 auto;">Grant Plan</button>
               </div>
               <div class="section-title" style="margin-top:16px; color:var(--rose-600);">Danger Zone</div>
-              <button class="btn btn-danger btn-block btn-sm" onclick="cancelSubscription()">Cancel Subscription (Downgrade to Free)</button>
+              <button class="btn btn-danger btn-block btn-sm ripple" onclick="cancelSubscription()">Cancel Subscription (Downgrade to Free)</button>
             </div>
           </div>
         </div>
@@ -802,9 +874,9 @@
             <p class="text-xs text-muted mb-2">Recover broken streaks or exclude a student from the leaderboard.</p>
             <div class="row mb-2">
               <input type="text" id="gmRollNo" placeholder="Student Roll No" style="text-transform:uppercase;">
-              <button class="btn btn-primary btn-sm" onclick="adminSearchGamification()" style="flex:0 0 auto;">Search</button>
+              <button class="btn btn-primary btn-sm ripple" onclick="adminSearchGamification()" style="flex:0 0 auto;">Search</button>
             </div>
-            <div id="gmResult" style="display:none; padding:16px; background:var(--slate-50); border-radius:12px; border:1px solid var(--slate-200);">
+            <div id="gmResult" style="display:none; padding:16px; background:var(--slate-50); border-radius:12px; border:1px solid var(--surface-border);">
               <div style="font-weight:800; font-size:14px; margin-bottom:12px;" id="gmName">Student Name</div>
               <div class="row mb-2">
                 <div style="flex:1;">
@@ -821,7 +893,7 @@
                   <input type="checkbox" id="gmExcluded"> Exclude from Leaderboard
                 </label>
               </div>
-              <button class="btn btn-success btn-block btn-sm" onclick="adminSaveGamification()">Save Changes</button>
+              <button class="btn btn-success btn-block btn-sm ripple" onclick="adminSaveGamification()">Save Changes</button>
             </div>
           </div>
         </div>
@@ -834,7 +906,7 @@
             <input type="number" id="feeAmount" placeholder="Amount (₹)" class="mb-1" />
             <input type="date" id="feeDueDate" class="mb-1" />
             <input type="text" id="feeDescription" placeholder="Description (e.g. Semester Fee)" class="mb-1" />
-            <button class="btn btn-primary btn-block" onclick="addFee()">Add Fee</button>
+            <button class="btn btn-primary btn-block ripple" onclick="addFee()">Add Fee</button>
           </div>
           <div class="card">
             <div class="card-title"><span>💰 Bulk Add Fee</span></div>
@@ -842,7 +914,7 @@
             <input type="number" id="feeBulkAmount" placeholder="Amount (₹)" class="mb-1" />
             <input type="date" id="feeBulkDueDate" class="mb-1" />
             <input type="text" id="feeBulkDescription" placeholder="Description" class="mb-1" />
-            <button class="btn btn-primary btn-block" onclick="bulkAddFee()">Bulk Add</button>
+            <button class="btn btn-primary btn-block ripple" onclick="bulkAddFee()">Bulk Add</button>
           </div>
           <div class="card">
             <div class="card-title"><span>📋 All Fees</span>
@@ -850,7 +922,7 @@
                 <select id="feeFilterStatus" onchange="loadAllFees()" style="width:auto;padding:7px 12px;font-size:11.5px;">
                   <option value="">All</option><option value="Pending">Pending</option><option value="Paid">Paid</option><option value="Partial">Partial</option><option value="Overdue">Overdue</option>
                 </select>
-                <button class="btn btn-outline btn-xs" onclick="loadAllFees()">Refresh</button>
+                <button class="btn btn-outline btn-xs ripple" onclick="loadAllFees()">Refresh</button>
               </div>
             </div>
             <div id="adminFeesList"><div class="empty">Loading…</div></div>
@@ -865,10 +937,10 @@
             <input type="text" id="libBookTitle" placeholder="Book Title" class="mb-1" />
             <input type="text" id="libBookAuthor" placeholder="Author (optional)" class="mb-1" />
             <input type="date" id="libDueDate" class="mb-1" />
-            <button class="btn btn-primary btn-block" onclick="issueBook()">Issue Book</button>
+            <button class="btn btn-primary btn-block ripple" onclick="issueBook()">Issue Book</button>
           </div>
           <div class="card">
-            <div class="card-title"><span>📚 All Library Records</span><button class="btn btn-outline btn-xs" onclick="loadAllLibrary()">Refresh</button></div>
+            <div class="card-title"><span>📚 All Library Records</span><button class="btn btn-outline btn-xs ripple" onclick="loadAllLibrary()">Refresh</button></div>
             <div id="adminLibraryList"><div class="empty">Loading…</div></div>
           </div>
         </div>
@@ -888,7 +960,7 @@
               <input type="number" id="resTotal" placeholder="Total Marks" value="100" />
             </div>
             <input type="text" id="resGrade" placeholder="Grade (optional, e.g. A+)" class="mb-1" />
-            <button class="btn btn-primary btn-block" onclick="publishResult()">Publish Result</button>
+            <button class="btn btn-primary btn-block ripple" onclick="publishResult()">Publish Result</button>
           </div>
           <div class="card">
             <div class="card-title">Recent Results</div>
@@ -912,7 +984,7 @@
               <input type="time" id="examEnd" value="12:00" />
             </div>
             <input type="text" id="examVenue" placeholder="Venue (e.g. Hall A)" class="mb-1" />
-            <button class="btn btn-primary btn-block" onclick="createExam()">Schedule Exam</button>
+            <button class="btn btn-primary btn-block ripple" onclick="createExam()">Schedule Exam</button>
           </div>
           <div class="card">
             <div class="card-title">Upcoming Exams</div>
@@ -922,30 +994,30 @@
 
         <!-- Alerts -->
         <div id="a-alerts" style="display:none;">
-          <div class="card" style="border-color:#fecdd3;background:linear-gradient(135deg,#fff,#fff1f2);">
-            <div class="card-title" style="color:#be123c;">🚨 Broadcast Emergency Alert</div>
-            <p class="text-xs text-muted mb-2" style="line-height:1.65;color:#9f1239;">Sends push notification to ALL users immediately.</p>
+          <div class="card" style="border-color:var(--rose-200);background:linear-gradient(135deg,var(--surface-card),var(--rose-50));">
+            <div class="card-title" style="color:var(--rose-700);">🚨 Broadcast Emergency Alert</div>
+            <p class="text-xs text-muted mb-2" style="line-height:1.65;color:var(--rose-800);">Sends push notification to ALL users immediately.</p>
             <input type="text" id="alertTitle" placeholder="Alert Title (e.g. Campus Closed)" class="mb-1" />
             <textarea id="alertMessage" placeholder="Alert message…" class="bulk-holiday-textarea mb-1" style="min-height:90px;"></textarea>
-            <button class="btn btn-danger btn-block" onclick="sendEmergencyAlert()">🚨 Send Alert</button>
+            <button class="btn btn-danger btn-block ripple" onclick="sendEmergencyAlert()">🚨 Send Alert</button>
           </div>
           <div class="card">
             <div class="card-title">Send Announcement</div>
             <input type="text" id="annSubject" placeholder="Subject (e.g. BDA)" class="mb-1" />
             <select id="annBranch" class="mb-1"><option value="CSE">CSE</option><option value="AIDS">AIDS</option></select>
             <textarea id="annMessage" placeholder="Announcement message…" class="bulk-holiday-textarea mb-1" style="min-height:90px;"></textarea>
-            <button class="btn btn-primary btn-block" onclick="postFacultyAnnouncement()">Send Announcement</button>
+            <button class="btn btn-primary btn-block ripple" onclick="postFacultyAnnouncement()">Send Announcement</button>
           </div>
         </div>
 
         <!-- Tools -->
         <div id="a-tools" style="display:none;">
-          <div class="card" style="border-color:var(--brand-200);background:linear-gradient(135deg,#fff,#f8fafc);">
+          <div class="card" style="border-color:var(--brand-200);background:linear-gradient(135deg,var(--surface-card),var(--slate-50));">
             <div class="card-title" style="color:var(--brand-700);">🔍 Student Lookup</div>
             <p class="text-xs text-muted" style="margin-bottom:12px;line-height:1.6;">Enter any roll number to view full attendance summary (subject-wise %).</p>
             <div class="row mb-2">
               <input type="text" id="adminLookupRoll" placeholder="e.g. 24CSE48" onkeydown="if(event.key==='Enter')adminLookupStudent()" />
-              <button class="btn btn-primary btn-sm" onclick="adminLookupStudent()" style="flex:0 0 auto;">Lookup</button>
+              <button class="btn btn-primary btn-sm ripple" onclick="adminLookupStudent()" style="flex:0 0 auto;">Lookup</button>
             </div>
             <div id="adminLookupResult"></div>
           </div>
@@ -961,20 +1033,20 @@
               <select id="facultySubject" class="mb-1"><option value="">Select Subject…</option></select>
             </div>
             <input type="text" id="toolPassword" placeholder="Password (default 123456)" class="mb-1" />
-            <button class="btn btn-primary btn-block" onclick="registerUser()">Register</button>
+            <button class="btn btn-primary btn-block ripple" onclick="registerUser()">Register</button>
           </div>
           <div class="card">
             <div class="card-title">Assign Subject to Teacher</div>
             <select id="assignTeacher" class="mb-1"><option value="">Select Teacher…</option></select>
             <select id="assignSubject" class="mb-1"><option value="">Select Subject…</option></select>
             <div class="row">
-              <button class="btn btn-primary btn-sm" onclick="assignSubject()">Assign</button>
-              <button class="btn btn-danger btn-sm" onclick="removeSubject()">Remove</button>
+              <button class="btn btn-primary btn-sm ripple" onclick="assignSubject()">Assign</button>
+              <button class="btn btn-danger btn-sm ripple" onclick="removeSubject()">Remove</button>
             </div>
           </div>
-          <div class="card" style="border-color:#fcd34d;background:linear-gradient(135deg,#fff,#fffbeb);">
-            <div class="card-title" style="color:#b45309;">📱 Bulk Device Reset</div>
-            <p class="text-xs text-muted mb-2" style="line-height:1.6;color:#92400e;">Reset device binding for all or selected students. They'll need to login fresh.</p>
+          <div class="card" style="border-color:var(--amber-400);background:linear-gradient(135deg,var(--surface-card),var(--amber-50));">
+            <div class="card-title" style="color:var(--amber-700);">📱 Bulk Device Reset</div>
+            <p class="text-xs text-muted mb-2" style="line-height:1.6;color:var(--amber-800);">Reset device binding for all or selected students. They'll need to login fresh.</p>
             <select id="bulkResetScope" class="mb-1" onchange="onBulkResetScopeChange()">
               <option value="ALL">All Students</option>
               <option value="CSE">All CSE Students</option>
@@ -985,25 +1057,25 @@
               <div class="section-title">Select Students</div>
               <div id="bulkResetStudents" class="bulk-select-list"></div>
             </div>
-            <button class="btn btn-warning btn-block" onclick="executeBulkDeviceReset()">📱 Reset Devices</button>
+            <button class="btn btn-warning btn-block ripple" onclick="executeBulkDeviceReset()">📱 Reset Devices</button>
           </div>
-          <div class="card"><div class="card-title">Reset Device (Single)</div><input type="text" id="resetDeviceRoll" placeholder="Student Roll No" class="mb-1" /><button class="btn btn-outline btn-block" onclick="resetDevice()">Reset</button></div>
-          <div class="card"><div class="card-title">Broadcast Notice</div><input type="text" id="noticeMsg" placeholder="Notice text" class="mb-1" /><div class="row"><button class="btn btn-primary btn-sm" onclick="postNotice()">Publish</button><button class="btn btn-danger btn-sm" onclick="clearNotice()">Clear</button></div></div>
-          <div class="card"><div class="card-title">Update Roll Number</div><input type="text" id="oldRoll" placeholder="Old ID" class="mb-1" /><input type="text" id="newRoll" placeholder="New ID" class="mb-1" /><button class="btn btn-primary btn-block" onclick="updateRoll()">Update</button></div>
-          <div class="card"><div class="card-title">Reset Password</div><input type="text" id="pwResetRoll" placeholder="ID" class="mb-1" /><input type="text" id="pwResetPass" placeholder="New password" class="mb-1" /><button class="btn btn-warning btn-block" onclick="resetPassword()">Reset</button></div>
-          <div class="card" style="border-color:#fecdd3;background:linear-gradient(135deg,#fff,#fff1f2);">
-            <div class="card-title" style="color:#be123c;">Fix All Student Attendance</div>
-            <div style="background:#fff;border:1px solid #fecdd3;border-radius:8px;padding:10px;margin-bottom:10px;">
-              <label class="form-label" style="color:#be123c;font-size:10px;margin-bottom:4px;">Test on Single Student</label>
+          <div class="card"><div class="card-title">Reset Device (Single)</div><input type="text" id="resetDeviceRoll" placeholder="Student Roll No" class="mb-1" /><button class="btn btn-outline btn-block ripple" onclick="resetDevice()">Reset</button></div>
+          <div class="card"><div class="card-title">Broadcast Notice</div><input type="text" id="noticeMsg" placeholder="Notice text" class="mb-1" /><div class="row"><button class="btn btn-primary btn-sm ripple" onclick="postNotice()">Publish</button><button class="btn btn-danger btn-sm ripple" onclick="clearNotice()">Clear</button></div></div>
+          <div class="card"><div class="card-title">Update Roll Number</div><input type="text" id="oldRoll" placeholder="Old ID" class="mb-1" /><input type="text" id="newRoll" placeholder="New ID" class="mb-1" /><button class="btn btn-primary btn-block ripple" onclick="updateRoll()">Update</button></div>
+          <div class="card"><div class="card-title">Reset Password</div><input type="text" id="pwResetRoll" placeholder="ID" class="mb-1" /><input type="text" id="pwResetPass" placeholder="New password" class="mb-1" /><button class="btn btn-warning btn-block ripple" onclick="resetPassword()">Reset</button></div>
+          <div class="card" style="border-color:var(--rose-200);background:linear-gradient(135deg,var(--surface-card),var(--rose-50));">
+            <div class="card-title" style="color:var(--rose-700);">Fix All Student Attendance</div>
+            <div style="background:var(--surface-card);border:1px solid var(--rose-200);border-radius:8px;padding:10px;margin-bottom:10px;">
+              <label class="form-label" style="color:var(--rose-700);font-size:10px;margin-bottom:4px;">Test on Single Student</label>
               <input type="text" id="fixAllTestRoll" placeholder="e.g. 24CSE48" style="font-size:11.5px;" />
-              <button class="btn btn-block mt-1" style="border:1px solid #be123c;background:#fff;color:#be123c;font-size:11.5px;" onclick="fixAllAttendanceSubjects(true)">Test</button>
+              <button class="btn btn-block mt-1 ripple" style="border:1px solid var(--rose-700);background:var(--surface-card);color:var(--rose-700);font-size:11.5px;" onclick="fixAllAttendanceSubjects(true)">Test</button>
             </div>
-            <button class="btn btn-danger btn-block" onclick="fixAllAttendanceSubjects(false)">Run Fix (All Students)</button>
+            <button class="btn btn-danger btn-block ripple" onclick="fixAllAttendanceSubjects(false)">Run Fix (All Students)</button>
             <p id="fixAllStatus" class="text-xs text-muted" style="margin-top:10px;text-align:center;font-weight:700;"></p>
             <div id="fixAllReport" style="margin-top:10px;"></div>
           </div>
-          <div class="card"><div class="card-title">Login as Student</div><input type="text" id="impRollInput" placeholder="Student Roll No" class="mb-1" /><button class="btn btn-warning btn-block" onclick="impersonate()">Login as Student</button></div>
-          <div class="card"><div class="card-title">Delete Account</div><input type="text" id="deleteRoll" placeholder="ID" class="mb-1" /><button class="btn btn-danger btn-block" onclick="deleteUser()">Delete</button></div>
+          <div class="card"><div class="card-title">Login as Student</div><input type="text" id="impRollInput" placeholder="Student Roll No" class="mb-1" /><button class="btn btn-warning btn-block ripple" onclick="impersonate()">Login as Student</button></div>
+          <div class="card"><div class="card-title">Delete Account</div><input type="text" id="deleteRoll" placeholder="ID" class="mb-1" /><button class="btn btn-danger btn-block ripple" onclick="deleteUser()">Delete</button></div>
         </div>
 
         <!-- Leave -->
@@ -1011,7 +1083,7 @@
           <div class="card">
             <div class="card-title">
               <span>Leave Requests</span>
-              <button class="btn btn-danger btn-xs" onclick="clearAllLeaves()">Clear All</button>
+              <button class="btn btn-danger btn-xs ripple" onclick="clearAllLeaves()">Clear All</button>
             </div>
             <div id="leaveRequestsList"><div class="empty">Loading…</div></div>
           </div>
@@ -1021,7 +1093,7 @@
         <div id="a-defaulters" style="display:none;">
           <div class="card">
             <div class="card-title">Defaulters</div>
-            <div class="row mb-2"><input type="number" id="defThreshold" value="75" /><button class="btn btn-primary btn-sm" onclick="loadDefaulters()">View</button></div>
+            <div class="row mb-2"><input type="number" id="defThreshold" value="75" /><button class="btn btn-primary btn-sm ripple" onclick="loadDefaulters()">View</button></div>
             <div id="defaulterList"><div class="empty">Click View</div></div>
           </div>
         </div>
@@ -1037,12 +1109,12 @@
         </div>
         <div class="card"><div class="card-title">Today's Present Students</div><div id="facPresentList" class="text-sm text-muted">Loading…</div></div>
 
-        <div class="card" style="border-color:var(--brand-200);background:linear-gradient(135deg,#fff,#f8fafc);">
+        <div class="card" style="border-color:var(--brand-200);background:linear-gradient(135deg,var(--surface-card),var(--slate-50));">
           <div class="card-title" style="color:var(--brand-700);">🔍 Student Lookup</div>
           <p class="text-xs text-muted" style="margin-bottom:12px;line-height:1.6;">Enter any roll number to view full attendance summary (subject-wise %).</p>
           <div class="row mb-2">
             <input type="text" id="facLookupRoll" placeholder="e.g. 24CSE48" onkeydown="if(event.key==='Enter')facLookupStudent()" />
-            <button class="btn btn-primary btn-sm" onclick="facLookupStudent()" style="flex:0 0 auto;">Lookup</button>
+            <button class="btn btn-primary btn-sm ripple" onclick="facLookupStudent()" style="flex:0 0 auto;">Lookup</button>
           </div>
           <div id="facLookupResult"></div>
         </div>
@@ -1054,32 +1126,32 @@
             <div class="passcode-meta">Valid for current lecture</div>
           </div>
           <div class="passcode-actions">
-            <button class="btn btn-success btn-sm" onclick="genTeacherPass(false)">Generate</button>
-            <button class="btn btn-warning btn-sm" onclick="genTeacherPass(true)">Change</button>
+            <button class="btn btn-success btn-sm ripple" onclick="genTeacherPass(false)">Generate</button>
+            <button class="btn btn-warning btn-sm ripple" onclick="genTeacherPass(true)">Change</button>
           </div>
         </div>
         <div class="card">
           <div class="card-title">Mark Student</div>
           <select id="facMarkStudent" class="mb-1"><option value="">Select Student…</option></select>
           <select id="facMarkSubject" class="mb-1"><option value="">Select Subject…</option></select>
-          <button class="btn btn-primary btn-block" onclick="facMark()">Mark Present</button>
+          <button class="btn btn-primary btn-block ripple" onclick="facMark()">Mark Present</button>
         </div>
-        <div class="card" style="border:1px solid var(--brand-200);background:linear-gradient(135deg,#fff,#f8fafc);">
+        <div class="card" style="border:1px solid var(--brand-200);background:linear-gradient(135deg,var(--surface-card),var(--slate-50));">
           <div class="card-title" style="color:var(--brand-700);">Bulk Actions (My Subjects)</div>
           <p class="text-xs text-muted" style="margin-bottom:12px;line-height:1.6;">Mark/delete attendance in bulk for your assigned subjects only. No location check needed.</p>
           <div class="section-title">Select Students</div>
           <div id="facBulkStudents" class="bulk-select-list mb-2"><div class="empty">Loading…</div></div>
-          <div class="row mb-1"><input type="date" id="facBulkDate" /><button class="btn btn-primary btn-sm" onclick="facAddBulkDate()">Add Date</button></div>
+          <div class="row mb-1"><input type="date" id="facBulkDate" /><button class="btn btn-primary btn-sm ripple" onclick="facAddBulkDate()">Add Date</button></div>
           <div id="facBulkDates" class="chips mb-2"></div>
           <select id="facBulkStatus" class="mb-2" style="font-size:11.5px;"><option value="Present">Present</option><option value="Duty Leave">Duty Leave</option></select>
           <div class="row">
-            <button class="btn btn-success btn-sm" onclick="facBulkMark()">Mark Bulk</button>
-            <button class="btn btn-danger btn-sm" onclick="facBulkDelete()">Delete Bulk</button>
+            <button class="btn btn-success btn-sm ripple" onclick="facBulkMark()">Mark Bulk</button>
+            <button class="btn btn-danger btn-sm ripple" onclick="facBulkDelete()">Delete Bulk</button>
           </div>
         </div>
         <div class="card">
           <div class="card-title">My Students</div>
-          <button class="btn btn-outline btn-sm mb-2" onclick="fetchTeacherStudents()">Refresh</button>
+          <button class="btn btn-outline btn-sm mb-2 ripple" onclick="fetchTeacherStudents()">Refresh</button>
           <div class="table-wrap" style="max-height:280px;">
             <table><thead><tr><th>Roll</th><th>Name</th><th></th></tr></thead>
               <tbody id="facStudentsBody"><tr><td colspan="3" class="empty">Click Refresh</td></tr></tbody></table>
@@ -1107,7 +1179,7 @@
             <input type="date" id="facReportStart" /><input type="date" id="facReportEnd" />
           </div>
           <div class="row">
-            <button class="btn btn-primary btn-block" onclick="facReport('pdf')">Download PDF</button>
+            <button class="btn btn-primary btn-block ripple" onclick="facReport('pdf')">Download PDF</button>
           </div>
         </div>
       </div>
@@ -1115,7 +1187,7 @@
       <!-- ===================== LEAVE TAB ===================== -->
       <div id="tab-leave" style="display:none;">
         <div class="card">
-          <div class="card-title"><span>Apply for Leave</span><button class="btn btn-outline btn-xs" onclick="switchTab('tab-mark')">← Back</button></div>
+          <div class="card-title"><span>Apply for Leave</span><button class="btn btn-outline btn-xs ripple" onclick="switchTab('tab-mark')">← Back</button></div>
           <div class="row mb-1">
             <div><label class="form-label">From</label><input type="date" id="leaveFrom" /></div>
             <div><label class="form-label">To</label><input type="date" id="leaveTo" /></div>
@@ -1124,13 +1196,35 @@
             <select id="leaveType"><option value="Sick">Sick</option><option value="Personal">Personal</option><option value="Event">Event</option><option value="Other">Other</option></select>
           </div>
           <div class="form-group"><label class="form-label">Reason</label><input type="text" id="leaveReason" placeholder="Enter reason" /></div>
-          <button class="btn btn-primary btn-block" onclick="applyLeave()">Submit Leave</button>
+          <button class="btn btn-primary btn-block ripple" onclick="applyLeave()">Submit Leave</button>
         </div>
         <div class="card"><div class="card-title">My Leave History</div><div id="myLeaveList"><div class="empty">Loading…</div></div></div>
       </div>
     </div>
   </div>
 </div>
+
+<!-- ===================== BOTTOM NAVIGATION (mobile only) ===================== -->
+<nav class="bottom-nav" id="bottomNav" style="display:none;" aria-label="Main navigation">
+  <div class="bottom-nav-inner">
+    <button type="button" class="bottom-nav-btn active" data-nav="home" onclick="bottomNavClick('home')" aria-label="Home">
+      <svg viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Home</span>
+    </button>
+    <button type="button" class="bottom-nav-btn" data-nav="attendance" onclick="bottomNavClick('attendance')" aria-label="Attendance">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="m9 16 2 2 4-4"/></svg>
+      <span>Attendance</span>
+    </button>
+    <button type="button" class="bottom-nav-btn" data-nav="notes" onclick="bottomNavClick('notes')" aria-label="Notes">
+      <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <span>Notes</span>
+    </button>
+    <button type="button" class="bottom-nav-btn" data-nav="menu" onclick="bottomNavClick('menu')" aria-label="Menu">
+      <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      <span>Menu</span>
+    </button>
+  </div>
+</nav>
 
 <!-- ===================== MODALS ===================== -->
 
@@ -1139,7 +1233,7 @@
   <div class="modal wide">
     <div class="modal-header">
       <div><h3>College Working Days</h3><p id="wdModalSub" class="text-xs text-muted" style="margin-top:4px;">Calendar</p></div>
-      <button type="button" class="modal-close" onclick="closeModal('wdModal')" aria-label="Close">✕</button>
+      <button type="button" class="modal-close ripple" onclick="closeModal('wdModal')" aria-label="Close">✕</button>
     </div>
     <div class="modal-body">
       <div class="wd-summary">
@@ -1156,33 +1250,33 @@
 <div class="modal-backdrop safe-top-modal" id="dayInfoModal">
   <div class="modal">
     <div class="modal-header"><div><h3 id="dayInfoTitle">Day Info</h3><p id="dayInfoSub" class="text-xs text-muted" style="margin-top:4px;">—</p></div>
-      <button type="button" class="modal-close" onclick="closeModal('dayInfoModal')" aria-label="Close">✕</button></div>
+      <button type="button" class="modal-close ripple" onclick="closeModal('dayInfoModal')" aria-label="Close">✕</button></div>
     <div class="modal-body" id="dayInfoBody"></div>
   </div>
 </div>
 
-<!-- Bulk Mark Modal — ★ FIX 2: used by both admin and faculty bulk mark -->
+<!-- Bulk Mark Modal -->
 <div class="modal-backdrop safe-top-modal" id="bulkMarkModal">
   <div class="modal wide">
     <div class="modal-header"><div><h3>Confirm Bulk Marking</h3></div>
-      <button type="button" class="modal-close" onclick="closeModal('bulkMarkModal')" aria-label="Close">✕</button></div>
+      <button type="button" class="modal-close ripple" onclick="closeModal('bulkMarkModal')" aria-label="Close">✕</button></div>
     <div class="modal-body"><div id="bulkMarkSummary"></div></div>
     <div class="modal-footer">
-      <button class="btn btn-outline btn-sm" onclick="closeModal('bulkMarkModal')">Cancel</button>
-      <button class="btn btn-success btn-sm" onclick="confirmBulkMark()">Confirm</button>
+      <button class="btn btn-outline btn-sm ripple" onclick="closeModal('bulkMarkModal')">Cancel</button>
+      <button class="btn btn-success btn-sm ripple" onclick="confirmBulkMark()">Confirm</button>
     </div>
   </div>
 </div>
 
-<!-- Bulk Delete Modal — ★ FIX 2 -->
+<!-- Bulk Delete Modal -->
 <div class="modal-backdrop safe-top-modal" id="bulkDeleteModal">
   <div class="modal wide">
     <div class="modal-header"><div><h3>Confirm Bulk Delete</h3></div>
-      <button type="button" class="modal-close" onclick="closeModal('bulkDeleteModal')" aria-label="Close">✕</button></div>
+      <button type="button" class="modal-close ripple" onclick="closeModal('bulkDeleteModal')" aria-label="Close">✕</button></div>
     <div class="modal-body"><div id="bulkDeleteSummary"></div></div>
     <div class="modal-footer">
-      <button class="btn btn-outline btn-sm" onclick="closeModal('bulkDeleteModal')">Cancel</button>
-      <button class="btn btn-danger btn-sm" onclick="confirmBulkDelete()">Confirm Delete</button>
+      <button class="btn btn-outline btn-sm ripple" onclick="closeModal('bulkDeleteModal')">Cancel</button>
+      <button class="btn btn-danger btn-sm ripple" onclick="confirmBulkDelete()">Confirm Delete</button>
     </div>
   </div>
 </div>
@@ -1190,15 +1284,15 @@
 <!-- Change Password -->
 <div class="modal-backdrop safe-top-modal" id="changePassModal">
   <div class="modal" style="max-width:420px;">
-    <div class="modal-header"><h3>Change Password</h3><button type="button" class="modal-close" onclick="closeModal('changePassModal')" aria-label="Close">✕</button></div>
+    <div class="modal-header"><h3>Change Password</h3><button type="button" class="modal-close ripple" onclick="closeModal('changePassModal')" aria-label="Close">✕</button></div>
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Current Password</label><input type="password" id="cpCurrent" placeholder="Enter current password" /></div>
       <div class="form-group"><label class="form-label">New Password</label><input type="password" id="cpNew" placeholder="Enter new password (min 6)" /></div>
       <div class="form-group"><label class="form-label">Confirm New Password</label><input type="password" id="cpConfirm" placeholder="Re-enter new password" /></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-outline btn-sm" onclick="closeModal('changePassModal')">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="submitChangePassword()">Update Password</button>
+      <button class="btn btn-outline btn-sm ripple" onclick="closeModal('changePassModal')">Cancel</button>
+      <button class="btn btn-primary btn-sm ripple" onclick="submitChangePassword()">Update Password</button>
     </div>
   </div>
 </div>
@@ -1206,15 +1300,15 @@
 <!-- Forgot Password -->
 <div class="modal-backdrop safe-top-modal" id="forgotPassModal">
   <div class="modal" style="max-width:420px;">
-    <div class="modal-header"><h3>Forgot Password</h3><button type="button" class="modal-close" onclick="closeModal('forgotPassModal')" aria-label="Close">✕</button></div>
+    <div class="modal-header"><h3>Forgot Password</h3><button type="button" class="modal-close ripple" onclick="closeModal('forgotPassModal')" aria-label="Close">✕</button></div>
     <div class="modal-body">
       <p class="text-xs text-muted" style="margin-bottom:16px;line-height:1.65;">Enter your roll number to send a reset request. Admin will approve it, then use "Set New Password" to create a new one.</p>
       <div class="form-group"><label class="form-label">Roll No</label><input type="text" id="fpRoll" placeholder="e.g. 24CSE48" /></div>
       <div class="form-group"><label class="form-label">Reason (optional)</label><input type="text" id="fpReason" placeholder="e.g. Forgot password" /></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-outline btn-sm" onclick="closeModal('forgotPassModal')">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="submitForgotPassword()">Send Request</button>
+      <button class="btn btn-outline btn-sm ripple" onclick="closeModal('forgotPassModal')">Cancel</button>
+      <button class="btn btn-primary btn-sm ripple" onclick="submitForgotPassword()">Send Request</button>
     </div>
   </div>
 </div>
@@ -1222,7 +1316,7 @@
 <!-- Set New Password -->
 <div class="modal-backdrop safe-top-modal" id="setNewPassModal">
   <div class="modal" style="max-width:420px;">
-    <div class="modal-header"><h3>Set New Password</h3><button type="button" class="modal-close" onclick="closeModal('setNewPassModal')" aria-label="Close">✕</button></div>
+    <div class="modal-header"><h3>Set New Password</h3><button type="button" class="modal-close ripple" onclick="closeModal('setNewPassModal')" aria-label="Close">✕</button></div>
     <div class="modal-body">
       <p class="text-xs text-muted" style="margin-bottom:16px;line-height:1.65;">Works only after admin approves your "Forgot Password" request.</p>
       <div class="form-group"><label class="form-label">Roll No</label><input type="text" id="snpRoll" placeholder="e.g. 24CSE48" /></div>
@@ -1230,8 +1324,8 @@
       <div class="form-group"><label class="form-label">Confirm</label><input type="password" id="snpConfirm" placeholder="Re-enter password" /></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-outline btn-sm" onclick="closeModal('setNewPassModal')">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="submitSetNewPassword()">Set Password</button>
+      <button class="btn btn-outline btn-sm ripple" onclick="closeModal('setNewPassModal')">Cancel</button>
+      <button class="btn btn-primary btn-sm ripple" onclick="submitSetNewPassword()">Set Password</button>
     </div>
   </div>
 </div>
@@ -1239,15 +1333,15 @@
 <!-- Device Reset -->
 <div class="modal-backdrop safe-top-modal" id="deviceResetModal">
   <div class="modal" style="max-width:420px;">
-    <div class="modal-header"><h3>Request Device Reset</h3><button type="button" class="modal-close" onclick="closeModal('deviceResetModal')" aria-label="Close">✕</button></div>
+    <div class="modal-header"><h3>Request Device Reset</h3><button type="button" class="modal-close ripple" onclick="closeModal('deviceResetModal')" aria-label="Close">✕</button></div>
     <div class="modal-body">
       <p class="text-xs text-muted" style="margin-bottom:16px;line-height:1.65;">If you can't log in from a new phone, send a device reset request.</p>
       <div class="form-group"><label class="form-label">Roll No</label><input type="text" id="drRoll" placeholder="e.g. 24CSE48" /></div>
       <div class="form-group"><label class="form-label">Reason (optional)</label><input type="text" id="drReason" placeholder="e.g. New phone" /></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-outline btn-sm" onclick="closeModal('deviceResetModal')">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="submitDeviceReset()">Send Request</button>
+      <button class="btn btn-outline btn-sm ripple" onclick="closeModal('deviceResetModal')">Cancel</button>
+      <button class="btn btn-primary btn-sm ripple" onclick="submitDeviceReset()">Send Request</button>
     </div>
   </div>
 </div>
@@ -1257,11 +1351,11 @@
   <div class="modal" style="max-width:440px;">
     <div class="modal-header">
       <div><h3>Check Request Status</h3><p class="text-xs text-muted" style="margin-top:4px;">Forgot Password · Device Reset</p></div>
-      <button type="button" class="modal-close" onclick="closeModal('checkStatusModal')" aria-label="Close">✕</button>
+      <button type="button" class="modal-close ripple" onclick="closeModal('checkStatusModal')" aria-label="Close">✕</button>
     </div>
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Roll No</label><input type="text" id="csRoll" placeholder="e.g. 24CSE48" onkeydown="if(event.key==='Enter')checkRequestStatus()" /></div>
-      <button class="btn btn-primary btn-block" onclick="checkRequestStatus()">
+      <button class="btn btn-primary btn-block ripple" onclick="checkRequestStatus()">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         Check Status
       </button>
@@ -1275,11 +1369,11 @@
   <div class="modal" style="max-width:440px;">
     <div class="modal-header">
       <div><h3>Registration Status</h3><p class="text-xs text-muted" style="margin-top:4px;">Check if admin approved your request</p></div>
-      <button type="button" class="modal-close" onclick="closeModal('regStatusModal')" aria-label="Close">✕</button>
+      <button type="button" class="modal-close ripple" onclick="closeModal('regStatusModal')" aria-label="Close">✕</button>
     </div>
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Roll No</label><input type="text" id="regStatusRoll" placeholder="e.g. 24CSE48" onkeydown="if(event.key==='Enter')checkRegStatus()" /></div>
-      <button class="btn btn-primary btn-block" onclick="checkRegStatus()">
+      <button class="btn btn-primary btn-block ripple" onclick="checkRegStatus()">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         Check Status
       </button>
@@ -1291,7 +1385,7 @@
 <!-- Document Request Modal -->
 <div class="modal-backdrop safe-top-modal" id="docRequestModal">
   <div class="modal" style="max-width:440px;">
-    <div class="modal-header"><h3>📤 Upload Document (Needs Approval)</h3><button type="button" class="modal-close" onclick="closeModal('docRequestModal')" aria-label="Close">✕</button></div>
+    <div class="modal-header"><h3>📤 Upload Document (Needs Approval)</h3><button type="button" class="modal-close ripple" onclick="closeModal('docRequestModal')" aria-label="Close">✕</button></div>
     <div class="modal-body">
       <p class="text-xs text-muted" style="margin-bottom:16px;line-height:1.65;">Upload any file (PDF, DOC, Images, etc.). After admin approves it, it will be visible to all roles.</p>
       <div class="form-group"><label class="form-label">Title</label><input type="text" id="docReqTitle" placeholder="e.g. BDA Unit 4 Notes" /></div>
@@ -1302,8 +1396,8 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-outline btn-sm" onclick="closeModal('docRequestModal')">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="submitDocRequest()">Submit Upload</button>
+      <button class="btn btn-outline btn-sm ripple" onclick="closeModal('docRequestModal')">Cancel</button>
+      <button class="btn btn-primary btn-sm ripple" onclick="submitDocRequest()">Submit Upload</button>
     </div>
   </div>
 </div>
@@ -1311,14 +1405,14 @@
 <!-- Undo Approval Modal -->
 <div class="modal-backdrop safe-top-modal" id="undoApprovalModal">
   <div class="modal" style="max-width:420px;">
-    <div class="modal-header"><h3>↩️ Undo Approval</h3><button type="button" class="modal-close" onclick="closeModal('undoApprovalModal')" aria-label="Close">✕</button></div>
+    <div class="modal-header"><h3>↩️ Undo Approval</h3><button type="button" class="modal-close ripple" onclick="closeModal('undoApprovalModal')" aria-label="Close">✕</button></div>
     <div class="modal-body">
       <p class="text-xs text-muted" style="margin-bottom:16px;line-height:1.65;">This will revert the approval and remove any auto-marked attendance records for this request.</p>
       <div id="undoApprovalInfo" style="padding:14px;background:var(--slate-50);border-radius:10px;font-size:12px;line-height:1.7;"></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-outline btn-sm" onclick="closeModal('undoApprovalModal')">Cancel</button>
-      <button class="btn btn-danger btn-sm" onclick="confirmUndoApproval()">Undo Approval</button>
+      <button class="btn btn-outline btn-sm ripple" onclick="closeModal('undoApprovalModal')">Cancel</button>
+      <button class="btn btn-danger btn-sm ripple" onclick="confirmUndoApproval()">Undo Approval</button>
     </div>
   </div>
 </div>
@@ -1328,12 +1422,12 @@
   <div class="modal wide">
     <div class="modal-header">
       <div><h3>🏆 Global Leaderboards</h3><p class="text-xs text-muted" style="margin-top:4px;">Top performing students</p></div>
-      <button type="button" class="modal-close" onclick="closeModal('leaderboardModal')" aria-label="Close">✕</button>
+      <button type="button" class="modal-close ripple" onclick="closeModal('leaderboardModal')" aria-label="Close">✕</button>
     </div>
     <div class="modal-body" style="padding-top:10px;">
       <div style="display:flex; gap:8px; margin-bottom:16px;">
-        <button class="btn btn-primary btn-sm" style="flex:1;" onclick="loadLeaderboard('attendance')">🔥 Current Streak</button>
-        <button class="btn btn-outline btn-sm" style="flex:1;" onclick="loadLeaderboard('percentage')">📊 Overall Percentage</button>
+        <button class="btn btn-primary btn-sm ripple" style="flex:1;" onclick="loadLeaderboard('attendance')">🔥 Current Streak</button>
+        <button class="btn btn-outline btn-sm ripple" style="flex:1;" onclick="loadLeaderboard('percentage')">📊 Overall Percentage</button>
       </div>
       <div id="leaderboardList" style="display:flex; flex-direction:column; gap:8px;">
         <div class="empty">Loading...</div>
@@ -1351,18 +1445,18 @@
   <div class="chat-head">
     <div class="chat-head-top">
       <h4><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg>BM Bot <span class="ai-tag">Groq AI</span></h4>
-      <button type="button" class="chat-close-btn" onclick="toggleChat()" aria-label="Close chat"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      <button type="button" class="chat-close-btn ripple" onclick="toggleChat()" aria-label="Close chat"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="chat-head-bottom">
-      <button type="button" class="ctx-toggle" id="ctxToggle" onclick="toggleContext()">
+      <button type="button" class="ctx-toggle ripple" id="ctxToggle" onclick="toggleContext()">
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><polyline points="8 12 11 15 16 9"/></svg>
         <span class="ctx-label">Context</span>
       </button>
-      <button type="button" class="db-toggle" id="dbToggle" onclick="toggleDatabase()">
+      <button type="button" class="db-toggle ripple" id="dbToggle" onclick="toggleDatabase()">
         <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
         <span class="db-label">Database</span>
       </button>
-      <button type="button" class="chat-sidebar-toggle" onclick="event.stopPropagation(); toggleChatSidebar();" aria-label="Toggle chat history">
+      <button type="button" class="chat-sidebar-toggle ripple" onclick="event.stopPropagation(); toggleChatSidebar();" aria-label="Toggle chat history">
         <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
     </div>
@@ -1387,21 +1481,26 @@
       <div class="chat-input">
         <div class="chat-input-wrap">
           <input type="file" id="chatFileInput" accept="*/*" onchange="onChatFileSelected(event)" />
-          <button type="button" class="mini-btn" onclick="document.getElementById('chatFileInput').click()" aria-label="Attach file">
+          <button type="button" class="mini-btn ripple" onclick="document.getElementById('chatFileInput').click()" aria-label="Attach file">
             <svg viewBox="0 0 24 24"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
           </button>
           <textarea id="chatInput" placeholder="Ask anything…" rows="1" onkeydown="handleChatKey(event)" oninput="autoResizeTextarea(this)"></textarea>
-          <button type="button" class="mini-btn" id="chatVoiceBtn" onclick="toggleVoiceInput()" aria-label="Voice input">
+          <button type="button" class="mini-btn ripple" id="chatVoiceBtn" onclick="toggleVoiceInput()" aria-label="Voice input">
             <svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
           </button>
         </div>
-        <button type="button" class="send-btn" id="chatSendBtn" onclick="sendChat()" aria-label="Send message">
+        <button type="button" class="send-btn ripple" id="chatSendBtn" onclick="sendChat()" aria-label="Send message">
           <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         </button>
       </div>
       <div id="voiceIndicator" class="voice-indicator">Listening…</div>
     </div>
   </div>
+</div>
+
+<!-- ===================== CUSTOM DIALOG (replaces prompt/confirm/alert) ===================== -->
+<div class="dialog-overlay" id="customDialog" role="dialog" aria-modal="true">
+  <!-- Populated dynamically by JS -->
 </div>
 
 <script src="app.js"></script>
