@@ -663,21 +663,21 @@ async function renderPdfWithPdfJs(blob) {
 function universalDownload(blob, filename, opts = {}){
   try {
     if (isMedianApp() && window.median) {
-      // Median app ke liye shareFile use karein taaki filename fix rahe
+      // 1. Median shareFile (Sabse best, Android ka Share Menu khulega)
       if (typeof window.median.shareFile === 'function') {
         const reader = new FileReader();
         reader.onload = function() {
           try {
             const base64 = reader.result.split(',')[1];
             window.median.shareFile({ base64: base64, filename: filename, mimeType: blob.type || 'application/octet-stream' });
-            toast('Choose "Save to Files" to keep the name', 'info');
+            toast('Select "Save to Files" to keep this name', 'info');
             if (opts.notify !== false) sendPushNotification('📥 File Ready', filename, { type: 'download', filename });
           } catch(e) { fallbackBlobDownload(blob, filename, opts); }
         };
         reader.readAsDataURL(blob); return;
       }
       
-      // Agar shareFile na ho toh downloadFile fallback
+      // 2. Median downloadFile (Agar shareFile na ho)
       if (typeof window.median.downloadFile === 'function') {
         const reader = new FileReader();
         reader.onload = function() {
@@ -692,19 +692,27 @@ function universalDownload(blob, filename, opts = {}){
       }
     }
     
-    // Browser / PWA ke liye normal download
+    // 3. Fallback (Browser / PWA)
     fallbackBlobDownload(blob, filename, opts);
   } catch(e) { toast('Download failed: ' + e.message, 'error'); }
 }
 
 function fallbackBlobDownload(blob, filename, opts = {}){
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = filename; a.style.display = 'none';
-  document.body.appendChild(a); a.click();
-  setTimeout(() => { try { document.body.removeChild(a); } catch(e){} URL.revokeObjectURL(url); }, 3000);
-  toast('Downloaded: ' + filename, 'success');
-  if (opts.notify !== false) sendPushNotification('📥 Download Complete', filename, { type: 'download', filename });
+  // ★ Yahan Blob URL ki jagah Data URL use kiya hai taaki WebView naam na badle
+  const reader = new FileReader();
+  reader.onload = function() {
+    const dataUrl = reader.result;
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { try { document.body.removeChild(a); } catch(e){} }, 3000);
+    toast('Downloaded: ' + filename, 'success');
+    if (opts.notify !== false) sendPushNotification('📥 Download Complete', filename, { type: 'download', filename });
+  };
+  reader.readAsDataURL(blob);
 }
 
 /* ★ NEW HELPER: Fetch a note file and download with proper filename */
