@@ -662,8 +662,23 @@ async function renderPdfWithPdfJs(blob) {
 
 function universalDownload(blob, filename, opts = {}){
   try {
-    if (isMedianApp() && window.median && typeof window.median.downloadFile === 'function') {
-      try {
+    if (isMedianApp() && window.median) {
+      // Median app ke liye shareFile use karein taaki filename fix rahe
+      if (typeof window.median.shareFile === 'function') {
+        const reader = new FileReader();
+        reader.onload = function() {
+          try {
+            const base64 = reader.result.split(',')[1];
+            window.median.shareFile({ base64: base64, filename: filename, mimeType: blob.type || 'application/octet-stream' });
+            toast('Choose "Save to Files" to keep the name', 'info');
+            if (opts.notify !== false) sendPushNotification('📥 File Ready', filename, { type: 'download', filename });
+          } catch(e) { fallbackBlobDownload(blob, filename, opts); }
+        };
+        reader.readAsDataURL(blob); return;
+      }
+      
+      // Agar shareFile na ho toh downloadFile fallback
+      if (typeof window.median.downloadFile === 'function') {
         const reader = new FileReader();
         reader.onload = function() {
           try {
@@ -674,11 +689,14 @@ function universalDownload(blob, filename, opts = {}){
           } catch(e) { fallbackBlobDownload(blob, filename, opts); }
         };
         reader.readAsDataURL(blob); return;
-      } catch(e) {}
+      }
     }
+    
+    // Browser / PWA ke liye normal download
     fallbackBlobDownload(blob, filename, opts);
   } catch(e) { toast('Download failed: ' + e.message, 'error'); }
 }
+
 function fallbackBlobDownload(blob, filename, opts = {}){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -697,7 +715,8 @@ async function downloadNoteFile(url, fileName) {
     if (!res.ok) throw new Error('Failed to fetch');
     const blob = await res.blob();
     hideDL();
-    universalDownload(blob, fileName || 'document.pdf');
+    // Fallback lagaya hai taaki undefined na jaye
+    universalDownload(blob, fileName || 'BM_Document.pdf'); 
   } catch(e) {
     hideDL();
     toast('Download failed: ' + e.message, 'error');
