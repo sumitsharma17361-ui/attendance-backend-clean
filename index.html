@@ -22,6 +22,12 @@
 <meta name="apple-mobile-web-app-title" content="BM ERP" />
 <meta name="application-name" content="BM ERP" />
 
+<!-- ★ NEW: PWA MANIFEST + ICONS -->
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+
 <title>BM Group – ERP Portal</title>
 
 <!-- ★ PRELOAD CRITICAL RESOURCES -->
@@ -122,6 +128,146 @@
     .chat-fab { bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important; }
     .scroll-top-fab { bottom: calc(150px + env(safe-area-inset-bottom, 0px)) !important; }
     .chat-panel { bottom: calc(88px + env(safe-area-inset-bottom, 0px)) !important; }
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     ★ NEW: PWA INSTALL BANNER STYLES
+     ═══════════════════════════════════════════════════════════ */
+  .pwa-install-banner {
+    position: fixed;
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    left: 50%;
+    transform: translate3d(-50%, calc(100% + 40px), 0);
+    width: calc(100% - 24px);
+    max-width: 440px;
+    background: linear-gradient(135deg, #1e40af 0%, #2563eb 60%, #3b82f6 100%);
+    color: #fff;
+    padding: 14px 16px;
+    border-radius: 16px;
+    box-shadow: 0 12px 36px rgba(37, 99, 235, 0.42), 0 2px 8px rgba(0, 0, 0, 0.15);
+    display: none;
+    align-items: center;
+    gap: 12px;
+    z-index: 9998;
+    transition: transform 0.42s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+    will-change: transform;
+    opacity: 0;
+    pointer-events: auto;
+  }
+  .pwa-install-banner.show {
+    display: flex;
+    transform: translate3d(-50%, 0, 0);
+    opacity: 1;
+  }
+  .pwa-install-banner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+    pointer-events: none;
+    animation: pwaShine 3.5s ease infinite;
+  }
+  @keyframes pwaShine {
+    0% { transform: translateX(-100%); opacity: 0; }
+    30% { opacity: 1; }
+    70% { opacity: 1; }
+    100% { transform: translateX(100%); opacity: 0; }
+  }
+  .pwa-install-icon {
+    font-size: 30px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  }
+  .pwa-install-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .pwa-install-text strong {
+    font-size: 13.5px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+  .pwa-install-text span {
+    font-size: 11px;
+    opacity: 0.9;
+    font-weight: 500;
+    line-height: 1.3;
+  }
+  .pwa-install-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .pwa-install-primary,
+  .pwa-install-secondary {
+    border: none;
+    border-radius: 10px;
+    padding: 9px 15px;
+    font-size: 11.5px;
+    font-weight: 800;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: transform 0.1s ease-out, background-color 0.15s ease, box-shadow 0.15s ease;
+    white-space: nowrap;
+    font-family: inherit;
+  }
+  .pwa-install-primary {
+    background: #ffffff;
+    color: #1e40af;
+    box-shadow: 0 3px 10px rgba(255, 255, 255, 0.28);
+  }
+  .pwa-install-primary:active { transform: scale(0.94); }
+  .pwa-install-secondary {
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+    backdrop-filter: blur(6px);
+  }
+  .pwa-install-secondary:active { transform: scale(0.94); }
+
+  @media (max-width: 640px) {
+    .pwa-install-banner {
+      bottom: calc(84px + env(safe-area-inset-bottom, 0px) + 8px);
+      width: calc(100% - 20px);
+      padding: 12px 14px;
+    }
+    .pwa-install-icon { font-size: 26px; }
+    .pwa-install-text strong { font-size: 12.5px; }
+    .pwa-install-text span { font-size: 10.5px; }
+    .pwa-install-primary, .pwa-install-secondary {
+      padding: 8px 12px;
+      font-size: 11px;
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     ★ NEW: BACK-BUTTON CONFIRM TOAST (safety fallback)
+     ═══════════════════════════════════════════════════════════ */
+  .back-confirm-toast {
+    position: fixed;
+    bottom: calc(120px + env(safe-area-inset-bottom, 0px));
+    left: 50%;
+    transform: translate3d(-50%, 20px, 0);
+    background: rgba(15, 23, 42, 0.94);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 99px;
+    font-size: 12px;
+    font-weight: 600;
+    z-index: 9997;
+    opacity: 0;
+    transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(10px);
+  }
+  .back-confirm-toast.show {
+    opacity: 1;
+    transform: translate3d(-50%, 0, 0);
   }
 </style>
 
@@ -1502,6 +1648,114 @@
 <div class="dialog-overlay" id="customDialog" role="dialog" aria-modal="true">
   <!-- Populated dynamically by JS -->
 </div>
+
+<!-- ===================== ★ NEW: PWA INSTALL BANNER ===================== -->
+<div class="pwa-install-banner" id="pwaInstallBanner" role="dialog" aria-labelledby="pwaInstallTitle" aria-live="polite">
+  <div class="pwa-install-icon" aria-hidden="true">📱</div>
+  <div class="pwa-install-text">
+    <strong id="pwaInstallTitle">Install BM ERP</strong>
+    <span>Faster access · Offline support</span>
+  </div>
+  <div class="pwa-install-actions">
+    <button type="button" class="pwa-install-secondary" id="pwaInstallDismiss">Not now</button>
+    <button type="button" class="pwa-install-primary" id="pwaInstallBtn">Install</button>
+  </div>
+</div>
+
+<!-- ===================== ★ NEW: BACK-CONFIRM TOAST (fallback) ===================== -->
+<div class="back-confirm-toast" id="backConfirmToast">Press back again to exit</div>
+
+<!-- ===================== ★ NEW: BACK BUTTON GUARD (earliest possible) ===================== -->
+<!--
+  This is CRITICAL for Median.co WebView.
+  - Pushes a "guard" state onto history immediately.
+  - When user presses Android back button, popstate fires FIRST (consuming the guard)
+    instead of the WebView closing the app.
+  - The actual state-clearing logic lives in app.js's window.bmHandleBack()
+  - If nothing to close AND user is at home → we DON'T re-push guard, letting
+    the NEXT back press close/minimize the app (native Android behavior).
+-->
+<script>
+(function bmBackGuardBootstrap() {
+  // Already initialized? Skip.
+  if (window.__bmGuardInitialized) return;
+  window.__bmGuardInitialized = true;
+
+  // Push initial guard
+  try {
+    if (!history.state || !history.state.bm_guard) {
+      history.pushState({ bm_guard: 1 }, '', location.href);
+    }
+  } catch (e) { /* ignore */ }
+
+  // Popstate handler — hands off to app.js's bmHandleBack()
+  window.addEventListener('popstate', function bmPopstate(e) {
+    try {
+      const handler = window.bmHandleBack;
+      if (typeof handler === 'function') {
+        const consumed = handler();
+        // If consumed → re-push guard so next back press doesn't close app
+        if (consumed) {
+          if (!history.state || !history.state.bm_guard) {
+            history.pushState({ bm_guard: 1 }, '', location.href);
+          }
+        }
+        // If NOT consumed → nothing left to close → let Android handle (minimize/close)
+      } else {
+        // app.js hasn't loaded yet — silently re-guard to prevent premature close
+        if (!history.state || !history.state.bm_guard) {
+          history.pushState({ bm_guard: 1 }, '', location.href);
+        }
+      }
+    } catch (err) {
+      console.warn('[BackGuard] popstate error:', err && err.message);
+      if (!history.state || !history.state.bm_guard) {
+        history.pushState({ bm_guard: 1 }, '', location.href);
+      }
+    }
+  });
+
+  console.log('[BackGuard] ✅ Initialized — back button will not close app until home root');
+})();
+</script>
+
+<!-- ===================== ★ NEW: PWA INSTALL PROMPT CAPTURE + SW REGISTRATION ===================== -->
+<script>
+(function bmPwaBootstrap() {
+  // Capture the deferred install prompt (fires before app.js may be loaded)
+  window.__bmDeferredInstall = null;
+  window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    window.__bmDeferredInstall = e;
+    console.log('[PWA] ✅ beforeinstallprompt captured — install available');
+    // Dispatch custom event so app.js can show the banner
+    try { window.dispatchEvent(new CustomEvent('bm-install-available')); } catch (err) {}
+  });
+
+  window.addEventListener('appinstalled', function() {
+    window.__bmDeferredInstall = null;
+    console.log('[PWA] ✅ App installed');
+    try { window.dispatchEvent(new CustomEvent('bm-installed')); } catch (err) {}
+  });
+
+  // ★ Register the service worker on load (required for PWA)
+  // Uses same path resolution as app.js so there's no conflict.
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    window.addEventListener('load', function() {
+      const basePath = window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '');
+      const swPath = basePath ? `${basePath}/firebase-messaging-sw.js` : 'firebase-messaging-sw.js';
+      const scopePath = basePath ? `${basePath}/` : './';
+      navigator.serviceWorker.register(swPath, { scope: scopePath })
+        .then(function(reg) {
+          console.log('[PWA] ✅ Service worker registered:', reg.scope);
+        })
+        .catch(function(err) {
+          console.warn('[PWA] ⚠️ Service worker registration failed:', err && err.message);
+        });
+    });
+  }
+})();
+</script>
 
 <script src="app.js"></script>
 </body>
