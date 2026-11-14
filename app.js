@@ -7,6 +7,7 @@
    - Device ID: persistent in localStorage, PRESERVED on logout
    - Session time remaining shown in header
    - v6.0: Native Android feel, Custom dialogs, Bottom nav, PTR
+   - v6.1: Fixed all download filenames (Notes, PDFs, Chat, CSV)
    ============================================================ */
 
 /* ★ Disable browser scroll restoration */
@@ -364,7 +365,6 @@ function hideDL(){ $('dlProgress')?.classList.remove('show'); }
 function closeModal(id){
   const m = $(id); if (!m) return;
   m.classList.remove('open');
-  // ★ transitionend fallback (no setTimeout for UI)
   const onEnd = () => { m.removeEventListener('transitionend', onEnd); };
   m.addEventListener('transitionend', onEnd, { once: true });
 }
@@ -381,7 +381,6 @@ function isMedianApp(){ return typeof window.median !== 'undefined' && window.me
 
 /* ============================================================
    ★ NEW: RIPPLE COORDINATE TRACKER
-   Captures touch/mouse position for --ripple-x/--ripple-y
    ============================================================ */
 document.addEventListener('pointerdown', function(e) {
   const el = e.target.closest('.ripple, .btn, .tab, .subnav-item, .menu-trigger-btn, .icon-btn, .bottom-nav-btn, .student-menu-item, .portal');
@@ -690,6 +689,21 @@ function fallbackBlobDownload(blob, filename, opts = {}){
   if (opts.notify !== false) sendPushNotification('📥 Download Complete', filename, { type: 'download', filename });
 }
 
+/* ★ NEW HELPER: Fetch a note file and download with proper filename */
+async function downloadNoteFile(url, fileName) {
+  showDL('Downloading file...');
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to fetch');
+    const blob = await res.blob();
+    hideDL();
+    universalDownload(blob, fileName || 'document.pdf');
+  } catch(e) {
+    hideDL();
+    toast('Download failed: ' + e.message, 'error');
+  }
+}
+
 function ensureJsPDF(){
   if (!window.jspdf || !window.jspdf.jsPDF) { toast('PDF library not loaded', 'error'); return null; }
   return window.jspdf.jsPDF;
@@ -985,7 +999,6 @@ async function loadRegistrationRequests(){
 }
 
 async function reviewRegistration(id, action){
-  // ★ Uses customPrompt (replaces native prompt)
   const note = await customPrompt(`Note for ${action} (optional):`, 'e.g. Verified', { message: `Provide an optional note for this ${action.toLowerCase()} action.` }) || '';
   try {
     const res = await fetch(`${API}/api/admin/registration-requests/review/${id}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo, action, note})});
@@ -1718,7 +1731,6 @@ function loadDashboard(){
   setTimeout(initCollapsibleCards, 300);
   startSessionCheck();
 
-  // ★ NEW: Bottom nav + PTR init
   updateBottomNavVisibility();
   updateBottomNavActive('home');
   initPullToRefresh();
@@ -1805,7 +1817,6 @@ function initAnnouncementsUI() {
     }
 }
 async function clearAllAnnouncements() {
-    // ★ Uses customConfirm
     const ok = await customConfirm('Clear All Announcements?', 'This will remove all announcements for all branches. This cannot be undone.', { danger: true, confirmText: 'Clear' });
     if (!ok) return;
     showDL('Clearing...');
@@ -1818,7 +1829,6 @@ async function clearAllAnnouncements() {
 }
 
 async function clearAllRequests(){
-  // ★ Custom confirm
   if (!await customConfirm('Delete ALL attendance requests?', 'This action cannot be undone. All pending, approved and rejected requests will be deleted.', { danger: true, confirmText: 'Delete All' })) return;
   try {
     const res = await fetch(`${API}/api/admin/clear-requests`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterRollNo: currentUser.rollNo})});
@@ -2446,7 +2456,14 @@ async function generateIndividualPDF(studentRoll, studentName, branch, range, mo
     const blob = generatePDFBlob('Student Attendance Report', `${studentName} (${studentRoll})`, [`Branch: ${branch} · 5th Semester`, `Range: ${fmtDatePretty(rng.start)} → ${fmtDatePretty(rng.end)}`], ['Date', 'Subject', 'Status'], records.sort((a,b) => b.date.localeCompare(a.date)).map(r => [fmtDatePretty(r.date), r.subject, r.status]), [`Attended: ${totalAttended}    |    Conducted: ${totalConducted}    |    Percentage: ${pct}%`]);
     hideDL();
     if (!blob) return toast('PDF library failed to load','error');
-    const filename = `attendance_${studentRoll}_${Date.now()}.pdf`;
+
+    // ★ NEW: descriptive filename instead of timestamp
+    let rangeText = 'Full_Semester';
+    if (range === 'CURRENT_MONTH') rangeText = 'Current_Month';
+    else if (range === 'SELECTED_MONTH') rangeText = MONTH_NAMES[parseInt(month)] || 'Selected_Month';
+    const safeName = (studentName || studentRoll).replace(/[^a-zA-Z0-9]/g, '_');
+    const filename = `${safeName}_${rangeText}_Report.pdf`;
+
     if (action === 'view') viewPdfBlob(blob, filename);
     else universalDownload(blob, filename);
   } catch(e) { hideDL(); toast('Failed: ' + e.message, 'error'); }
@@ -2568,8 +2585,9 @@ async function generateClassReport(action = 'download'){
     const blob = generatePDFBlob('Class Attendance Report', `${b === 'ALL' ? 'All Branches' : b} – 5th Semester`, [`Range: ${fmtDatePretty(s)} to ${fmtDatePretty(e)}`], ['S.No', 'Roll', 'Name', 'Present', '%'], rows, null);
     hideDL();
     if (!blob) return toast('PDF library failed','error');
-    if (action === 'view') viewPdfBlob(blob);
-    else universalDownload(blob, `class_report_${b}_${Date.now()}.pdf`);
+    // ★ NEW: descriptive filename
+    if (action === 'view') viewPdfBlob(blob, `Class_Report_${b}_${s}_to_${e}.pdf`);
+    else universalDownload(blob, `Class_Report_${b}_${s}_to_${e}.pdf`);
   } catch(e){ hideDL(); toast('Failed: ' + e.message,'error'); }
 }
 
@@ -2598,7 +2616,9 @@ async function exportGrid(){
     });
     row += `,${total}`; csv += row + '\n';
   });
-  download(csv, `attendance_grid.csv`);
+  // ★ NEW: descriptive CSV filename
+  const rangeName = sel === 'ALL_SEMESTER' ? 'Full_Semester' : (MONTH_NAMES[parseInt(sel)] || 'Selected_Month');
+  download(csv, `Attendance_Grid_${rangeName}.csv`);
 }
 
 async function generateStudentReport(f, action = 'download'){
@@ -2899,20 +2919,6 @@ async function reviewLeave(id, action){
 async function loadDefaulters(){ const t = $('defThreshold').value || 75; try { const data = await fetch(`${API}/api/admin/defaulters/${currentUser.rollNo}?threshold=${t}`).then(x=>x.json()); const el = $('defaulterList'); if (!data.defaulters || !data.defaulters.length) return el.innerHTML = '<div class="empty">None below threshold</div>'; el.innerHTML = data.defaulters.map(s => `<div style="padding:10px 0;border-bottom:1px solid var(--surface-border);"><b>${s.rollNo}</b> · ${s.name} · ${s.branch} · <span class="badge badge-danger">${s.pct}%</span></div>`).join(''); } catch(e){} observeNewContent(); }
 
 /* ═══════════════════════════════════════════════════════════
-   ★ PART 1 ENDS HERE
-   ═══════════════════════════════════════════════════════════
-   PART 2 START karega yaha se (next message):
-   - Notes & Documents (loadStudentNotes, openDocumentPreview, etc.)
-   - Assignments, Exams, Announcements
-   - Faculty module (initFaculty, facMark, facBulkMark, etc.)
-   - Chat / AI (toggleChat, sendChat, renderMarkdown, etc.)
-   - FCM (initFirebase, enableNotifications, autoInitFCM)
-   - Premium init (initScrollProgress, initSpotlight, etc.)
-   - CRON-adjacent helpers (ensureHolidays, checkDateStatus, etc.)
-   - final boot (DOMContentLoaded, deep link, service worker)
-   ═══════════════════════════════════════════════════════════ */
-
-/* ═══════════════════════════════════════════════════════════
    NOTES & DOCUMENTS
    ═══════════════════════════════════════════════════════════ */
 async function loadStudentNotes() {
@@ -2932,7 +2938,7 @@ async function loadStudentNotes() {
         </div>
         <div class="list-item-actions" style="margin-top:0;flex-shrink:0;">
           <button onclick="openDocumentPreview('${n._id}')" class="btn btn-outline btn-xs ripple" style="padding:5px 10px;">${ICONS.view} View</button>
-          <a href="${API}${n.downloadUrl}" class="btn btn-success btn-xs ripple" style="padding:5px 10px;">${ICONS.download} Download</a>
+          <button data-url="${API}${n.downloadUrl}" data-filename="${escapeHtml(n.fileName || 'document.pdf')}" onclick="downloadNoteFile(this.dataset.url, this.dataset.filename)" class="btn btn-success btn-xs ripple" style="padding:5px 10px;">${ICONS.download} Download</button>
         </div>
       </div>
     `).join('');
@@ -2999,7 +3005,7 @@ async function loadAdminNotes() {
         </div>
         <div class="list-item-actions" style="margin-top:0;flex-shrink:0;">
           <button onclick="openDocumentPreview('${n._id}')" class="btn btn-outline btn-xs ripple">${ICONS.view} View</button>
-          <a href="${API}${n.downloadUrl}" class="btn btn-success btn-xs ripple">${ICONS.download} Download</a>
+          <button data-url="${API}${n.downloadUrl}" data-filename="${escapeHtml(n.fileName || 'document.pdf')}" onclick="downloadNoteFile(this.dataset.url, this.dataset.filename)" class="btn btn-success btn-xs ripple">${ICONS.download} Download</button>
           <button class="btn btn-danger btn-xs ripple" onclick="deleteNote('${n._id}')">${ICONS.trash} Delete</button>
         </div>
       </div>
@@ -3501,8 +3507,9 @@ async function facReport(fmt, action = 'download'){
       const blob = generatePDFBlob('Teacher Report', `${roll} · ${currentUser.name}`, [`Range: ${startStr} → ${endStr}`], ['Date','Subject','Status'], filtered.map(r => [fmtDatePretty(r.date), r.subject, r.status]), null);
       hideDL();
       if (!blob) return toast('PDF library failed','error');
-      if (action === 'view') viewPdfBlob(blob);
-      else universalDownload(blob, `teacher_report_${roll}_${Date.now()}.pdf`);
+      // ★ NEW: descriptive filename
+      if (action === 'view') viewPdfBlob(blob, `${roll}_Attendance_Report.pdf`);
+      else universalDownload(blob, `${roll}_Attendance_Report.pdf`);
     } else {
       let csv = `Teacher Report\nStudent: ${roll}\nTeacher: ${currentUser.name}\nRange: ${startStr} to ${endStr}\n\nDate,Subject,Status\n`;
       filtered.forEach(r => { csv += `${r.date},${r.subject},${r.status}\n`; });
@@ -3846,8 +3853,11 @@ function downloadMessagePDF(msgId, action = 'download'){
     let y = 32; const pageH = doc.internal.pageSize.height;
     lines.forEach(line => { if (y > pageH - 15) { doc.addPage(); y = 20; } doc.text(line, 14, y); y += 5.5; });
     const blob = doc.output('blob');
-    if (action === 'view') viewPdfBlob(blob, `bm-bot-${Date.now()}.pdf`);
-    else universalDownload(blob, `bm-bot-${Date.now()}.pdf`);
+    // ★ NEW: descriptive filename
+    const dateStr = new Date().toLocaleDateString('en-GB').replace(/\//g,'-');
+    const fileName = `BM_Bot_Report_${dateStr}.pdf`;
+    if (action === 'view') viewPdfBlob(blob, fileName);
+    else universalDownload(blob, fileName);
     const menu = document.getElementById('dlmenu_' + msgId); if (menu) menu.classList.remove('open'); openDownloadMenuId = null;
   } catch(e) { toast('Failed: ' + e.message, 'error'); }
 }
@@ -3856,7 +3866,8 @@ function downloadMessageTXT(msgId){
   try {
     const text = getMessageText(msgId); if (!text) return toast('Nothing','error');
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-    universalDownload(blob, `bm-bot-${Date.now()}.txt`);
+    // ★ NEW: descriptive filename
+    universalDownload(blob, `BM_Bot_Notes_${new Date().toLocaleDateString('en-GB').replace(/\//g,'-')}.txt`);
     const m = document.getElementById('dlmenu_' + msgId); if (m) m.classList.remove('open'); openDownloadMenuId = null;
   } catch(e){ toast('Failed','error'); }
 }
@@ -3870,7 +3881,8 @@ function downloadMessageExcel(msgId){
     XLSX.utils.book_append_sheet(wb, ws, 'BM Bot');
     const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    universalDownload(blob, `bm-bot-${Date.now()}.xlsx`);
+    // ★ NEW: descriptive filename
+    universalDownload(blob, `BM_Bot_Data_${new Date().toLocaleDateString('en-GB').replace(/\//g,'-')}.xlsx`);
     const m = document.getElementById('dlmenu_' + msgId); if (m) m.classList.remove('open'); openDownloadMenuId = null;
   } catch(e){ toast('Failed','error'); }
 }
@@ -4384,305 +4396,6 @@ if ('serviceWorker' in navigator) {
 })();
 
 /* ═══════════════════════════════════════════════════════════
-   ★ NEW v6.1: BACK BUTTON HANDLER (Median.co WebView Safe)
-   ─────────────────────────────────────────────────────────────
-   Priority order (each consumes one back press):
-     1. Custom dialog (customDialog)
-     2. Modal backdrop (any .modal-backdrop.open)
-     3. Feedback overlay (showFeedback)
-     4. Download menu
-     5. Chat panel
-     6. Chat sidebar
-     7. Student menu drawer
-     8. Admin menu drawer
-     9. Non-home tab → switch to Home tab
-    10. Student menu key ≠ home → reset to home
-    11. Scrolled down → scroll to top
-    12. Auth "register" mode → switch to login mode
-    13. Home root → minimize (Median) OR double-back-exit (web)
-   ═══════════════════════════════════════════════════════════ */
-let _backExitTimer = null;
-
-window.bmHandleBack = function () {
-  try {
-    /* ── 1. Custom Dialog open? ── */
-    const cd = document.getElementById('customDialog');
-    if (cd && cd.classList.contains('open')) {
-      cd.classList.remove('open');
-      setTimeout(() => { cd.innerHTML = ''; }, 200);
-      return true;
-    }
-
-    /* ── 2. Modal backdrop open? ── */
-    const modals = document.querySelectorAll('.modal-backdrop.open');
-    if (modals.length > 0) {
-      const topModal = modals[modals.length - 1];
-      topModal.classList.remove('open');
-      // If it was a dynamically created modal (view records, PDF viewer), remove from DOM
-      if (topModal.id === 'viewRecordsModal' || !topModal.id) {
-        // leave it - just hidden
-      }
-      return true;
-    }
-
-    /* ── 3. Feedback overlay? ── */
-    const fb = document.querySelector('.feedback-overlay');
-    if (fb) {
-      fb.style.opacity = '0';
-      fb.style.transition = 'opacity .2s ease';
-      setTimeout(() => { try { fb.remove(); } catch (e) {} }, 220);
-      return true;
-    }
-
-    /* ── 4. Download menu open? ── */
-    if (typeof openDownloadMenuId !== 'undefined' && openDownloadMenuId) {
-      const m = document.getElementById(openDownloadMenuId);
-      if (m) m.classList.remove('open');
-      openDownloadMenuId = null;
-      return true;
-    }
-
-    /* ── 5. Chat panel open? ── */
-    const chatPanel = document.getElementById('chatPanel');
-    if (chatPanel && chatPanel.classList.contains('open')) {
-      try { toggleChat(); } catch (e) {
-        chatPanel.classList.remove('open');
-        document.body.classList.remove('body-locked');
-        document.body.style.overflow = '';
-      }
-      return true;
-    }
-
-    /* ── 6. Chat sidebar open? ── */
-    const chatSidebar = document.getElementById('chatSidebar');
-    if (chatSidebar && chatSidebar.classList.contains('open')) {
-      chatSidebar.classList.remove('open');
-      return true;
-    }
-
-    /* ── 7. Student menu drawer open? ── */
-    const smd = document.getElementById('studentMenuDrawer');
-    if (smd && smd.classList.contains('open')) {
-      try { closeStudentMenu(); } catch (e) { smd.classList.remove('open'); }
-      const sbd = document.getElementById('studentMenuBackdrop');
-      if (sbd) sbd.classList.remove('open');
-      return true;
-    }
-
-    /* ── 8. Admin menu drawer open? ── */
-    const amd = document.getElementById('adminMenuDrawer');
-    if (amd && amd.classList.contains('open')) {
-      try { closeAdminMenu(); } catch (e) { amd.classList.remove('open'); }
-      const abd = document.getElementById('adminMenuBackdrop');
-      if (abd) abd.classList.remove('open');
-      return true;
-    }
-
-    /* ── 9. Not on Home tab? ── */
-    if (currentUser) {
-      const activeTabEl = document.querySelector('#mainTabs .tab.active');
-      const activeTabId = activeTabEl ? activeTabEl.dataset.tab : null;
-      if (activeTabId && activeTabId !== 'tab-mark') {
-        try { switchTab('tab-mark'); } catch (e) {}
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return true;
-      }
-
-      /* ── 10. Student menu key ≠ home? ── */
-      if (currentUser.role === 'student' && typeof activeStudentMenuKey !== 'undefined' &&
-          activeStudentMenuKey && activeStudentMenuKey !== 'home') {
-        activeStudentMenuKey = 'home';
-        try { populateStudentMenu(); } catch (e) {}
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return true;
-      }
-    }
-
-    /* ── 11. Scrolled down? → scroll to top ── */
-    if (window.scrollY > 100) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return true;
-    }
-
-    /* ── 12. Auth register mode → back to login ── */
-    const authBox = document.getElementById('auth-box');
-    if (authBox && authBox.style.display !== 'none' && typeof isRegistering !== 'undefined' && isRegistering) {
-      try { toggleAuthMode(); } catch (e) {}
-      return true;
-    }
-
-    /* ── 13. Home root → MINIMIZE (Option A) ──
-       Strategy:
-         • If Median.co supports appMinimize() → use it → single back minimizes app
-         • Else (web/PWA) → double-back-to-exit with toast (safe UX)
-    */
-    if (typeof isMedianApp === 'function' && isMedianApp() && window.median) {
-      if (typeof window.median.appMinimize === 'function') {
-        try {
-          window.median.appMinimize();
-          return true; // consumed — re-guard so next back does same
-        } catch (e) { /* fall through */ }
-      }
-    }
-
-    /* Fallback: double-back-to-exit */
-    const toastEl = document.getElementById('backConfirmToast');
-    if (toastEl && toastEl.classList.contains('show')) {
-      // 2nd back press within window → EXIT
-      toastEl.classList.remove('show');
-      clearTimeout(_backExitTimer);
-      _backExitTimer = null;
-      return false; // ← guard NOT re-pushed → app closes/minimizes
-    }
-    if (toastEl) {
-      toastEl.classList.add('show');
-      clearTimeout(_backExitTimer);
-      _backExitTimer = setTimeout(() => {
-        toastEl.classList.remove('show');
-        _backExitTimer = null;
-      }, 2000);
-    }
-    return true; // consumed — wait for 2nd back press
-  } catch (err) {
-    console.warn('[BackHandler] error:', err && err.message);
-    return false;
-  }
-};
-
-/* ═══════════════════════════════════════════════════════════
-   ★ NEW v6.1: PWA INSTALL BANNER LOGIC
-   ═══════════════════════════════════════════════════════════ */
-let _pwaBannerTimer = null;
-
-window.bmShowInstallBanner = function () {
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-  const hasPrompt = !!window.__bmDeferredInstall;
-  const isStandalone =
-    window.matchMedia('(display-mode: standalone)').matches ||
-    window.navigator.standalone === true;
-
-  if (isStandalone) return;                // Already installed
-  if (!hasPrompt && !isIOS) return;        // Not installable
-  if (localStorage.getItem('BM_PWA_DISMISSED') === '1') return;
-
-  const banner = document.getElementById('pwaInstallBanner');
-  if (!banner || banner.classList.contains('show')) return;
-
-  banner.classList.add('show');
-
-  clearTimeout(_pwaBannerTimer);
-  _pwaBannerTimer = setTimeout(() => {
-    banner.classList.remove('show');
-  }, 15000);
-
-  console.log('[PWA] Install banner shown');
-};
-
-window.bmInstallPwa = async function () {
-  const prompt = window.__bmDeferredInstall;
-
-  // iOS / unsupported — show manual instructions
-  if (!prompt) {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    if (isIOS && typeof showFeedback === 'function') {
-      showFeedback(
-        'info',
-        'Install on iPhone / iPad',
-        '1. Tap the Share button (📤)\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add"\n\nDone! BM ERP will appear on your home screen.'
-      );
-    } else if (typeof toast === 'function') {
-      toast('Install not available in this browser', 'info');
-    }
-    window.bmDismissInstall();
-    return;
-  }
-
-  try {
-    prompt.prompt();
-    const result = await prompt.userChoice;
-    if (result && result.outcome === 'accepted') {
-      console.log('[PWA] ✅ User accepted install');
-      if (typeof toast === 'function') toast('Installing BM ERP…', 'success');
-    } else {
-      console.log('[PWA] User dismissed install');
-    }
-    window.__bmDeferredInstall = null;
-  } catch (e) {
-    console.warn('[PWA] install error:', e);
-  }
-  window.bmDismissInstall();
-};
-
-window.bmDismissInstall = function () {
-  const banner = document.getElementById('pwaInstallBanner');
-  if (banner) banner.classList.remove('show');
-  clearTimeout(_pwaBannerTimer);
-  // Remember dismissal for this session only (not permanent)
-  try { localStorage.setItem('BM_PWA_DISMISSED', '1'); } catch (e) {}
-};
-
-/* Bootstrap PWA banner */
-(function _initPwaBanner() {
-  // Listen for install availability (fired from index.html guard)
-  window.addEventListener('bm-install-available', () => {
-    setTimeout(() => window.bmShowInstallBanner(), 3000);
-  });
-
-  // Hide banner when app installed
-  window.addEventListener('bm-installed', () => {
-    const banner = document.getElementById('pwaInstallBanner');
-    if (banner) banner.classList.remove('show');
-    window.__bmDeferredInstall = null;
-    try { localStorage.removeItem('BM_PWA_DISMISSED'); } catch (e) {}
-  });
-
-  // Wire up install / dismiss buttons
-  const wireButtons = () => {
-    const installBtn = document.getElementById('pwaInstallBtn');
-    const dismissBtn = document.getElementById('pwaInstallDismiss');
-    if (installBtn && !installBtn._bound) {
-      installBtn._bound = true;
-      installBtn.addEventListener('click', window.bmInstallPwa);
-    }
-    if (dismissBtn && !dismissBtn._bound) {
-      dismissBtn._bound = true;
-      dismissBtn.addEventListener('click', window.bmDismissInstall);
-    }
-  };
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', wireButtons);
-  } else {
-    wireButtons();
-  }
-
-  // iOS fallback — show after 15s if not standalone
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const isStandalone =
-    window.matchMedia('(display-mode: standalone)').matches ||
-    window.navigator.standalone === true;
-  if (isIOS && !isStandalone && localStorage.getItem('BM_PWA_DISMISSED') !== '1') {
-    setTimeout(() => window.bmShowInstallBanner(), 15000);
-  }
-
-  // If already available on page load (e.g. user refresh), show after delay
-  if (window.__bmDeferredInstall) {
-    setTimeout(() => window.bmShowInstallBanner(), 5000);
-  }
-})();
-
-/* ═══════════════════════════════════════════════════════════
-   ★ NEW v6.1: RE-GUARD ON VISIBILITY RESTORE
-   (After minimize → user reopens → ensure back guard still active)
-   ═══════════════════════════════════════════════════════════ */
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') {
-    if (!history.state || !history.state.bm_guard) {
-      try { history.pushState({ bm_guard: 1 }, '', location.href); } catch (e) {}
-    }
-  }
-});
-
-/* ═══════════════════════════════════════════════════════════
    BOOT
    ═══════════════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
@@ -4725,5 +4438,5 @@ window.addEventListener('load', () => {
 });
 
 /* ============================================================
-   END OF FILE — app.js v6.0
+   END OF FILE — app.js v6.1
    ============================================================ */
