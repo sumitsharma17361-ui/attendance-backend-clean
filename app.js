@@ -4384,6 +4384,305 @@ if ('serviceWorker' in navigator) {
 })();
 
 /* ═══════════════════════════════════════════════════════════
+   ★ NEW v6.1: BACK BUTTON HANDLER (Median.co WebView Safe)
+   ─────────────────────────────────────────────────────────────
+   Priority order (each consumes one back press):
+     1. Custom dialog (customDialog)
+     2. Modal backdrop (any .modal-backdrop.open)
+     3. Feedback overlay (showFeedback)
+     4. Download menu
+     5. Chat panel
+     6. Chat sidebar
+     7. Student menu drawer
+     8. Admin menu drawer
+     9. Non-home tab → switch to Home tab
+    10. Student menu key ≠ home → reset to home
+    11. Scrolled down → scroll to top
+    12. Auth "register" mode → switch to login mode
+    13. Home root → minimize (Median) OR double-back-exit (web)
+   ═══════════════════════════════════════════════════════════ */
+let _backExitTimer = null;
+
+window.bmHandleBack = function () {
+  try {
+    /* ── 1. Custom Dialog open? ── */
+    const cd = document.getElementById('customDialog');
+    if (cd && cd.classList.contains('open')) {
+      cd.classList.remove('open');
+      setTimeout(() => { cd.innerHTML = ''; }, 200);
+      return true;
+    }
+
+    /* ── 2. Modal backdrop open? ── */
+    const modals = document.querySelectorAll('.modal-backdrop.open');
+    if (modals.length > 0) {
+      const topModal = modals[modals.length - 1];
+      topModal.classList.remove('open');
+      // If it was a dynamically created modal (view records, PDF viewer), remove from DOM
+      if (topModal.id === 'viewRecordsModal' || !topModal.id) {
+        // leave it - just hidden
+      }
+      return true;
+    }
+
+    /* ── 3. Feedback overlay? ── */
+    const fb = document.querySelector('.feedback-overlay');
+    if (fb) {
+      fb.style.opacity = '0';
+      fb.style.transition = 'opacity .2s ease';
+      setTimeout(() => { try { fb.remove(); } catch (e) {} }, 220);
+      return true;
+    }
+
+    /* ── 4. Download menu open? ── */
+    if (typeof openDownloadMenuId !== 'undefined' && openDownloadMenuId) {
+      const m = document.getElementById(openDownloadMenuId);
+      if (m) m.classList.remove('open');
+      openDownloadMenuId = null;
+      return true;
+    }
+
+    /* ── 5. Chat panel open? ── */
+    const chatPanel = document.getElementById('chatPanel');
+    if (chatPanel && chatPanel.classList.contains('open')) {
+      try { toggleChat(); } catch (e) {
+        chatPanel.classList.remove('open');
+        document.body.classList.remove('body-locked');
+        document.body.style.overflow = '';
+      }
+      return true;
+    }
+
+    /* ── 6. Chat sidebar open? ── */
+    const chatSidebar = document.getElementById('chatSidebar');
+    if (chatSidebar && chatSidebar.classList.contains('open')) {
+      chatSidebar.classList.remove('open');
+      return true;
+    }
+
+    /* ── 7. Student menu drawer open? ── */
+    const smd = document.getElementById('studentMenuDrawer');
+    if (smd && smd.classList.contains('open')) {
+      try { closeStudentMenu(); } catch (e) { smd.classList.remove('open'); }
+      const sbd = document.getElementById('studentMenuBackdrop');
+      if (sbd) sbd.classList.remove('open');
+      return true;
+    }
+
+    /* ── 8. Admin menu drawer open? ── */
+    const amd = document.getElementById('adminMenuDrawer');
+    if (amd && amd.classList.contains('open')) {
+      try { closeAdminMenu(); } catch (e) { amd.classList.remove('open'); }
+      const abd = document.getElementById('adminMenuBackdrop');
+      if (abd) abd.classList.remove('open');
+      return true;
+    }
+
+    /* ── 9. Not on Home tab? ── */
+    if (currentUser) {
+      const activeTabEl = document.querySelector('#mainTabs .tab.active');
+      const activeTabId = activeTabEl ? activeTabEl.dataset.tab : null;
+      if (activeTabId && activeTabId !== 'tab-mark') {
+        try { switchTab('tab-mark'); } catch (e) {}
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return true;
+      }
+
+      /* ── 10. Student menu key ≠ home? ── */
+      if (currentUser.role === 'student' && typeof activeStudentMenuKey !== 'undefined' &&
+          activeStudentMenuKey && activeStudentMenuKey !== 'home') {
+        activeStudentMenuKey = 'home';
+        try { populateStudentMenu(); } catch (e) {}
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return true;
+      }
+    }
+
+    /* ── 11. Scrolled down? → scroll to top ── */
+    if (window.scrollY > 100) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return true;
+    }
+
+    /* ── 12. Auth register mode → back to login ── */
+    const authBox = document.getElementById('auth-box');
+    if (authBox && authBox.style.display !== 'none' && typeof isRegistering !== 'undefined' && isRegistering) {
+      try { toggleAuthMode(); } catch (e) {}
+      return true;
+    }
+
+    /* ── 13. Home root → MINIMIZE (Option A) ──
+       Strategy:
+         • If Median.co supports appMinimize() → use it → single back minimizes app
+         • Else (web/PWA) → double-back-to-exit with toast (safe UX)
+    */
+    if (typeof isMedianApp === 'function' && isMedianApp() && window.median) {
+      if (typeof window.median.appMinimize === 'function') {
+        try {
+          window.median.appMinimize();
+          return true; // consumed — re-guard so next back does same
+        } catch (e) { /* fall through */ }
+      }
+    }
+
+    /* Fallback: double-back-to-exit */
+    const toastEl = document.getElementById('backConfirmToast');
+    if (toastEl && toastEl.classList.contains('show')) {
+      // 2nd back press within window → EXIT
+      toastEl.classList.remove('show');
+      clearTimeout(_backExitTimer);
+      _backExitTimer = null;
+      return false; // ← guard NOT re-pushed → app closes/minimizes
+    }
+    if (toastEl) {
+      toastEl.classList.add('show');
+      clearTimeout(_backExitTimer);
+      _backExitTimer = setTimeout(() => {
+        toastEl.classList.remove('show');
+        _backExitTimer = null;
+      }, 2000);
+    }
+    return true; // consumed — wait for 2nd back press
+  } catch (err) {
+    console.warn('[BackHandler] error:', err && err.message);
+    return false;
+  }
+};
+
+/* ═══════════════════════════════════════════════════════════
+   ★ NEW v6.1: PWA INSTALL BANNER LOGIC
+   ═══════════════════════════════════════════════════════════ */
+let _pwaBannerTimer = null;
+
+window.bmShowInstallBanner = function () {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const hasPrompt = !!window.__bmDeferredInstall;
+  const isStandalone =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true;
+
+  if (isStandalone) return;                // Already installed
+  if (!hasPrompt && !isIOS) return;        // Not installable
+  if (localStorage.getItem('BM_PWA_DISMISSED') === '1') return;
+
+  const banner = document.getElementById('pwaInstallBanner');
+  if (!banner || banner.classList.contains('show')) return;
+
+  banner.classList.add('show');
+
+  clearTimeout(_pwaBannerTimer);
+  _pwaBannerTimer = setTimeout(() => {
+    banner.classList.remove('show');
+  }, 15000);
+
+  console.log('[PWA] Install banner shown');
+};
+
+window.bmInstallPwa = async function () {
+  const prompt = window.__bmDeferredInstall;
+
+  // iOS / unsupported — show manual instructions
+  if (!prompt) {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (isIOS && typeof showFeedback === 'function') {
+      showFeedback(
+        'info',
+        'Install on iPhone / iPad',
+        '1. Tap the Share button (📤)\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add"\n\nDone! BM ERP will appear on your home screen.'
+      );
+    } else if (typeof toast === 'function') {
+      toast('Install not available in this browser', 'info');
+    }
+    window.bmDismissInstall();
+    return;
+  }
+
+  try {
+    prompt.prompt();
+    const result = await prompt.userChoice;
+    if (result && result.outcome === 'accepted') {
+      console.log('[PWA] ✅ User accepted install');
+      if (typeof toast === 'function') toast('Installing BM ERP…', 'success');
+    } else {
+      console.log('[PWA] User dismissed install');
+    }
+    window.__bmDeferredInstall = null;
+  } catch (e) {
+    console.warn('[PWA] install error:', e);
+  }
+  window.bmDismissInstall();
+};
+
+window.bmDismissInstall = function () {
+  const banner = document.getElementById('pwaInstallBanner');
+  if (banner) banner.classList.remove('show');
+  clearTimeout(_pwaBannerTimer);
+  // Remember dismissal for this session only (not permanent)
+  try { localStorage.setItem('BM_PWA_DISMISSED', '1'); } catch (e) {}
+};
+
+/* Bootstrap PWA banner */
+(function _initPwaBanner() {
+  // Listen for install availability (fired from index.html guard)
+  window.addEventListener('bm-install-available', () => {
+    setTimeout(() => window.bmShowInstallBanner(), 3000);
+  });
+
+  // Hide banner when app installed
+  window.addEventListener('bm-installed', () => {
+    const banner = document.getElementById('pwaInstallBanner');
+    if (banner) banner.classList.remove('show');
+    window.__bmDeferredInstall = null;
+    try { localStorage.removeItem('BM_PWA_DISMISSED'); } catch (e) {}
+  });
+
+  // Wire up install / dismiss buttons
+  const wireButtons = () => {
+    const installBtn = document.getElementById('pwaInstallBtn');
+    const dismissBtn = document.getElementById('pwaInstallDismiss');
+    if (installBtn && !installBtn._bound) {
+      installBtn._bound = true;
+      installBtn.addEventListener('click', window.bmInstallPwa);
+    }
+    if (dismissBtn && !dismissBtn._bound) {
+      dismissBtn._bound = true;
+      dismissBtn.addEventListener('click', window.bmDismissInstall);
+    }
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', wireButtons);
+  } else {
+    wireButtons();
+  }
+
+  // iOS fallback — show after 15s if not standalone
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isStandalone =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true;
+  if (isIOS && !isStandalone && localStorage.getItem('BM_PWA_DISMISSED') !== '1') {
+    setTimeout(() => window.bmShowInstallBanner(), 15000);
+  }
+
+  // If already available on page load (e.g. user refresh), show after delay
+  if (window.__bmDeferredInstall) {
+    setTimeout(() => window.bmShowInstallBanner(), 5000);
+  }
+})();
+
+/* ═══════════════════════════════════════════════════════════
+   ★ NEW v6.1: RE-GUARD ON VISIBILITY RESTORE
+   (After minimize → user reopens → ensure back guard still active)
+   ═══════════════════════════════════════════════════════════ */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    if (!history.state || !history.state.bm_guard) {
+      try { history.pushState({ bm_guard: 1 }, '', location.href); } catch (e) {}
+    }
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════
    BOOT
    ═══════════════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
