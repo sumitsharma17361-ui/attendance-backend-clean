@@ -4467,3 +4467,478 @@ window.addEventListener('load', () => {
 /* ============================================================
    END OF FILE — app.js v6.1
    ============================================================ */
+
+
+
+
+/* ============================================================================
+   ★ BM ERP v7.0 MASTER PATCH
+   Paste this at the VERY END of your app.js file.
+   Features: 
+   - Removed 7-day session expiry (Session is now indefinite)
+   - Smart Device Login (Only blocks if account is truly active elsewhere)
+   - Study Tracker & Pomodoro Timer (With full JSON Data)
+   - Bottom Navigation updated with Tracker button
+   ============================================================================ */
+
+(function() {
+  console.log("🚀 Applying BM ERP v7.0 Master Patch...");
+
+  // ==========================================================================
+  // 1. REMOVE SESSION EXPIRY TIMER
+  // ==========================================================================
+  const _origUpdateClock = window.updateClock;
+  window.updateClock = function() {
+    if (_origUpdateClock) _origUpdateClock();
+    // Override the expiry text injected by the original function
+    const sessionEl = document.getElementById('sessionExpiry');
+    if (sessionEl) {
+      sessionEl.textContent = 'Active';
+      sessionEl.style.color = 'var(--emerald-700)';
+      sessionEl.style.background = 'var(--emerald-50)';
+      sessionEl.title = 'Session active (No Expiry)';
+    }
+  };
+
+  // ==========================================================================
+  // 2. SMART DEVICE LOGIN LOGIC
+  // ==========================================================================
+  window.handleAuth = async function() {
+    const roll = sanitizeRoll(document.getElementById('rollNo').value.trim());
+    const password = document.getElementById('password').value.trim();
+    if (!roll) return showFeedback('error', 'Missing Roll No', 'Please enter a valid roll number.');
+    if (!password) return showFeedback('error', 'Missing Password', 'Please enter your password.');
+    
+    const deviceInfo = getDeviceInfo();
+    const deviceId = getOrCreateDeviceId();
+    
+    try {
+      if (isRegistering) {
+        const name = document.getElementById('regName').value.trim();
+        if (!name) return showFeedback('error', 'Missing Name', 'Please enter your full name.');
+        if (!isValidStudentRoll(roll)) return showFeedback('error', 'Invalid Roll Format', 'Use 24CSE01 or 24AIDS01 format.');
+        showDL('Submitting request…');
+        const res = await fetch(`${API}/api/auth/register-request`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name, rollNo: roll, password, deviceId, deviceName: deviceInfo.name})});
+        const data = await res.json();
+        hideDL();
+        if (!res.ok) return showFeedback('error', 'Request Failed', data.error || 'Could not submit registration request.');
+        showFeedback('success', 'Request Submitted', 'Your registration request has been sent to the admin.\nYou can sign in after approval.\n\nRoll No: ' + roll);
+        toggleAuthMode();
+        document.getElementById('password').value = '';
+      } else {
+        const selectedRole = document.getElementById('loginRole').value;
+        showDL('Signing in…');
+        const res = await fetch(`${API}/api/auth/login`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rollNo: roll, password, deviceId, deviceName: deviceInfo.name})});
+        const data = await res.json();
+        hideDL();
+        
+        if (!res.ok) {
+          // ★ SMART FIX: Only block if backend explicitly says device is active elsewhere
+          if (data.requiresDeviceReset) {
+            return showFeedback('warning', 'Account Active on Another Device', 
+              `This account is currently active on "${data.activeDevice || 'another device'}". Please log out from that device first, or request an admin reset.`, 
+              { buttonText: 'OK' });
+          }
+          return showFeedback('error', 'Sign-in Failed', data.error || 'Invalid credentials.');
+        }
+        
+        if (data.user.role !== selectedRole) return showFeedback('error', 'Role Mismatch', `Registered as ${data.user.role}, not ${selectedRole}.`);
+        
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('BM_LOGIN_TIME', Date.now().toString());
+        
+        if (window.initFirebase) window.initFirebase(); 
+        loadDashboard();
+      }
+    } catch(e){ hideDL(); showFeedback('error', 'Network Error', e.message); }
+  };
+
+  // ==========================================================================
+  // 3. FULL STUDY PLAN DATA (24 Nov - 31 Dec)
+  // ==========================================================================
+  const STUDY_PLAN_DATA = {
+    "exams": [
+      { "subject_code": "DAA", "exam_date": "2026-12-15" },
+      { "subject_code": "CN", "exam_date": "2026-12-17" },
+      { "subject_code": "FLA", "exam_date": "2026-12-19" },
+      { "subject_code": "WT", "exam_date": "2026-12-21" },
+      { "subject_code": "BDA", "exam_date": "2026-12-29" },
+      { "subject_code": "HRM", "exam_date": "2026-12-31" }
+    ],
+    "daily_schedule": [
+      { "date": "2026-11-24", "day": "Tuesday", "slots": [
+          { "subject_code": "DAA", "start_time": "06:30", "end_time": "08:00", "unit": "Unit I", "topics": "Algorithm Performance, Time/Space Complexity, Asymptotic Notations" },
+          { "subject_code": "DAA", "start_time": "17:00", "end_time": "19:30", "unit": "Unit I", "topics": "Divide & Conquer (Binary Search, Merge/Quick Sort)" },
+          { "subject_code": "CN", "start_time": "20:30", "end_time": "22:30", "unit": "Unit I", "topics": "Data Comm, Transmission Modes, OSI & TCP/IP" }
+      ]},
+      { "date": "2026-11-25", "day": "Wednesday", "slots": [
+          { "subject_code": "CN", "start_time": "06:30", "end_time": "08:00", "unit": "Unit I", "topics": "Modulation, Multiplexing, Topologies" },
+          { "subject_code": "FLA", "start_time": "17:00", "end_time": "19:30", "unit": "Unit I", "topics": "FA Basics, DFA, NDFA, NFA-to-DFA" },
+          { "subject_code": "DAA", "start_time": "20:30", "end_time": "22:30", "unit": "Unit I", "topics": "Elementary DS, DSU, Numericals" }
+      ]},
+      { "date": "2026-11-26", "day": "Thursday", "slots": [
+          { "subject_code": "FLA", "start_time": "06:30", "end_time": "08:00", "unit": "Unit I", "topics": "Minimization of FA & ε-moves" },
+          { "subject_code": "FLA", "start_time": "17:00", "end_time": "19:30", "unit": "Unit I", "topics": "Mealy/Moore Machines & Interconversion" },
+          { "subject_code": "WT", "start_time": "20:30", "end_time": "22:30", "unit": "Unit I", "topics": "HTML Anatomy, Links, Lists, Images, Tables" }
+      ]},
+      { "date": "2026-11-27", "day": "Friday", "slots": [
+          { "subject_code": "WT", "start_time": "06:30", "end_time": "08:00", "unit": "Unit I", "topics": "CSS Internal/External, Page Design" },
+          { "subject_code": "DAA", "start_time": "17:00", "end_time": "19:30", "unit": "Unit II", "topics": "Greedy: Fractional Knapsack, Job Sequencing" },
+          { "subject_code": "CN", "start_time": "20:30", "end_time": "22:30", "unit": "Unit II", "topics": "DLL Framing, Stop&Wait, GBN, Selective Repeat" }
+      ]},
+      { "date": "2026-11-28", "day": "Saturday", "slots": [
+          { "subject_code": "DAA", "start_time": "07:30", "end_time": "10:30", "unit": "Unit II", "topics": "MST (Prim/Kruskal), Dijkstra SSSP" },
+          { "subject_code": "CN", "start_time": "11:30", "end_time": "14:00", "unit": "Unit II", "topics": "MAC, IPv4/IPv6 Subnetting" },
+          { "subject_code": "FLA", "start_time": "16:00", "end_time": "18:30", "unit": "Unit II", "topics": "Regex, Arden's Theorem + Numericals" },
+          { "subject_code": "TEST", "start_time": "20:00", "end_time": "22:00", "unit": "Test", "topics": "Weekly Test 1: DAA U1 + CN U1 + FLA U1" }
+      ]},
+      { "date": "2026-11-29", "day": "Sunday", "slots": [
+          { "subject_code": "DAA", "start_time": "07:30", "end_time": "10:30", "unit": "Unit II", "topics": "DP: OBST, 0/1 Knapsack, TSP" },
+          { "subject_code": "FLA", "start_time": "11:30", "end_time": "14:00", "unit": "Unit II", "topics": "RE→FA, Pumping Lemma" },
+          { "subject_code": "WT", "start_time": "16:00", "end_time": "18:30", "unit": "Unit II", "topics": "PHP: Variables, Arrays, Control, Forms" },
+          { "subject_code": "CN", "start_time": "20:00", "end_time": "22:00", "unit": "Unit II", "topics": "ICMPv4, ARP, RARP, Classful/Classless" }
+      ]},
+      { "date": "2026-11-30", "day": "Monday", "slots": [
+          { "subject_code": "WT", "start_time": "06:30", "end_time": "08:00", "unit": "Unit II", "topics": "PHP File Upload, MySQL, Sessions" },
+          { "subject_code": "DAA", "start_time": "17:00", "end_time": "19:30", "unit": "Unit III", "topics": "Backtracking: 8-Queen, Sum of Subsets" },
+          { "subject_code": "CN", "start_time": "20:30", "end_time": "22:30", "unit": "Unit III", "topics": "Network Devices, Shortest Path/Flooding" }
+      ]},
+      { "date": "2026-12-01", "day": "Tuesday", "slots": [
+          { "subject_code": "CN", "start_time": "06:30", "end_time": "08:00", "unit": "Unit III", "topics": "Hierarchical, Link State & DV Routing" },
+          { "subject_code": "DAA", "start_time": "17:00", "end_time": "19:30", "unit": "Unit III", "topics": "Backtracking: Graph Colouring, Hamiltonian" },
+          { "subject_code": "FLA", "start_time": "20:30", "end_time": "22:30", "unit": "Unit III", "topics": "Chomsky Hierarchy, CFG, Parse Trees" }
+      ]},
+      { "date": "2026-12-02", "day": "Wednesday", "slots": [
+          { "subject_code": "FLA", "start_time": "06:30", "end_time": "08:00", "unit": "Unit III", "topics": "CFG Reduced Forms, Useless Symbols" },
+          { "subject_code": "FLA", "start_time": "17:00", "end_time": "19:30", "unit": "Unit III", "topics": "CNF & GNF Numericals" },
+          { "subject_code": "CN", "start_time": "20:30", "end_time": "22:30", "unit": "Unit III", "topics": "Transport Layer, UDP, TCP" }
+      ]},
+      { "date": "2026-12-03", "day": "Thursday", "slots": [
+          { "subject_code": "WT", "start_time": "06:30", "end_time": "08:00", "unit": "Unit III", "topics": "JS Syntax, DOM, Event Handling" },
+          { "subject_code": "DAA", "start_time": "17:00", "end_time": "19:30", "unit": "Unit III", "topics": "Branch and Bound: 0/1 Knapsack, TSP" },
+          { "subject_code": "WT", "start_time": "20:30", "end_time": "22:30", "unit": "Unit III", "topics": "JS Forms, Cookies, VBScript" }
+      ]},
+      { "date": "2026-12-04", "day": "Friday", "slots": [
+          { "subject_code": "FLA", "start_time": "06:30", "end_time": "08:00", "unit": "Unit III", "topics": "PDA Design, CFG Equivalence" },
+          { "subject_code": "DAA", "start_time": "17:00", "end_time": "19:30", "unit": "Unit IV", "topics": "P, NP, NP-Hard, Cook's Theorem" },
+          { "subject_code": "CN", "start_time": "20:30", "end_time": "22:30", "unit": "Unit IV", "topics": "Congestion Control, QoS" }
+      ]},
+      { "date": "2026-12-05", "day": "Saturday", "slots": [
+          { "subject_code": "FLA", "start_time": "07:30", "end_time": "10:30", "unit": "Unit IV", "topics": "Turing Machines, Variants" },
+          { "subject_code": "CN", "start_time": "11:30", "end_time": "14:00", "unit": "Unit IV", "topics": "DNS, Email, FTP, HTTP, Security" },
+          { "subject_code": "WT", "start_time": "16:00", "end_time": "18:30", "unit": "Unit IV", "topics": "XML, DTD, Schemas, XSL/XSLT" },
+          { "subject_code": "TEST", "start_time": "20:00", "end_time": "22:00", "unit": "Test", "topics": "Weekly Test 2: DAA U2-3 + CN U2-3 + FLA U2-3" }
+      ]},
+      { "date": "2026-12-06", "day": "Sunday", "slots": [
+          { "subject_code": "FLA", "start_time": "07:30", "end_time": "10:30", "unit": "Unit IV", "topics": "Halting Problem, PCP, LBA, Rice's Theorem" },
+          { "subject_code": "DAA", "start_time": "11:30", "end_time": "14:00", "unit": "Unit IV", "topics": "NP-Hard Graph, Scheduling" },
+          { "subject_code": "BDA", "start_time": "16:00", "end_time": "18:30", "unit": "Unit I", "topics": "Big Data Characteristics, 3Vs" },
+          { "subject_code": "HRM", "start_time": "20:00", "end_time": "22:00", "unit": "Unit I", "topics": "Nature, Scope, Objectives, Strategic HRM" }
+      ]},
+      { "date": "2026-12-07", "day": "Monday", "slots": [
+          { "subject_code": "BDA", "start_time": "06:30", "end_time": "08:00", "unit": "Unit II", "topics": "CAP Theorem, Hadoop Ecosystem, HDFS" },
+          { "subject_code": "DAA", "start_time": "17:00", "end_time": "19:30", "unit": "Rev 1", "topics": "Revision Round 1: DAA U1 & U2" },
+          { "subject_code": "CN", "start_time": "20:30", "end_time": "22:30", "unit": "Rev 1", "topics": "Revision Round 1: CN U1 & U2" }
+      ]},
+      { "date": "2026-12-08", "day": "Tuesday", "slots": [
+          { "subject_code": "HRM", "start_time": "06:30", "end_time": "08:00", "unit": "Unit II", "topics": "Manpower Planning, Recruitment, Selection" },
+          { "subject_code": "FLA", "start_time": "17:00", "end_time": "19:30", "unit": "Rev 1", "topics": "Revision Round 1: FLA U1 & U2" },
+          { "subject_code": "WT", "start_time": "20:30", "end_time": "22:30", "unit": "Rev 1", "topics": "Revision Round 1: WT U1 & U2" }
+      ]},
+      { "date": "2026-12-09", "day": "Wednesday", "slots": [
+          { "subject_code": "BDA", "start_time": "06:30", "end_time": "08:00", "unit": "Unit III", "topics": "MapReduce, MongoDB CRUD" },
+          { "subject_code": "DAA", "start_time": "17:00", "end_time": "19:30", "unit": "Rev 1", "topics": "Revision Round 1: DAA U3 & U4" },
+          { "subject_code": "CN", "start_time": "20:30", "end_time": "22:30", "unit": "Rev 1", "topics": "Revision Round 1: CN U3 & U4" }
+      ]},
+      { "date": "2026-12-10", "day": "Thursday", "slots": [
+          { "subject_code": "HRM", "start_time": "06:30", "end_time": "08:00", "unit": "Unit III", "topics": "Training Types, Evaluation, TNA" },
+          { "subject_code": "FLA", "start_time": "17:00", "end_time": "19:30", "unit": "Rev 1", "topics": "Revision Round 1: FLA U3 & U4" },
+          { "subject_code": "WT", "start_time": "20:30", "end_time": "22:30", "unit": "Rev 1", "topics": "Revision Round 1: WT U3 & U4" }
+      ]},
+      { "date": "2026-12-11", "day": "Friday", "slots": [
+          { "subject_code": "BDA", "start_time": "06:30", "end_time": "08:00", "unit": "Unit IV", "topics": "Cassandra, CQL Data Types" },
+          { "subject_code": "DAA", "start_time": "17:00", "end_time": "19:30", "unit": "Mock", "topics": "Mock Paper: Full 3-Hour Exam" },
+          { "subject_code": "BUFFER", "start_time": "20:30", "end_time": "22:30", "unit": "Buffer", "topics": "Backlog Buffer: Pending Topics" }
+      ]},
+      { "date": "2026-12-12", "day": "Saturday", "slots": [
+          { "subject_code": "CN", "start_time": "07:30", "end_time": "10:30", "unit": "Mock", "topics": "Mock Paper: Full Syllabus PYQs" },
+          { "subject_code": "FLA", "start_time": "11:30", "end_time": "14:00", "unit": "Mock", "topics": "Mock Paper: Full Syllabus PYQs" },
+          { "subject_code": "WT", "start_time": "16:00", "end_time": "18:30", "unit": "Mock", "topics": "Mock Paper: Full Syllabus PYQs" },
+          { "subject_code": "DAA", "start_time": "20:00", "end_time": "22:00", "unit": "Rev", "topics": "Final Sheet: Complexities & Pseudocodes" }
+      ]},
+      { "date": "2026-12-13", "day": "Sunday", "slots": [
+          { "subject_code": "DAA", "start_time": "07:30", "end_time": "10:30", "unit": "Rev", "topics": "Deep Revision: U1 & U2" },
+          { "subject_code": "DAA", "start_time": "11:30", "end_time": "14:00", "unit": "Rev", "topics": "Deep Revision: U3 & U4" },
+          { "subject_code": "DAA", "start_time": "16:00", "end_time": "18:30", "unit": "PYQ", "topics": "PYQ Solving: Last 3 Years" },
+          { "subject_code": "DAA", "start_time": "20:00", "end_time": "22:00", "unit": "Rev", "topics": "Short Q1 Prep: 2-Mark Definitions" }
+      ]},
+      { "date": "2026-12-14", "day": "Monday", "slots": [
+          { "subject_code": "DAA", "start_time": "08:00", "end_time": "11:00", "unit": "Rev", "topics": "Rapid Revision: All 4 Units" },
+          { "subject_code": "DAA", "start_time": "12:00", "end_time": "15:00", "unit": "Prac", "topics": "Numerical Dry-Run: Knapsack, TSP" },
+          { "subject_code": "DAA", "start_time": "17:00", "end_time": "20:00", "unit": "Rev", "topics": "Final Formula Check & Early Sleep" }
+      ]},
+      { "date": "2026-12-15", "day": "Tuesday", "slots": [
+          { "subject_code": "DAA", "start_time": "09:30", "end_time": "12:30", "unit": "EXAM", "topics": "EXAM 1: Design & Analysis of Algorithms" },
+          { "subject_code": "CN", "start_time": "16:00", "end_time": "19:00", "unit": "Rev", "topics": "CN Revision: U1 & U2" },
+          { "subject_code": "CN", "start_time": "20:00", "end_time": "22:30", "unit": "Rev", "topics": "CN Revision: U3" }
+      ]},
+      { "date": "2026-12-16", "day": "Wednesday", "slots": [
+          { "subject_code": "CN", "start_time": "07:30", "end_time": "11:00", "unit": "Rev", "topics": "CN Revision: U4" },
+          { "subject_code": "CN", "start_time": "12:00", "end_time": "15:30", "unit": "Prac", "topics": "Diagrams & Numericals" },
+          { "subject_code": "CN", "start_time": "17:00", "end_time": "21:00", "unit": "PYQ", "topics": "PYQ & Q1 Prep" }
+      ]},
+      { "date": "2026-12-17", "day": "Thursday", "slots": [
+          { "subject_code": "CN", "start_time": "09:30", "end_time": "12:30", "unit": "EXAM", "topics": "EXAM 2: Computer Networks" },
+          { "subject_code": "FLA", "start_time": "16:00", "end_time": "19:00", "unit": "Rev", "topics": "FLA Revision: U1 & U2" },
+          { "subject_code": "FLA", "start_time": "20:00", "end_time": "22:30", "unit": "Rev", "topics": "FLA Revision: U3" }
+      ]},
+      { "date": "2026-12-18", "day": "Friday", "slots": [
+          { "subject_code": "FLA", "start_time": "07:30", "end_time": "11:00", "unit": "Rev", "topics": "FLA Revision: U3 & U4" },
+          { "subject_code": "FLA", "start_time": "12:00", "end_time": "15:30", "unit": "Rev", "topics": "Theory & Proofs" },
+          { "subject_code": "FLA", "start_time": "17:00", "end_time": "21:00", "unit": "PYQ", "topics": "PYQ & Q1 Prep" }
+      ]},
+      { "date": "2026-12-19", "day": "Saturday", "slots": [
+          { "subject_code": "FLA", "start_time": "09:30", "end_time": "12:30", "unit": "EXAM", "topics": "EXAM 3: Formal Languages & Automata" },
+          { "subject_code": "WT", "start_time": "16:00", "end_time": "19:00", "unit": "Rev", "topics": "WT Revision: U1 & U2" },
+          { "subject_code": "WT", "start_time": "20:00", "end_time": "22:30", "unit": "Rev", "topics": "WT Revision: U3" }
+      ]},
+      { "date": "2026-12-20", "day": "Sunday", "slots": [
+          { "subject_code": "WT", "start_time": "07:30", "end_time": "11:00", "unit": "Rev", "topics": "WT Revision: U4" },
+          { "subject_code": "WT", "start_time": "12:00", "end_time": "15:30", "unit": "Prac", "topics": "Code Practice" },
+          { "subject_code": "WT", "start_time": "17:00", "end_time": "21:00", "unit": "PYQ", "topics": "PYQ & Q1 Prep" }
+      ]},
+      { "date": "2026-12-21", "day": "Monday", "slots": [
+          { "subject_code": "WT", "start_time": "09:30", "end_time": "12:30", "unit": "EXAM", "topics": "EXAM 4: Web Technology" },
+          { "subject_code": "HRM", "start_time": "17:00", "end_time": "20:00", "unit": "Unit IV", "topics": "Performance Appraisal, Compensation" }
+      ]},
+      { "date": "2026-12-22", "day": "Tuesday", "slots": [
+          { "subject_code": "BDA", "start_time": "08:00", "end_time": "11:00", "unit": "Unit I", "topics": "Complete Deep Study" },
+          { "subject_code": "BDA", "start_time": "12:30", "end_time": "15:30", "unit": "Unit II", "topics": "Complete Deep Study" },
+          { "subject_code": "HRM", "start_time": "17:30", "end_time": "20:00", "unit": "Rev", "topics": "HRM Revision U1 & U2" }
+      ]},
+      { "date": "2026-12-23", "day": "Wednesday", "slots": [
+          { "subject_code": "BDA", "start_time": "08:00", "end_time": "11:00", "unit": "Unit III", "topics": "Complete Deep Study" },
+          { "subject_code": "BDA", "start_time": "12:30", "end_time": "15:30", "unit": "Unit IV", "topics": "Complete Deep Study" },
+          { "subject_code": "HRM", "start_time": "17:30", "end_time": "20:00", "unit": "Rev", "topics": "HRM Revision U3 & U4" }
+      ]},
+      { "date": "2026-12-24", "day": "Thursday", "slots": [
+          { "subject_code": "BDA", "start_time": "08:00", "end_time": "11:00", "unit": "Prac", "topics": "Query Cheat-Sheet" },
+          { "subject_code": "HRM", "start_time": "12:30", "end_time": "15:30", "unit": "Prac", "topics": "Answer Writing Practice" },
+          { "subject_code": "BDA", "start_time": "17:30", "end_time": "20:00", "unit": "PYQ", "topics": "BDA PYQs U1 & U2" }
+      ]},
+      { "date": "2026-12-25", "day": "Friday", "slots": [
+          { "subject_code": "BDA", "start_time": "08:00", "end_time": "11:00", "unit": "PYQ", "topics": "BDA PYQs U3 & U4" },
+          { "subject_code": "HRM", "start_time": "12:30", "end_time": "15:30", "unit": "Mock", "topics": "HRM Mock Paper" },
+          { "subject_code": "BDA", "start_time": "17:30", "end_time": "20:00", "unit": "Mock", "topics": "BDA Mock Paper" }
+      ]},
+      { "date": "2026-12-26", "day": "Saturday", "slots": [
+          { "subject_code": "BDA", "start_time": "08:00", "end_time": "11:00", "unit": "Rev", "topics": "BDA Final Revision U1 & U2" },
+          { "subject_code": "HRM", "start_time": "12:30", "end_time": "15:30", "unit": "Rev", "topics": "HRM Final Revision U1 & U2" },
+          { "subject_code": "BDA", "start_time": "17:30", "end_time": "20:00", "unit": "Rev", "topics": "BDA Q1 Prep" }
+      ]},
+      { "date": "2026-12-27", "day": "Sunday", "slots": [
+          { "subject_code": "BDA", "start_time": "08:00", "end_time": "11:00", "unit": "Rev", "topics": "BDA Final Revision U3" },
+          { "subject_code": "BDA", "start_time": "12:30", "end_time": "15:30", "unit": "Rev", "topics": "BDA Final Revision U4" },
+          { "subject_code": "BDA", "start_time": "17:30", "end_time": "20:00", "unit": "Prac", "topics": "BDA Diagrams" }
+      ]},
+      { "date": "2026-12-28", "day": "Monday", "slots": [
+          { "subject_code": "BDA", "start_time": "08:00", "end_time": "12:00", "unit": "Rev", "topics": "BDA Rapid Revision" },
+          { "subject_code": "BDA", "start_time": "14:00", "end_time": "18:00", "unit": "Rev", "topics": "BDA Final Check" }
+      ]},
+      { "date": "2026-12-29", "day": "Tuesday", "slots": [
+          { "subject_code": "BDA", "start_time": "09:30", "end_time": "12:30", "unit": "EXAM", "topics": "EXAM 5: Big Data Analytics" },
+          { "subject_code": "HRM", "start_time": "16:00", "end_time": "19:30", "unit": "Rev", "topics": "HRM Revision U1 & U2" },
+          { "subject_code": "HRM", "start_time": "20:30", "end_time": "22:30", "unit": "Rev", "topics": "HRM Revision U3" }
+      ]},
+      { "date": "2026-12-30", "day": "Wednesday", "slots": [
+          { "subject_code": "HRM", "start_time": "08:00", "end_time": "12:00", "unit": "Rev", "topics": "HRM Revision U4" },
+          { "subject_code": "HRM", "start_time": "14:00", "end_time": "18:00", "unit": "Rev", "topics": "HRM Complete Recall" },
+          { "subject_code": "HRM", "start_time": "19:30", "end_time": "21:30", "unit": "Rev", "topics": "HRM Q1 Prep" }
+      ]},
+      { "date": "2026-12-31", "day": "Thursday", "slots": [
+          { "subject_code": "HRM", "start_time": "09:30", "end_time": "12:30", "unit": "EXAM", "topics": "EXAM 6: Human Resource Management" }
+      ]}
+    ]
+  };
+
+  // ==========================================================================
+  // 4. STUDY TRACKER & POMODORO LOGIC
+  // ==========================================================================
+  let pomoInterval = null;
+  let pomoTimeLeft = 25 * 60; 
+  let pomoRunning = false;
+
+  window.renderTrackerUI = function() {
+    const container = document.getElementById('trackerContainer');
+    if (!container) return;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayData = STUDY_PLAN_DATA.daily_schedule.find(d => d.date === todayStr) || STUDY_PLAN_DATA.daily_schedule[0];
+
+    let html = `
+      <div style="margin-bottom: 16px;">
+        <div style="font-size:11px; font-weight:800; color:var(--slate-500); text-transform:uppercase; margin-bottom:8px;">End-Term Exams</div>
+        <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;" class="no-scrollbar">
+    `;
+    
+    STUDY_PLAN_DATA.exams.forEach(ex => {
+      const exDate = new Date(ex.exam_date);
+      const diffDays = Math.ceil((exDate - new Date()) / (1000 * 60 * 60 * 24));
+      html += `
+        <div class="tracker-exam-card" style="min-width:100px; background:var(--slate-800); color:#fff; border-radius:10px; padding:10px; box-shadow:var(--shadow-sm);">
+          <div class="tracker-exam-code" style="font-size:10px; font-weight:800; color:var(--amber-400);">${ex.subject_code}</div>
+          <div class="tracker-exam-date" style="font-size:14px; font-weight:800; margin-top:2px;">${fmtDatePretty(ex.exam_date)}</div>
+          <div class="tracker-exam-days" style="font-size:11px; color:var(--slate-300); margin-top:2px;">${diffDays > 0 ? diffDays + ' days left' : 'Exam Day!'}</div>
+        </div>
+      `;
+    });
+    
+    html += `</div></div>`;
+
+    html += `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <div style="font-size:14px; font-weight:800;">Today's Schedule <span style="font-size:11px;color:var(--slate-500);font-weight:600;">(${todayData.day})</span></div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+    `;
+
+    if (todayData && todayData.slots) {
+      todayData.slots.forEach((slot, i) => {
+        const isExam = slot.subject_code === 'TEST' || slot.unit === 'EXAM' || slot.unit === 'Mock';
+        const badgeColor = isExam ? 'var(--amber-100)' : 'var(--brand-50)';
+        const badgeText = isExam ? 'var(--amber-700)' : 'var(--brand-700)';
+        
+        html += `
+          <div class="tracker-slot" style="border:1px solid var(--surface-border); border-radius:12px; padding:12px; display:flex; gap:12px; align-items:flex-start; background:var(--surface-card); transition:all 0.2s; position:relative; overflow:hidden;">
+            <div style="position:absolute; left:0; top:0; bottom:0; width:4px; background:${isExam ? 'var(--amber-500)' : 'var(--brand-500)'};"></div>
+            <div style="flex:1; padding-left:6px;">
+              <div style="display:flex; justify-content:space-between; margin-bottom:6px; align-items:center;">
+                <span style="font-size:11px; font-weight:800; color:${badgeText}; background:${badgeColor}; padding:2px 8px; border-radius:6px;">${slot.subject_code}</span>
+                <span style="font-size:11px; font-weight:700; color:var(--slate-500); display:flex; align-items:center; gap:4px;">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  ${slot.start_time} - ${slot.end_time}
+                </span>
+              </div>
+              <div style="font-size:13px; font-weight:800; color:var(--slate-900); margin-bottom:4px;">${slot.unit}</div>
+              <div style="font-size:12px; color:var(--slate-600); line-height:1.5;">${slot.topics}</div>
+            </div>
+            <button onclick="startPomodoro('${slot.subject_code}', '${slot.topics}')" style="flex-shrink:0; width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg, var(--brand-500), var(--brand-700)); color:#fff; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 10px rgba(37, 99, 235, 0.25); transition:transform 0.2s;" onmousedown="this.style.transform='scale(0.9)'" onmouseup="this.style.transform='scale(1)'" onmouseleave="this.style.transform='scale(1)'">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="white" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </button>
+          </div>
+        `;
+      });
+    } else {
+      html += `<div class="empty">No slots today. Take a rest!</div>`;
+    }
+
+    html += `</div>`;
+    container.innerHTML = html;
+  };
+
+  window.startPomodoro = function(subject, topic) {
+    if (pomoRunning) {
+      showFeedback('warning', 'Timer Active', 'Ek Pomodoro session pehle se chal raha hai. Please stop it first.');
+      return;
+    }
+    
+    pomoTimeLeft = 25 * 60;
+    pomoRunning = true;
+    
+    let modal = document.getElementById('pomoModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'pomoModal';
+      modal.className = 'modal-backdrop safe-top-modal open';
+      modal.style.zIndex = '99999';
+      modal.innerHTML = `
+        <div class="modal" style="max-width:320px; text-align:center; padding:24px;">
+          <div style="font-size:20px; font-weight:900; color:var(--slate-900); margin-bottom:4px;">Focus Session</div>
+          <div style="font-size:12px; color:var(--slate-500); margin-bottom:20px;">${subject}</div>
+          <div id="pomoTimerDisplay" style="font-size:64px; font-weight:900; color:var(--brand-600); font-variant-numeric:tabular-nums; line-height:1; margin-bottom:24px; text-shadow:0 4px 12px rgba(37,99,235,0.2);">25:00</div>
+          <div style="display:flex; gap:12px; justify-content:center;">
+            <button class="btn btn-outline" onclick="stopPomodoro()" style="flex:1;">Stop</button>
+            <button class="btn btn-primary" id="pomoPlayBtn" onclick="togglePomodoro()" style="flex:1;">Pause</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    } else {
+      modal.classList.add('open');
+      document.getElementById('pomoTimerDisplay').textContent = '25:00';
+      document.getElementById('pomoPlayBtn').textContent = 'Pause';
+    }
+
+    if (pomoInterval) clearInterval(pomoInterval);
+    pomoInterval = setInterval(() => {
+      if (!pomoRunning) return;
+      pomoTimeLeft--;
+      
+      const m = Math.floor(pomoTimeLeft / 60).toString().padStart(2, '0');
+      const s = (pomoTimeLeft % 60).toString().padStart(2, '0');
+      const el = document.getElementById('pomoTimerDisplay');
+      if (el) el.textContent = `${m}:${s}`;
+      
+      if (pomoTimeLeft <= 0) {
+        stopPomodoro();
+        if (window.sendPushNotification) sendPushNotification('Pomodoro Complete!', `Session for ${subject} is done. Take a 5 min break.`, { type: 'pomodoro' });
+        toast(`Pomodoro for ${subject} Complete!`, 'success');
+      }
+    }, 1000);
+  };
+
+  window.togglePomodoro = function() {
+    pomoRunning = !pomoRunning;
+    document.getElementById('pomoPlayBtn').textContent = pomoRunning ? 'Pause' : 'Resume';
+  };
+
+  window.stopPomodoro = function() {
+    pomoRunning = false;
+    if (pomoInterval) clearInterval(pomoInterval);
+    const modal = document.getElementById('pomoModal');
+    if (modal) modal.classList.remove('open');
+  };
+
+  // ==========================================================================
+  // 5. OVERRIDE BOTTOM NAV CLICK (To handle 'tracker')
+  // ==========================================================================
+  const _origBottomNavClick = window.bottomNavClick;
+  window.bottomNavClick = function(action) {
+    if (action === 'tracker') {
+      updateBottomNavActive('tracker');
+      switchTab('tab-mark'); 
+      setTimeout(() => {
+        const el = document.getElementById('sec-tracker');
+        if (el) {
+          el.style.display = 'block';
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          renderTrackerUI(); 
+        }
+      }, 100);
+    } else {
+      const el = document.getElementById('sec-tracker');
+      if (el) el.style.display = 'none'; 
+      if (_origBottomNavClick) _origBottomNavClick(action);
+    }
+  };
+
+  // ==========================================================================
+  // 6. RENDER TRACKER ON INIT
+  // ==========================================================================
+  const _origLoadDashboard = window.loadDashboard;
+  window.loadDashboard = function() {
+    if (_origLoadDashboard) _origLoadDashboard();
+    setTimeout(() => {
+      if (currentUser && currentUser.role === 'student') {
+        const trackerSec = document.getElementById('sec-tracker');
+        if (trackerSec) {
+          renderTrackerUI();
+        }
+      }
+    }, 800);
+  };
+
+  console.log("✅ BM ERP v7.0 Patch Applied Successfully!");
+
+})();
