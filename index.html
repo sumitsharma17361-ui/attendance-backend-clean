@@ -131,8 +131,33 @@
   }
 
   /* ═══════════════════════════════════════════════════════════
-     ★ NEW: PWA INSTALL BANNER STYLES
+     ★ NEW: BOTTOM NAV 5-ITEM FIX
      ═══════════════════════════════════════════════════════════ */
+  .bottom-nav-inner {
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
+  }
+  .bottom-nav-btn {
+    flex: 1;
+    padding: 8px 0;
+  }
+  .bottom-nav-btn svg {
+    width: 22px;
+    height: 22px;
+  }
+  
+  /* ═══════════════════════════════════════════════════════════
+     ★ NEW: STUDY TRACKER STYLES (Inline for quick display)
+     ═══════════════════════════════════════════════════════════ */
+  .tracker-slot {
+    transition: all 0.2s ease;
+    background: var(--surface-card);
+  }
+  .tracker-slot:hover { border-color: var(--primary-400) !important; transform: translateY(-2px); }
+  .tracker-slot .btn { padding: 6px 10px; }
+  
+  /* PWA Install Banner */
   .pwa-install-banner {
     position: fixed;
     bottom: calc(20px + env(safe-area-inset-bottom, 0px));
@@ -158,21 +183,6 @@
     display: flex;
     transform: translate3d(-50%, 0, 0);
     opacity: 1;
-  }
-  .pwa-install-banner::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 16px;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
-    pointer-events: none;
-    animation: pwaShine 3.5s ease infinite;
-  }
-  @keyframes pwaShine {
-    0% { transform: translateX(-100%); opacity: 0; }
-    30% { opacity: 1; }
-    70% { opacity: 1; }
-    100% { transform: translateX(100%); opacity: 0; }
   }
   .pwa-install-icon {
     font-size: 30px;
@@ -235,18 +245,9 @@
       width: calc(100% - 20px);
       padding: 12px 14px;
     }
-    .pwa-install-icon { font-size: 26px; }
-    .pwa-install-text strong { font-size: 12.5px; }
-    .pwa-install-text span { font-size: 10.5px; }
-    .pwa-install-primary, .pwa-install-secondary {
-      padding: 8px 12px;
-      font-size: 11px;
-    }
   }
 
-  /* ═══════════════════════════════════════════════════════════
-     ★ NEW: BACK-BUTTON CONFIRM TOAST (safety fallback)
-     ═══════════════════════════════════════════════════════════ */
+  /* Back-button Confirm Toast */
   .back-confirm-toast {
     position: fixed;
     bottom: calc(120px + env(safe-area-inset-bottom, 0px));
@@ -283,7 +284,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <!-- Razorpay checkout -->
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-<!-- ★ Lenis REMOVED — native scroll-behavior: smooth handles it -->
 </head>
 <body>
 
@@ -493,6 +493,18 @@
               </button>
             </div>
             <div class="plb-meta" id="mainPasscodeMeta" style="display:none;">—</div>
+          </div>
+        </div>
+
+        <!-- ★ NEW: STUDY TRACKER SECTION (Injected here) -->
+        <div class="collapsible-card" id="sec-tracker" style="display:none; margin-top:20px;">
+          <div class="collapsible-header" onclick="this.nextElementSibling.classList.toggle('open'); this.querySelector('.collapse-arrow').style.transform = this.nextElementSibling.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';">
+            <h3><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Study Tracker & Pomodoro</h3>
+            <span class="collapse-arrow" style="transition:transform .25s;">▼</span>
+          </div>
+          <div class="collapsible-body" id="trackerContainer">
+            <!-- JS will dynamically inject schedule cards and countdown here -->
+            <div class="empty">Loading tracker data...</div>
           </div>
         </div>
 
@@ -1361,6 +1373,13 @@
       <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="m9 16 2 2 4-4"/></svg>
       <span>Attendance</span>
     </button>
+    
+    <!-- ★ NEW: TRACKER BUTTON -->
+    <button type="button" class="bottom-nav-btn" data-nav="tracker" onclick="bottomNavClick('tracker')" aria-label="Study Tracker">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>Tracker</span>
+    </button>
+
     <button type="button" class="bottom-nav-btn" data-nav="notes" onclick="bottomNavClick('notes')" aria-label="Notes">
       <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
       <span>Notes</span>
@@ -1373,6 +1392,9 @@
 </nav>
 
 <!-- ===================== MODALS ===================== -->
+
+<!-- ★ NEW: POMODORO MODAL (Injected empty, JS will fill) -->
+<div class="modal-backdrop safe-top-modal" id="pomodoroModal" style="z-index: 99999;"></div>
 
 <!-- Working Days Modal -->
 <div class="modal-backdrop safe-top-modal" id="wdModal">
@@ -1666,43 +1688,28 @@
 <div class="back-confirm-toast" id="backConfirmToast">Press back again to exit</div>
 
 <!-- ===================== ★ NEW: BACK BUTTON GUARD (earliest possible) ===================== -->
-<!--
-  This is CRITICAL for Median.co WebView.
-  - Pushes a "guard" state onto history immediately.
-  - When user presses Android back button, popstate fires FIRST (consuming the guard)
-    instead of the WebView closing the app.
-  - The actual state-clearing logic lives in app.js's window.bmHandleBack()
-  - If nothing to close AND user is at home → we DON'T re-push guard, letting
-    the NEXT back press close/minimize the app (native Android behavior).
--->
 <script>
 (function bmBackGuardBootstrap() {
-  // Already initialized? Skip.
   if (window.__bmGuardInitialized) return;
   window.__bmGuardInitialized = true;
 
-  // Push initial guard
   try {
     if (!history.state || !history.state.bm_guard) {
       history.pushState({ bm_guard: 1 }, '', location.href);
     }
   } catch (e) { /* ignore */ }
 
-  // Popstate handler — hands off to app.js's bmHandleBack()
   window.addEventListener('popstate', function bmPopstate(e) {
     try {
       const handler = window.bmHandleBack;
       if (typeof handler === 'function') {
         const consumed = handler();
-        // If consumed → re-push guard so next back press doesn't close app
         if (consumed) {
           if (!history.state || !history.state.bm_guard) {
             history.pushState({ bm_guard: 1 }, '', location.href);
           }
         }
-        // If NOT consumed → nothing left to close → let Android handle (minimize/close)
       } else {
-        // app.js hasn't loaded yet — silently re-guard to prevent premature close
         if (!history.state || !history.state.bm_guard) {
           history.pushState({ bm_guard: 1 }, '', location.href);
         }
@@ -1722,13 +1729,11 @@
 <!-- ===================== ★ NEW: PWA INSTALL PROMPT CAPTURE + SW REGISTRATION ===================== -->
 <script>
 (function bmPwaBootstrap() {
-  // Capture the deferred install prompt (fires before app.js may be loaded)
   window.__bmDeferredInstall = null;
   window.addEventListener('beforeinstallprompt', function(e) {
     e.preventDefault();
     window.__bmDeferredInstall = e;
     console.log('[PWA] ✅ beforeinstallprompt captured — install available');
-    // Dispatch custom event so app.js can show the banner
     try { window.dispatchEvent(new CustomEvent('bm-install-available')); } catch (err) {}
   });
 
@@ -1738,8 +1743,6 @@
     try { window.dispatchEvent(new CustomEvent('bm-installed')); } catch (err) {}
   });
 
-  // ★ Register the service worker on load (required for PWA)
-  // Uses same path resolution as app.js so there's no conflict.
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
     window.addEventListener('load', function() {
       const basePath = window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '');
