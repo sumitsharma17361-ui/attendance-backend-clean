@@ -4690,3 +4690,203 @@ body.body-locked {
 /* ============================================================
    END OF FILE — style.css v12.0
    ============================================================ */
+
+
+
+
+
+/* ============================================================
+   ★ NEW: STUDY TRACKER & UPDATED BOTTOM NAV (v7.0)
+   ============================================================ */
+
+/* 1. Bottom Nav Fix for 5 Items */
+.bottom-nav-inner {
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+  width: 100%;
+}
+.bottom-nav-btn {
+  flex: 1;
+  padding: 8px 0;
+}
+.bottom-nav-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* 2. Tracker Container */
+#sec-tracker {
+  scroll-margin-top: 100px;
+}
+
+/* Exam Countdown Cards */
+.tracker-exam-card {
+  min-width: 110px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: transform 0.2s ease;
+}
+.tracker-exam-card:active {
+  transform: scale(0.96);
+}
+.tracker-exam-code {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--amber-400);
+  letter-spacing: 0.05em;
+}
+.tracker-exam-date {
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+.tracker-exam-days {
+  font-size: 11px;
+  color: var(--slate-300);
+  margin-top: 2px;
+}
+
+/* Slots List */
+.tracker-slot {
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: var(--surface-card);
+  transition: all 0.25s var(--ease-out);
+  position: relative;
+  overflow: hidden;
+}
+@media (hover: hover) {
+  .tracker-slot:hover {
+    border-color: var(--brand-400);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+  }
+}
+.tracker-slot::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--brand-500);
+  border-radius: 4px 0 0 4px;
+}
+.tracker-slot.completed::before {
+  background: var(--emerald-500);
+}
+.tracker-slot.missed::before {
+  background: var(--rose-500);
+}
+
+.tracker-slot-info {
+  flex: 1;
+}
+.tracker-slot-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  align-items: center;
+}
+.tracker-slot-subject {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--brand-700);
+  background: var(--brand-50);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+.tracker-slot-time {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--slate-500);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.tracker-slot-time svg {
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+}
+.tracker-slot-unit {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--slate-900);
+  margin-bottom: 4px;
+}
+.tracker-slot-topics {
+  font-size: 12px;
+  color: var(--slate-600);
+  line-height: 1.5;
+}
+
+/* Pomodoro Action Button */
+.tracker-action-btn {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--brand-500), var(--brand-700));
+  color: #fff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+  transition: transform 0.2s var(--ease-spring);
+}
+.tracker-action-btn:active {
+  transform: scale(0.9);
+}
+.tracker-action-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke: #fff;
+  stroke-width: 2.5;
+}
+
+/* 3. Pomodoro Modal (Timer) */
+#pomodoroModal .modal {
+  max-width: 320px;
+  text-align: center;
+  background: linear-gradient(180deg, var(--surface-card) 0%, var(--slate-50) 100%);
+  border-radius: 24px;
+  padding: 24px;
+}
+.pomo-title {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--slate-900);
+  margin-bottom: 4px;
+}
+.pomo-sub {
+  font-size: 12px;
+  color: var(--slate-500);
+  margin-bottom: 24px;
+}
+.pomo-timer {
+  font-size: 64px;
+  font-weight: 900;
+  color: var(--brand-600);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  margin-bottom: 24px;
+  text-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+.pomo-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+.pomo-actions .btn {
+  flex: 1;
+}
